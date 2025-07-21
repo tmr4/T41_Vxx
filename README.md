@@ -14,7 +14,7 @@ This is a work in progress.  Some functions may be broken and will likely remain
 
 A handy Arduino feature makes maintaining the common project easy. The Arduino compiler will compile any source and header files in the sketch folder and the *src* subfolder. All other subfolders in the sketch folder are ignored. That makes the following folder structure possible:
 
-![Project folder structure](https://github.com/tmr4/T41_v12/blob/main/images/CommonCodeFolderStructure.png)
+![Project folder structure](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/CommonCodeFolderStructure.png)
 
 The T41 sketch and common code files are placed in the *T41_SDR* folder. The hardware specific files are place in the *v11* and *v12* folders respectively. Then, if you want to compile for a v11 or v12 radio, you put the hardware specific files for the desired version in the *src* folder, select the proper Teensy in the IDE and compile.
 
