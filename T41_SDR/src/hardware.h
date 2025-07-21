@@ -4,82 +4,52 @@
 //-------------------------------------------------------------------------------------------------------------
 
 //------------
+// Display.h
+
+#define LIGHT_BLUE tft.Color565(64, 64, 192)
+
+//------------
 // Encoders.h
-
-//---- Teensy 4.1 Pin assignments
-#ifdef FOURSQRP_FRONTPANEL
-    #define VOLUME_ENCODER_A         2
-    #define VOLUME_ENCODER_B         3
-    #define FILTER_ENCODER_A        16
-    #define FILTER_ENCODER_B        15
-    #define FINETUNE_ENCODER_A       4
-    #ifdef PROJECTSYSTEM
-    #define FINETUNE_ENCODER_B      24 // pin 5 is TFT_CS on Project System (the pin assigned here is only meaningful when testing fine tune encoder on non-front panel systems)
-    #else
-    #define FINETUNE_ENCODER_B       5
-    #endif
-    #define TUNE_ENCODER_A          14
-    #define TUNE_ENCODER_B          17
-#else
-    #define VOLUME_ENCODER_A         2
-    #define VOLUME_ENCODER_B         3
-    #define FILTER_ENCODER_A        15
-    #define FILTER_ENCODER_B        14
-    #define FINETUNE_ENCODER_A       4
-    #define FINETUNE_ENCODER_B       5
-    #define TUNE_ENCODER_A          16
-    #define TUNE_ENCODER_B          17
-#endif
-
-#define PTT          37    // Transmit/Receive
-
 //------------
 // Menu.cpp
 
-#define MENU_RF_OPTIONS  "Power level", "Gain", "Cancel"
-#define MENU_CAL_OPTIONS "Freq Cal", "CW PA Cal", "Rec Cal", "Xmit Cal", "SSB PA Cal", "Cancel"
-#define MENU_RF_COUNT    3
-#define MENU_CAL_COUNT   6
+#define MENU_RF_OPTIONS  "Power level", "Gain", "Atten In", "Atten Out", "Cancel"
+#define MENU_CAL_OPTIONS "Freq Cal", "Rec Cal", "Xmit Cal", "Two Tone", "CW PA Cal", "SSB PA Cal", "Cancel"
+#define MENU_RF_COUNT    5
+#define MENU_CAL_COUNT   7
 
 //------------
 // Process.cpp
 
-#define AUDIO_SPEC_SHIFT     90.0
+#define AUDIO_SPEC_SHIFT     50.0
 #define AUDIO_SPEC_SHIFT_NFM 90.0
-#define VOL_FACTOR           80.0
-#define AUDIO_SCALER_NFM      0.1
+#define VOL_FACTOR            0.1
+#define AUDIO_SCALER_NFM      0.025
 
 //------------
 // SDT.h
 
-#define MUTE                        38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
-#ifdef PROJECTSYSTEM
-#define BUSY_ANALOG_PIN             40    // pin 39 is TFT_MISO on Project System (the pin assigned here is only meaningful when testing switch matrix on non-front panel systems)
-#else
+#define XMIT_SSB                  1
+#define XMIT_CW                   0
+
+#define PTT                         37    // Transmit/Receive
+
+// v12 RF board signals
+#define RF_CW_SIGNAL 33     // CW on/off (H = on, L = off)
+#define RF_XMIT_RELAY 34    // Transmit relay (H = SSB, L = CW)
+#define RF_CAL_RELAY 38     // calibration relay, signal routed to board (H = input, L = output)
+
+#ifdef FOURSQRP_FRONTPANEL
 #define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
 #endif
 
-//------------
-// T41_SDR.ino
-
-// hardware/band specific signal strength adjustment
-#define GAIN_CORRECTION_80M -4.0
-#define GAIN_CORRECTION_40M -2.0
-#define GAIN_CORRECTION_20M -3.0
-#define GAIN_CORRECTION_17M -3.0
-#define GAIN_CORRECTION_15M -1.0
-#define GAIN_CORRECTION_12M -1.0
-#define GAIN_CORRECTION_10M -1.0
-
-//-------------------------------------------------------------------------------------------------------------
-// Code
-//-------------------------------------------------------------------------------------------------------------
-
-//------------
-// Process.h
-
-void RemoveDCBias();
-float32_t CalcSignalStrength();
+#ifdef PROJECTSYSTEM_EXPANDED_IO
+#define INT_PIN_1 41
+#define INT_PIN_2 40
+#else
+#define INT_PIN_1 14
+#define INT_PIN_2 15
+#endif
 
 //------------
 // T41Control.h
@@ -91,7 +61,81 @@ extern int signalStrengthReceivedIndex;
 //------------
 // T41_SDR.ino
 
+// hardware/band specific signal strength adjustment
+#define GAIN_CORRECTION_80M -3.0
+#define GAIN_CORRECTION_40M -5.0
+#define GAIN_CORRECTION_20M -3.5
+#define GAIN_CORRECTION_17M -4.5
+#define GAIN_CORRECTION_15M -3.0
+#define GAIN_CORRECTION_12M -1.0
+#define GAIN_CORRECTION_10M -1.0
+
+//----------
+// Utility.h
+
+extern float32_t sinBuffer4[];
+extern float32_t sinBuffer5[];
+
+extern const byte ShutdownInPin;
+extern const byte ShutdownOutPin;
+
+// Define a structure to hold the results of built-in-test routine
+typedef struct {
+  bool RF_I2C_present;
+  bool RF_Si5351_present;
+  bool BPF_I2C_present;
+  bool V12_LPF_I2C_present;
+  bool V12_LPF_AD7991_present;
+  bool FRONT_PANEL_I2C_1_present;
+  bool FRONT_PANEL_I2C_2_present;
+  byte AD7991_I2C_ADDR;
+} I2C;
+
+extern I2C bit_results;
+
+//-------------------------------------------------------------------------------------------------------------
+// Code
+//-------------------------------------------------------------------------------------------------------------
+
+//------------
+// Display.h
+
+void ShowAnalogGain();
+
+//------------
+// Encoders.h
+
+
+//------------
+// Process.h
+
+void RemoveDCBias();
+float32_t CalcSignalStrength();
+
+//------------
+// T41Control.h
+
+void SendSetFreq(int freq);
+void SendSetMode(int mode);
+void SendSignalStrengthRequest();
+void SendSignalStrengthRequest(int index);
+void SendSetDisplayZoom(int zoom);
+void SendSetNarrowFilter();
+void SendSetBandChange(int upDown);
+
+//------------
+// T41_SDR.ino
+
 void InitHardware();
 void SoftResetHardware();
 void ConfigRadioStateHardware();
 void HardwareLoopStart();
+
+//----------
+// Utility.h
+
+void GenTwoToneBuffer(int numCycles, int tone);
+
+void ShutDownRoutine();
+
+void I2C_display();
