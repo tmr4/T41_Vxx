@@ -7,7 +7,10 @@ to you under their original license terms set forth below.  I reserves all other
 expressly granted, whether by implication, estoppel or otherwise.
 
 
-1. T41-EP software version V049.2K (https://groups.io/g/SoftwareControlledHamRadio/files/SDTVer049.2K.zip)
+1. T41-EP software version V66-9 (https://github.com/KI3P/SDTVer066-9)
+
+(c) Frank Dziock, DD4WH, 2020_05_8
+"TEENSY CONVOLUTION SDR" substantially modified by Jack Purdum, W8TEE, and Al Peter, AC8GY
 
 This software is made available under the GNU GPLv3 license agreement. If commercial use of this
 software is planned, we would appreciate it if the interested parties contact Jack Purdum, W8TEE,
@@ -17,7 +20,20 @@ and Al Peter, AC8GY.
 END OF T41-EP NOTICES AND INFORMATION
 
 
-2. T41EEE (https://github.com/Greg-R/T41EEE/tree/main)
+2. T41-EP software version V049.2K (https://groups.io/g/SoftwareControlledHamRadio/files/SDTVer049.2K.zip)
+
+(c) Frank Dziock, DD4WH, 2020_05_8
+"TEENSY CONVOLUTION SDR" substantially modified by Jack Purdum, W8TEE, and Al Peter, AC8GY
+
+This software is made available under the GNU GPLv3 license agreement. If commercial use of this
+software is planned, we would appreciate it if the interested parties contact Jack Purdum, W8TEE,
+and Al Peter, AC8GY.
+
+=========================================
+END OF T41-EP NOTICES AND INFORMATION
+
+
+3. T41EEE (https://github.com/Greg-R/T41EEE/tree/main)
 
 %% T41EEE NOTICES AND INFORMATION BEGIN HERE
 =========================================
@@ -32,7 +48,7 @@ Greg Raven, December 13 2023
 END OF T41EEE NOTICES AND INFORMATION
 
 
-3. csdr (https://github.com/ha7ilm/csdr)
+4. csdr (https://github.com/ha7ilm/csdr)
 
 %% csdr NOTICES AND INFORMATION BEGIN HERE
 =========================================
@@ -44,7 +60,8 @@ It should also be noted that if you compile with -DUSE_FFTW and -DLIBCSDR_GPL (a
 =========================================
 END OF csdr NOTICES AND INFORMATION
 
-4. ft8_lib (https://github.com/kgoba/ft8_lib)
+
+5. ft8_lib (https://github.com/kgoba/ft8_lib)
 
 %% ft8_lib NOTICES AND INFORMATION BEGIN HERE
 =========================================
@@ -74,7 +91,8 @@ SOFTWARE.
 =========================================
 END OF ft8_lib NOTICES AND INFORMATION
 
-5. Pocket_FT8 (https://github.com/DD4WH/Pocket_FT8)
+
+6. Pocket_FT8 (https://github.com/DD4WH/Pocket_FT8)
 
 %% Pocket_FT8 NOTICES AND INFORMATION BEGIN HERE
 =========================================
