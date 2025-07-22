@@ -44,10 +44,11 @@
 //------------
 // Process.cpp
 
-#define AUDIO_SPEC_SHIFT     90.0
-#define AUDIO_SPEC_SHIFT_NFM 90.0
-#define VOL_FACTOR           80.0
-#define AUDIO_SCALER_NFM      0.1
+#define AUDIO_SPEC_SHIFT     105.0
+#define AUDIO_SPEC_SHIFT_NFM 105.0
+#define VOL_FACTOR            20.0
+#define AUDIO_SCALER_NFM       0.005
+#define FREQSPEC_OFFSET_10DB  80
 
 //------------
 // SDT.h
@@ -63,8 +64,10 @@
 // T41_SDR.ino
 
 // hardware/band specific signal strength adjustment
+// these were set with AD3 signal generator at S9 (1mW signal attenuated -73dB)
+// TODO: signal strength varies by demod mode as noted; consider refinement ***
 #define GAIN_CORRECTION_80M -4.0
-#define GAIN_CORRECTION_40M -2.0
+#define GAIN_CORRECTION_40M  1.0  // gives -71 on USB
 #define GAIN_CORRECTION_20M -3.0
 #define GAIN_CORRECTION_17M -3.0
 #define GAIN_CORRECTION_15M -1.0
