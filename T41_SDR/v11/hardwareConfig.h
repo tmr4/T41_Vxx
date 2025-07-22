@@ -1,3 +1,4 @@
+// v11 specific hardware config file
 
 #define VERSION "v11_dev.1" // Change this for updates. If you make this longer than 9 characters, brace yourself for surprises
 
