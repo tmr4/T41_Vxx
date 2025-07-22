@@ -46,7 +46,8 @@ int currentBandA = BAND_40M;
 int currentBandB = BAND_40M;
 int currentFreqA = CURRENT_FREQ_A;  // initial VFOA center freq
 int currentFreqB = CURRENT_FREQ_B;  // initial VFOB center freq
-int freqCorrectionFactor = 1200;
+//int freqCorrectionFactor = 17578;   // AD3 source @ 5MHz
+int freqCorrectionFactor = 0;   // gives
 
 int equalizerRec[EQUALIZER_CELL_COUNT] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
 int equalizerXmt[EQUALIZER_CELL_COUNT] = {0, 0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0};   // Provide equalizer optimized for SSB voice based on Neville's tests.  KF5N November 2, 2023
@@ -75,11 +76,13 @@ float32_t powerOutCW[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
 float CWPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.019, 0.019, .0190, .019, .019, .019, .019 };       // 0.019;
 float SSBPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008 };  // 0.008
 
+//float IQAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 0.976, 1, 1, 1, 1, 1 };
+//float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, -0.011, 0, 0, 0, 0, 0 };
 float IQAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
 float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 
-float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
-float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
+float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1.004, 1, 1, 1, 1, 1 };
+float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, -0.01, 0, 0, 0, 0, 0 };
 
 long favoriteFreqs[13] = { 3560000, 3690000, 7030000, 7200000, 14060000, 14200000, 21060000, 21285000, 28060000, 28365000, 5000000, 10000000, 15000000 };
 //int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7048000, 7030000 }, { 14048000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };
