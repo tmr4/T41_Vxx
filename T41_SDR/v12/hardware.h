@@ -25,6 +25,7 @@
 #define AUDIO_SPEC_SHIFT_NFM 90.0
 #define VOL_FACTOR            0.1
 #define AUDIO_SCALER_NFM      0.025
+#define FREQSPEC_OFFSET_10DB 25
 
 //------------
 // SDT.h
