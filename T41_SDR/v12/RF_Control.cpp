@@ -1,3 +1,5 @@
+// v12 specific hardware file
+
 // RF Board MCP23017 control
 
 #include "..\SDT.h"

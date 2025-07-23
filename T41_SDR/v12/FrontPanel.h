@@ -1,3 +1,5 @@
+// v12 specific hardware file
+
 #pragma once
 
 #include <stdint.h>

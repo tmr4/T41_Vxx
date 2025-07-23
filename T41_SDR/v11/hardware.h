@@ -5,6 +5,12 @@
 //-------------------------------------------------------------------------------------------------------------
 
 //------------
+// Display.h
+
+// radio specific display calibration factors
+#define FREQSPEC_OFFSET_10DB  80
+
+//------------
 // Encoders.h
 
 //---- Teensy 4.1 Pin assignments
@@ -45,11 +51,11 @@
 //------------
 // Process.cpp
 
+// radio specific display calibration factors
 #define AUDIO_SPEC_SHIFT     105.0
 #define AUDIO_SPEC_SHIFT_NFM 105.0
 #define VOL_FACTOR            20.0
 #define AUDIO_SCALER_NFM       0.005
-#define FREQSPEC_OFFSET_10DB  80
 
 //------------
 // SDT.h

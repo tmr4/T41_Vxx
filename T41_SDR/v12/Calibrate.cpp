@@ -1,3 +1,5 @@
+// v12 specific hardware file
+
 #include <Chrono.h>                // https://github.com/SofaPirate/Chrono/
 #include <LinearRegression.h>      // https://github.com/cubiwan/Regressino/
 #include <Linear2DRegression.hpp>  // https://github.com/nkaaf/Arduino-Regression

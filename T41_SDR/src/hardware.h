@@ -1,3 +1,4 @@
+// v12 specific hardware header file
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -7,6 +8,9 @@
 // Display.h
 
 #define LIGHT_BLUE tft.Color565(64, 64, 192)
+
+// radio specific display calibration factors
+#define FREQSPEC_OFFSET_10DB  25
 
 //------------
 // Encoders.h
@@ -25,7 +29,6 @@
 #define AUDIO_SPEC_SHIFT_NFM 90.0
 #define VOL_FACTOR            0.1
 #define AUDIO_SCALER_NFM      0.025
-#define FREQSPEC_OFFSET_10DB 25
 
 //------------
 // SDT.h

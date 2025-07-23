@@ -1,3 +1,5 @@
+// v12 specific hardware file
+
 /*
  * Rotary encoder library for Arduino.
  */

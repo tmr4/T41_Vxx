@@ -1,3 +1,5 @@
+// v12 specific hardware file
+
 /*
  * si5351.cpp - Si5351 library for Arduino
  *
