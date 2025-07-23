@@ -18,7 +18,7 @@ A handy Arduino feature makes maintaining the common project easy. The Arduino c
 
 The T41 sketch and common code files are placed in the *T41_SDR* folder. The hardware specific files are place in the *v11* and *v12* folders respectively. Then, if you want to compile for a v11 or v12 radio, you put the hardware specific files for the desired version in the *src* folder, select the proper Teensy in the IDE and compile.
 
-Alternatively, you can maintain version specific branches where the *src* folder is already properly set up.
+Alternatively, you can maintain version specific branches where the *src* folder is already properly set up.  I'm still experimenting with this alternative.  Git source control tracks file changes overtime.  However, the contents of the *src* folder depends on the version. This doesn't work well with time-based source tracking.  When creating a version specific development branch for updating a version branch, I had to resolve merge conflicts with at least one version.  A better approach might be to keep the *src* folder empty in the development branch and then manually add the hardware specific files to the *src* folder for each version branch.  With this alternative, the *src* folder doesn't even exist in the GitHub repository, but you can add it to your local copy for testing.  Then just copy the hardware specific files for the version you're interested in testing.  Delete them before you're ready to commit and all should be good.
 
 ## Branches
 

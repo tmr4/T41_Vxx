@@ -1,4 +1,4 @@
-// v11 specific hardware file
+// v11 specific calibration file
 
 #include "..\SDT.h"
 

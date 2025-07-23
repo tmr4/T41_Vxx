@@ -1,4 +1,4 @@
-// v12 specific hardware file
+// v12 specific calibration file
 
 #include <Chrono.h>                // https://github.com/SofaPirate/Chrono/
 #include <LinearRegression.h>      // https://github.com/cubiwan/Regressino/
