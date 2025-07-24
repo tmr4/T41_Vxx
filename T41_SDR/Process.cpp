@@ -950,8 +950,8 @@ void FreqShift2() {
   float32_t NCO_INC;
   double OSC_COS;
   double OSC_SIN;
-  double Osc_Vect_Q = 1.0;
-  double Osc_Vect_I = 0.0;
+  static double Osc_Vect_Q = 1.0;
+  static double Osc_Vect_I = 0.0;
   double Osc_Gain = 0.0;
   double Osc_Q = 0.0;
   double Osc_I = 0.0;
