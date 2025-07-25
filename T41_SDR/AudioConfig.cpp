@@ -205,7 +205,7 @@ FLASHMEM int SetI2SFreq(int freq) {
 
 void AudioSetup() {
   // set I2S freq to sample rate
-  SetI2SFreq(192000.0);
+  SetI2SFreq(sampleRate);
 
   // configure an SGTL5000 control object for input from the audio adapter microphone
   sgtl5000_1.setAddress(LOW); // Teensy pin 8

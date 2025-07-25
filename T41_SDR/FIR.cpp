@@ -114,22 +114,22 @@ void InitFIRFilter() {
       gives: n_dec1_taps = 27, n_dec2_taps = 33 (see decFilterTaps.xlsx)
   ****************************************************************************************/
   // Decimation filter 1, M1 = 4
-  CalcFIRCoeffs(FIR_dec1_coeffs, 27, 9000.0, 90.0, 0, 0.0, 192000.0);
+  CalcFIRCoeffs(FIR_dec1_coeffs, 27, 9000.0, 90.0, 0, 0.0, sampleRate);
   arm_fir_decimate_init_f32(&FIR_dec1_I, 27, 4.0, FIR_dec1_coeffs, FIR_dec1_I_state, 2048);
   arm_fir_decimate_init_f32(&FIR_dec1_Q, 27, 4.0, FIR_dec1_coeffs, FIR_dec1_Q_state, 2048);
 
   // Decimation filter 2, M2 = 2
-  CalcFIRCoeffs(FIR_dec2_coeffs, 33, 9000.0, 90.0, 0, 0.0, 48000.0);
+  CalcFIRCoeffs(FIR_dec2_coeffs, 33, 9000.0, 90.0, 0, 0.0, sampleRate / 4.0);
   arm_fir_decimate_init_f32(&FIR_dec2_I, 33, 2, FIR_dec2_coeffs, FIR_dec2_I_state, 512);
   arm_fir_decimate_init_f32(&FIR_dec2_Q, 33, 2, FIR_dec2_coeffs, FIR_dec2_Q_state, 512);
 
   // Interpolation filter 1, L1 = 2
-  CalcFIRCoeffs(FIR_int1_coeffs, 48, 9000.0, 90.0, 0, 0.0, 48000.0);
+  CalcFIRCoeffs(FIR_int1_coeffs, 48, 9000.0, 90.0, 0, 0.0, sampleRate / 4.0);
   arm_fir_interpolate_init_f32(&FIR_int1_I, 2, 48, FIR_int1_coeffs, FIR_int1_I_state, 256);
   arm_fir_interpolate_init_f32(&FIR_int1_Q, 2, 48, FIR_int1_coeffs, FIR_int1_Q_state, 256);
 
   // Interpolation filter 2, L2 = 4
-  CalcFIRCoeffs(FIR_int2_coeffs, 32, 9000.0, 90.0, 0, 0.0, 192000.0);
+  CalcFIRCoeffs(FIR_int2_coeffs, 32, 9000.0, 90.0, 0, 0.0, sampleRate);
   arm_fir_interpolate_init_f32(&FIR_int2_I, 4.0, 32, FIR_int2_coeffs, FIR_int2_I_state, 512);
   arm_fir_interpolate_init_f32(&FIR_int2_Q, 4.0, 32, FIR_int2_coeffs, FIR_int2_Q_state, 512);
 

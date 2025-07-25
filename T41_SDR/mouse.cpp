@@ -229,7 +229,7 @@ void MouseButtonFreqArea(int button) {
           inc = TxRxFreq % 100000000;
         }
       }
-      if(inc < 192000.0 / (1 << spectrumZoom)) {
+      if(inc < sampleRate / (1 << spectrumZoom)) {
         SetNCOFreq(NCOFreq - inc);
       } else {
         SetCenterTune(-inc);
@@ -286,7 +286,7 @@ void MouseWheelFreqArea(int wheel) {
   //inc *= wheel;
   //Serial.println(inc);
 
-  if(inc < 192000.0 / (1 << spectrumZoom)) {
+  if(inc < sampleRate / (1 << spectrumZoom)) {
     SetNCOFreq(NCOFreq + inc * wheel);
   } else {
     SetCenterTune(inc * wheel);
@@ -330,7 +330,7 @@ void MouseButtonSpectrumWaterfall(int button) {
       // replace what was previously under the cursor
       tft.BTE_move(0, 0, 16, 32, oldCursorX, oldCursorY, 2, 2);
 
-      SetNCOFreq((cursorX + CURSOR_W / 2 - centerLine) * 192000.0 / (1 << spectrumZoom) / SPECTRUM_RES);
+      SetNCOFreq((cursorX + CURSOR_W / 2 - centerLine) * sampleRate / (1 << spectrumZoom) / SPECTRUM_RES);
 
       DrawBandwidthBar();
 

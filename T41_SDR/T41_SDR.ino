@@ -60,6 +60,8 @@ extern char myGrid[];
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+float sampleRate, intermediateFreq;
+
 int radioState, lastState;
 
 float32_t DMAMEM audioBufferL[2048];
@@ -228,6 +230,10 @@ FLASHMEM void SoftReset() {
   // skip for now to facilitate testing/dev, don't need to reset when shifting between v66-9 and this version
   //LoadOpVars();
 
+  // reset sample rate and IF
+  sampleRate = 192000.0;
+  intermediateFreq = 48000.0;
+
   splitVFO = false;
   SoftResetHardware();
 
@@ -307,6 +313,9 @@ FLASHMEM void setup() {
 #endif
 
   delay(100L);
+
+  sampleRate = 192000.0;
+  intermediateFreq = 48000.0;
 
   InitSI5351();
   AudioSetup();

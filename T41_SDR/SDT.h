@@ -85,6 +85,8 @@ typedef __uint8_t uint8_t;
 
 // radio hardware and state global variables
 
+extern float sampleRate, intermediateFreq;
+
 extern int radioState, lastState;  // Used by the loop to monitor current state.
 
 extern float32_t audioBufferL[];

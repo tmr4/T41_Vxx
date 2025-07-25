@@ -682,7 +682,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
   //}
 
   if(spectrumZoom == 0) {
-    freq_calc += 48000.0; // intermediate freq
+    freq_calc += intermediateFreq;
   }
 
   // TODO: *** these are the same ***

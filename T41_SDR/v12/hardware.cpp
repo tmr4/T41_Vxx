@@ -448,7 +448,7 @@ void ConfigRadioStateHardware() {
       SetRF_OutAtten(currentRF_OutAtten);
 
       oldCenterFreq = centerFreq;
-      centerFreq = centerFreq - 48000.0 + NCOFreq;
+      centerFreq = centerFreq - intermediateFreq + NCOFreq;
       break;
 
     case CW_RECEIVE_STATE:

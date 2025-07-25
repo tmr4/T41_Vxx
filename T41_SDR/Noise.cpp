@@ -157,8 +157,8 @@ void Kim1_NR() {
         lf_freq = -(float32_t)currentFilterHiCut;
       }
     }
-    lf_freq /= (24000.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
-    uf_freq /= (24000.0 / NR_FFT_L);
+    lf_freq /= (sampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
+    uf_freq /= (sampleRate / 8.0 / NR_FFT_L);
 
     VAD_low = (int)lf_freq;
     VAD_high = (int)uf_freq;
@@ -428,8 +428,8 @@ void SpectralNoiseReduction() {
   }
 
   // / rate 24k = 192k / 8
-  lf_freq /= 24000.0 / NR_FFT_L; // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
-  uf_freq /= 24000.0 / NR_FFT_L;
+  lf_freq /= (sampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
+  uf_freq /= (sampleRate / 8.0 / NR_FFT_L);
 
 
   // INITIALIZATION ONCE 1

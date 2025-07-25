@@ -110,9 +110,9 @@ FLASHMEM void InitAMDemodBiquadFilter() {
     LP_F_help = -bands[currentBand].FLoCut;
   }
 
-  SetIIRCoeffs(biquad_lowpass1_coeffs, (float32_t)LP_F_help, 1.3, 24000.0, 0);  // 1st stage
+  SetIIRCoeffs(biquad_lowpass1_coeffs, (float32_t)LP_F_help, 1.3, sampleRate / 8.0, 0);  // 1st stage
 */
-  SetIIRCoeffs(biquad_lowpass1_coeffs, currentFilterHiCut, 1.3, 24000.0, 0);  // 1st stage
+  SetIIRCoeffs(biquad_lowpass1_coeffs, currentFilterHiCut, 1.3, sampleRate / 8.0, 0);  // 1st stage
 
   biquad_lowpass1.numStages = 1;  // set number of stages
   biquad_lowpass1.pCoeffs = biquad_lowpass1_coeffs;      // set pointer to coefficients file
@@ -549,14 +549,14 @@ bool ProcessReceiverData(bool updateSpectrumData) {
 
         // buzz and muffled sound with this deemphasis filter
         // *** TODO: see: https://sdr.hu/static/bsc-thesis.pdf section 10.6 De-emphasis to investigate problems here ***
-        //deemphasis_nfm_ff(audioBufferL, audioBufferR, 256, 24000);
+        //deemphasis_nfm_ff(audioBufferL, audioBufferR, 256, sampleRate / 8.0);
         //arm_copy_f32(audioBufferR, audioBufferL, 256);
 
-        //deemphasis_nfm_ff(audioBufferL, audioBufferR, 256, 24000);
+        //deemphasis_nfm_ff(audioBufferL, audioBufferR, 256, sampleRate / 8.0);
         //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferR, audioBufferL, 256);
 
         //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferL, audioBufferR, 256);
-        //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, 24000);
+        //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, sampleRate / 8.0);
 
         // process audio for demodulated NFM and FT8 wave file
         AudioDSP(updateSpectrumData, AUDIO_SPEC_SHIFT_NFM, false); // no imaginary component for these
@@ -979,7 +979,8 @@ void FreqShift2() {
       }
     }
   }
-  NCO_INC = 2.0 * PI * (NCOFreq + sideToneShift) / 192000.0; //192000 SPS is the actual sample rate used in the Receive ADC
+
+  NCO_INC = 2.0 * PI * (NCOFreq + sideToneShift) / sampleRate;
 
   OSC_COS = cos(NCO_INC);
   OSC_SIN = sin(NCO_INC);
@@ -1007,8 +1008,8 @@ void FreqShift2() {
 FLASHMEM void ZoomFFTPrep() {
   // take value of spectrumZoom and initialize IIR lowpass and FIR decimation filters for the right values
 
-  float32_t Fstop_Zoom = 0.5 * 192000.0 / (1 << spectrumZoom);
-  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate_coeffs, 4, Fstop_Zoom, 60, 0, 0.0, 192000.0);
+  float32_t Fstop_Zoom = 0.5 * sampleRate / (1 << spectrumZoom);
+  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate_coeffs, 4, Fstop_Zoom, 60, 0, 0.0, sampleRate);
 
   // this sets the coefficients for the ZoomFFT decimation filter according to the desired magnification mode
   // for 0 the mag_coeffs will a NULL ptr, since the filter is not going to be used in this mode!
@@ -1028,9 +1029,9 @@ FLASHMEM void ZoomFFTPrep() {
 }
 
 FLASHMEM void InitFFTFilter() {
-  float32_t Fstop_Zoom = 0.5 * 192000.0 / (1 << spectrumZoom);
+  float32_t Fstop_Zoom = 0.5 * sampleRate / (1 << spectrumZoom);
 
-  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate_coeffs, 4, Fstop_Zoom, 60, 0, 0.0, 192000.0);
+  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate_coeffs, 4, Fstop_Zoom, 60, 0, 0.0, sampleRate);
   arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I, 4, 128, Fir_Zoom_FFT_Decimate_coeffs, Fir_Zoom_FFT_Decimate_I_state, 2048);
   arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q, 4, 128, Fir_Zoom_FFT_Decimate_coeffs, Fir_Zoom_FFT_Decimate_Q_state, 2048);
 

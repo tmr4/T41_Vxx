@@ -64,7 +64,7 @@ FLASHMEM void SetFreqCal(long calFreqShift) {
   }
 
   //  The receive LO frequency is not dependent on mode or sideband.  CW frequency shift is done in DSP code.
-  Clk2SetFreq = ((centerFreq * SI5351_FREQ_MULT) + 48000.0 * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
+  Clk2SetFreq = ((centerFreq * SI5351_FREQ_MULT) + intermediateFreq * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
 
   //  Set and enable both RX and TX local oscillator outputs.
   si5351.set_freq(Clk2SetFreq, SI5351_CLK2);
@@ -175,13 +175,13 @@ void SetNCOFreq(int newNCOFreq) {
 
   // recenter at band edges
   if(spectrumZoom != 0) {
-    if((NCOFreq + highSideAdj) >= (96000 / (1 << spectrumZoom))) {
+    if((NCOFreq + highSideAdj) >= (sampleRate / 2.0 / (1 << spectrumZoom))) {
       NCOFreq += highSideAdj;
       fineTuneFlag = false;
       resetTuningFlag = true;
       return;
     }
-    if((NCOFreq - lowSideAdj) <= (-96000 / (1 << spectrumZoom))) {
+    if((NCOFreq - lowSideAdj) <= (-sampleRate / 2.0 / (1 << spectrumZoom))) {
       NCOFreq -= lowSideAdj;
       fineTuneFlag = false;
       resetTuningFlag = true;
@@ -231,7 +231,7 @@ void SetFreq(bool reset) {
   }
 
   //  The receive LO frequency is not dependent on mode or sideband.  CW frequency shift is done in DSP code.
-  Clk2SetFreq = ((centerFreq * SI5351_FREQ_MULT) + 48000.0 * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
+  Clk2SetFreq = ((centerFreq * SI5351_FREQ_MULT) + intermediateFreq * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
 
   if(radioState == SSB_RECEIVE_STATE || radioState == CW_RECEIVE_STATE) {   //  Receive state
     si5351.set_freq(Clk2SetFreq, SI5351_CLK2);

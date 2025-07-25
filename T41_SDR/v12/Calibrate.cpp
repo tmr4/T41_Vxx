@@ -238,7 +238,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   if(calType == 2 || calType == 3) {
     // remove the IF offset
     // *** why? ***
-    TxRxFreq = centerFreq = centerFreq - 48000.0 + NCOFreq;
+    TxRxFreq = centerFreq = centerFreq - intermediateFreq + NCOFreq;
     //TxRxFreq = centerFreq = centerFreq + NCOFreq;
 
   } else {
@@ -1313,20 +1313,20 @@ FLASHMEM float ShowSpectrum2() {
              = 512 / 2 / 128 * 8
              = 16
   Therefore the bin width of each FFT bin is SAMPLE_RATE / FFT_LEN = 192000 / 512 = 375 Hz.
-  The frequency of the middle bin is centerFreq + 48000.0 and our spectrum spans
-  (centerFreq + 48000.0 - SAMPLE_RATE/2) to (centerFreq + 48000.0 + SAMPLE_RATE/2).
+  The frequency of the middle bin is centerFreq + intermediateFreq and our spectrum spans
+  (centerFreq + intermediateFreq - SAMPLE_RATE/2) to (centerFreq + intermediateFreq + SAMPLE_RATE/2).
 
   So the equation for bin number n given frequency Clk2SetFreq is:
     n = (Clk2SetFreq - Clk1SetFreq)/375 + 256
-      = (Clk2SetFreq - (centerFreq + 48000.0))/375 + 256
+      = (Clk2SetFreq - (centerFreq + intermediateFreq))/375 + 256
 
-  In receive cal mode, we set Clk2SetFreq to centerFreq + 2*48000.0
+  In receive cal mode, we set Clk2SetFreq to centerFreq + 2*intermediateFreq
   So we expect the desired tone to appear in bin
-    n_tone = 48000.0/375 + 256
+    n_tone = intermediateFreq/375 + 256
   while the undesired image product will be at
-    n_image= -48000.0/375 + 256
+    n_image= -intermediateFreq/375 + 256
 
-  Which are, given 48000.0 = 48000:
+  Which are, given intermediateFreq = 48000:
     n_tone = 384
     n_image= 128
   *********************************************/
@@ -1996,7 +1996,7 @@ FLASHMEM void ProcessTransmitCalIQData() {
   //float rfGainValue;
   static float theta = -2 * PI;
   float tmp;
-  const float thetaInc = 2.0 * PI * 48000.0 / 192000.0;
+  const float thetaInc = 2.0 * PI * intermediateFreq / sampleRate;
 
   if((uint32_t)Q_in_L.available() > 16 && (uint32_t)Q_in_R.available() > 16) {
     for(unsigned i = 0; i < 16; i++) {
@@ -2646,7 +2646,7 @@ FLASHMEM void CalibrateTransmitIQ() {
           // signal strength from external source over CAT SM
           minSignalStrength = 0;
 
-          SendSetFreq(centerFreq + 48000.0);
+          SendSetFreq(centerFreq + intermediateFreq);
           SendSetMode(DEMOD_USB);
           SendSetDisplayZoom(2);
           SendSetNarrowFilter();
@@ -2698,7 +2698,7 @@ FLASHMEM void CalibrateTransmitIQ() {
             // set up this and external unit for calibration
             minSignalStrength = 0;
             manualSignalStrengthSource = false;
-            SendSetFreq(centerFreq + 48000.0);
+            SendSetFreq(centerFreq + intermediateFreq);
             if(bands[currentBand].demod == DEMOD_LSB) {
               SendSetMode(DEMOD_USB);
             } else {
@@ -2750,7 +2750,7 @@ FLASHMEM void CalibrateTransmitIQ() {
         // set up this and external unit for calibration
         minSignalStrength = 0;
         manualSignalStrengthSource = false;
-        SendSetFreq(centerFreq + 48000.0);
+        SendSetFreq(centerFreq + intermediateFreq);
         if(bands[currentBand].demod == DEMOD_LSB) {
           SendSetMode(DEMOD_USB);
         } else {
@@ -2805,9 +2805,9 @@ FLASHMEM void DisplayTones(int cycles1, int cycles2) {
   tft.fillRect(680, 440, 150, tft.getFontHeight(), RA8875_BLACK);
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(680, 400);
-  tft.print(cycles1 * 24000.0 / 256.0, 0);
+  tft.print(cycles1 * sampleRate / 8.0 / 256.0, 0);
   tft.setCursor((float)680, 440);
-  tft.print((float)cycles2 * 24000.0 / 256.0, 0);
+  tft.print((float)cycles2 * sampleRate / 8.0 / 256.0, 0);
 }
 
 FLASHMEM void IncTone(int tone, int inc = 0) {
@@ -2967,8 +2967,8 @@ FLASHMEM void ShowTwoToneDisplay() {
   IncTone(0);
 }
 
-const float thetaInc1 = 2.0 * PI * 700.0 / 24000.0;
-const float thetaInc2 = 2.0 * PI * 1900.0 / 24000.0;
+const float thetaInc1 = 2.0 * PI * 700.0 / (sampleRate / 8.0);
+const float thetaInc2 = 2.0 * PI * 1900.0 / (sampleRate / 8.0);
 
 FLASHMEM void GetTwoToneData(float *bufI, float *bufQ, int len) {
   static float theta1, theta2;

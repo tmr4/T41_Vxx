@@ -335,7 +335,7 @@ FLASHMEM void AltNoiseBlanking(float* insamp, int Nsam, float* E ) {
 
 FLASHMEM void AGCLoadValues() {
   float32_t tmp;
-  float32_t sample_rate = 24000.0;
+  float32_t sample_rate = sampleRate / 8.0;
 
   //calculate internal parameters
   switch(AGCMode)
@@ -509,7 +509,7 @@ void AGC() {
           } else {
             if(hang_enable && (hang_backaverage > hang_level)) {
               state = 2;
-              hang_counter = (int)(hangtime * 24000.0);
+              hang_counter = (int)(hangtime * sampleRate / 8.0);
               decay_type = 1;
             } else {
               state = 3;

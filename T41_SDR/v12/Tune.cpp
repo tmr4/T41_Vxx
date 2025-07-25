@@ -152,13 +152,13 @@ void SetNCOFreq(int newNCOFreq) {
 
   // recenter at band edges
   if(spectrumZoom != 0) {
-    if((NCOFreq + highSideAdj) >= (96000 / (1 << spectrumZoom))) {
+    if((NCOFreq + highSideAdj) >= (sampleRate / 2.0 / (1 << spectrumZoom))) {
       NCOFreq += highSideAdj;
       fineTuneFlag = false;
       resetTuningFlag = true;
       return;
     }
-    if((NCOFreq - lowSideAdj) <= (-96000 / (1 << spectrumZoom))) {
+    if((NCOFreq - lowSideAdj) <= (-sampleRate / 2.0 / (1 << spectrumZoom))) {
       NCOFreq -= lowSideAdj;
       fineTuneFlag = false;
       resetTuningFlag = true;
@@ -263,7 +263,7 @@ void SetFreq(bool reset) {
 
   // NEVER USE AUDIONOINTERRUPTS HERE: that introduces annoying clicking noise with every frequency change
 
-  Clk1SetFreq = ((f * SI5351_FREQ_MULT) + 48000.0 * SI5351_FREQ_MULT);
+  Clk1SetFreq = ((f * SI5351_FREQ_MULT) + ((int)intermediateFreq) * SI5351_FREQ_MULT);
   multiple = EvenDivisor(Clk1SetFreq / SI5351_FREQ_MULT);
   pll_freq = Clk1SetFreq * multiple;
   freq = pll_freq / multiple;     // is this equal to Clk1SetFreq?
