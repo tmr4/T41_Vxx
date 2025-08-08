@@ -15,6 +15,7 @@
 #include "FIR.h"
 #include "ft8.h"
 #include "InfoBox.h"
+#include "keyer.h"
 #include "Menu.h"
 #include "MenuProc.h"
 #include "Noise.h"
@@ -46,8 +47,6 @@ char atom, currentAtom;
 uint8_t ANR_notch = 0;
 uint8_t ANR_notchOn = 0;
 
-int mute = 0; // 0 - normal volume, 1 - mute (*** this is never changed ***)
-
 float32_t DMAMEM audioFFT[1024] __attribute__((aligned(4)));
 float32_t DMAMEM audioIFFT[1024 + 1];
 float32_t DMAMEM prevAudioBuffer_L[256];
@@ -61,31 +60,23 @@ float32_t DMAMEM freqFFT[1024] __attribute__((aligned(4)));
 float32_t DMAMEM freqSpecBuf[1024];
 float32_t DMAMEM prevFreqSpecBuf[1024];
 
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_I_state[4 + 2048 - 1];
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q_state[4 + 2048 - 1];
-
-arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I;
-arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_Q;
-
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_coeffs[4];
-
-const uint32_t IIR_biquad_Zoom_FFT_N_stages = 4;
-
-float32_t IIR_biquad_Zoom_FFT_I_state[IIR_biquad_Zoom_FFT_N_stages * 4];
-float32_t IIR_biquad_Zoom_FFT_Q_state[IIR_biquad_Zoom_FFT_N_stages * 4];
-
-arm_biquad_casd_df1_inst_f32 IIR_biquad_Zoom_FFT_I;
-arm_biquad_casd_df1_inst_f32 IIR_biquad_Zoom_FFT_Q;
+arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_I1_state[12 + 2048 - 1];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q1_state[12 + 2048 - 1];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_I2_state[12 + 2048 - 1];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q2_state[12 + 2048 - 1];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate1_coeffs[12];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate2_coeffs[12];
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
 float VolumeToAmplification(int volume);
-void FreqShift1();
+void FreqShift1(int blockSize);
 void FreqShift2();
-void ZoomFFTExe(uint32_t blockSize);
-void CalcZoom1Magn();
+void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
+void Calc1xFreqSpec();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -117,7 +108,7 @@ FLASHMEM void InitAMDemodBiquadFilter() {
   biquad_lowpass1.numStages = 1;  // set number of stages
   biquad_lowpass1.pCoeffs = biquad_lowpass1_coeffs;      // set pointer to coefficients file
 
-  for(unsigned i = 0; i < 4; i++) {
+  for(int i = 0; i < 4; i++) {
     biquad_lowpass1_state[i] = 0.0;  // set state variables to zero
   }
 
@@ -133,12 +124,12 @@ void CalcAudioMax() {
 
   // Prepare the audio signal buffers
   // fill buffer with last events audio samples
-  for(unsigned i = 0; i < 256; i++) {
+  for(int i = 0; i < 256; i++) {
     audioNFM[i * 2] = prevNFMAudioBuffer_L[i]; // real
     audioNFM[i * 2 + 1] = prevNFMAudioBuffer_R[i]; // imaginary
   }
 
-  for(unsigned i = 0; i < 256; i++) {
+  for(int i = 0; i < 256; i++) {
     // copy recent samples to last_sample_buffer for next time
     prevNFMAudioBuffer_L[i] = audioBufferL[i];
     prevNFMAudioBuffer_R[i] = audioBufferR[i];
@@ -173,12 +164,12 @@ void AudioDSP(bool updateSpectrumData, int offset, bool imComp = true) {
 
   // Prepare the audio signal buffers
   // fill buffer with last events audio samples
-  for(unsigned i = 0; i < 256; i++) {
+  for(int i = 0; i < 256; i++) {
     audioFFT[i * 2] = prevAudioBuffer_L[i]; // real
     audioFFT[i * 2 + 1] = imComp ? prevAudioBuffer_R[i] : 0.0; // imaginary
   }
 
-  for(unsigned i = 0; i < 256; i++) {
+  for(int i = 0; i < 256; i++) {
     // copy recent samples to last_sample_buffer for next time
     prevAudioBuffer_L[i] = audioBufferL[i];
     if(imComp) prevAudioBuffer_R[i] = audioBufferR[i];
@@ -241,15 +232,23 @@ void AudioDSP(bool updateSpectrumData, int offset, bool imComp = true) {
                                false (default): skips these calculations
 
    Return value:
-      true: input stream was processed; false: not enough data to process
+      0: false: not enough data to process
+      1: input stream was processed
+      2: spectrums updates
  *****/
-bool ProcessReceiverData(bool updateSpectrumData) {
-  bool success = false;
+int ProcessReceiverData(bool updateSpectrumData) {
   static float32_t audiotmp = 0.0f;
   float32_t w;
   static float32_t wold = 0.0f;
   q15_t q15_buffer_LTemp[2048];
-  float rfGainValue;
+  float rfGainValue, intScaler;
+  // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8
+  int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
+  // the required data required by the frequency spectrum calc depends on the zoom factor
+  static int reqPasses = 20;
+  static int passes = 20;
+  bool updateFreqSpec = false; // true: spectrums updated, otherwise false
+  bool success = false; // true: enough data to process, otherwise false
 
   /**********************************************************************************
         Get samples from queue buffers
@@ -274,16 +273,17 @@ bool ProcessReceiverData(bool updateSpectrumData) {
   // even with reenabling interrupts during the idle loop.  Perhaps the low priority of the update interrupt was affecting this.
   //
   // we allow input buffer availability to regulate FT8 wav file decoding otherwise we'll process the wav file too fast
-  if(((uint32_t)Q_in_L.available() > 16) && ((uint32_t)Q_in_R.available() > 16)) {
-#ifdef PROFILER_ACTIVE
+  if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) {
+    success = true;
+    #ifdef PROFILER_ACTIVE
     digitalWrite(4, HIGH);
-#endif
+    #endif
 
     elapsedMicros usec = 0;
 
     // get audio samples from the audio buffers and convert them to float
     // read in 32 blocks á 128 samples in I and Q
-    for(int i = 0; i < 16; i++) {
+    for(int i = 0; i < blocks; i++) {
       /**********************************************************************************
           Using arm_Math library, convert to float one buffer_size.
           Float_buffer samples are now standardized from > -1.0 to < 1.0
@@ -298,8 +298,8 @@ bool ProcessReceiverData(bool updateSpectrumData) {
     // *** TODO: consider if this is needed for FT8 ***
     // set RF gain for all bands
     rfGainValue = pow(10, (float)rfGainAllBands / 20);
-    arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, 2048);
-    arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 2048);
+    arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, blocks * 128);
+    arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, blocks * 128);
 
     /**********************************************************************************
         Remove DC offset to reduce centeral spike.  First read the Mean value of
@@ -307,13 +307,20 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         and subtract the Means from the float L and R buffer data arrays.  Again use Arm_Math functions
         to manipulate the arrays.  Arrays are all 2048 long
     **********************************************************************************/
-    RemoveDCBias();
+    switch(bands[currentBand].demod) {
+      case DEMOD_FT8:
+        break;
+
+      default:
+        RemoveDCBias();
+        break;
+    }
 
     /**********************************************************************************
         Scale the data buffers by the RFgain value defined in bands[currentBand] structure
     **********************************************************************************/
-    arm_scale_f32(audioBufferL, bands[currentBand].RFgain, audioBufferL, 2048);
-    arm_scale_f32(audioBufferR, bands[currentBand].RFgain, audioBufferR, 2048);
+    arm_scale_f32(audioBufferL, bands[currentBand].RFgain, audioBufferL, blocks * 128);
+    arm_scale_f32(audioBufferR, bands[currentBand].RFgain, audioBufferR, blocks * 128);
 
     /**********************************************************************************
       Clear Buffers
@@ -322,6 +329,12 @@ bool ProcessReceiverData(bool updateSpectrumData) {
       I deleted the code block.  You can read more about it here:
       https://new.reddit.com/r/T41_EP/comments/1dus4d0/clearing_up_some_artifacts_in_my_t41_audio_stream/
     **********************************************************************************/
+    // this is still helpful for troubleshooting at times when the audio process isn't working correctly
+    //if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
+    //  Serial.println("clearing...");
+    //  Q_in_L.clear();
+    //  Q_in_R.clear();
+    //}
 
     /**********************************************************************************
       IQ amplitude and phase correction.  For this scaled down version the I an Q channels are
@@ -333,11 +346,12 @@ bool ProcessReceiverData(bool updateSpectrumData) {
 
     // Manual IQ amplitude correction
     if(bands[currentBand].demod == DEMOD_LSB || bands[currentBand].demod == DEMOD_AM || bands[currentBand].demod == DEMOD_SAM || bands[currentBand].demod == DEMOD_NFM) {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 2048);
-      IQPhaseCorrection(audioBufferL, audioBufferR, -IQPhaseCorrectionFactor[currentBand], 2048);
-    } else if(bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_AM || bands[currentBand].demod == DEMOD_SAM || bands[currentBand].demod == DEMOD_FT8) {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 2048);
-      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 2048);
+      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, blocks * 128);
+      IQPhaseCorrection(audioBufferL, audioBufferR, -IQPhaseCorrectionFactor[currentBand], blocks * 128);
+    //} else if(bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_AM || bands[currentBand].demod == DEMOD_SAM || bands[currentBand].demod == DEMOD_FT8) {
+    } else {
+      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, blocks * 128);
+      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], blocks * 128);
     }
 
     /**********************************************************************************
@@ -348,13 +362,14 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         Only go there from here, if magnification == 1
     ***********************************************************************************************/
 
-    if(spectrumZoom == 0 && updateSpectrumData) {
-      CalcZoom1Magn();
+    if((spectrumZoom == 0) && updateSpectrumData) {
+      Calc1xFreqSpec();
+      updateFreqSpec = true;
 
     // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
       if(calibrateFlag == 1) {
-        FFTupdated = true;
-        return success; // *** TODO: check that receive calibrate is coded to get the data it needs ***
+        FFTupdated = true; // *** TODO: consolidate this as return from ShowSpectrum2 ***
+        return true; // *** TODO: check that receive calibrate is coded to get the data it needs ***
       }
     }
 
@@ -370,20 +385,39 @@ bool ProcessReceiverData(bool updateSpectrumData) {
               leave first value (DC component) as it is!
           xnew(1) =  - ximag(1) + jxreal(1)
     **********************************************************************************/
-    FreqShift1();
+    FreqShift1(blocks * 128);
 
     /**********************************************************************************
-        SPECTRUM_ZOOM_2 and larger here after frequency conversion!
-        Spectrum zoom displays a magnified display of the data around the translated receive frequency.
-        Processing is done in the ZoomFFTExe(2048) function.  For magnifications of 2x to 8X
-        Larger magnification are not needed in practice.
-
-        Spectrum Zoom uses the shifted spectrum, so the center "hump" around DC is shifted by fs/4
+        Spectrum zoom displays a magnified display of the data around the translated
+        receive frequency.  It uses the shifted spectrum, so the center "hump" around DC is
+        shifted by Fs/4.  Buffering and processing is done in the CalcZoomFreqSpec function.
     **********************************************************************************/
-    // Run frequency spectrum FFT routine only once for each audio process loop
-    if(spectrumZoom != 0 && updateSpectrumData) {
-      ZoomFFTExe(2048); // there seems to be a BUG here, because the blocksize has to be adjusted according to magnification,
-      // does not work for magnifications > 8
+    // Kick off frequency spectrum FFT routine only once for each audio process loop
+    if(spectrumZoom != 0) {
+      if(updateSpectrumData && (reqPasses == 20)) {
+        passes = 0;
+
+        // calc passes needed to buffer a complete frequency spectrum at the current zoom factor
+        // and sample rate.  At 192kkHz sample rate, the zoom factor alone determines the passes
+        // required as the sample rate term below is 0.  At 44.1kHz sample rate, zoom is limited
+        // to 2x and 4x (22kHz/11kHz BW which is roughly equivalent to an 8x or 16x zoom).
+        // so the passes required based on zoom factor will always be 1 but the passes required
+        // based on sample rate are 4 or 8.
+        //          <----------------- zoom factor ------------------>   <----- sample rate ----->
+        reqPasses = (spectrumZoom < 3 ? 1 : ((1 << spectrumZoom) / 4)) + 2048 / (blocks * 128) - 1;
+      }
+      if(passes < reqPasses) {
+        passes++;
+        if(passes == reqPasses) {
+          // flag that we're ready to update frequency spectrum
+          // no need to reset passes, we won't pass through this
+          // block again until the next time updateSpectrumData is set
+          updateFreqSpec = true;
+          reqPasses = 20;
+          passes = 20;
+        }
+        CalcZoomFreqSpec(blocks * 128, updateFreqSpec);
+      }
     }
 
     // *** TODO: this is from v11 - reconcile calibration calls within Process.cpp ***
@@ -405,7 +439,6 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         Wheatley, M. (2011): CuteSDR Technical Manual Ver. 1.01. - http://sourceforge.net/projects/cutesdr/
         Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition.
     *************************************************************************************************/
-
     FreqShift2();
 
     /**********************************************************************************
@@ -419,13 +452,7 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         now 192K/8 = 24K SPS.  The array size is also reduced by 8, making FFT calculations much faster.
         The effective bandwidth (up to Nyquist frequency) is 12KHz.
     **********************************************************************************/
-
     switch(bands[currentBand].demod) {
-      case DEMOD_PSK31_WAV:
-        // *** TODO: refactored code needs work ***
-        ProcessPSK31WaveData();
-        break;
-
       case DEMOD_PSK31:
         // decimation-by-4 in-place!
         arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
@@ -433,6 +460,20 @@ bool ProcessReceiverData(bool updateSpectrumData) {
 
         // we're now at 48k samples per second, the rate used by the PSK31 routines
         // transfer this to the PSK31 buffer
+        // *** TODO: finish psk31 work ***
+        // but for now just continue
+        // *** TODO: the below breaks audio processing (audio buffers fill), don't know why ***
+        // decimation-by-2 in-place
+        //arm_fir_decimate_f32(&FIR_dec2_I, audioBufferL, audioBufferL, 512);
+        //arm_fir_decimate_f32(&FIR_dec2_Q, audioBufferR, audioBufferR, 512);
+        break;
+
+      case DEMOD_FT8:
+        break;
+
+      case DEMOD_PSK31_WAV:
+        // *** TODO: refactored code needs work ***
+        ProcessPSK31WaveData();
         break;
 
       case DEMOD_FT8_WAV:
@@ -461,19 +502,25 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         // Prepare the audio signal buffers
         // fill recent audio samples into audioFFT (left channel: re, right channel: im)
         // we'll use this to demodulate the NFM signal
-        for(unsigned i = 0; i < 256; i++) {
+        for(int i = 0; i < 256; i++) {
           audioFFT[512 + i * 2] = audioBufferL[i]; // real
           audioFFT[512 + i * 2 + 1] = audioBufferR[i]; // imaginary
         }
         break;
 
+      case DEMOD_FT8:
+        AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
+
+        // *** TODO: consider if AGC is needed for FT8 or even possible at 44.1kHz sample rate ***
+        break;
+
       case DEMOD_FT8_WAV:
-        AudioDSP(updateSpectrumData, 20, false); // no imaginary component for these
+        AudioDSP(updateFreqSpec, 20, false); // no imaginary component for these
         break;
 
       default:
         // prepare audio signals for all other modes
-        AudioDSP(updateSpectrumData, AUDIO_SPEC_SHIFT);
+        AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
 
         // apply automatic gain control
         // AGC acts upon on the audio data in audioIFFT
@@ -487,28 +534,27 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         our time domain output is a combination of the real part (left channel) AND the imaginary part (right channel) of the second half of the audioFFT
         The demod mode is accomplished by selecting/combining the real and imaginary parts of the output of the IFFT process.
     **********************************************************************************/
-
     switch(bands[currentBand].demod) {
       case DEMOD_USB:
-      case DEMOD_FT8: // demodulate FT8 signals via antenna input as USB for audio
-        for(unsigned i = 0; i < 256; i++) {
+      case DEMOD_FT8_DECODE: // demodulate FT8 signals via antenna input as USB for audio
+        for(int i = 0; i < 256; i++) {
           audioBufferL[i] = audioIFFT[512 + (i * 2)];
         }
 
           // save audio signal to FT8 buffer
-        if(bands[currentBand].demod == DEMOD_FT8) {
+        if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
           BufferFT8Data(q15_buffer_LTemp);
         }
         break;
 
       case DEMOD_LSB:
-        for(unsigned i = 0; i < 256; i++) {
+        for(int i = 0; i < 256; i++) {
           audioBufferL[i] = audioIFFT[512 + (i * 2)];
         }
         break;
 
       case DEMOD_AM:
-        for(unsigned i = 0; i < 256; i++) {     // Magnitude estimation Lyons (2011): page 652 / libcsdr
+        for(int i = 0; i < 256; i++) {     // Magnitude estimation Lyons (2011): page 652 / libcsdr
           audiotmp = AlphaBetaMag(audioIFFT[512 + (i * 2)], audioIFFT[512 + (i * 2) + 1]);
           // DC removal filter -----------------------
           w = audiotmp + wold * 0.99f; // Response to below 200Hz
@@ -533,7 +579,7 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         arm_scale_f32(audioBufferL, AUDIO_SCALER_NFM, audioBufferL, 256);
 
         // limit the demodulated signal
-        for(unsigned i = 1; i < 256; i++) {
+        for(int i = 1; i < 256; i++) {
           float32_t tmp = audioBufferL[i];
 
           // limit it to -1 <= tmp <= 1
@@ -559,7 +605,7 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, sampleRate / 8.0);
 
         // process audio for demodulated NFM and FT8 wave file
-        AudioDSP(updateSpectrumData, AUDIO_SPEC_SHIFT_NFM, false); // no imaginary component for these
+        AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT_NFM, false); // no imaginary component for these
 
         // apply automatic gain control
         // AGC acts upon on the audio data in audioIFFT
@@ -567,23 +613,17 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         AGC();
 
         // transfer audio signal back to buffer
-        for(unsigned i = 0; i < 256; i++) {
+        for(int i = 0; i < 256; i++) {
           audioBufferL[i] = audioIFFT[512 + (i * 2)];
         }
         break;
 
-      case DEMOD_PSK31_WAV:
-        // determine the second derivative of the phase angle
-        //Psk31Decoder(&audioFFT[512], audioBufferL_EX, 256);
-        Psk31PhaseShiftDetector(&audioFFT[512], audioBufferL_EX, 256);
-        break;
-
       case DEMOD_PSK31:
-        break;
+        //break;
 
-      case DEMOD_FT8_WAV:
+      case DEMOD_FT8:
         // transfer audio signal back to buffer
-        for(unsigned i = 0; i < 256; i++) {
+        for(int i = 0; i < 256; i++) {
           audioBufferL[i] = audioIFFT[512 + (i * 2)];
         }
         break;
@@ -592,12 +632,25 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         AMDecodeSAM();
         break;
 
+      case DEMOD_PSK31_WAV:
+        // determine the second derivative of the phase angle
+        //Psk31Decoder(&audioFFT[512], audioBufferL_EX, 256);
+        Psk31PhaseShiftDetector(&audioFFT[512], audioBufferL_EX, 256);
+        break;
+
+      case DEMOD_FT8_WAV:
+        // transfer audio signal back to buffer
+        for(int i = 0; i < 256; i++) {
+          audioBufferL[i] = audioIFFT[512 + (i * 2)];
+        }
+        break;
+
       default:
         break;
     }
 
     // send audio data to control app if applicable
-    if(updateSpectrumData && controlDataFlag) {
+    if(updateFreqSpec && controlDataFlag) {
       for(int i = 0; i < AUDIO_SPEC_RES; i++) {
         // audioYPixel is already >= 0, limit it to 255
         specData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
@@ -614,12 +667,11 @@ bool ProcessReceiverData(bool updateSpectrumData) {
     }
 #endif
 
-    //============================  Receive EQ  ========================
+    // apply receive EQ if set
     if(receiveEQFlag == ON ) {
       DoReceiveEQ();
       //arm_copy_f32(audioBufferL, audioBufferR, 256);
     }
-    //============================ End Receive EQ
 
     /**********************************************************************************
       Noise Reduction
@@ -646,15 +698,13 @@ bool ProcessReceiverData(bool updateSpectrumData) {
         //arm_scale_f32(audioBufferR, 2, audioBufferR, 256);
         break;
     }
-    //==================  End NR ============================
 
-    // ===========================Automatic Notch ==================
+    // apply automatic notch if set
     if(ANR_notchOn == 1) {
       ANR_notch = 1;
       Xanr();
       arm_copy_f32(audioBufferR, audioBufferL, 256);
     }
-    // ====================End notch =================================
 
     /**********************************************************************************
       EXPERIMENTAL: noise blanker
@@ -703,28 +753,50 @@ bool ProcessReceiverData(bool updateSpectrumData) {
     }
 
     // ======================================Interpolation  ================
-    // interpolation-by-2
-    arm_fir_interpolate_f32(&FIR_int1_I, audioBufferL, audioIFFT, 256);
+    switch(bands[currentBand].demod) {
+      case DEMOD_FT8:
+        // not needed, we're at a 44.1kHz sample rate and haven't decimated
+        // *** this scaler works for a Windows input sound device volume of 10 to give
+        // the recommended 30dB input level on WSJT-X ***
+        intScaler = 0.1;
+        break;
 
-    // interpolation-by-4
-    arm_fir_interpolate_f32(&FIR_int2_I, audioIFFT, audioBufferL, 512);
+      default:
+        // interpolation-by-2
+        arm_fir_interpolate_f32(&FIR_int1_I, audioBufferL, audioIFFT, 256);
+
+        // interpolation-by-4
+        arm_fir_interpolate_f32(&FIR_int2_I, audioIFFT, audioBufferL, 512);
+
+        // scale by 8x to compensate for the interpolation
+        intScaler = 8.0;
+        break;
+    }
 
     /**********************************************************************************
       Digital Volume Control
     **********************************************************************************/
+    // v11 has a hardware MUTE output pin that is unrelated to this, at least currently.
+    // *** TODO: there is currently no mechanism to set mute. ***
+    /*
+    int mute = 0; // 0 - normal volume, 1 - mute (*** this is never changed ***)
     if(mute == 1) {
-      arm_scale_f32(audioBufferL, 0.0, audioBufferL, 2048);
+      arm_scale_f32(audioBufferL, 0.0, audioBufferL, blocks * 128);
     } else if(mute == 0) {
       // this includes a factor of 8x to compensate for the interpolation above
-      arm_scale_f32(audioBufferL, 8.0 * VolumeToAmplification(audioVolume) * VOL_FACTOR, audioBufferL, 2048);
+      arm_scale_f32(audioBufferL, 8.0 * VolumeToAmplification(audioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
     }
+    */
+    arm_scale_f32(audioBufferL, intScaler * VolumeToAmplification(audioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
 
     /**********************************************************************************
       CONVERT TO INTEGER AND PLAY AUDIO
     **********************************************************************************/
-    arm_float_to_q15(audioBufferL, q15_buffer_LTemp, 2048);
-    Q_out_L.play(q15_buffer_LTemp, 2048);
+    arm_float_to_q15(audioBufferL, q15_buffer_LTemp, blocks * 128);
+    Q_out_L.play(q15_buffer_LTemp, blocks * 128);
 
+    /*
+    // volume testing
     float tmp;
     static float max = 0;
     uint32_t index;
@@ -734,6 +806,7 @@ bool ProcessReceiverData(bool updateSpectrumData) {
     }
 
     Serial.print(tmp*32768.0);Serial.print(", "); Serial.println(max*32768.0);
+    */
 
     elapsed_micros_sum = elapsed_micros_sum + usec;
     elapsed_micros_idx_t++;
@@ -741,11 +814,9 @@ bool ProcessReceiverData(bool updateSpectrumData) {
 #ifdef PROFILER_ACTIVE
     digitalWrite(4, LOW);
 #endif
-
-    success = true;
   }
 
-  return success;
+  return !success ? 0 : (updateFreqSpec ? 2 : 1);
 }
 
 /*****
@@ -885,7 +956,7 @@ FASTRUN void ProcessControls() {
 }
 
 /*****
-  Purpose: FreqShift1()
+  Purpose:
         Frequency translation by Fs/4 without multiplication from Lyons (2011): chapter 13.1.2 page 646
         together with the savings of not having to shift/rotate the audioFFT, this saves
         about 1% of processor use
@@ -896,30 +967,48 @@ FASTRUN void ProcessControls() {
            xnew(0) =  xreal(0) + jximag(0)
                leave first value (DC component) as it is!
            xnew(1) =  - ximag(1) + jxreal(1)
-*****/
-void FreqShift1() {
-  float32_t hh1;
-  float32_t hh2;
+           ...
 
-  for(unsigned i = 0; i < 2048; i += 4) {
-    hh1 = - audioBufferR[i + 1];  // xnew(1) =  - ximag(1) + jxreal(1)
-    hh2 =   audioBufferL[i + 1];
-    audioBufferL[i + 1] = hh1;
-    audioBufferR[i + 1] = hh2;
-    hh1 = - audioBufferL[i + 2];
-    hh2 = - audioBufferR[i + 2];
-    audioBufferL[i + 2] = hh1;
-    audioBufferR[i + 2] = hh2;
-    hh1 =   audioBufferR[i + 3];
-    hh2 = - audioBufferL[i + 3];
-    audioBufferL[i + 3] = hh1;
-    audioBufferR[i + 3] = hh2;
+      Backward shift:
+      This is for -Fs/4 [moves receive frequency to the right in the spectrumdisplay]
+      // shift backward Fs/4
+      xreal = audioBufferL[i + 1];
+      ximag = audioBufferR[i + 1];
+      audioBufferL[i + 1] = ximag; // xnew(1) = ximag(1) - jxreal(1)
+      audioBufferR[i + 1] = -xreal;
+      xreal = audioBufferL[i + 2];
+      ximag = audioBufferR[i + 2];
+      audioBufferL[i + 2] = -xreal; // xnew(2) = -xreal(2) - jximag(2)
+      audioBufferR[i + 2] = -ximag;
+      xreal = audioBufferL[i + 3];
+      ximag = audioBufferR[i + 3];
+      audioBufferL[i + 3] = -ximag; // xnew(3) = -ximag(3) + jxreal(3)
+      audioBufferR[i + 3] = xreal;
+*****/
+void FreqShift1(int blockSize) {
+  float32_t xreal, ximag;
+
+  for(int i = 0; i < blockSize; i += 4) {
+    // shift forward Fs/4
+    xreal = audioBufferL[i + 1];
+    ximag = audioBufferR[i + 1];
+    audioBufferL[i + 1] = -ximag; // xnew(1) = -ximag(1) + jxreal(1)
+    audioBufferR[i + 1] = xreal;
+    xreal = audioBufferL[i + 2];
+    ximag = audioBufferR[i + 2];
+    audioBufferL[i + 2] = -xreal; // xnew(2) = -xreal(2) - jximag(2)
+    audioBufferR[i + 2] = -ximag;
+    xreal = audioBufferL[i + 3];
+    ximag = audioBufferR[i + 3];
+    audioBufferL[i + 3] = ximag; // xnew(3) = ximag(3) - jxreal(3)
+    audioBufferR[i + 3] = -xreal;
   }
-  for(unsigned i = 0; i < 2048; i ++) {
+
+  // these will be used for fine tune adjustment in FreqShift2
+  for(int i = 0; i < blockSize; i ++) {
     audioBufferL_EX[i] = audioBufferL[i];
     audioBufferR_EX[i] = audioBufferR[i];
   }
-  // this is for -Fs/4 [moves receive frequency to the right in the spectrumdisplay]
 }
 
 /*****
@@ -1005,96 +1094,86 @@ void FreqShift2() {
 /*****
   Purpose: change IIR and decimation filters for altered frequency spectrum badwidth.
 *****/
-FLASHMEM void ZoomFFTPrep() {
-  // take value of spectrumZoom and initialize IIR lowpass and FIR decimation filters for the right values
-
+FLASHMEM void ZoomFFTFilterUpdate() {
   float32_t Fstop_Zoom = 0.5 * sampleRate / (1 << spectrumZoom);
-  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate_coeffs, 4, Fstop_Zoom, 60, 0, 0.0, sampleRate);
+  int factor1 = spectrumZoom < 3 ? 2 : (1 << spectrumZoom) / 2;
 
-  // this sets the coefficients for the ZoomFFT decimation filter according to the desired magnification mode
-  // for 0 the mag_coeffs will a NULL ptr, since the filter is not going to be used in this mode!
-  if(spectrumZoom < 7) {
-    Fir_Zoom_FFT_Decimate_I.M = (1 << spectrumZoom);
-    Fir_Zoom_FFT_Decimate_Q.M = (1 << spectrumZoom);
-    IIR_biquad_Zoom_FFT_I.pCoeffs = mag_coeffs[spectrumZoom];
-    IIR_biquad_Zoom_FFT_Q.pCoeffs = mag_coeffs[spectrumZoom];
-  } else { // we have to decimate by 128 for all higher magnifications, arm routine does not allow for higher decimations
-    Fir_Zoom_FFT_Decimate_I.M = 128;
-    Fir_Zoom_FFT_Decimate_Q.M = 128;
-    IIR_biquad_Zoom_FFT_I.pCoeffs = mag_coeffs[7];
-    IIR_biquad_Zoom_FFT_Q.pCoeffs = mag_coeffs[7];
-  }
+  // 1st decimation stage
+  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate1_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate);
+
+  // 2nd decimation stage
+  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate2_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate / factor1);
 
   zoom_sample_ptr = 0;
 }
 
-FLASHMEM void InitFFTFilter() {
-  float32_t Fstop_Zoom = 0.5 * sampleRate / (1 << spectrumZoom);
+FLASHMEM void InitZoomFFTFilter(uint32_t blockSize /* = 2048 */) {
+  int factor1 = spectrumZoom < 3 ? 2 : (1 << spectrumZoom) / 2;
+  int factor2 = spectrumZoom < 2 ? 1 : 2;
 
-  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate_coeffs, 4, Fstop_Zoom, 60, 0, 0.0, sampleRate);
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I, 4, 128, Fir_Zoom_FFT_Decimate_coeffs, Fir_Zoom_FFT_Decimate_I_state, 2048);
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q, 4, 128, Fir_Zoom_FFT_Decimate_coeffs, Fir_Zoom_FFT_Decimate_Q_state, 2048);
+  ZoomFFTFilterUpdate();
 
-  IIR_biquad_Zoom_FFT_I.numStages = IIR_biquad_Zoom_FFT_N_stages;  // set number of stages
-  IIR_biquad_Zoom_FFT_Q.numStages = IIR_biquad_Zoom_FFT_N_stages;  // set number of stages
-  for(unsigned i = 0; i < 4 * IIR_biquad_Zoom_FFT_N_stages; i++) {
-    IIR_biquad_Zoom_FFT_I_state[i] = 0.0;  // set state variables to zero
-    IIR_biquad_Zoom_FFT_Q_state[i] = 0.0;  // set state variables to zero
-  }
-  IIR_biquad_Zoom_FFT_I.pState = IIR_biquad_Zoom_FFT_I_state;  // set pointer to the state variables
-  IIR_biquad_Zoom_FFT_Q.pState = IIR_biquad_Zoom_FFT_Q_state;  // set pointer to the state variables
+  // 1st decimation stage
+  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I1, 12, factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_I1_state, blockSize);
+  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q1, 12, factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_Q1_state, blockSize);
 
-  ZoomFFTPrep();
+  // 2nd decimation stage
+  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I2, 12, factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_I2_state, blockSize / factor1);
+  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q2, 12, factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_Q2_state, blockSize / factor1);
 }
 
 /*****
   Purpose: Calculate frequency spectrum
            Intended for spectrumZoom > 1
+
+           *** TODO: process here is poorly explained, fix ***
 *****/
-void ZoomFFTExe(uint32_t blockSize) {
+void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
   float32_t LPFcoeff;
   float32_t onem_LPFcoeff;
-  float32_t x_buffer[blockSize]; // can be 4096 [FFT length == 1024] or even 8192 [FFT length == 2048]
+  float32_t x_buffer[blockSize];
   float32_t y_buffer[blockSize];
-  static float32_t FFT_ring_buffer_x[SPECTRUM_RES*2];
-  static float32_t FFT_ring_buffer_y[SPECTRUM_RES*2];
-  int sample_no = SPECTRUM_RES; // sample_no is 256, in high magnify modes it is smaller but it must never be > SPECTRUM_RES
-  float32_t multiplier;
+  static float32_t FFT_ring_buffer_x[SPECTRUM_RES * 2];
+  static float32_t FFT_ring_buffer_y[SPECTRUM_RES * 2];
+  int sample_no = blockSize / (1 << spectrumZoom);
+  float32_t multiplier = (float32_t)spectrumZoom;;
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
+  int factor = spectrumZoom < 3 ? 2 : (1 << spectrumZoom) / 2;
 
-  sample_no = 2048 / (1 << spectrumZoom);
-  if(sample_no > SPECTRUM_RES) {
+  if (sample_no > SPECTRUM_RES) {
     sample_no = SPECTRUM_RES;
   }
 
-  arm_biquad_cascade_df1_f32(&IIR_biquad_Zoom_FFT_I, audioBufferL, x_buffer, blockSize);
-  arm_biquad_cascade_df1_f32(&IIR_biquad_Zoom_FFT_Q, audioBufferR, y_buffer, blockSize);
+  // decimation 1
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I1, audioBufferL, x_buffer, blockSize);
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q1, audioBufferR, y_buffer, blockSize);
 
-  // decimation
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I, x_buffer, x_buffer, blockSize);
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q, y_buffer, y_buffer, blockSize);
+  // decimation 2
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I2, x_buffer, x_buffer, blockSize / factor);
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q2, y_buffer, y_buffer, blockSize / factor);
 
-  // This puts the sample_no samples into the ringbuffer -->
-  // the right order has to be thought about!
-  // we take all the samples from zoom_sample_ptr to 256 and
-  // then all samples from 0 to zoom_sampl_ptr - 1
-  // fill into ringbuffer
 
-  // interleave real and imaginary input values [real, imag, real, imag . . .]
+  if(zoom_sample_ptr >= SPECTRUM_RES) zoom_sample_ptr = 0;
+
+  // put sample_no samples into the circular buffer
   for(int i = 0; i < sample_no; i++) {
     FFT_ring_buffer_x[zoom_sample_ptr] = x_buffer[i];
     FFT_ring_buffer_y[zoom_sample_ptr] = y_buffer[i];
     zoom_sample_ptr++;
-    if(zoom_sample_ptr >= SPECTRUM_RES)
-      zoom_sample_ptr = 0;
+    if(zoom_sample_ptr >= SPECTRUM_RES) zoom_sample_ptr = 0;
   }
 
-  multiplier = (float32_t)spectrumZoom;
+  // populate the FFT array and apply a Hanning window
+  // the right order has to be thought about!
+  // we take all the samples from zoom_sample_ptr to 256 and
+  // then all samples from 0 to zoom_sampl_ptr - 1
   if(spectrumZoom > 3) { // SPECTRUM_ZOOM_8
     multiplier = (float32_t)(1 << spectrumZoom);
   }
   for(int idx = 0; idx < SPECTRUM_RES; idx++) {
-    freqFFT[idx * 2 + 0] =  multiplier * FFT_ring_buffer_x[zoom_sample_ptr] * (0.5 - 0.5 * cos(6.28 * idx / SPECTRUM_RES)); //Hanning Window AFP 03-12-21
+    // interleave real and imaginary input values [real, imag, real, imag . . .]
+    // apply Hanning window
+    freqFFT[idx * 2 + 0] =  multiplier * FFT_ring_buffer_x[zoom_sample_ptr] * (0.5 - 0.5 * cos(6.28 * idx / SPECTRUM_RES));
     freqFFT[idx * 2 + 1] =  multiplier * FFT_ring_buffer_y[zoom_sample_ptr] * (0.5 - 0.5 * cos(6.28 * idx / SPECTRUM_RES));
     zoom_sample_ptr++;
     if(zoom_sample_ptr >= SPECTRUM_RES) {
@@ -1125,85 +1204,87 @@ void ZoomFFTExe(uint32_t blockSize) {
     freqSpecBuf[i] = (freqFFT[(i + SPECTRUM_RES / 2) * 2] * freqFFT[(i + SPECTRUM_RES / 2)  * 2] + freqFFT[(i + SPECTRUM_RES / 2)  * 2 + 1] * freqFFT[(i + SPECTRUM_RES / 2)  * 2 + 1]);
   }
 
-  // apply low pass filter and scale the magnitude values and convert to int for spectrum display
-  // apply spectrum AGC
-  int16_t min = 0;
-  int16_t max = 0;
-  int16_t data[SPECTRUM_RES];
-  for(int i = 0; i < SPECTRUM_RES; i++) {
-    freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
-    prevFreqSpecBuf[i] = freqSpecBuf[i];
-
-    pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
-
-    // *** TODO: evaluate noise floor default setting for new v12 hardware ***
-    // *** TODO: some calibration routines need this adjustment because there is no noise floor adjustment ***
-    //pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i])) + 50;
-
-    if(controlDataFlag) {
-      // T41 spectrum equation: spectrumNoiseFloor - pixelnew[i] - currentNF;
-      //data[i] = spectrumNoiseFloor - pixelnew[i] - currentNF;
-      data[i] = pixelnew[i] + nf2PC;
-      if(data[i] < min) {
-        min = data[i];
-      }
-      if(data[i] > max) {
-        max = data[i];
-      }
-    }
-  }
-
-  // set up specData for frequency spectrum command
-  // FDxxx[512]; where xxx = 255 - max and [512] = 512 bytes spectrum data
-  sprintf((char*)specData, "FD%03d", 255 - max);
-  specData[517] = ';';
-
-  // shift spectrum data and send it to PC if applicable
-  // we have to scale and apply noise floor in the control app
-  if(controlDataFlag) {
-    int tmp = 0;
+  if(updateSpectrumData) {
+    // apply low pass filter and scale the magnitude values and convert to int for spectrum display
+    // apply spectrum AGC
+    int16_t min = 0;
+    int16_t max = 0;
+    int16_t data[SPECTRUM_RES];
     for(int i = 0; i < SPECTRUM_RES; i++) {
-      // shift data so max = 255
-      // *** TODO: consider scaling here fits data into a 0-255 range ***
-      tmp = data[i] + 255 - max;
-      // though unlikely, data can still be negative, limit it
-      if(tmp < 0) {
-        tmp = 0;
+      freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
+      prevFreqSpecBuf[i] = freqSpecBuf[i];
+
+      pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
+
+      // *** TODO: evaluate noise floor default setting for new v12 hardware ***
+      // *** TODO: some calibration routines need this adjustment because there is no noise floor adjustment ***
+      //pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i])) + 50;
+
+      if(controlDataFlag) {
+        // T41 spectrum equation: spectrumNoiseFloor - pixelnew[i] - currentNF;
+        //data[i] = spectrumNoiseFloor - pixelnew[i] - currentNF;
+        data[i] = pixelnew[i] + nf2PC;
+        if(data[i] < min) {
+          min = data[i];
+        }
+        if(data[i] > max) {
+          max = data[i];
+        }
       }
-      //if(tmp > 255) {
-      //  tmp = 255;
-      //}
-      specData[i + 5] = (uint8_t)tmp;
     }
 
-    T41ControlSendData(specData, SPECTRUM_RES + 6);
+    // set up specData for frequency spectrum command
+    // FDxxx[512]; where xxx = 255 - max and [512] = 512 bytes spectrum data
+    sprintf((char*)specData, "FD%03d", 255 - max);
+    specData[517] = ';';
+
+    // shift spectrum data and send it to PC if applicable
+    // we have to scale and apply noise floor in the control app
+    if(controlDataFlag) {
+      int tmp = 0;
+      for(int i = 0; i < SPECTRUM_RES; i++) {
+        // shift data so max = 255
+        // *** TODO: consider scaling here fits data into a 0-255 range ***
+        tmp = data[i] + 255 - max;
+        // though unlikely, data can still be negative, limit it
+        if(tmp < 0) {
+          tmp = 0;
+        }
+        //if(tmp > 255) {
+        //  tmp = 255;
+        //}
+        specData[i + 5] = (uint8_t)tmp;
+      }
+
+      T41ControlSendData(specData, SPECTRUM_RES + 6);
+    }
+    //if(connected) {
+    //  int tmp = 0;
+    //  for(int i = 0; i < SPECTRUM_RES; i++) {
+    //    // shift data so max = 255
+    //    // *** TODO: consider scaling here fits data into a 0-255 range ***
+    //    tmp = spectrumNoiseFloor - pixelnew[i] - currentNF;
+    //    // though unlikely, data can still be negative, limit it
+    //    if(tmp < 0) {
+    //      tmp = SPECTRUM_BOTTOM;
+    //    }
+    //    if(tmp > 255) {
+    //      tmp = SPECTRUM_BOTTOM;
+    //    }
+    //    freqData[i] = tmp;
+    //  }
+    //}
   }
-  //if(connected) {
-  //  int tmp = 0;
-  //  for(int i = 0; i < SPECTRUM_RES; i++) {
-  //    // shift data so max = 255
-  //    // *** TODO: consider scaling here fits data into a 0-255 range ***
-  //    tmp = spectrumNoiseFloor - pixelnew[i] - currentNF;
-  //    // though unlikely, data can still be negative, limit it
-  //    if(tmp < 0) {
-  //      tmp = SPECTRUM_BOTTOM;
-  //    }
-  //    if(tmp > 255) {
-  //      tmp = SPECTRUM_BOTTOM;
-  //    }
-  //    freqData[i] = tmp;
-  //  }
-  //}
 }
 
 /*****
   Purpose: Calcculate zoom magnification when Spectrum Zoom = 1
 *****/
-void CalcZoom1Magn() {
+void Calc1xFreqSpec() {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
-
   float32_t spec_help = 0.0;
   float32_t LPFcoeff = 0.7;
+
   if(LPFcoeff > 1.0) {
     LPFcoeff = 1.0;
   }
@@ -1237,5 +1318,45 @@ void CalcZoom1Magn() {
 #else
     pixelnew[x] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t) (displayScale[currentScale].dBScale * log10f(spec_help));
 #endif
+  }
+}
+
+void YieldToProcess(bool updateSpectrum /* = false */) {
+  static long prevUpdate = 0;
+
+  if(updateSpectrum) {
+    // wait for spectrum data update
+    while(ProcessReceiverData(true) != 2) {
+      // process controls aif 10ms has passed since last update
+      if(millis() - prevUpdate > 10) {
+        ProcessControls();
+        prevUpdate = millis();
+      }
+    }
+  } else {
+    while(true) {
+      // process IQ data while sufficient data exists
+      // This allows the process to catch up after longer tasks
+      // such as the waterfall update. Failing to do this can
+      // result in poor audio.
+      if(ProcessReceiverData() != 1) {
+        break;
+      }
+
+      // process controls aif 10ms has passed since last update
+      if(millis() - prevUpdate > 10) {
+        ProcessControls();
+        prevUpdate = millis();
+      }
+    }
+  }
+}
+
+void YieldForProcess(int ms) {
+  long unsigned entry = millis();
+
+  // process controls and IQ data if 10ms has passed since last update
+  while(millis() - entry < (long unsigned)ms) {
+    YieldToProcess();
   }
 }

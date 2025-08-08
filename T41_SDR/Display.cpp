@@ -143,7 +143,6 @@ int newSpectrumFlag = 0; // 0 - oldNF needs initialized in ShowSpectrum(), 1 - i
 int16_t pos_x_time = 390;
 int16_t pos_y_time = 5;
 int16_t spectrum_x = 10;
-float xExpand = 1.4;
 
 /* PROGMEM */ const uint16_t gradient[] = {  // Color array for waterfall background
   0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9,
@@ -167,16 +166,18 @@ struct DEMOD_Descriptor
 { const uint8_t DEMOD_n;
   const char* const text;
 };
-const DEMOD_Descriptor DEMOD[8] = {
+const DEMOD_Descriptor DEMOD[10] = {
   //   DEMOD_n, name
   { DEMOD_USB, "USB" },
   { DEMOD_LSB, "LSB" },
   { DEMOD_AM, "AM" },
   { DEMOD_NFM, "NFM" },
-  { DEMOD_PSK31_WAV, "PSK31.wav" },
   { DEMOD_PSK31, "PSK31" },
-  { DEMOD_FT8_WAV, "FT8.wav" },
   { DEMOD_FT8, "FT8" },
+  { DEMOD_SAM, "SAM" }, // placeholder, not used
+  { DEMOD_PSK31_WAV, "PSK31.wav" },
+  { DEMOD_FT8_DECODE, "FT8.dec" },
+  { DEMOD_FT8_WAV, "FT8.wav" },
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -184,7 +185,6 @@ const DEMOD_Descriptor DEMOD[8] = {
 //-------------------------------------------------------------------------------------------------------------
 
 void DrawSMeterContainer();
-void DrawAudioSpectContainer();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -255,9 +255,10 @@ int filterLoPosition;
 int filterHiPosition;
 
 void CalcAudioFilterLinePositions() {
+  float span = AUDIO_SPEC_SPAN * (sampleRate < 45000.0 ? 44.1 / 24.0 : 1.0);
   // map filter position to audio spectrum box
-  filterLoPosition = map(currentFilterLoCut, 0, AUDIO_SPEC_SPAN, 0, AUDIO_SPEC_RES);
-  filterHiPosition = map(currentFilterHiCut, 0, AUDIO_SPEC_SPAN, 0, AUDIO_SPEC_RES);
+  filterLoPosition = map(currentFilterLoCut, 0, span, 0, AUDIO_SPEC_RES);
+  filterHiPosition = map(currentFilterHiCut, 0, span, 0, AUDIO_SPEC_RES);
 }
 
 // *** pulling this out of ShowSpectrum allows the screen to update about 35% faster
@@ -275,10 +276,11 @@ void DrawAudioFilterLines() {
   switch(bands[currentBand].demod) {
     case DEMOD_USB:
     case DEMOD_LSB:
-    case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:
-    case DEMOD_FT8_WAV:
     case DEMOD_FT8:
+    case DEMOD_PSK31_WAV:
+    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_WAV:
       if(lowerAudioFilterActive) {
         filterLoColor = RA8875_GREEN;
         filterHiColor = RA8875_LIGHT_GREY;
@@ -375,7 +377,7 @@ FASTRUN void ShowSpectrum() {
     digitalWrite(30, showSpectrumStart);
     #endif
 
-    // calculate the freq spectrum plot value; pixelnew spectrum is calculated in ZoomFFTExe
+    // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
     yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF;
     y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF;
 
@@ -570,10 +572,11 @@ FLASHMEM void ShowBandwidthBarValues() {
   // set color of active filter value to green
   switch(bands[currentBand].demod) {
     case DEMOD_USB:
-    case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:
-    case DEMOD_FT8_WAV:
     case DEMOD_FT8:
+    case DEMOD_PSK31_WAV:
+    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_WAV:
       if(!ft8MsgSelectActive) {
         if(lowerAudioFilterActive) {
           loColor = RA8875_GREEN;
@@ -646,102 +649,82 @@ FLASHMEM void ShowSpectrumdBScale() {
 /*****
   Purpose: This function draws the frequency bar at the bottom of the spectrum scope, putting markers at every
             graticule and the full frequency
-            *** this can be more efficient by moving the tick marks to the static function, but this increases code size ***
 *****/
 FLASHMEM void ShowSpectrumFreqValues() {
   char txt[16];
-
-  int bignum;
-  int centerIdx;
-  int pos_help;
-  float disp_freq;
-
-  float freq_calc;
-  float grat;
+  int pos_help, tickX;
+  int tunedInx = 0;
+  float cFreq = (float)centerFreq;
+  float tunedFreq, lFreq;
+  float fInc =  sampleRate / (float)(1 << spectrumZoom) / 4.0;
   // positions for graticules: first for spectrumZoom < 3, then for spectrumZoom > 2
   const static int idx2pos[2][9] = {
     { -43, 21, 50, 250, 140, 250, 232, 250, 315 },
     { -43, 21, 50, 85, 200, 200, 232, 218, 315 }
   };
+  float xExpand = 1.4;
+  float32_t pixel_per_hz = (1 << spectrumZoom) * SPECTRUM_RES / sampleRate;
 
-  grat = 24.0 / (float)(1 << spectrumZoom);  // 24 = sample rate / 8
-
-  tft.setTextColor(RA8875_WHITE);
   tft.setFontScale((enum RA8875tsize)0);
 
-  // erase frequency bar values
-  tft.fillRect(SPECTRUM_LEFT_X, SPEC_BOX_LABELS, SPECTRUM_RES + 5, tft.getFontHeight(), RA8875_BLACK);
+  // erase frequency bar values and tick marks
+  tft.fillRect(SPECTRUM_LEFT_X, SPEC_BOX_LABELS - 4, SPECTRUM_RES + 5, tft.getFontHeight() + 4, RA8875_BLACK);
 
-  freq_calc = (float)(centerFreq / NEW_SI5351_FREQ_MULT);  // get current frequency in Hz
+  if(spectrumZoom == 0) {
+    tunedInx = -1;
+    cFreq += intermediateFreq;
+    tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
+  } else {
+    tft.setCursor(centerLine - 20, SPEC_BOX_LABELS);
+  }
 
-  // TODO: *** this is misplaced *** shows problem with original code transitioning between VFOs
+  if(bands[currentBand].demod == DEMOD_FT8) {
+    //tunedInx = -1;
+    //cFreq += fInc;
+    //tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
+  }
+
+  // TODO: *** this is misplaced *** shows problem with original code transitioning between VFOs ***
   //if(activeVFO == VFO_A) {
   //  currentFreqA = TxRxFreq;
   //} else {
   //  currentFreqB = TxRxFreq;
   //}
 
-  if(spectrumZoom == 0) {
-    freq_calc += intermediateFreq;
-  }
+  // calc tuned frequency and it's rounded (label) value
+  // calc the position of the tick mark for the label value
+  tunedFreq = (cFreq + (float)tunedInx * fInc);
+  lFreq = round((cFreq + (float)tunedInx * fInc) / 1000.0) * 1000.0;
+  ultoa(lFreq / 1000.0, txt, DEC);
+  tickX = (tunedFreq - lFreq - intermediateFreq * tunedInx) * pixel_per_hz;
 
-  // TODO: *** these are the same ***
-  if(spectrumZoom < 5) {
-    freq_calc = roundf(freq_calc / 1000);  // round graticule frequency to the nearest kHz
-  //} else if(spectrumZoom < 5) {
-  //  freq_calc = roundf(freq_calc / 100) / 10;  // round graticule frequency to the nearest 100Hz
-  }
-
-  if(spectrumZoom != 0)
-    centerIdx = 0;
-  else
-    centerIdx = -2;
-
-  /**************************************************************************************************
-    CENTER FREQUENCY PRINT
-  **************************************************************************************************/
-  ultoa((freq_calc + (centerIdx * grat)), txt, DEC);
-  disp_freq = freq_calc + (centerIdx * grat);
-  bignum = (int)disp_freq;
-  itoa(bignum, txt, DEC);  // Make into a string
-
+  // print label and tick mark
   tft.setTextColor(RA8875_GREEN);
-
-  if(spectrumZoom == 0) {
-    tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
-  } else {
-    tft.setCursor(centerLine - 20, SPEC_BOX_LABELS);
-  }
-
   tft.print(txt);
+  //tft.drawFastVLine(SPECTRUM_LEFT_X + centerLine - tickX, SPEC_BOX_LABELS - 4, 6, RA8875_YELLOW);
+  tft.drawFastVLine(centerLine - tickX, SPEC_BOX_LABELS - 4, 6, RA8875_YELLOW);
+
+  // print non-center freq and tick marks
   tft.setTextColor(RA8875_WHITE);
+  for(int idx = -2; idx < 3; idx++) {
+    pos_help = idx2pos[spectrumZoom < 3 ? 0 : 1][idx * 2 + 4];
+    if(idx != tunedInx) {
+      // calculate label freq (always a whole number) and the exact position of its tick mark
+      lFreq = round((cFreq +  (float)idx * fInc) / 1000.0) * 1000.0;
+      ultoa(lFreq / 1000.0, txt, DEC);
+      tickX = (tunedFreq - lFreq - intermediateFreq * tunedInx) * pixel_per_hz;
 
-  /**************************************************************************************************
-     PRINT ALL OTHER FREQUENCIES (NON-CENTER)
-   **************************************************************************************************/
-  // snprint() extremely memory inefficient. replaced with simple str?? functions
-  for(int idx = -4; idx < 5; idx++) {
-    pos_help = idx2pos[spectrumZoom < 3 ? 0 : 1][idx + 4];
-    if(idx != centerIdx) {
-      ultoa((freq_calc + (idx * grat)), txt, DEC);
-
-      if(idx < 4) {
+      // print freq label (always in the same position for visual)
+      if(idx < 2) {
         tft.setCursor(SPECTRUM_LEFT_X + pos_help * xExpand + 40, SPEC_BOX_LABELS);
       } else {
         tft.setCursor(SPECTRUM_LEFT_X + (pos_help + 9) * xExpand + 59 - strlen(txt)*tft.getFontWidth(), SPEC_BOX_LABELS);
       }
-
       tft.print(txt);
-      if(idx < 4) {
-        tft.drawFastVLine((SPECTRUM_LEFT_X + pos_help * xExpand + 60), SPEC_BOX_LABELS - 5, 7, RA8875_YELLOW);  // Tick marks depending on zoom
-      } else {
-        tft.drawFastVLine((SPECTRUM_LEFT_X + (pos_help + 9) * xExpand + 59), SPEC_BOX_LABELS - 5, 7, RA8875_YELLOW);
-      }
-    }
 
-    // TODO: *** ??? display is messed up for frequencies under 1000 ***
-    if(spectrumZoom > 2 || freq_calc > 1000) {
-      idx++;
+      // print label tick mark for the rounded freq label
+      //tft.drawFastVLine(SPECTRUM_LEFT_X + centerLine - tickX, SPEC_BOX_LABELS - 4, 6, RA8875_YELLOW);
+      tft.drawFastVLine(centerLine - tickX, SPEC_BOX_LABELS - 4, 6, RA8875_YELLOW);
     }
   }
 }
@@ -762,7 +745,8 @@ FLASHMEM void ShowOperatingStats() {
   tft.setCursor(OPERATION_STATS_CF, OPERATION_STATS_T);
   tft.setTextColor(RA8875_LIGHT_ORANGE);
   if(spectrumZoom == 0) {
-    tft.print(centerFreq + 48000);
+    //tft.print(centerFreq + 48000);
+    tft.print(centerFreq + (long)intermediateFreq);
   } else {
     tft.print(centerFreq);
   }
@@ -801,9 +785,10 @@ FLASHMEM void ShowOperatingStats() {
   switch(bands[currentBand].demod) {
     case DEMOD_USB:
     case DEMOD_LSB:
-    case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:
     case DEMOD_FT8:
+    case DEMOD_PSK31_WAV:
+    case DEMOD_FT8_DECODE:
     case DEMOD_FT8_WAV:
       if(activeVFO == VFO_A) {
         tft.print(DEMOD[bands[currentBandA].demod].text);
@@ -1041,9 +1026,8 @@ FLASHMEM void RedrawDisplayScreen() {
   Purpose: Draw Tuned Bandwidth on Spectrum Plot
 *****/
 FASTRUN void DrawBandwidthBar() {
-  float zoomMultFactor = 0.0;
-  float Zoom1Offset = 0.0;
-  float32_t pixel_per_khz;
+  float zoomOffset = 0.0;
+  float32_t pixel_per_hz = (1 << spectrumZoom) * SPECTRUM_RES / sampleRate;
   int NCOFreqX;
   int newFilterX = 0; // x position of bandwidth bar
   int newFilterWidth = 0;
@@ -1051,39 +1035,25 @@ FASTRUN void DrawBandwidthBar() {
   static int oldFilterWidth = 0;
   static int oldTuneLine = 0;
 
-  switch(spectrumZoom) {
-    case 0:
-      zoomMultFactor = 0.5;
-      Zoom1Offset = 24000 * 0.0053333;
-      break;
-
-    case 1:
-      zoomMultFactor = 1.0;
-      break;
-
-    case 2:
-      zoomMultFactor = 2.0;
-      break;
-
-    case 3:
-      zoomMultFactor = 4.0;
-      break;
-
-    case 4:
-      zoomMultFactor = 8.0;
-      break;
+  if(spectrumZoom == 0) {
+    zoomOffset = 48000.0 * pixel_per_hz;
   }
-  NCOFreqX = (int)(NCOFreq * 0.0053333) * zoomMultFactor - Zoom1Offset;
 
-  pixel_per_khz = ((1 << spectrumZoom) * SPECTRUM_RES / 192.0);
-  newFilterWidth = (int)(((float)(currentFilterHiCut - currentFilterLoCut) / 1000.0) * pixel_per_khz * 1.06);
+  if(bands[currentBand].demod == DEMOD_FT8) {
+    //zoomOffset = 44100.0 / 8.0 * pixel_per_hz / ((float)(1 << spectrumZoom)) * 2.0;
+  }
+
+  //NCOFreqX = (int)(NCOFreq * pixel_per_hz * ((float)(1 << spectrumZoom)) / 2.0 - zoomOffset);
+  NCOFreqX = (int)(NCOFreq * pixel_per_hz - zoomOffset);
+  newFilterWidth = (int)(((float)(currentFilterHiCut - currentFilterLoCut)) * pixel_per_hz * 1.06);
 
   // make sure bandwidth is within zoom range
   switch(bands[currentBand].demod) {
     case DEMOD_USB:
-    case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:
     case DEMOD_FT8:
+    case DEMOD_PSK31_WAV:
+    case DEMOD_FT8_DECODE:
     case DEMOD_FT8_WAV:
       if(centerLine + NCOFreqX + newFilterWidth > SPECTRUM_RES) {
         resetTuningFlag = true;
@@ -1097,7 +1067,7 @@ FASTRUN void DrawBandwidthBar() {
       break;
 
     case DEMOD_NFM:
-      newFilterWidth = (int)((nfmFilterBW / 1000.0) * pixel_per_khz * 1.06);
+      newFilterWidth = (int)(nfmFilterBW * pixel_per_hz * 1.06);
 
     case DEMOD_AM:
     case DEMOD_SAM:
@@ -1117,19 +1087,20 @@ FASTRUN void DrawBandwidthBar() {
   if(!resetTuningFlag) {
     switch(bands[currentBand].demod) {
       case DEMOD_USB:
-      case DEMOD_PSK31_WAV:
       case DEMOD_PSK31:
       case DEMOD_FT8:
+      case DEMOD_PSK31_WAV:
+      case DEMOD_FT8_DECODE:
       case DEMOD_FT8_WAV:
-        newFilterX = centerLine + NCOFreqX + (float)currentFilterLoCut / 1000.0 * pixel_per_khz;
+        newFilterX = centerLine + NCOFreqX + (float)currentFilterLoCut * pixel_per_hz;
         break;
 
       case DEMOD_LSB:
-        newFilterX = centerLine - newFilterWidth + NCOFreqX - (float)currentFilterLoCut / 1000.0 * pixel_per_khz;
+        newFilterX = centerLine - newFilterWidth + NCOFreqX - (float)currentFilterLoCut * pixel_per_hz;
         break;
 
       case DEMOD_NFM:
-        newFilterWidth = (int)((nfmFilterBW / 1000.0) * pixel_per_khz * 1.06);
+        newFilterWidth = (int)(nfmFilterBW * pixel_per_hz * 1.06);
         newFilterX = centerLine - (newFilterWidth / 2) * 0.93 + NCOFreqX;
         newFilterWidth *= 0.95;
         break;
@@ -1228,16 +1199,32 @@ FLASHMEM void DrawSMeterContainer() {
   Parameter list:
 *****/
 FLASHMEM void DrawAudioSpectContainer() {
-  float ticks = (float)(AUDIO_SPEC_RES) / AUDIO_SPEC_SPAN * 1000.0;
+  // *** 1st calc below is per DSP, 2nd calc is empirical to match measurement
+  //float pixels_kHz = (float)(AUDIO_SPEC_RES) / 512.0 / 12.0 * 1000.0;
+  float pixels_kHz = (float)(AUDIO_SPEC_RES) / AUDIO_SPEC_SPAN * 1000.0;
+  int ticks = 7;
+  int start = 1;
+  int inc = 1;
+
+  if(bands[currentBand].demod == DEMOD_FT8) {
+    pixels_kHz *= 24.0 / 44.1;
+    ticks = 11;
+    start = 2;
+    inc = 2;
+  }
+
+  // erase old box
+  tft.fillRect(AUDIO_SPEC_BOX_L, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_W, AUDIO_SPEC_BOX_H + 39, RA8875_BLACK);
 
   tft.drawRect(AUDIO_SPEC_BOX_L, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_W, AUDIO_SPEC_BOX_H, RA8875_WHITE);
   tft.drawFastVLine(AUDIO_SPEC_BOX_L + 1, AUDIO_SPEC_BOX_BOTTOM, 15, RA8875_WHITE);
+  tft.setTextColor(RA8875_WHITE);
   tft.setCursor(AUDIO_SPEC_BOX_L - 3, AUDIO_SPEC_BOX_BOTTOM + 16);
   tft.print(0);
   tft.print("k");
-  for(int k = 1; k < 7; k++) {
-    tft.drawFastVLine(AUDIO_SPEC_BOX_L + 1 + ((float)k * ticks), AUDIO_SPEC_BOX_BOTTOM, 15, RA8875_WHITE);
-    tft.setCursor(AUDIO_SPEC_BOX_L - 3 + ((float)k * ticks), AUDIO_SPEC_BOX_BOTTOM + 16);
+  for(int k = start; k < ticks; k+=inc) {
+    tft.drawFastVLine(AUDIO_SPEC_BOX_L + 1 + ((float)k * pixels_kHz), AUDIO_SPEC_BOX_BOTTOM, 15, RA8875_WHITE);
+    tft.setCursor(AUDIO_SPEC_BOX_L - 3 + ((float)k * pixels_kHz), AUDIO_SPEC_BOX_BOTTOM + 16);
     tft.print(k);
     tft.print("k");
   }
@@ -1286,6 +1273,7 @@ FLASHMEM void ShowTransmitReceiveStatus() {
     case SSB_TRANSMIT_STATE:
     case CW_TRANSMIT_STRAIGHT_STATE:
     case CW_TRANSMIT_KEYER_STATE:
+    case DATA_TRANSMIT_STATE:
       tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 25, RA8875_RED);
       tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y - 5);
       tft.print("XMT");
@@ -1324,10 +1312,18 @@ FLASHMEM void SetZoom(int zoom) {
     spectrumZoom = MAX_ZOOM_ENTRIES - 1;
   }
 
-  ZoomFFTPrep();
+  // limit zoom in FT8 mode to 2x and 4x
+  if(bands[currentBand].demod == DEMOD_FT8) {
+    if((spectrumZoom == 0) || (spectrumZoom > 2)) {
+      spectrumZoom = 1;
+    }
+  }
+
+  InitZoomFFTFilter();
   UpdateInfoBoxItem(IB_ITEM_ZOOM);
   DrawBandwidthBar();
   ShowSpectrumFreqValues();
+  ShowOperatingStats(); // needes for to or from 1x zoom
 }
 
 /*****

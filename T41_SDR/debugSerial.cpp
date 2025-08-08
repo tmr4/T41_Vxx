@@ -8,7 +8,7 @@
 int DebugSerial::count = 0;
 
 // two instances of DebugSerial are provided, create more as needed
-#ifdef DEBUG_ENABLED
+#ifdef DEBUG_SERIAL_ENABLED
   DebugSerial *dbSerial = new DebugSerial();
   DebugSerial *dbSerial2 = new DebugSerial();
 #endif

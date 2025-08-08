@@ -9,12 +9,11 @@
 #define WIGGLE_ROOM               20     // This is the maximum value that can added to a BUSY_ANALOG_PIN pin read value of a push
                                          // button and still have the switch value be associated with the correct push button.
 
+// *** TODO: consider moving to CW processing ***
 extern float32_t cosBuffer2[];
-extern float32_t cosBuffer3[];
 
 extern float32_t sinBuffer[];
 extern float32_t sinBuffer2[];
-extern float32_t sinBuffer3[];
 
 extern double elapsed_micros_idx_t;
 extern double elapsed_micros_sum;
@@ -55,5 +54,3 @@ void SetTeensyTime(time_t time);
 
 void UpdateClock();
 void UpdateMemTempLoad();
-void YieldToProcess(bool updateSpectrum = false);
-void YieldForProcess(int ms);

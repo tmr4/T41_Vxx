@@ -19,24 +19,24 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-int val;
-int corrChange;
-float correctionIncrement;
-int userScale, userZoomIndex, userXmtMode;
-int transmitPowerLevelTemp;
-int calTypeFlag = 0;
-int calOnFlag = 0;
-int IQCalType;
+static int val;
+static int corrChange;
+static float correctionIncrement;
+static int userScale, userZoomIndex, userXmtMode;
+static int transmitPowerLevelTemp;
+static int calTypeFlag = 0;
+static int calOnFlag = 0;
+static int IQCalType;
 
-float32_t sinBuffer3[256];
-float32_t cosBuffer3[256];
+static float32_t sinBuffer3[256];
+static float32_t cosBuffer3[256];
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-void ShowSpectrum2();
-float PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int currentNF);
+void FT8ShowSpectrum2();
+float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int currentNF);
 void CalcZoomFreqSpec(uint32_t blockSize); // needed for ProcessTransmitCalIQData
 void Calc1xFreqSpec();
 void FreqShift1(int blockSize);
@@ -59,7 +59,7 @@ void SetFreqCal(long calFreqShift);
    Return value:
       void
  *****/
-FLASHMEM void CalibratePreamble(int setZoom) {
+FLASHMEM void FT8CalibratePreamble(int setZoom) {
   calOnFlag = 1;
   corrChange = 0;
   correctionIncrement = 0.01;
@@ -95,14 +95,14 @@ FLASHMEM void CalibratePreamble(int setZoom) {
   userScale = currentScale;  //  Remember user preference so it can be reset when done.  KF5N
   currentScale = 1;          //  Set vertical scale to 10 dB during calibration.  KF5N
   //updateSpectrumData = false;
-  digitalWrite(MUTE, LOW);  //turn off mute
+  //digitalWrite(MUTE, LOW);  //turn off mute
 
   //ConfigAudioState(radioState);
   ConfigAudioState(CALIBRATE_TRANSMIT_STATE);
 
   centerFreq = TxRxFreq;
   NCOFreq = 0L;
-  digitalWrite(MUTE, HIGH);  //  Mute Audio  (HIGH=Mute)
+  //digitalWrite(MUTE, HIGH);  //  Mute Audio  (HIGH=Mute)
   digitalWrite(RXTX, HIGH);  // Turn on transmitter.
   ShowTransmitReceiveStatus();
   ShowSpectrumdBScale();
@@ -112,7 +112,9 @@ FLASHMEM void CalibratePreamble(int setZoom) {
 
   for(int i = 0; i < 256; i++) {
     // used in calibration
-    theta = i * 2.0 * PI * freqSideTone3 / 24000.0;
+    theta = i * 2.0 * PI * freqSideTone3 / 44100.0;
+    //theta = i * 2.0 * PI * freqSideTone3 / 22050.0;
+    //theta = i * 2.0 * PI * freqSideTone3 / 11025.0;
     cosBuffer3[i] = cos(theta);
     sinBuffer3[i] = sin(theta);
   }
@@ -127,7 +129,7 @@ FLASHMEM void CalibratePreamble(int setZoom) {
    Return value:
       void
  *****/
-FLASHMEM void CalibratePrologue() {
+FLASHMEM void FT8CalibratePrologue() {
   digitalWrite(RXTX, LOW);  // Turn off the transmitter.
   //updateSpectrumData = false;
   ShowTransmitReceiveStatus();
@@ -153,7 +155,7 @@ FLASHMEM void CalibratePrologue() {
   return;
 }
 
-void UpdateIQCorrection(bool xmit = true) {
+static void UpdateIQCorrection(bool xmit = true) {
   if(xmit) {
     //  Read encoder and update values.
     if(IQCalType == 0) {
@@ -179,20 +181,20 @@ void UpdateIQCorrection(bool xmit = true) {
    Return value:
       void
  *****/
-FLASHMEM void DoReceiveCalibrate() {
+FLASHMEM void FT8DoReceiveCalibrate() {
   int task = -1;
   int lastUsedTask = -2;
   int IQChoice = 0;
   long calFreqShift = 0;
 
-  CalibratePreamble(0);                                                   // Set zoom to 1X.
+  FT8CalibratePreamble(0);                                                   // Set zoom to 1X.
   if(bands[currentBand].demod == DEMOD_LSB) calFreqShift = 24000 - 2000;  // LSB offset
   if(bands[currentBand].demod == DEMOD_USB) calFreqShift = 24000 + 2250;  // USB offset
   SetFreqCal(calFreqShift);
   calTypeFlag = 0;  // RX cal
   // Receive calibration loop
   while(true) {
-    ShowSpectrum2();
+    FT8ShowSpectrum2();
     val = ReadSelectedPushButton();
     if(val != BOGUS_PIN_READ) {
       val = ProcessButtonPress(val);
@@ -234,27 +236,28 @@ FLASHMEM void DoReceiveCalibrate() {
 
     if(IQChoice == 6) break;  // Exit the while loop.
   }
-  CalibratePrologue();
-}
 
+  FT8CalibratePrologue();
+}
 
 /*****
   Purpose: Combined input/ output for the purpose of calibrating the transmit IQ
            calibrateFlag = 3
  *****/
-FLASHMEM void DoXmitCalibrate() {
+FLASHMEM void FT8DoXmitCalibrate() {
   int IQChoice = 0;
 
   RedrawDisplayScreen();
 
-  CalibratePreamble(2);  // Set zoom to 4x
+  //FT8CalibratePreamble(2);  // set zoom to 4x
+  FT8CalibratePreamble(1);  // set zoom to 2x
   calTypeFlag = 1;       // TX cal
   SetFreqCal(750);
   tft.writeTo(L1);
 
   // Transmit Calibration Loop
   while(true) {
-    ShowSpectrum2();
+    FT8ShowSpectrum2();
     val = ReadSelectedPushButton();
     if(val != BOGUS_PIN_READ) {
       val = ProcessButtonPress(val);
@@ -281,8 +284,8 @@ FLASHMEM void DoXmitCalibrate() {
 
       case (MENU_OPTION_SELECT):  // Save values and exit calibration.
         tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        //EEPROMData.IQXAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
-        //EEPROMData.IQXPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
+        EEPROMData.IQXAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
+        EEPROMData.IQXPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
         IQChoice = 6;
         break;
 
@@ -295,7 +298,8 @@ FLASHMEM void DoXmitCalibrate() {
 
     if(IQChoice == 6) break;  //  Exit the while loop.
   }
-  CalibratePrologue();
+
+  FT8CalibratePrologue();
 }
 
 
@@ -308,7 +312,7 @@ FLASHMEM void DoXmitCalibrate() {
    Return value:
       void
  *****/
-FLASHMEM bool ProcessIQData2(bool updateSpectrumData) {
+FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
   float bandCouplingFactor[7] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };
   float bandOutputFactor;
   float rfGainValue;
@@ -325,26 +329,30 @@ FLASHMEM bool ProcessIQData2(bool updateSpectrumData) {
         BUFFER_SIZE*N_BLOCKS = 2048 samples
      **********************************************************************************/
 
-  bandOutputFactor = bandCouplingFactor[currentBand] * CWPowerCalibrationFactor[currentBand] / CWPowerCalibrationFactor[1];
+  //bandOutputFactor = bandCouplingFactor[currentBand] * CWPowerCalibrationFactor[currentBand] / CWPowerCalibrationFactor[1];
   //bandOutputFactor = bandCouplingFactor[currentBand] * 1.0;
+  bandOutputFactor = 0.1;
 
-  // Generate I and Q for the transmit or receive calibration
+  // generate I and Q for the transmit or receive calibration
   if(calibrateFlag == 2 || calibrateFlag == 3) {
-    arm_scale_f32(cosBuffer3, bandOutputFactor, audioBufferL_EX, 256);  //Use pre-calculated sin & cos instead of Hilbert
-    arm_scale_f32(sinBuffer3, bandOutputFactor, audioBufferR_EX, 256);  //Sidetone = 3000
+    arm_scale_f32(cosBuffer3, bandOutputFactor, audioBufferL_EX, 256);  // use pre-calculated sin & cos instead of Hilbert
+    arm_scale_f32(sinBuffer3, bandOutputFactor, audioBufferR_EX, 256);  // sidetone = 3000
   }
 
   UpdateIQCorrection();
 
-  // adjust IQ signal amplitude and phase
+  // adjust IQ signals for amplitude and phase correction factors
   if(bands[currentBand].demod == DEMOD_LSB) {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
-  } else if(bands[currentBand].demod == DEMOD_USB) {
-    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
+  } else {
+    if(bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_FT8) {
+      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
+      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
+    }
   }
 
+  /*
   //24KHz effective sample rate here
   arm_fir_interpolate_f32(&FIR_int1_EX_I, audioBufferL_EX, audioBufferTemp, 256);
 
@@ -354,24 +362,36 @@ FLASHMEM bool ProcessIQData2(bool updateSpectrumData) {
   // and again for R channel
   arm_fir_interpolate_f32(&FIR_int1_EX_Q, audioBufferR_EX, audioBufferTemp, 256);
   arm_fir_interpolate_f32(&FIR_int2_EX_Q, audioBufferTemp, audioBufferR_EX, 512);
+  */
+
+  // scale to give equivalent peak as SSB USB cal
+  //arm_scale_f32(audioBufferL_EX, 0.126, audioBufferL_EX, 256);
+  //arm_scale_f32(audioBufferR_EX, 0.126, audioBufferR_EX, 256);
+
+  // scale to give +10dB peak (actually gave +21dB)
+  //arm_scale_f32(audioBufferL_EX, 3.16, audioBufferL_EX, 256);
+  //arm_scale_f32(audioBufferR_EX, 3.16, audioBufferR_EX, 256);
+
+  //arm_scale_f32(audioBufferL_EX, 2.0, audioBufferL_EX, 256);
+  //arm_scale_f32(audioBufferR_EX, 2.0, audioBufferR_EX, 256);
 
   // are there at least 16 blocks available in each channel
-  if((uint32_t)Q_in_L.available() > 16 && (uint32_t)Q_in_R.available() > 16) {
+  if((uint32_t)Q_in_L.available() > 2 && (uint32_t)Q_in_R.available() > 2) {
 
-    q15_t q15_buffer_LTemp[2048];
-    q15_t q15_buffer_RTemp[2048];
+    q15_t q15_buffer_LTemp[256];
+    q15_t q15_buffer_RTemp[256];
     Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
     Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
-    arm_float_to_q15(audioBufferL_EX, q15_buffer_LTemp, 2048);
-    arm_float_to_q15(audioBufferR_EX, q15_buffer_RTemp, 2048);
-    Q_out_L_Ex.play(q15_buffer_LTemp, 2048);
-    Q_out_R_Ex.play(q15_buffer_RTemp, 2048);
+    arm_float_to_q15(audioBufferL_EX, q15_buffer_LTemp, 256);
+    arm_float_to_q15(audioBufferR_EX, q15_buffer_RTemp, 256);
+    Q_out_L_Ex.play(q15_buffer_LTemp, 256);
+    Q_out_R_Ex.play(q15_buffer_RTemp, 256);
     //Q_out_L_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
     //Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
 
     // get audio samples from the audio  buffers and convert them to float
     // read in 32 blocks á 128 samples in I and Q
-    for(unsigned i = 0; i < 16; i++) {
+    for(unsigned i = 0; i < 2; i++) {
       /**********************************************************************************
           Using arm_Math library, convert to float one buffer_size.
           Float_buffer samples are now standardized from > -1.0 to < 1.0
@@ -383,36 +403,32 @@ FLASHMEM bool ProcessIQData2(bool updateSpectrumData) {
     }
 
     rfGainValue = pow(10, (float)rfGainAllBands / 20);
-    arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, 2048);
-    arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 2048);
+    arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, 256);
+    arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 256);
 
     /**********************************************************************************
       Scale the data buffers by the RFgain value defined in bands[currentBand] structure
     **********************************************************************************/
-    arm_scale_f32(audioBufferL, recBandFactor[currentBand], audioBufferL, 2048);
-    arm_scale_f32(audioBufferR, recBandFactor[currentBand], audioBufferR, 2048);
+    arm_scale_f32(audioBufferL, recBandFactor[currentBand], audioBufferL, 256);
+    arm_scale_f32(audioBufferR, recBandFactor[currentBand], audioBufferR, 256);
 
     // Manual IQ amplitude correction
     if(bands[currentBand].demod == DEMOD_LSB) {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 2048);  //AFP 04-14-22
-      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 2048);
+      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 256);
+      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 256);
     } else {
-      if(bands[currentBand].demod == DEMOD_USB) {
-        arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 2048);  //AFP 04-14-22 KF5N changed sign
-        IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 2048);
+      if(bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_FT8) {
+        arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 256);
+        IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 256);
       }
     }
 
-    FreqShift1(2048);
+    FreqShift1(256);
 
     if(spectrumZoom == 0) {  // && display_S_meter_or_spectrum_state == 1)
       Calc1xFreqSpec();
     }
 
-    //if(spectrumZoom != 0 && updateSpectrumData) {
-    ////if(spectrumZoom != 0) {
-    //  CalcZoomFreqSpec(2048, updateSpectrumData);
-    //}
     // Kick off frequency spectrum FFT routine only once for each audio process loop
     if(spectrumZoom != 0) {
       if(updateSpectrumData && (reqPasses == 20)) {
@@ -425,7 +441,7 @@ FLASHMEM bool ProcessIQData2(bool updateSpectrumData) {
         // so the passes required based on zoom factor will always be 1 but the passes required
         // based on sample rate are 4 or 8.
         //          <----------------- zoom factor ------------------>   <----- sample rate ----->
-        reqPasses = (spectrumZoom < 3 ? 1 : ((1 << spectrumZoom) / 4)) + 2048 / (2048) - 1;
+        reqPasses = (spectrumZoom < 3 ? 1 : ((1 << spectrumZoom) / 4)) + 2048 / (256) - 1;
       }
       if(passes < reqPasses) {
         passes++;
@@ -437,7 +453,7 @@ FLASHMEM bool ProcessIQData2(bool updateSpectrumData) {
           reqPasses = 20;
           passes = 20;
         }
-        CalcZoomFreqSpec(2048, updateFreqSpec);
+        CalcZoomFreqSpec(256, updateFreqSpec);
       }
     }
   }
@@ -449,9 +465,8 @@ FLASHMEM bool ProcessIQData2(bool updateSpectrumData) {
            This is similar to the function used for normal reception, however, it has
            been simplified and streamlined for calibration.
 *****/
-static int hLo = 0;
-static int hHi = 0;
-FLASHMEM void ShowSpectrum2() {
+int hLo = 0, hHi = 0;
+FLASHMEM void FT8ShowSpectrum2() {
   int x1 = 0;
   float adjdB = 0.0;
   int capture_bins = 10;  // ets the number of bins to scan for signal peak
@@ -475,7 +490,7 @@ FLASHMEM void ShowSpectrum2() {
     cal_bins[0] = 310;
     cal_bins[1] = 460;
   }  // Receive calibration, LSB
-  if(calTypeFlag == 0 && bands[currentBand].demod == DEMOD_USB) {
+  if(calTypeFlag == 0 && (bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_FT8)) {
     cal_bins[0] = 65;
     cal_bins[1] = 192;
   }  // Receive calibration, USB
@@ -483,19 +498,19 @@ FLASHMEM void ShowSpectrum2() {
     cal_bins[0] = 240;
     cal_bins[1] = 305;
   }  // Transmit calibration, LSB
-  if(calTypeFlag == 1 && bands[currentBand].demod == DEMOD_USB) {
+  if(calTypeFlag == 1 && (bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_FT8)) {
     cal_bins[0] = 209;
     cal_bins[1] = 273;
   }  // Transmit calibration, USB
 
   //  There are 2 for-loops, one for the reference signal and another for the undesired sideband.
-  //for(x1 = 0; x1 < SPECTRUM_RES -1; x1++) adjdB = PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
-  for(x1 = cal_bins[0] - capture_bins; x1 < cal_bins[0] + capture_bins; x1++) adjdB = PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
-  for(x1 = cal_bins[1] - capture_bins; x1 < cal_bins[1] + capture_bins; x1++) adjdB = PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
+  for(x1 = 0; x1 < SPECTRUM_RES -1; x1++) adjdB = FT8PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
+  //for(x1 = cal_bins[0] - capture_bins; x1 < cal_bins[0] + capture_bins; x1++) adjdB = FT8PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
+  //for(x1 = cal_bins[1] - capture_bins; x1 < cal_bins[1] + capture_bins; x1++) adjdB = FT8PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
 
   // Plot carrier during transmit cal, do not return a dB value:
   if(calTypeFlag == 1) {
-    for(x1 = cal_bins[0] + 20; x1 < cal_bins[1] - 20; x1++) PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
+    for(x1 = cal_bins[0] + 20; x1 < cal_bins[1] - 20; x1++) FT8PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
   }
 
 
@@ -516,8 +531,8 @@ FLASHMEM void ShowSpectrum2() {
   }
 
   // print sideband supression
-  tft.fillRect(350, 125, 50, tft.getFontHeight(), RA8875_BLACK);
   tft.setFontScale((enum RA8875tsize)0);
+  tft.fillRect(350, 125, 50, tft.getFontHeight(), RA8875_BLACK);
   tft.setCursor(350, 125);  // 350, 125
   tft.print(adjdB, 1);
 
@@ -531,7 +546,7 @@ FLASHMEM void ShowSpectrum2() {
   Purpose:  Plot Calibration Spectrum   //  KF5N 7/2/2023
             This function plots a partial spectrum during calibration only.
             This is intended to increase the efficiency and therefore the responsiveness of the calibration encoder.
-            This function is called by ShowSpectrum2() in two for-loops.  One for-loop is for the refenence signal,
+            This function is called by FT8ShowSpectrum2() in two for-loops.  One for-loop is for the refenence signal,
             and the other for-loop is for the undesired sideband.
   Parameter list:
     int x1, where x1 is the FFT bin.
@@ -540,10 +555,10 @@ FLASHMEM void ShowSpectrum2() {
   Return value:
     float returns the adjusted value in dB
 *****/
-FLASHMEM float PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int currentNF) {
+FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int currentNF) {
   float adjdB = 0.0;
-  int16_t adjAmplitude = 0;  // Was float; cast to float in dB calculation.  KF5N
-  int16_t refAmplitude = 0;  // Was float; cast to float in dB calculation.  KF5N
+  int16_t adjAmplitude = 0;
+  int16_t refAmplitude = 0;
   uint32_t index_of_max;     // This variable is not currently used, but it is required by the ARM max function.  KF5N
   int16_t yPlot, y1Plot;
   static int yOldPlot[SPECTRUM_RES];
@@ -557,15 +572,15 @@ FLASHMEM float PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int cu
   //}
 
   if(updateSpectrumData) {
-    while(!ProcessIQData2(updateSpectrumData)) ;  // Call the Audio process from within the display routine to eliminate conflicts with drawing the spectrum and waterfall displays
+    while(!FT8ProcessIQData2(updateSpectrumData)) ;  // Call the Audio process from within the display routine to eliminate conflicts with drawing the spectrum and waterfall displays
 
   } else {
-    ProcessIQData2(updateSpectrumData);  // Call the Audio process from within the display routine to eliminate conflicts with drawing the spectrum and waterfall displays
+    FT8ProcessIQData2(updateSpectrumData);  // Call the Audio process from within the display routine to eliminate conflicts with drawing the spectrum and waterfall displays
   }
 
   // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
-  yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF;
-  y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF;
+  yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF + 50;
+  y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF + 50;
 
   // create rough spectrum histogram if auto noise floor is active
   // the frequency spectrum is 150 pixels high, let's create
@@ -606,7 +621,7 @@ FLASHMEM float PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int cu
     arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
     arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
   }
-  if(bands[currentBand].demod == DEMOD_USB) {
+  if(bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_FT8) {
     arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
     arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
   }
@@ -660,7 +675,7 @@ FLASHMEM float PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int cu
       tft.fillRect(295, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);  // Adjusted height due to other graphics changes.  KF5N August 3, 2023
       tft.fillRect(230, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);
     } else {
-      if(bands[currentBand].demod == DEMOD_USB) {  //mode == DEMOD_LSB
+      if(bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_FT8) {  //mode == DEMOD_LSB
         tft.fillRect(199, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);
         tft.fillRect(263, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);
       }

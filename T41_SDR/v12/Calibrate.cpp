@@ -116,7 +116,7 @@ extern bool FFTupdated;
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-void ZoomFFTExe(uint32_t blockSize); // needed for ProcessTransmitCalIQData
+void CalcZoomFreqSpec(uint32_t blockSize); // needed for ProcessTransmitCalIQData
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -165,7 +165,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
       bands[currentBand].demod = DEMOD_SAM;
       CalcFilters();
 
-      spectrumZoom = 0; // prevents call to ZoomFFTExe in Process.cpp
+      spectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
       break;
 
     case 1: // receive IQ cal
@@ -176,7 +176,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
 
       currentScale = 1; // set vertical scale to 10 dB during calibration
       displayState = DISPLAY_CALIBRATION;
-      spectrumZoom = 0; // prevents call to ZoomFFTExe in Process.cpp
+      spectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
 
       SetRF_InAtten(RECIEVE_CAL_START_ATTEN);
       SetRF_OutAtten(RECIEVE_CAL_START_ATTEN);
@@ -2052,8 +2052,8 @@ FLASHMEM void ProcessTransmitCalIQData() {
     }
 
 
-    ZoomFFTExe(2048);
-    //CalcZoom1Magn();
+    //CalcZoomFreqSpec(2048);
+    //Calc1xFreqSpec();
   }
 }
 

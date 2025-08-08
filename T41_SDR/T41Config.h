@@ -14,6 +14,8 @@
 #define Debug(x)
 #endif
 
+#define debugSerial Serial // Serial or SerialUSB1 or SerialUSB2
+
 //#define DEBUG_SW // debug switch matrix false presses
 //#define DEBUG_EEPROM
 
@@ -67,12 +69,12 @@
 #define IMAGE_CORNER_Y            0               // ImageHeight = 302 Therefore 480 - 302 = 178 / 2 = 89
 #define RAY_LENGTH                190
 
-#define USE_FULL_MENU             1      // 0 - use top line menus; 1 - use full screen menus
+#define USE_FULL_MENU             0               // 0 - use top line menus; 1 - use full screen menus
 
 #define SDCARD_MESSAGE_LENGTH     3000L  // The number of milliseconds to leave error message on screen
 
 #define BEACON_FILE_NAME          "beacon.bmp"
 
-//#define T41_USB_AUDIO // experimental
+#define T41_USB_AUDIO // *** for passing audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
 
 #define FT8_EXTERNAL_MEMORY

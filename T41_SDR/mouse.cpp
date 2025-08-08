@@ -313,7 +313,7 @@ void MouseButtonOpStatsArea(int button) {
 
 void MouseButtonSpectrumWaterfall(int button) {
   if(button == 1) {
-    if(bands[currentBand].demod == DEMOD_FT8 && (cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8)) {
+    if(bands[currentBand].demod == DEMOD_FT8_DECODE && (cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8)) {
       ft8MsgSelectActive = true;
       //int msg = wfRows - (YPIXELS - cursorY - CURSOR_H / 2) / 5;
       int y = YPIXELS - cursorY - CURSOR_H / 2;
@@ -341,7 +341,7 @@ void MouseButtonSpectrumWaterfall(int button) {
 }
 
 void MouseWheelSpectrumWaterfall(int wheel) {
-  if(bands[currentBand].demod == DEMOD_FT8 && (cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8)) {
+  if(bands[currentBand].demod == DEMOD_FT8_DECODE && (cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8)) {
     if(num_decoded_msg > 0) {
       activeMsg += wheel;
       if(activeMsg >= num_decoded_msg) {

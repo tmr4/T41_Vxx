@@ -44,8 +44,6 @@ extern arm_fir_instance_f32 FIR_CW_DecodeR;
 // see https://groups.io/g/SoftwareControlledHamRadio/message/34030
 //#define USE_24K_SPS
 
-extern float32_t *mag_coeffs[];
-
 extern float32_t FIR_Coef_I[256 + 1];
 extern float32_t FIR_Coef_Q[256 + 1];
 
@@ -58,7 +56,8 @@ extern float32_t /* DMAMEM */ FIR_int2_coeffs[32];
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void InitFIRFilter();
+void InitFIRFilters();
+void InitHilbertFilters();
 
 void CalcFIRCoeffs(float *coeffs_I, int numCoeffs, float32_t fc, float32_t Astop, int type, float dfc, float Fsamprate);
 void CalcCplxFIRCoeffs(float *coeffs_I, float *coeffs_Q, int numCoeffs, float32_t fLoCut, float32_t fHiCut, float sampleRate);

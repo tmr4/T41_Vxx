@@ -60,6 +60,7 @@ void KeyRingOn() {
     bool pwrScale   scale signal for loses during interpolation
 *****/
 void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, float timeAdjust = 0.0, bool pwrScale = true) {
+  // calibrated for 1W on: 40m
   float cwPwr = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
   float fac;
 
@@ -71,16 +72,13 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
       Additional scaling, if nesessary to compensate for down-stream gain variations
    **********************************************************************************/
 
+  // adjust IQ signal amplitude and phase
   if(bands[currentBand].demod == DEMOD_LSB) {
-    //arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBandA], audioBufferL_EX, 256);  //Adjust level of L buffer
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);       //Adjust level of L buffer KF5N flipped sign, original was +
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);  // Adjust phase
-  } else {
-    if(bands[currentBand].demod == DEMOD_USB) {
-      //arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBandA], audioBufferL_EX, 256);
-      arm_scale_f32(audioBufferL_EX, + IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);   // KF5N flipped sign, original was minus
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
-    }
+    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
+  } else if(bands[currentBand].demod == DEMOD_USB) {
+    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
   }
 
   // ramp signal if requested
@@ -137,6 +135,7 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
     Interpolate (upsample the data streams by 8X to create the 192 kHz sample rate for output
     Requires a LPF FIR 48 tap 10KHz and 8KHz
     **********************************************************************************/
+
   // interpolation I channel by 2 to 48kHz
   arm_fir_interpolate_f32(&FIR_int1_EX_I, audioBufferL_EX, audioBufferTemp, 256);
 

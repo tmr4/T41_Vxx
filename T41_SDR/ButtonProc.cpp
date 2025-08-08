@@ -37,7 +37,8 @@ bool save_last_frequency = false;
 bool directFreqFlag = false;
 long TxRxFreqOld;
 int priorDemodMode; // preserves SSB demod mode between mode and band changes
-int currentDataMode = DEMOD_PSK31; // preserves data mode between mode and band changes
+//int currentDataMode = DEMOD_PSK31;
+int currentDataMode = DEMOD_FT8; // start in FT8 *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -124,6 +125,9 @@ FLASHMEM void ChangeBand(int change) {
         break;
 
       case DEMOD_FT8:
+        break;
+
+      case DEMOD_FT8_DECODE:
       case DEMOD_FT8_WAV:
         // turn on FT8
         syncFlag = false;
@@ -187,7 +191,7 @@ FLASHMEM void ButtonFilter() {
     }
     break;
 
-  case DEMOD_FT8:
+  case DEMOD_FT8_DECODE:
   case DEMOD_FT8_WAV:
     // Filter sequence in FT8 mode:
     // At startup:  high audio
@@ -223,22 +227,25 @@ FLASHMEM void ButtonFilter() {
 FLASHMEM void ChangeDemodMode(int mode) {
   // wrap up current demod mode
   if(radioMode == DATA_MODE) {
+    // switch demod modes: PSK31 -> FT8 -> PSK31 or FT8_dec -> FT8
     switch(currentDataMode) {
       case DEMOD_PSK31:
-        // try to set up FT8
-        if(SetupFT8()) {
-          // FT8 set up successful
-          bands[currentBand].demod = DEMOD_FT8;
-          currentDataMode = DEMOD_FT8;
-          ShowOperatingStats();
-        }
+        exitPSK31();
+        bands[currentBand].demod = DEMOD_FT8;
+        currentDataMode = DEMOD_FT8;
         break;
 
       case DEMOD_FT8:
-        ExitFT8();
+        // *** TODO: consider where best to reset radio from FT8 ***
+        setupPSK31();
         bands[currentBand].demod = DEMOD_PSK31;
         currentDataMode = DEMOD_PSK31;
-        ShowOperatingStats();
+        break;
+
+      case DEMOD_FT8_DECODE:
+        ExitFT8();
+        bands[currentBand].demod = DEMOD_FT8;
+        currentDataMode = DEMOD_FT8;
         break;
 
       case DEMOD_PSK31_WAV:
@@ -247,6 +254,7 @@ FLASHMEM void ChangeDemodMode(int mode) {
         break;
     }
 
+    ShowOperatingStats();
     return;
   }
 
@@ -259,11 +267,11 @@ FLASHMEM void ChangeDemodMode(int mode) {
   }
 
   // skip Data modes (*** these assume we're cycling through up or down ***)
-  if(bands[currentBand].demod == DEMOD_PSK31_WAV) {
-    bands[currentBand].demod += 4;
+  if(bands[currentBand].demod == DEMOD_PSK31) {
+    bands[currentBand].demod += 2;
   }
   if(bands[currentBand].demod == DEMOD_FT8) {
-    bands[currentBand].demod -= 4;
+    bands[currentBand].demod -= 3;
   }
 
   SetupDemodFilterBW();
@@ -321,9 +329,9 @@ FLASHMEM void ChangeMode(int mode) {
       break;
 
     case DATA_MODE:
-      if(bands[currentBand].demod == DEMOD_FT8) {
+      if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
         ExitFT8();
-      } else {
+      } else if(bands[currentBand].demod == DEMOD_PSK31) {
         exitPSK31();
       }
 
@@ -354,18 +362,26 @@ FLASHMEM void ChangeMode(int mode) {
       break;
 
     case DATA_MODE:
-      if(currentDataMode == DEMOD_FT8) {
-        // try to set up FT8
-        if(SetupFT8()) {
-          // FT8 set up successful
-          bands[currentBand].demod = DEMOD_FT8;
-        } else {
-          // can't set up FT8, move to psk31
+      switch(currentDataMode) {
+        case DEMOD_FT8_DECODE:
+          // try to set up FT8
+          if(SetupFT8()) {
+            // FT8 set up successful
+            bands[currentBand].demod = DEMOD_FT8_DECODE;
+          } else {
+            // can't set up FT8 decode, fall back to normal FT8
+            bands[currentBand].demod = DEMOD_FT8;
+          }
+          break;
+
+        case DEMOD_PSK31:
+          setupPSK31();
           bands[currentBand].demod = DEMOD_PSK31;
-        }
-      } else {
-        setupPSK31();
-        bands[currentBand].demod = DEMOD_PSK31;
+          break;
+
+        default:
+          bands[currentBand].demod = currentDataMode;
+          break;
       }
       break;
   }

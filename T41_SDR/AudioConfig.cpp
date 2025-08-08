@@ -118,16 +118,15 @@ AudioConnection pc_OutputAmp(outputAmp, 0, i2s_quadOut, 2);
 
 AudioConnection pc_Q_out_L(Q_out_L, 0, i2s_quadOut, 2);
 
+// currently USB Audio only used with WSJT-X FT8
 #ifdef T41_USB_AUDIO
-AudioOutputUSB usb1;
-AudioAmplifier amp1, amp2;
-AudioFilterBiquad biquad1;
-AudioConnection patchCord25(Q_out_L, biquad1);
-//AudioConnection patchCord25(Q_out_L, amp1);
-AudioConnection patchCord26(biquad1, amp1);
-AudioConnection patchCord27(amp1, 0, usb1, 0);
-AudioConnection patchCord28(Q_out_L, 0, amp2, 0);
-AudioConnection patchCord29(amp2, 0, usb1, 1);
+AudioOutputUSB usbOut;
+AudioAmplifier amp1; // WSJT-X needs some amplification to detect signal *** TODO: this needs refined with PC input volume adjustment ***
+AudioConnection pc_amp1(Q_out_L, amp1);
+AudioConnection pc_usb1(amp1, 0, usbOut, 0);
+
+AudioInputUSB usbIn;
+AudioConnection pc_usb2(usbIn, Q_in_L_Ex);
 #endif
 
 //-------------------------------------------------------------------------------------------------------------
@@ -211,6 +210,7 @@ void AudioSetup() {
   sgtl5000_1.setAddress(LOW); // Teensy pin 8
   sgtl5000_1.enable();
   AudioMemory(500);
+  //AudioMemory(1000); // about 26k increase in DMAMEM for each 100 block increase in audio memory so this is about 130k increase in DMAMEM
   //AudioMemory_F32(10);
   sgtl5000_1.inputSelect(AUDIO_INPUT_MIC);
   //sgtl5000_1.micGain(20);
@@ -230,9 +230,15 @@ void AudioSetup() {
   // *** TODO: examine need for these with regards to audio memory ***
   // enabling these causes unstable CW behavior *** TODO: examine this and provide details ***
   // *** TODO: consider activating these only when needed, like FT8 for Q_out_L
-  Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
-  //Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
-  //Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
+
+  // Q_out_L can buffer up to 80 blocks. setMaxBuffers can limit this to prevent play queue from buffering to much
+  // I haven't found setMaxBuffers solving a high memory use
+  //Q_out_L.setMaxBuffers(40);
+  Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL); // memory buffer for output queues are limited so this can be set without effect if problem is with input queue
+  //Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
+
+  Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
+  Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
 
 #ifdef USE_MIC_COMPRESSION
   comp1.setPreGain_dB(-10);
@@ -241,15 +247,11 @@ void AudioSetup() {
 
 #ifdef T41_USB_AUDIO
   amp1.gain(100);
-  amp2.gain(200);
-  //amp2.gain(100);
-  //amp2.gain(1);
-  //biquad1.setBandpass(0, 1000, 0.5);
-  biquad1.setLowpass(0, 3000, 0.5);
 #endif
 
   Q_in_R_Ex.end();
   pc_Q_in_R_Ex.disconnect();
+  pc_usb2.disconnect(); // USB
 }
 
 inline void Q_in_Ex_Stop() {
@@ -334,6 +336,30 @@ void ConfigAudioState(int audioState) {
       Q_out_Start(); // sidetone
       break;
 
+    case DATA_RECEIVE_STATE:
+      pc_Q_out_L_Ex.disconnect();
+      pc_Q_out_R_Ex.disconnect();
+      pc_usb2.disconnect();
+      Q_in_L_Ex.end();
+      Q_in_L_Ex.clear();
+
+      // start receive audio chain
+      Q_in_Start();
+      Q_out_Start();
+      pc_amp1.connect();
+      break;
+
+    case DATA_TRANSMIT_STATE:
+      // start USB audio transmit chain
+      pc_usb2.connect();
+      Q_in_L_Ex.begin();
+
+      Q_out_Ex_Start();
+
+      pc_amp1.disconnect();
+      Q_out_Start();
+      break;
+
     case CALIBRATE_RECEIVE_STATE:
       // set calibration state
       Q_in_Start();
@@ -342,7 +368,7 @@ void ConfigAudioState(int audioState) {
     case CALIBRATE_TRANSMIT_STATE:
       // set calibration state
       Q_in_Start();
-      Q_in_Ex_Start();
+      //Q_in_Ex_Start(); // *** for v12??? ***
       Q_out_Ex_Start();
       break;
 

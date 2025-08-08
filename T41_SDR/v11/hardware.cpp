@@ -35,18 +35,13 @@ extern long long oldCenterFreq;
 
 #define PTT          37    // Transmit/Receive
 
-//----------
-// Utility.h
-
-float32_t sinBuffer3[256];
-float32_t cosBuffer3[256];
-
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
 void RFPowerFollowup();
 void RFGainFollowup();
+void FT8DoXmitCalibrate();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -143,12 +138,16 @@ FLASHMEM void CalibrateOptions() {
       break;
 
     case 2:                  // IQ Receive Cal - Gain and Phase
-      DoReceiveCalibrate();  // This function was significantly revised
+      DoReceiveCalibrate();
       calibrateFlag = 5;
       break;
 
     case 3:               // IQ Transmit Cal - Gain and Phase
-      DoXmitCalibrate();  // This function was significantly revised
+    if(bands[currentBand].demod == DEMOD_FT8) {
+      FT8DoXmitCalibrate();
+    } else {
+      DoXmitCalibrate();
+    }
       calibrateFlag = 5;
       break;
 
@@ -254,18 +253,6 @@ void SoftResetHardware() {
   lastFilterEncoder = 1; // force initial update
   filter_pos_BW = 0;
   last_filter_pos_BW = 0;
-
-
-  // from v11 Utility.cpp GenSineToneBuffers
-  // *** TODO: move this to calibration module and eliminate globals ***
-  float theta, freqSideTone3 = 3000;
-
-  for(int i = 0; i < 256; i++) {
-    // used in calibration
-    theta = i * 2.0 * PI * freqSideTone3 / 2400;
-    cosBuffer3[i] = cos(theta);
-    sinBuffer3[i] = sin(theta);
-  }
 }
 
 void ConfigRadioStateHardware() {
@@ -274,6 +261,7 @@ void ConfigRadioStateHardware() {
       break;
 
     case SSB_TRANSMIT_STATE:
+    case DATA_TRANSMIT_STATE:
       oldCenterFreq = centerFreq;
       break;
 

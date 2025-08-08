@@ -1577,8 +1577,9 @@ void ProcessFT8WaveData(q15_t *q15_buffer_LTemp) {
     FT_8_counter = 0;
     ft8_flag = 0;
 
-    bands[currentBand].demod = DEMOD_FT8;
-    currentDataMode = DEMOD_FT8;
+    // *** TODO: consider having FT8 decode mode running on 44.1kHz sample rate
+    bands[currentBand].demod = DEMOD_FT8_DECODE;
+    currentDataMode = DEMOD_FT8_DECODE;
     ShowOperatingStats();
     ft8State = 1;
     UpdateInfoBoxItem(IB_ITEM_FT8);

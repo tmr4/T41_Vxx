@@ -91,7 +91,21 @@ float32_t DMAMEM FIR_Coef_Q[256 + 1];
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void InitFIRFilter() {
+void InitHilbertFilters() {
+  // Hilbert filters
+  // *** TODO: examine these filter coeficients
+  // see: https://groups.io/g/SoftwareControlledHamRadio/topic/t41_hilbert_filter_design/113214259
+  // ***
+  if(bands[currentBand].demod == DEMOD_FT8) {
+    arm_fir_init_f32(&FIR_Hilbert_L, 100, FIR_Hilbert_coeffs_45_FT8, FIR_Hilbert_state_L, 256);
+    arm_fir_init_f32(&FIR_Hilbert_R, 100, FIR_Hilbert_coeffs_neg45_FT8, FIR_Hilbert_state_R, 256);
+  } else {
+    arm_fir_init_f32(&FIR_Hilbert_L, 100, FIR_Hilbert_coeffs_45, FIR_Hilbert_state_L, 256);
+    arm_fir_init_f32(&FIR_Hilbert_R, 100, FIR_Hilbert_coeffs_neg45, FIR_Hilbert_state_R, 256);
+  }
+}
+
+void InitFIRFilters() {
   /****************************************************************************************
      Receive decimation and interpolation FIR filters design
 
@@ -152,16 +166,12 @@ void InitFIRFilter() {
   arm_fir_interpolate_init_f32(&FIR_int3_EX_I, 2, 48, FIR_int3_12ksps_48tap_2k7, FIR_int3_EX_I_state, 128); // v66-9 coef
   arm_fir_interpolate_init_f32(&FIR_int3_EX_Q, 2, 48, FIR_int3_12ksps_48tap_2k7, FIR_int3_EX_Q_state, 128); //
 
-  // Hilbert filters
-  // *** TODO: examine these filter coeficients
-  // see: https://groups.io/g/SoftwareControlledHamRadio/topic/t41_hilbert_filter_design/113214259
-  // ***
-  arm_fir_init_f32(&FIR_Hilbert_L, 100, FIR_Hilbert_coeffs_45, FIR_Hilbert_state_L, 256);
-  arm_fir_init_f32(&FIR_Hilbert_R, 100, FIR_Hilbert_coeffs_neg45, FIR_Hilbert_state_R, 256);
-
   // CW filters
   arm_fir_init_f32(&FIR_CW_DecodeL, 64, CW_Filter_Coeffs2, FIR_CW_DecodeL_state, 256);
   arm_fir_init_f32(&FIR_CW_DecodeR, 64, CW_Filter_Coeffs2, FIR_CW_DecodeR_state, 256);
+
+  // init Hilbert filters
+  InitHilbertFilters();
 
   // set audio, decimate and interpolate filters based on current band filter cutoffs
   SetupDemodFilterBW();

@@ -495,6 +495,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
             break;
 
           case DEMOD_FT8:
+            // *** TODO: add DEMOD_FT8_DECODE ***
             // try to load wav file
             if(SetupFT8Wav()) {
               // switch to play a wav file

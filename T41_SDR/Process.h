@@ -3,7 +3,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern float32_t /*DMAMEM*/ audioFFT[1024];
+//extern float32_t /*DMAMEM*/ audioFFT[1024];
+extern float32_t /*DMAMEM*/ audioFFT[];
 extern float32_t /*DMAMEM*/ audioIFFT[];
 
 extern float32_t biquad_lowpass1_coeffs[];
@@ -18,11 +19,14 @@ extern float32_t audioMaxSquaredAve;
 //-------------------------------------------------------------------------------------------------------------
 
 void InitFFTArrays();
-void InitFFTFilter();
+void InitZoomFFTFilter(uint32_t blockSize = 2048);
 void InitAMDemodBiquadFilter();
 
-void ZoomFFTPrep();
-
-bool ProcessReceiverData(bool updateSpectrumData = false);
+int ProcessReceiverData(bool updateSpectrumData = false);
 void ProcessControls();
 float32_t CalcSignalStrength();
+
+void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
+
+void YieldToProcess(bool updateSpectrum = false);
+void YieldForProcess(int ms);

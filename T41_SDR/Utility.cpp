@@ -418,6 +418,7 @@ FLASHMEM void SetBand() {
       DrawBandwidthBar();
       ShowBandwidthBarValues();
       ShowSpectrumFreqValues();
+      DrawAudioFilterLines();
       break;
 
     case DISPLAY_BEACON_MONITOR:
@@ -426,6 +427,7 @@ FLASHMEM void SetBand() {
     case DISPLAY_FULL_MENU:
       ShowFrequency();
       ShowOperatingStats();
+      DrawAudioFilterLines();
       break;
 
     default:
@@ -790,6 +792,7 @@ int GetXRState() {
     case SSB_TRANSMIT_STATE:
     case CW_TRANSMIT_STRAIGHT_STATE:
     case CW_TRANSMIT_KEYER_STATE:
+    case DATA_TRANSMIT_STATE:
       return 0;
 
     // *** TODO: may need to add specific receive states if other radio states are added
@@ -833,38 +836,5 @@ void UpdateMemTempLoad() {
     UpdateInfoBoxItem(IB_ITEM_HEAP);
     UpdateInfoBoxItem(IB_ITEM_TEMP);
     UpdateInfoBoxItem(IB_ITEM_LOAD);
-  }
-}
-
-void YieldToProcess(bool updateSpectrum /* = false */) {
-  static long prevUpdate = 0;
-
-  if(updateSpectrum) {
-    // wait for spectrum data update
-    while(!ProcessReceiverData(true)) {
-      ProcessControls();
-    }
-    prevUpdate = millis();
-  } else {
-    // process controls and IQ data if 10ms has passed since last update
-    if(millis() - prevUpdate > 10) {
-      ProcessControls();
-
-      // process IQ data while sufficient data exists
-      // This allows the process to catch up after longer tasks
-      // such as the waterfall update. Failing to do this can
-      // result in poor audio.
-      while(ProcessReceiverData()) ;
-      prevUpdate = millis();
-    }
-  }
-}
-
-void YieldForProcess(int ms) {
-  long unsigned entry = millis();
-
-  // process controls and IQ data if 10ms has passed since last update
-  while(millis() - entry < (long unsigned)ms) {
-    YieldToProcess();
   }
 }

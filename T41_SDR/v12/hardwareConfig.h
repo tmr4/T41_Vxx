@@ -32,7 +32,7 @@
 // is set to Serial and the unit is connected to the USB host of another unit ***
 #define controlSerial usbHostSerial // Serial or SerialUSB1 for USB port or usbHostSerial for USB Host port
 #define beaconSerial Serial // Serial or SerialUSB2
-#define wsjtSerial SerialUSB1 // Serial or SerialUSB1 or SerialUSB2
+#define wsjtSerial Serial // Serial or SerialUSB1 or SerialUSB2
 
 #define I2C_DELAY_LONG 1000L   // How long to show I2C screen with errors
 //#define I2C_DELAY_LONG 10000L   // How long to show I2C screen with errors

@@ -5,6 +5,7 @@
 //#include "EEPROM.h"
 #include "Filter.h"
 #include "FIR.h"
+#include "keyer.h"
 #include "Menu.h"
 #include "Utility.h"
 
@@ -28,94 +29,123 @@
 *****/
 void PlayExciterIQData() {
   int16_t *sp_L, *sp_R;
+  int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
 
   // *** we're at 24kHz sample rate here ***
 
   // copy left buffer to right channel
   arm_copy_f32(audioBufferL_EX, audioBufferR_EX, 256);
 
-#if HILBERT_SIZE == 256 // 24kHz sample rate
-#ifdef USE_24K_SPS
-  // create I and Q signals with Hilbert transform
-  arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 256);
-  arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 256);
-#else
-  // use 12k sample rate with older Hilbert coefficients
-  arm_fir_decimate_f32(&FIR_dec3_EX_I, audioBufferL_EX, audioBufferL_EX, 256);
-  arm_fir_decimate_f32(&FIR_dec3_EX_Q, audioBufferR_EX, audioBufferR_EX, 256);
+  if(bands[currentBand].demod != DEMOD_FT8) {
+    #if HILBERT_SIZE == 256 // 24kHz sample rate
+    #ifdef USE_24K_SPS
+      // create I and Q signals with Hilbert transform
+      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 256);
+      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 256);
+    #else
+      // use 12k sample rate with older Hilbert coefficients
+      arm_fir_decimate_f32(&FIR_dec3_EX_I, audioBufferL_EX, audioBufferL_EX, 256);
+      arm_fir_decimate_f32(&FIR_dec3_EX_Q, audioBufferR_EX, audioBufferR_EX, 256);
 
-  arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
-  arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
+      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
+      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
 
-  // Interpolate back to 24kHz and scale to equalize levels
-  // left channel first
-  arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
-  arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
+      // Interpolate back to 24kHz and scale to equalize levels
+      // left channel first
+      arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
+      arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
 
-  // now right channel
-  arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
-  arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
-#endif
-#endif
+      // now right channel
+      arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
+      arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
+    #endif
+    #endif
 
-#if HILBERT_SIZE == 128 // 12kHz sample rate
-  // v66-9 does the following:
-  // Convert sample rate to 12kHz, apply Hilbert transforms and then interpolate back to 24kHz.
-  // The objective is to extend the lower frequency range of the Hilbert transfrom by moving the
-  // lowewr limit of the Hilbert usefullness down to below 200Hz.
-  // Decimate by 2 to 12K SPS sample rate
-  arm_fir_decimate_f32(&FIR_dec3_EX_I, audioBufferL_EX, audioBufferL_EX, 256);
-  arm_fir_decimate_f32(&FIR_dec3_EX_Q, audioBufferR_EX, audioBufferR_EX, 256);
+    #if HILBERT_SIZE == 128 // 12kHz sample rate
+      // v66-9 does the following:
+      // Convert sample rate to 12kHz, apply Hilbert transforms and then interpolate back to 24kHz.
+      // The objective is to extend the lower frequency range of the Hilbert transfrom by moving the
+      // lowewr limit of the Hilbert usefullness down to below 200Hz.
+      // Decimate by 2 to 12K SPS sample rate
+      arm_fir_decimate_f32(&FIR_dec3_EX_I, audioBufferL_EX, audioBufferL_EX, 256);
+      arm_fir_decimate_f32(&FIR_dec3_EX_Q, audioBufferR_EX, audioBufferR_EX, 256);
 
-  // Hilbert transforms at 12kHz, with 5KHz bandwidth, buffer size 128
-  arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
-  arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
+      // Hilbert transforms at 12kHz, with 5KHz bandwidth, buffer size 128
+      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
+      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
 
-  // Interpolate back to 24kHz and scale to equalize levels
-  // left channel first
-  arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
-  arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
+      // Interpolate back to 24kHz and scale to equalize levels
+      // left channel first
+      arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
+      arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
 
-  // now right channel
-  arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
-  arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
-#endif
+      // now right channel
+      arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
+      arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
+    #endif
+  } else {
+    // create I and Q signals with Hilbert transform
+    arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 256);
+    arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 256);
+  }
 
-  // apply IQ calibration factors
+  // adjust IQ signal amplitude and phase
   // *** TODO: v66-9 has currentBandA, why? ***
   if(bands[currentBand].demod == DEMOD_LSB) {
-    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-  }
-  else if(bands[currentBand].demod == DEMOD_USB) {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
+  } else if(bands[currentBand].demod == DEMOD_USB) {
+    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
+  } else if(bands[currentBand].demod == DEMOD_FT8) {
+    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
   }
-  IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
 
-  // return to 192kHz, interpolate by a factor of 8, once again in two steps to preserve the spectrum order
-  // 24kHz effective sample rate here
-  arm_fir_interpolate_f32(&FIR_int1_EX_I, audioBufferL_EX, audioBufferTemp, 256);
+  if(bands[currentBand].demod != DEMOD_FT8) {
+    // return to 192kHz, interpolate by a factor of 8, once again in two steps to preserve the spectrum order
+    // 24kHz effective sample rate here
+    arm_fir_interpolate_f32(&FIR_int1_EX_I, audioBufferL_EX, audioBufferTemp, 256);
 
-  // interpolation-by-4,  48KHz effective sample rate here
-  arm_fir_interpolate_f32(&FIR_int2_EX_I, audioBufferTemp, audioBufferL_EX, 512);
+    // interpolation-by-4,  48KHz effective sample rate here
+    arm_fir_interpolate_f32(&FIR_int2_EX_I, audioBufferTemp, audioBufferL_EX, 512);
 
-  // and again for R channel
-  arm_fir_interpolate_f32(&FIR_int1_EX_Q, audioBufferR_EX, audioBufferTemp, 256);
-  arm_fir_interpolate_f32(&FIR_int2_EX_Q, audioBufferTemp, audioBufferR_EX, 512);
+    // and again for R channel
+    arm_fir_interpolate_f32(&FIR_int1_EX_Q, audioBufferR_EX, audioBufferTemp, 256);
+    arm_fir_interpolate_f32(&FIR_int2_EX_Q, audioBufferTemp, audioBufferR_EX, 512);
 
-  // 192kHz effective sample rate here
+    // 192kHz effective sample rate here
 
-  // scale to compensate for losses during interpolation
-  arm_scale_f32(audioBufferL_EX, 8.0, audioBufferL_EX, 2048);
-  arm_scale_f32(audioBufferR_EX, 8.0, audioBufferR_EX, 2048);
+    // scale to compensate for losses during interpolation
+    arm_scale_f32(audioBufferL_EX, 8.0, audioBufferL_EX, blocks * 128);
+    arm_scale_f32(audioBufferR_EX, 8.0, audioBufferR_EX, blocks * 128);
+  } else {
+    // measurements at dummy load tap which is -30dB with WSJT-X pwr level at -45dB
+    // 2x scaler gives -6.6dbm
+    // 4x scaler gives -0.8dbm
+    // 12x scaler gives 8.1dbm
+    // scale to 1W = 30dBm, scaller = 4.0 * 1.0965
+    // scale to 5W = 36.99dBm, scaller = 4.0 * 2.4519
+    float pwr = pow(10, log10((float)transmitPowerLevel * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
+    arm_scale_f32(audioBufferL_EX, pwr, audioBufferL_EX, 256);
+    arm_scale_f32(audioBufferR_EX, pwr, audioBufferR_EX, 256);
+  }
 
   // convert to integer values and output
-  for(unsigned  i = 0; i < 16; i++) {
+  for(int  i = 0; i < blocks; i++) {
     sp_L = Q_out_L_Ex.getBuffer();
     sp_R = Q_out_R_Ex.getBuffer();
     arm_float_to_q15(&audioBufferL_EX[128 * i], sp_L, 128);
     arm_float_to_q15(&audioBufferR_EX[128 * i], sp_R, 128);
     Q_out_L_Ex.playBuffer();
     Q_out_R_Ex.playBuffer();
+  }
+
+  // pause while this plays to prevent churn
+  // *** TODO: find right pause interval ***
+  //CWPause(10); // audio memory usage increases with this
+  if(bands[currentBand].demod != DEMOD_FT8) {
+    CWPause(5); // audio memory usage doesn't increase with this
   }
 }
 
@@ -132,11 +162,12 @@ void PlayExciterIQData() {
 *****/
 void ExciterIQData() {
   int16_t *sp_L;
+  int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
 
   // process samples from queue buffer if there are at least 16 buffers available
-  if((uint32_t)Q_in_L_Ex.available() > 16) {
+  if(Q_in_L_Ex.available() > blocks) {
     // get audio samples from the audio  buffers and convert them to float
-    for(unsigned i = 0; i < 16; i++) {
+    for(int i = 0; i < blocks; i++) {
       // read in 16 blocks á 128 samples into the left channel, we'll duplicate this later
       sp_L = Q_in_L_Ex.readBuffer();
 
@@ -153,15 +184,29 @@ void ExciterIQData() {
               192KHz/8 = 24KHz, with 8xsmaller sample sizes
      **********************************************************************************/
 
-    // reduce sample rate and size by decimation by 8
-    // decimate in two stages to maintain spectrum order
-    // 192kHz effective sample rate here
-    // decimation-by-4 in-place
-    arm_fir_decimate_f32(&FIR_dec1_EX_I, audioBufferL_EX, audioBufferL_EX, 2048);
+    if(bands[currentBand].demod != DEMOD_FT8) {
+      // reduce sample rate and size by decimation by 8
+      // decimate in two stages to maintain spectrum order
+      // 192kHz effective sample rate here
+      // decimation-by-4 in-place
+      arm_fir_decimate_f32(&FIR_dec1_EX_I, audioBufferL_EX, audioBufferL_EX, 2048);
 
-    // 48KHz effective sample rate here
-    // decimation-by-2 in-place
-    arm_fir_decimate_f32(&FIR_dec2_EX_I, audioBufferL_EX, audioBufferL_EX, 512);
+      // 48KHz effective sample rate here
+      // decimation-by-2 in-place
+      arm_fir_decimate_f32(&FIR_dec2_EX_I, audioBufferL_EX, audioBufferL_EX, 512);
+    } else {
+      float tmp[256];
+
+      // let's listen to it
+      // *** this gives reasonable volume at wsjt-x -45dB transmit level and 1 Windows mixer volume setting ***
+      // *** higher wsjt-x transmit levels (~-20dB) is too loud here ***
+      // *** TODO: higher wsjt-x transmit levels  do not increase power out ***
+      // *** TODO: add volume adjustment here ***
+      arm_scale_f32(audioBufferL_EX, usbIn.volume() / 0.01, tmp, blocks * 128);
+      sp_L = Q_out_L.getBuffer();
+      arm_float_to_q15(tmp, sp_L, blocks * 128);
+      Q_out_L.play(sp_L, blocks * 128);
+    }
 
     // leaving us at 24kHz sample rate here
 

@@ -153,9 +153,9 @@ FLASHMEM void VFOSelect(int32_t index) {
         bands[currentBand].demod = DEMOD_PSK31;
         break;
 
-      case DEMOD_FT8:
+      case DEMOD_FT8_DECODE:
       case DEMOD_FT8_WAV:
-        bands[currentBand].demod = DEMOD_FT8;
+        bands[currentBand].demod = DEMOD_FT8_DECODE;
         syncFlag = false;
         ft8State = 1;
         UpdateInfoBoxItem(IB_ITEM_FT8);

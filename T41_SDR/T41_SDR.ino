@@ -116,6 +116,12 @@ int bandswitchPins[] = {
 long long oldCenterFreq = centerFreq; // simplifies v12 transmit recovery
 
 //-------------------------------------------------------------------------------------------------------------
+// Forwards
+//-------------------------------------------------------------------------------------------------------------
+
+int SetI2SFreq(int freq);
+
+//-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
@@ -145,8 +151,8 @@ FLASHMEM void InitializeDataArrays() {
   CLEAR_VAR(LMS_nr_delay);
 
   // initialize various filters
-  InitFIRFilter();
-  InitFFTFilter();
+  InitFIRFilters();
+  InitZoomFFTFilter();
   InitSpectralNoiseReduction();
   InitLMSNoiseReduction();
 
@@ -480,15 +486,69 @@ FASTRUN void loop() {
   }
 
   if(radioMode == DATA_MODE) {
-    radioState = SSB_RECEIVE_STATE;
+    //Serial.print("ft8PTT: "); Serial.println(ft8PTT);
+    if(ft8PTT) {
+      radioState = DATA_TRANSMIT_STATE;
+    } else {
+      radioState = DATA_RECEIVE_STATE;
+    }
+
+    // *** TODO: consider best place to do this ***
+    // *** TODO: this needs work ***
+    switch(bands[currentBand].demod) {
+      case DEMOD_FT8:
+        if(sampleRate > 50000) {
+          sampleRate = 44100.0;
+          intermediateFreq = 11025.0;
+          // using 48k sample rate doesn't change FT8 transmision
+          //sampleRate = 48000.0;
+          //intermediateFreq = 12000.0;
+          SetI2SFreq(sampleRate);
+          InitFFTArrays();
+          SetZoom(1);
+          //InitZoomFFTFilter(); // *** TODO: can save some memory by specifying block size if will operate in FT8 a lot ***
+          InitHilbertFilters();
+          SetupDemodFilterBW();
+          //ShowSpectrumFreqValues();
+          DrawAudioSpectContainer();
+          DrawAudioFilterLines();
+          ResetTuning();
+        }
+        break;
+
+      default:
+        if(sampleRate < 50000) {
+          sampleRate = 192000.0;
+          intermediateFreq = 48000.0;
+          SetI2SFreq(sampleRate);
+          InitFFTArrays();
+          SetZoom(1);
+          InitHilbertFilters();
+          SetupDemodFilterBW();
+          DrawAudioSpectContainer();
+          DrawAudioFilterLines();
+          //ShowSpectrumFreqValues();
+          //ShowOperatingStats();
+        }
+        break;
+    }
+  } else {
+    if(sampleRate < 50000) {
+      sampleRate = 192000.0;
+      intermediateFreq = 48000.0;
+      SetI2SFreq(sampleRate);
+      InitFFTArrays();
+      SetZoom(1);
+      InitHilbertFilters();
+      SetupDemodFilterBW();
+      DrawAudioSpectContainer();
+      DrawAudioFilterLines();
+      //ShowSpectrumFreqValues();
+      //ShowOperatingStats();
+    }
   }
 
   if(radioState != lastState) {
-    ConfigAudioState(radioState);
-    ConfigRadioState();
-    SetFreq();  // Update frequencies if the radio state has changed
-    ShowTransmitReceiveStatus();
-
     // cleanup last state
     switch(lastState) {
       case CW_RECEIVE_STATE:
@@ -502,9 +562,18 @@ FASTRUN void loop() {
         // *** TODO: consider moving exit stuff from ChangeDemodMode and ChangeMode here ***
         break;
 
+      case DATA_TRANSMIT_STATE:
+        digitalWrite(RXTX, LOW); // turn off TX relay
+        break;
+
       default:
         break;
     }
+
+    ConfigAudioState(radioState);
+    ConfigRadioState();
+    SetFreq();  // Update frequencies if the radio state has changed
+    ShowTransmitReceiveStatus();
   }
 
   // *** TODO: consider if a control update is proper here ***
@@ -514,6 +583,7 @@ FASTRUN void loop() {
   switch(radioState) {
     case SSB_RECEIVE_STATE:
     case CW_RECEIVE_STATE:
+    case DATA_RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
           ShowSpectrum();
@@ -527,6 +597,7 @@ FASTRUN void loop() {
         YieldToProcess();
         break;
       }
+      //if(radioState == DATA_RECEIVE_STATE) Serial.println("at 4");
       break;
 
     case SSB_TRANSMIT_STATE:
@@ -621,6 +692,20 @@ FASTRUN void loop() {
       CWPause(50);
       break;
 
+    case DATA_TRANSMIT_STATE:
+      digitalWrite(RXTX, HIGH); // turn on TX relay
+      ShowTransmitReceiveStatus();
+
+      while(ft8PTT) {
+        ExciterIQData();
+        UpdateClock();
+        WSJTLoop(); // update ft8PTT
+      }
+
+      centerFreq = oldCenterFreq;
+      digitalWrite(RXTX, LOW);
+      break;
+
     default:
       break;
   }
@@ -655,20 +740,17 @@ FASTRUN void loop() {
 
 #ifdef NO_DISPLAY
   // need PC control without a display
-  T41ControlLoop();
+  //T41ControlLoop();
 #endif
 
 #ifndef HOST_CAT_CONTROL_SUPPORT
-  T41ControlLoop();
+  //T41ControlLoop();
 #endif
 
   // *** this allows setting clock with Set T41Clock app in addition to communication with WSJT-X app
   //     this is also possible with T41ControlLoop if not being used for HOST_CAT_CONTROL_SUPPORT ***
-  if(bands[currentBand].demod == DEMOD_FT8) {
-    WSJTLoop();
-  } else {
-    T41ControlLoop();
-  }
+  // *** TODO: work up auto wsjt connect ***
+  WSJTLoop(); // force wsjt loop
 
 #ifdef DEBUG_LOOP
   ExitLoop();

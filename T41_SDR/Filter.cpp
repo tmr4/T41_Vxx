@@ -323,7 +323,6 @@ void UpdateAudioFilterMask(float *coeffs_I, float *coeffs_Q, int numCoeffs, floa
   // FFT of audioFIRFilterMask
   // perform FFT (in-place), needs only to be done once (or every time the filter coeffs change)
   arm_cfft_f32(maskS, audioFIRFilterMask, 0, 1);
-
 }
 
 /*****
@@ -364,16 +363,18 @@ void SetDecIntFIRFilters(int decFilterBW = 0) {
 *****/
 void CalcFilters() {
   int loCut = 0, hiCut = 0;
+  float sr = sampleRate / (bands[currentBand].demod == DEMOD_FT8 ? 1.0 : 8.0);
 
   switch(bands[currentBand].demod) {
     case DEMOD_USB:
     case DEMOD_AM:
     case DEMOD_NFM:
-    case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:
     case DEMOD_FT8:
-    case DEMOD_FT8_WAV:
     case DEMOD_SAM:
+    case DEMOD_PSK31_WAV:
+    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_WAV:
       loCut = currentFilterLoCut;
       hiCut = currentFilterHiCut;
       break;
@@ -390,13 +391,20 @@ void CalcFilters() {
   }
 
   // update audio filter
-  UpdateAudioFilterMask(FIR_Coef_I, FIR_Coef_Q, 256 + 1, loCut, hiCut, sampleRate / 8.0);
+  UpdateAudioFilterMask(FIR_Coef_I, FIR_Coef_Q, 256 + 1, loCut, hiCut, sr);
 
   // update decimation and interpolation filters
-  if(bands[currentBand].demod == DEMOD_NFM) {
-    SetDecIntFIRFilters(nfmFilterBW);
-  } else {
-    SetDecIntFIRFilters();
+  switch(bands[currentBand].demod) {
+    case DEMOD_NFM:
+      SetDecIntFIRFilters(nfmFilterBW);
+      break;
+
+    case DEMOD_FT8:
+      break;
+
+    default:
+      SetDecIntFIRFilters();
+      break;
   }
 }
 
@@ -408,9 +416,10 @@ FLASHMEM void SetupDemodFilterBW() {
     case DEMOD_USB:
     case DEMOD_LSB:
     case DEMOD_NFM:
-    case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:
     case DEMOD_FT8:
+    case DEMOD_PSK31_WAV:
+    case DEMOD_FT8_DECODE:
     case DEMOD_FT8_WAV:
       currentFilterLoCut = bands[currentBand].FLoCut;
       currentFilterHiCut = bands[currentBand].FHiCut;

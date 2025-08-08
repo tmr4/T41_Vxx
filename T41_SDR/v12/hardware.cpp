@@ -443,6 +443,7 @@ void ConfigRadioStateHardware() {
       break;
 
     case SSB_TRANSMIT_STATE:
+    case DATA_TRANSMIT_STATE:
       digitalWrite(RF_XMIT_RELAY, XMIT_SSB);
       //SetRF_OutAtten(powerOutSSB[currentBand]);
       SetRF_OutAtten(currentRF_OutAtten);

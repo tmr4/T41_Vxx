@@ -2,13 +2,21 @@
 
 This is a combination of my T41 v11 and v12 projects.  This should make it easier to maintain consistency between the two versions.
 
-The driver for this project was to leverage all of the work I put into adding features  to my v11 radio such as:
+The driver for this project was to leverage all of the work I put into adding features to my v11 radio such as:
 
 * new input capability (mouse and keyboard)
 * new modes (NFM demodulation and some data modes)
 * new features (beacon monitor, CW message keyer, CAT control, remote display, USB host connection to another T41)
 
 This is a work in progress.  Some functions may be broken and will likely remain so until they are of interest to me.  This is especially true for the v12 radio. I'm still building that so I've yet to add a lot of functionality.  Use at your own risk.
+
+## Recent Work
+
+* WSJT-X working over T41 USB connection
+  * Modified the FT8 Data mode to pass audio back and forth with a PC over USB at a 44.1kHz sample rate
+  * Modified the wsjt module CAT controls for transmit
+  * Will test out code where WSJT-X connection sets up T41 for FT8
+  * Calibration of FT8 Data mode still in progress
 
 ## Use
 

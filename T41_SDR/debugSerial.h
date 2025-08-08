@@ -37,40 +37,40 @@ class DebugSerial {
     // *** Note: the debug window app outputs the message with Console.WriteLine so println fuctions aren't supported ***
 
     // Print a string
-    inline size_t print(const String &s) { return Serial.print(id) + Serial.print(s) + Serial.print(">"); }
+    inline size_t print(const String &s) { return debugSerial.print(id) + debugSerial.print(s) + debugSerial.print(">"); }
     // Print a single character
-    inline size_t print(char c)				  { return Serial.print(id) + Serial.print(c) + Serial.print(">"); }
+    inline size_t print(char c)				  { return debugSerial.print(id) + debugSerial.print(c) + debugSerial.print(">"); }
     // Print a string
-    inline size_t print(const char s[])	{ return Serial.print(id) + Serial.print(s) + Serial.print(">"); }
+    inline size_t print(const char s[])	{ return debugSerial.print(id) + debugSerial.print(s) + debugSerial.print(">"); }
     // Print a string
-    inline size_t print(const __FlashStringHelper *f)	{ return Serial.print(id) + Serial.print(f) + Serial.print(">"); }
+    inline size_t print(const __FlashStringHelper *f)	{ return debugSerial.print(id) + debugSerial.print(f) + debugSerial.print(">"); }
     // Print an unsigned number
-    inline size_t print(uint8_t b)				{ return Serial.print(id) + Serial.print(b) + Serial.print(">"); }
+    inline size_t print(uint8_t b)				{ return debugSerial.print(id) + debugSerial.print(b) + debugSerial.print(">"); }
     // Print a signed number
-    inline size_t print(int n)				    { return Serial.print(id) + Serial.print(n) + Serial.print(">"); }
+    inline size_t print(int n)				    { return debugSerial.print(id) + debugSerial.print(n) + debugSerial.print(">"); }
     // Print an unsigned number
-    inline size_t print(unsigned int n)	{ return Serial.print(id) + Serial.print(n) + Serial.print(">"); }
+    inline size_t print(unsigned int n)	{ return debugSerial.print(id) + debugSerial.print(n) + debugSerial.print(">"); }
     // Print a signed number
-    inline size_t print(long n)          { return Serial.print(id) + Serial.print(n) + Serial.print(">"); }
+    inline size_t print(long n)          { return debugSerial.print(id) + debugSerial.print(n) + debugSerial.print(">"); }
     // Print an unsigned number
-    inline size_t print(unsigned long n) { return Serial.print(id) + Serial.print(n) + Serial.print(">"); }
+    inline size_t print(unsigned long n) { return debugSerial.print(id) + debugSerial.print(n) + debugSerial.print(">"); }
     // Print a signed number
-    inline size_t print(int64_t n)       { return Serial.print(id) + Serial.print(n) + Serial.print(">"); }
+    inline size_t print(int64_t n)       { return debugSerial.print(id) + debugSerial.print(n) + debugSerial.print(">"); }
     // Print an unsigned number
-    inline size_t print(uint64_t n)      { return Serial.print(id) + Serial.print(n) + Serial.print(">"); }
+    inline size_t print(uint64_t n)      { return debugSerial.print(id) + debugSerial.print(n) + debugSerial.print(">"); }
 };
 
 // debug macros and pointers to two instances of DebugSerial are provided, create more as needed
 extern DebugSerial *dbSerial, *dbSerial2;
 
-#define DEBUG_ENABLED
+//#define DEBUG_SERIAL_ENABLED
 
-#ifdef DEBUG_ENABLED
+#ifdef DEBUG_SERIAL_ENABLED
 #define DEBUG_SERIAL(msg) dbSerial->print(msg);
 #define DEBUG_SERIAL2(msg) dbSerial2->print(msg);
-#elif
-#define DEBUG_SERIAL
-#define DEBUG_SERIAL2
+#else
+#define DEBUG_SERIAL(msg)
+#define DEBUG_SERIAL2(msg)
 #endif
 
 //-------------------------------------------------------------------------------------------------------------

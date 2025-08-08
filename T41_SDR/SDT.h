@@ -26,10 +26,11 @@ typedef __uint8_t uint8_t;
 #define CW_TRANSMIT_STRAIGHT_STATE 3
 #define CW_TRANSMIT_KEYER_STATE 4
 #define DATA_RECEIVE_STATE 5
-#define CALIBRATE_RECEIVE_STATE 6
-#define CALIBRATE_TRANSMIT_STATE 7
-#define CALIBRATE_TWOTONE_STATE 8
-#define CALIBRATE_DONE_STATE 9
+#define DATA_TRANSMIT_STATE 6
+#define CALIBRATE_RECEIVE_STATE 7
+#define CALIBRATE_TRANSMIT_STATE 8
+#define CALIBRATE_TWOTONE_STATE 9
+#define CALIBRATE_DONE_STATE 10
 
 // demodulation modes
 #define DEMOD_MIN                   0
@@ -37,12 +38,15 @@ typedef __uint8_t uint8_t;
 #define DEMOD_LSB                   1
 #define DEMOD_AM                    2
 #define DEMOD_NFM                   3
-#define DEMOD_PSK31_WAV             4
-#define DEMOD_PSK31                 5
-#define DEMOD_FT8_WAV               6
-#define DEMOD_FT8                   7
-#define DEMOD_SAM                   8
-#define DEMOD_MAX                   8
+#define DEMOD_PSK31                 4
+#define DEMOD_FT8                   5
+#define DEMOD_SAM                   6
+#define DEMOD_MAX                   6
+
+// special demodulation modes not accessible by demod button
+#define DEMOD_PSK31_WAV             (DEMOD_MAX + 1)
+#define DEMOD_FT8_DECODE            (DEMOD_MAX + 2)
+#define DEMOD_FT8_WAV               (DEMOD_MAX + 3)
 
 #define NUMBER_OF_BANDS           7
 #define BAND_80M                  0

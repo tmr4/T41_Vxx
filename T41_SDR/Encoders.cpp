@@ -100,9 +100,10 @@ void SetBWFilters() {
   switch(bands[currentBand].demod) {
     case DEMOD_USB:
     case DEMOD_LSB:
-    case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:
     case DEMOD_FT8:
+    case DEMOD_PSK31_WAV:
+    case DEMOD_FT8_DECODE:
     case DEMOD_FT8_WAV:
       AdjustFilterBW(filterChange);
       break;

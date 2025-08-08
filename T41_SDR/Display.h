@@ -174,9 +174,10 @@ void InitDisplay();
 void ShowName();
 void DrawSpectrumFrame();
 //void DrawSMeterContainer();
-//void DrawAudioSpectContainer();
 
 void DrawStaticDisplayItems();
+
+void DrawAudioSpectContainer();
 
 // mainly updated each loop during call to ShowSpectrum
 void ShowFrequency();
