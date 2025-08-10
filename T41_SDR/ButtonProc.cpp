@@ -37,8 +37,7 @@ bool save_last_frequency = false;
 bool directFreqFlag = false;
 long TxRxFreqOld;
 int priorDemodMode; // preserves SSB demod mode between mode and band changes
-//int currentDataMode = DEMOD_PSK31;
-int currentDataMode = DEMOD_FT8; // start in FT8 *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
+int currentDataMode = DEMOD_FT8; // start in FT8 data mode *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -329,10 +328,17 @@ FLASHMEM void ChangeMode(int mode) {
       break;
 
     case DATA_MODE:
-      if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
-        ExitFT8();
-      } else if(bands[currentBand].demod == DEMOD_PSK31) {
-        exitPSK31();
+      switch(bands[currentBand].demod) {
+        case DEMOD_FT8_DECODE:
+          ExitFT8();
+          break;
+
+        case DEMOD_PSK31:
+          exitPSK31();
+          break;
+
+        default:
+          break;
       }
 
       // return demod mode to previous mode

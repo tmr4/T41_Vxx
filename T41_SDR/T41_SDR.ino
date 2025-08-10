@@ -437,6 +437,14 @@ FASTRUN void loop() {
 
   HardwareLoopStart();
 
+#ifdef T41_USB_AUDIO
+  // *** There is only one USB serial object available with USB audio enabled.  The Serial object
+  // is reserved for WSJT-X use.  Any other use could disrupt WSJT-X control of the T41.  The
+  // wsjt module provides for to communication with the WSJT-X app and allows setting the T41 clock
+  // with the SetT41Clock PC app. ***
+  WSJTLoop();
+#endif
+
 #ifdef AUDIO_STATS
   StartAudioStats();
 #endif
@@ -746,11 +754,6 @@ FASTRUN void loop() {
 #ifndef HOST_CAT_CONTROL_SUPPORT
   //T41ControlLoop();
 #endif
-
-  // *** this allows setting clock with Set T41Clock app in addition to communication with WSJT-X app
-  //     this is also possible with T41ControlLoop if not being used for HOST_CAT_CONTROL_SUPPORT ***
-  // *** TODO: work up auto wsjt connect ***
-  WSJTLoop(); // force wsjt loop
 
 #ifdef DEBUG_LOOP
   ExitLoop();

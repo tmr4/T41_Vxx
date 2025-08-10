@@ -417,10 +417,19 @@ void WSJTLoop()
         break;
 
       case 'I':
-        if(cmd[1] == 'D' && cmd[2] == ';') {
-          sprintf(cmd,"ID024;"); // TS-890S
+        if(cmd[1] == 'D' && cmd[2] == ';') { // ID;
+          // receipt of ID command will switch to FT8 Data mode if not already there
+          if(radioMode != DATA_MODE) {
+            currentDataMode = DEMOD_FT8;
+            ChangeMode(DATA_MODE);
+          } else if(bands[currentBand].demod != DEMOD_FT8) {
+            ChangeDemodMode(DEMOD_FT8);
+          }
+
+          // reply with the TS-890S id
+          sprintf(cmd,"ID024;");
           //sprintf(cmd,"ID019;"); // TS-2000
-        } else if(cmd[1] == 'F' && cmd[2] == ';') {
+        } else if(cmd[1] == 'F' && cmd[2] == ';') { // IF;
           // retrieves transceiver status
           // WSJT-X recieved w/ USB Serial+Audio: IF00007048000125004+0000000001000361100007030000; which is 48, expects 37
           //                            1         2         3      |  4

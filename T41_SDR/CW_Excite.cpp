@@ -65,8 +65,8 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
   float fac;
 
   // create I/Q from precalculated buffers (750 Hz signal at a 24kHz sample rate)
-  arm_scale_f32(cosBuffer2, 0.2, audioBufferL_EX, 256);
-  arm_scale_f32(sinBuffer2, 0.2, audioBufferR_EX, 256);
+  arm_scale_f32(sinBuffer2, 0.2, audioBufferL_EX, 256);
+  arm_scale_f32(cosBuffer2, 0.2, audioBufferR_EX, 256);
 
   /**********************************************************************************
       Additional scaling, if nesessary to compensate for down-stream gain variations
@@ -74,10 +74,10 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
 
   // adjust IQ signal amplitude and phase
   if(bands[currentBand].demod == DEMOD_LSB) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
+    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
   } else if(bands[currentBand].demod == DEMOD_USB) {
-    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
+    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
   }
 
