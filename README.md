@@ -15,7 +15,7 @@ This is a work in progress.  Some functions may be broken and will likely remain
 * WSJT-X working over T41 USB connection
   * Modified the FT8 Data mode to pass audio back and forth with a PC over USB at a 44.1kHz sample rate
   * Modified the wsjt module CAT controls for transmit
-  * Will test out code where WSJT-X connection sets up T41 for FT8
+  * T41 switches to FT8 Data mode upon receipt of *ID;* command
   * Calibration of FT8 Data mode still in progress
 
 ## Use
