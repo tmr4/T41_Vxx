@@ -31,14 +31,6 @@
 int attenuator = 0;
 
 //------------
-// T41Control.cpp
-
-// calibration data
-bool signalStrengthReceived = false;
-float signalStrength = 0.0;
-int signalStrengthReceivedIndex = -1;
-
-//------------
 // T41_SDR.ino
 
 extern long long oldCenterFreq;
@@ -46,7 +38,7 @@ extern long long oldCenterFreq;
 //------------
 // Utility.cpp
 
-// used in ExciterIQData for two tone test
+// used in PrepareMicExciterData for two tone test
 float32_t sinBuffer4[256];
 float32_t sinBuffer5[256];
 
@@ -325,67 +317,6 @@ float32_t CalcSignalStrength() {
   }
 
   return dbm;
-}
-
-//------------
-// T41Control.cpp
-
-// Dual T41 master commands
-void SendSetFreq(int freq) {
-  char cmd[20];
-
-  // set center frequency
-  // *** note FA/FB set frequency based on mouseCenterTuneActive
-  // and by default adjust fine tune, not center tune ***
-  sprintf(cmd,"FC%011d;", freq);
-  T41ControlSendCmd(cmd);
-}
-
-void SendSetBandChange(int upDown) {
-  char cmd[5];
-
-  if(upDown > 0) {
-    sprintf(cmd,"BU;");
-  } else {
-    sprintf(cmd,"BD;");
-  }
-
-  T41ControlSendCmd(cmd);
-}
-
-void SendSetMode(int mode) {
-  char cmd[5];
-  sprintf(cmd,"MD%d;", mode);
-  T41ControlSendCmd(cmd);
-}
-
-void SendSignalStrengthRequest() {
-  char cmd[5];
-
-  sprintf(cmd,"SM;");
-  T41ControlSendCmd(cmd);
-}
-
-void SendSignalStrengthRequest(int index) {
-  char cmd[5];
-
-  sprintf(cmd,"SM%d;", index);
-  T41ControlSendCmd(cmd);
-}
-
-// sets 0.5kHz-1.5kHz audio filter
-void SendSetNarrowFilter() {
-  char cmd[4];
-
-  sprintf(cmd,"NW;");
-  T41ControlSendCmd(cmd);
-}
-
-void SendSetDisplayZoom(int zoom) {
-  char cmd[5];
-
-  sprintf(cmd,"ZM%d;", zoom);
-  T41ControlSendCmd(cmd);
 }
 
 //------------

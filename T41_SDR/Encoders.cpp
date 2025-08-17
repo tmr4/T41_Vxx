@@ -26,7 +26,7 @@ bool volumeChangeFlag, resetTuningFlag, fineTuneFlag, getEncoderValueFlag;
 long filter_pos_BW, last_filter_pos_BW;
 int posFilterEncoder, lastFilterEncoder;
 
-float adjustVolEncoder = 0;
+float adjustVolEncoder = 0.0;
 int tuneChange = 0;
 
 volatile int menuEncoderMove;
@@ -253,9 +253,10 @@ void EncoderVolumeISR() {
 #else
   adjustVolEncoder = result;
 #endif
-  if((calibrateFlag == 1) || (calibrateFlag == 3)) return; // receive calibrate adjusts IQ phase
+  if((calibrateFlag >= 1) && (calibrateFlag <= 3)) return;
 
   audioVolume += adjustVolEncoder;
+  adjustVolEncoder = 0;
 
   if(audioVolume > MAX_AUDIO_VOLUME) {
     audioVolume = MAX_AUDIO_VOLUME;
@@ -352,9 +353,7 @@ FASTRUN void EncoderMenuChangeFilterISR() {
   menuEncoderMove = result;
 #endif
 
-  // *** TODO: from v12, validate v11 calibration routines
-  // v11 was: if(calibrateFlag >= 0) return; // we're calibrating
-  if((calibrateFlag == 1) || (calibrateFlag == 3)) return; // receive calibrate adjusts IQ amp
+  if((calibrateFlag >= 1) && (calibrateFlag <= 3)) return;
 
   // interpret encoder according to flag settings
   if(getEncoderValueFlag || (displayState == DISPLAY_FULL_MENU)) {

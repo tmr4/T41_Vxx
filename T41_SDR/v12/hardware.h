@@ -56,13 +56,6 @@
 #endif
 
 //------------
-// T41Control.h
-
-extern bool signalStrengthReceived;
-extern float signalStrength;
-extern int signalStrengthReceivedIndex;
-
-//------------
 // T41_SDR.ino
 
 // hardware/band specific signal strength adjustment
@@ -117,17 +110,6 @@ void ShowAnalogGain();
 
 void RemoveDCBias();
 float32_t CalcSignalStrength();
-
-//------------
-// T41Control.h
-
-void SendSetFreq(int freq);
-void SendSetMode(int mode);
-void SendSignalStrengthRequest();
-void SendSignalStrengthRequest(int index);
-void SendSetDisplayZoom(int zoom);
-void SendSetNarrowFilter();
-void SendSetBandChange(int upDown);
 
 //------------
 // T41_SDR.ino

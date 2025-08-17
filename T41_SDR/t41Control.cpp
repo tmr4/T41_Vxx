@@ -29,6 +29,11 @@ bool useKenwoodIF = false;
 bool controlDataFlag = false;
 uint8_t specData[518]; // xDyyy[up to 512 bytes of data];   x=A or F, yyy = 255 - max
 
+// calibration data
+bool signalStrengthReceived = false;
+float signalStrength = 0.0;
+int signalStrengthReceivedIndex = -1;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -101,6 +106,64 @@ void T41ControlGetCommand(char * cmd, int max) {
     i++;
   }
   cmd[i+1] = 0; // *** TODO: this is currently needed by send command, revisit if that is changed ***
+}
+
+// Dual T41 master commands
+void SendSetFreq(int freq) {
+  char cmd[20];
+
+  // set center frequency
+  // *** note FA/FB set frequency based on mouseCenterTuneActive
+  // and by default adjust fine tune, not center tune ***
+  sprintf(cmd,"FC%011d;", freq);
+  T41ControlSendCmd(cmd);
+}
+
+void SendSetBandChange(int upDown) {
+  char cmd[5];
+
+  if(upDown > 0) {
+    sprintf(cmd,"BU;");
+  } else {
+    sprintf(cmd,"BD;");
+  }
+
+  T41ControlSendCmd(cmd);
+}
+
+void SendSetMode(int mode) {
+  char cmd[5];
+  sprintf(cmd,"MD%d;", mode);
+  T41ControlSendCmd(cmd);
+}
+
+void SendSignalStrengthRequest() {
+  char cmd[5];
+
+  sprintf(cmd,"SM;");
+  T41ControlSendCmd(cmd);
+}
+
+void SendSignalStrengthRequest(int index) {
+  char cmd[5];
+
+  sprintf(cmd,"SM%d;", index);
+  T41ControlSendCmd(cmd);
+}
+
+// sets 0.5kHz-1.5kHz audio filter
+void SendSetNarrowFilter() {
+  char cmd[4];
+
+  sprintf(cmd,"NW;");
+  T41ControlSendCmd(cmd);
+}
+
+void SendSetDisplayZoom(int zoom) {
+  char cmd[5];
+
+  sprintf(cmd,"ZM%d;", zoom);
+  T41ControlSendCmd(cmd);
 }
 
 //void SendSmeter(int16_t smeterPad, float32_t dbm) {

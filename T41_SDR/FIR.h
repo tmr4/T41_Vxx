@@ -40,7 +40,7 @@ extern arm_fir_instance_f32 FIR_CW_DecodeR;
 //#define HILBERT_SIZE 128 // 12kHz sample rate, new coefficients
 #define HILBERT_SIZE 256 // 24kHz sample rate, older coefficients
 // Uncomment following line to use the older 24kHz Hilbert coefficients at that rate
-// Keeping this commented uses the older Hilbert coefficients with newer 12kHz sample rate structure in PlayExciterIQData
+// Keeping this commented uses the older Hilbert coefficients with newer 12kHz sample rate structure in PrepareExciterIQData
 // see https://groups.io/g/SoftwareControlledHamRadio/message/34030
 //#define USE_24K_SPS
 

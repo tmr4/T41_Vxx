@@ -13,6 +13,11 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+#ifdef T41_USB_AUDIO
+extern AudioInputUSB usbIn;
+#endif
+
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -30,64 +35,6 @@
 void PlayExciterIQData() {
   int16_t *sp_L, *sp_R;
   int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
-
-  // *** we're at 24kHz sample rate here ***
-
-  // copy left buffer to right channel
-  arm_copy_f32(audioBufferL_EX, audioBufferR_EX, 256);
-
-  if(bands[currentBand].demod != DEMOD_FT8) {
-    #if HILBERT_SIZE == 256 // 24kHz sample rate
-    #ifdef USE_24K_SPS
-      // create I and Q signals with Hilbert transform
-      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 256);
-      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 256);
-    #else
-      // use 12k sample rate with older Hilbert coefficients
-      arm_fir_decimate_f32(&FIR_dec3_EX_I, audioBufferL_EX, audioBufferL_EX, 256);
-      arm_fir_decimate_f32(&FIR_dec3_EX_Q, audioBufferR_EX, audioBufferR_EX, 256);
-
-      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
-      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
-
-      // Interpolate back to 24kHz and scale to equalize levels
-      // left channel first
-      arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
-      arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
-
-      // now right channel
-      arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
-      arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
-    #endif
-    #endif
-
-    #if HILBERT_SIZE == 128 // 12kHz sample rate
-      // v66-9 does the following:
-      // Convert sample rate to 12kHz, apply Hilbert transforms and then interpolate back to 24kHz.
-      // The objective is to extend the lower frequency range of the Hilbert transfrom by moving the
-      // lowewr limit of the Hilbert usefullness down to below 200Hz.
-      // Decimate by 2 to 12K SPS sample rate
-      arm_fir_decimate_f32(&FIR_dec3_EX_I, audioBufferL_EX, audioBufferL_EX, 256);
-      arm_fir_decimate_f32(&FIR_dec3_EX_Q, audioBufferR_EX, audioBufferR_EX, 256);
-
-      // Hilbert transforms at 12kHz, with 5KHz bandwidth, buffer size 128
-      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
-      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
-
-      // Interpolate back to 24kHz and scale to equalize levels
-      // left channel first
-      arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
-      arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
-
-      // now right channel
-      arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
-      arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
-    #endif
-  } else {
-    // create I and Q signals with Hilbert transform
-    arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 256);
-    arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 256);
-  }
 
   // adjust IQ signal amplitude and phase
   // *** TODO: v66-9 has currentBandA, why? ***
@@ -149,18 +96,80 @@ void PlayExciterIQData() {
   }
 }
 
+void PrepareExciterIQData() {
+  // *** we're at 24kHz sample rate here ***
+
+  // copy left buffer to right channel
+  arm_copy_f32(audioBufferL_EX, audioBufferR_EX, 256);
+
+  if(bands[currentBand].demod != DEMOD_FT8) {
+    #if HILBERT_SIZE == 256 // 24kHz sample rate
+    #ifdef USE_24K_SPS
+      // create I and Q signals with Hilbert transform
+      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 256);
+      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 256);
+    #else
+      // use 12k sample rate with older Hilbert coefficients
+      arm_fir_decimate_f32(&FIR_dec3_EX_I, audioBufferL_EX, audioBufferL_EX, 256);
+      arm_fir_decimate_f32(&FIR_dec3_EX_Q, audioBufferR_EX, audioBufferR_EX, 256);
+
+      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
+      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
+
+      // Interpolate back to 24kHz and scale to equalize levels
+      // left channel first
+      arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
+      arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
+
+      // now right channel
+      arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
+      arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
+    #endif
+    #endif
+
+    #if HILBERT_SIZE == 128 // 12kHz sample rate
+      // v66-9 does the following:
+      // Convert sample rate to 12kHz, apply Hilbert transforms and then interpolate back to 24kHz.
+      // The objective is to extend the lower frequency range of the Hilbert transfrom by moving the
+      // lowewr limit of the Hilbert usefullness down to below 200Hz.
+      // Decimate by 2 to 12K SPS sample rate
+      arm_fir_decimate_f32(&FIR_dec3_EX_I, audioBufferL_EX, audioBufferL_EX, 256);
+      arm_fir_decimate_f32(&FIR_dec3_EX_Q, audioBufferR_EX, audioBufferR_EX, 256);
+
+      // Hilbert transforms at 12kHz, with 5KHz bandwidth, buffer size 128
+      arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
+      arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
+
+      // Interpolate back to 24kHz and scale to equalize levels
+      // left channel first
+      arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
+      arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
+
+      // now right channel
+      arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
+      arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
+    #endif
+  } else {
+    // create I and Q signals with Hilbert transform
+    arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 256);
+    arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 256);
+  }
+
+  PlayExciterIQData();
+}
+
 /*****
   Purpose: Gets data from Mic input
 
     Notes:
     There are several actions in this function
     1.  Read in the data from the ADC into the Left Channel at 192KHz
-    2.  Format the L data and Ddcimate (downsample and filter) the sampled data by x8
-          - the new effective sampling rate is now 24KHz
+    2.  Format the L data and decimate (downsample and filter) the sampled data by x8
+          - the new effective sampling rate is now 24kHz (or 44.1kHz for FT8)
     3.  Process the L data through the 7 EQ filters and combine to a single data stream
-    4.  Create and play IQ signals with PlayExciterIQData
+    4.  Create and play IQ signals with PrepareExciterIQData
 *****/
-void ExciterIQData() {
+void PrepareMicExciterData() {
   int16_t *sp_L;
   int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
 
@@ -202,7 +211,11 @@ void ExciterIQData() {
       // *** higher wsjt-x transmit levels (~-20dB) is too loud here ***
       // *** TODO: higher wsjt-x transmit levels  do not increase power out ***
       // *** TODO: add volume adjustment here ***
-      arm_scale_f32(audioBufferL_EX, usbIn.volume() / 0.01, tmp, blocks * 128);
+      #ifdef T41_USB_AUDIO
+        arm_scale_f32(audioBufferL_EX, usbIn.volume() / 0.01, tmp, blocks * 128);
+      #else
+        arm_scale_f32(audioBufferL_EX, 1.0, tmp, blocks * 128);
+      #endif
       sp_L = Q_out_L.getBuffer();
       arm_float_to_q15(tmp, sp_L, blocks * 128);
       Q_out_L.play(sp_L, blocks * 128);
@@ -215,7 +228,7 @@ void ExciterIQData() {
       DoExciterEQ();
     }
 
-    PlayExciterIQData();
+    PrepareExciterIQData();
   }
 }
 

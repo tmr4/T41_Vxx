@@ -234,8 +234,9 @@ void AudioSetup() {
   // Q_out_L can buffer up to 80 blocks. setMaxBuffers can limit this to prevent play queue from buffering to much
   // I haven't found setMaxBuffers solving a high memory use
   //Q_out_L.setMaxBuffers(40);
-  Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL); // memory buffer for output queues are limited so this can be set without effect if problem is with input queue
-  //Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
+  //Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL); // memory buffer for output queues are limited so this can be set without effect if problem is with input queue
+  Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
+
 
   Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
   Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
@@ -247,11 +248,11 @@ void AudioSetup() {
 
 #ifdef T41_USB_AUDIO
   amp1.gain(100);
+  pc_usb2.disconnect(); // USB
 #endif
 
   Q_in_R_Ex.end();
   pc_Q_in_R_Ex.disconnect();
-  pc_usb2.disconnect(); // USB
 }
 
 inline void Q_in_Ex_Stop() {
@@ -339,24 +340,32 @@ void ConfigAudioState(int audioState) {
     case DATA_RECEIVE_STATE:
       pc_Q_out_L_Ex.disconnect();
       pc_Q_out_R_Ex.disconnect();
-      pc_usb2.disconnect();
+      #ifdef T41_USB_AUDIO
+        pc_usb2.disconnect(); // USB
+      #endif
       Q_in_L_Ex.end();
       Q_in_L_Ex.clear();
 
       // start receive audio chain
       Q_in_Start();
       Q_out_Start();
-      pc_amp1.connect();
+      #ifdef T41_USB_AUDIO
+        pc_amp1.connect();
+      #endif
       break;
 
     case DATA_TRANSMIT_STATE:
       // start USB audio transmit chain
-      pc_usb2.connect();
+      #ifdef T41_USB_AUDIO
+        pc_usb2.connect(); // USB
+      #endif
       Q_in_L_Ex.begin();
 
       Q_out_Ex_Start();
 
-      pc_amp1.disconnect();
+      #ifdef T41_USB_AUDIO
+        pc_amp1.disconnect();
+      #endif
       Q_out_Start();
       break;
 
@@ -370,6 +379,8 @@ void ConfigAudioState(int audioState) {
       Q_in_Start();
       //Q_in_Ex_Start(); // *** for v12??? ***
       Q_out_Ex_Start();
+
+      Q_out_Start(); // *** TODO: why doesn't this give audio during v11 cal ***
       break;
 
     case CALIBRATE_TWOTONE_STATE:

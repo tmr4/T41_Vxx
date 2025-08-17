@@ -10,5 +10,4 @@ extern int calOnFlag;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void DoReceiveCalibrate();
-void DoXmitCalibrate();
+void CalibrateIQ(bool transmitCal);

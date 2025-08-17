@@ -7,6 +7,8 @@
 extern float32_t /*DMAMEM*/ audioFFT[];
 extern float32_t /*DMAMEM*/ audioIFFT[];
 
+extern float32_t /*DMAMEM*/ prevFreqSpecBuf[1024];
+
 extern float32_t biquad_lowpass1_coeffs[];
 
 extern uint8_t ANR_notch;

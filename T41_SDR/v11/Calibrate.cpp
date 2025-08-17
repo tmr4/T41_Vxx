@@ -8,664 +8,1371 @@
 #include "..\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
+#include "..\Exciter.h"
 #include "..\FIR.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"
 #include "..\Tune.h"
+#include "..\t41Control.h"
 #include "..\Utility.h"
+
+// for v11 only
+// Prerequisite: QSD board RF in connected to QSE RF out with 20 dB attenuator
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-int val;
-int corrChange;
-float correctionIncrement;
-int userScale, userZoomIndex, userXmtMode;
+#define GAIN_COARSE_MAX 1.2
+#define GAIN_COARSE_MIN 0.8
+#define PHASE_COARSE_MAX 0.2
+#define PHASE_COARSE_MIN -0.2
+
+#define GAIN_COARSE_STEP2_N 10
+#define PHASE_COARSE_STEP2_N 10
+#define GAIN_FINE_N 5
+#define PHASE_FINE_N 5
+
+#define SIG_STRENGTH_MAX 8
+
+// preserve/restore radio state
+int userFilterLowCut, userFilterHiCut, userMode, userDemodMode, userRadioState;
+int userScale, userZoomIndex, userXmtMode, userBand;
+long userCenterFreq, userTxRxFreq, userNCOFreq;
+float userIQAmpFactor, userIQPhaseFactor;
+
+// common to several routines
+float iqIncrementValues[] = { 0.001, 0.01, 0.1 };
+int iqIncrementIndex = 1;
+float iqCorInc = iqIncrementValues[iqIncrementIndex];
+int iqCorIncY = 115;
+int menuX = 530;
+
+float minSignalStrength;
+bool transmitCal; // calibration mode: true=transmit, false=receive
+
+// frequency calibration
+
+// receive calibration
+
+// transmit calibration
+float plotValue = 0;
+bool plotValueInc = true; // true = 1.0, false = 0.1
+int signalStrengthSource = 0; // signal strength source: 0 = manual user entry, 1 = external via CAT SM command, 2 = internal loopback
+const char *signalStrengthSources[3] =  {"man", "ext", "loop"};
+
+// two tone variables
+
+
 int transmitPowerLevelTemp;
-int calTypeFlag = 0;
-int calOnFlag = 0;
-int IQCalType;
 
 float32_t sinBuffer3[256];
 float32_t cosBuffer3[256];
+
+// delete when ready
+int calTypeFlag = 0;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-void ShowSpectrum2();
-float PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int currentNF);
-void CalcZoomFreqSpec(uint32_t blockSize); // needed for ProcessTransmitCalIQData
-void Calc1xFreqSpec();
-void FreqShift1(int blockSize);
-
 void SetFreqCal(long calFreqShift);
+
+void DrawIQGainPlot();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
 /*****
-  Purpose: Set up prior to IQ calibrations.  New function.  KF5N August 14, 2023
-  These things need to be saved here and restored in the prologue function:
-  Vertical scale in dB  (set to 10 dB during calibration)
-  Zoom, set to 1X in receive and 4X in transmit calibrations.
-  Transmitter power, set to 5W during both calibrations.
-   Parameter List:
-      int setZoom   (This parameter should be 0 for receive (1X) and 2 (4X) for transmit)
+  Purpose: save common radio state parameters, change center frequency to current frequancy,
+           and configure audio state
 
-   Return value:
-      void
+           *** radioState may occasionally be referenced by various global routines use
+               during calibration but has no other effect as the calibration routines all
+               bypass the main processing loop ***
+
+  Parameter List:
+    calType - type of calibration we're cleaning up after
+    rState  - radioState for calibration
+    aState  - audio configuration state for calibration
  *****/
-FLASHMEM void CalibratePreamble(int setZoom) {
-  calOnFlag = 1;
-  corrChange = 0;
-  correctionIncrement = 0.01;
-  //correctionIncrement = 0.1;
-  IQCalType = 0;
-  radioState = CW_TRANSMIT_STRAIGHT_STATE;
-  //radioState = CW_RECEIVE_STATE;
-  //radioState = CALIBRATE_TRANSMIT_STATE;
-  transmitPowerLevelTemp = transmitPowerLevel;
-  transmitPowerLevel = 5;
-  powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
-  userXmtMode = radioMode;          // Store the user's mode setting
-  userZoomIndex = spectrumZoom;  // Save the zoom index so it can be reset at the conclusion
-  SetZoom(setZoom);
-  tft.writeTo(L2);  // Erase the bandwidth bar
-  tft.clearMemory();
-  tft.writeTo(L1);
-  tft.setFontScale((enum RA8875tsize)0);
-  tft.setTextColor(RA8875_GREEN);
-  tft.setCursor(350, 160);
-  tft.print("user1 - Gain/Phase");
-  tft.setCursor(350, 175);
-  tft.print("User2 - Incr");
-  tft.setTextColor(RA8875_CYAN);
-  tft.fillRect(350, 125, 100, tft.getFontHeight(), RA8875_BLACK);
-  tft.fillRect(0, 272, 517, 399, RA8875_BLACK);  // Erase waterfall.  KF5N August 14, 2023
-  tft.setCursor(400, 125);
-  tft.print("dB");
-  tft.setCursor(350, 110);
-  tft.print("Incr= ");
-  tft.setCursor(400, 110);
-  tft.print(correctionIncrement, 3);
-  userScale = currentScale;  //  Remember user preference so it can be reset when done.  KF5N
-  currentScale = 1;          //  Set vertical scale to 10 dB during calibration.  KF5N
-  //updateSpectrumData = false;
-  digitalWrite(MUTE, LOW);  //turn off mute
+FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
+  // Save the current operating state to restore later
+  userTxRxFreq = TxRxFreq;
+  userCenterFreq = centerFreq;
+  userNCOFreq = NCOFreq;
+  userRadioState = radioState;
+  userMode = radioMode;
+  userDemodMode = bands[currentBand].demod;
+  userZoomIndex = spectrumZoom;
 
-  //ConfigAudioState(radioState);
-  ConfigAudioState(CALIBRATE_TRANSMIT_STATE);
+  TxRxFreq = centerFreq = centerFreq + NCOFreq;
+  NCOFreq = 0;
 
-  centerFreq = TxRxFreq;
-  NCOFreq = 0L;
-  digitalWrite(MUTE, HIGH);  //  Mute Audio  (HIGH=Mute)
-  digitalWrite(RXTX, HIGH);  // Turn on transmitter.
-  ShowTransmitReceiveStatus();
-  ShowSpectrumdBScale();
+  // calibration specific configuration
+  switch(calType) {
+    case 0: // frequency cal
+      break;
 
-  // from v11 Utility.cpp GenSineToneBuffers
-  float theta, freqSideTone3 = 3000.0;
+    case 1: // receive IQ cal
+      //if(bands[currentBand].demod == DEMOD_LSB) SetFreqCal(24000 - 2000);
+      //if(bands[currentBand].demod == DEMOD_USB) SetFreqCal(24000 + 2250);
+      //SetFreqCal(1500);
+      //SetFreqCal(12000);
+      SetFreqCal(22000);
+      //SetFreqCal(24000);
+      //SetFreqCal(24000 + 2250); // puts wanted sideband at proper v11 place (blue bar) but unwanted shifted left
+      //SetFreqCal(0);
+      SetZoom(0); // 1x
+      //SetZoom(1); // 2x
+      //SetZoom(2); // 4x
+      userIQAmpFactor = IQAmpCorrectionFactor[currentBand];
+      userIQPhaseFactor = IQPhaseCorrectionFactor[currentBand];
+      break;
+
+    case 2: // transmit IQ cal
+      //SetFreqCal(750);
+      //SetFreqCal(1500);
+      SetFreqCal(0);
+      SetZoom(2); // 4x
+      //SetZoom(3); // 8x
+      //SetZoom(1); // 2x
+      userIQAmpFactor = IQXAmpCorrectionFactor[currentBand];
+      userIQPhaseFactor = IQXPhaseCorrectionFactor[currentBand];
+      break;
+
+    case 3: // two tone test
+    default:
+      break;
+  }
 
   for(int i = 0; i < 256; i++) {
     // used in calibration
-    theta = i * 2.0 * PI * freqSideTone3 / 24000.0;
+    float theta = i * 2.0 * PI * 3000.0 / 24000.0;
     cosBuffer3[i] = cos(theta);
     sinBuffer3[i] = sin(theta);
+    //cosBuffer3[i] = 0.0;
+    //sinBuffer3[i] = 0.0;
   }
+
+
+
+
+  transmitPowerLevelTemp = transmitPowerLevel;
+  //transmitPowerLevel = 5;
+  transmitPowerLevel = 1;
+  //powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
+
+  //digitalWrite(MUTE, HIGH);  //  Mute Audio  (HIGH=Mute)
+  digitalWrite(RXTX, HIGH);  // Turn on transmitter.
+
+
+
+
+  // general calibration configuration
+  radioState = rState;
+  ConfigAudioState(aState);
+  //SetFreq(); // v12
 }
 
 /*****
   Purpose: Shut down and clean up after IQ calibrations.  New function.  KF5N August 14, 2023
-
-   Parameter List:
-      void
-
-   Return value:
-      void
  *****/
-FLASHMEM void CalibratePrologue() {
+FLASHMEM void CalibratePost(int calType) {
+  // restore radio operating state
+  TxRxFreq = userTxRxFreq;
+  NCOFreq = userNCOFreq;
+  centerFreq = userCenterFreq;
+  radioState = userRadioState;
+  bands[currentBand].demod = userDemodMode;
+  spectrumZoom = userZoomIndex;
+
+  // calibration specific restoration
+  switch(calType) {
+    case 0: // frequency cal
+      bands[currentBand].demod = userDemodMode;
+      //currentFilterLoCut = userFilterLowCut;
+      //currentFilterHiCut = userFilterHiCut;
+      //CalcFilters();
+      break;
+
+    case 1: // receive cal
+      if(currentBand != userBand) {
+        ChangeBand(userBand - currentBand);
+        currentBand = userBand;
+      }
+
+      SetFreq();
+      currentScale = userScale;
+
+      // reset frequency spectrum buffers
+      SET_VAR(pixelnew, SPECTRUM_BOTTOM);
+      InitFFTArrays();
+      newSpectrumFlag = 0;
+      break;
+
+    case 2: // transmit cal
+      // reset frequency spectrum buffers
+      SET_VAR(pixelnew, SPECTRUM_BOTTOM);
+      InitFFTArrays();
+      newSpectrumFlag = 0;
+      break;
+
+    case 3: // two tone test
+      break;
+
+    default:
+      break;
+  }
+
   digitalWrite(RXTX, LOW);  // Turn off the transmitter.
-  //updateSpectrumData = false;
-  ShowTransmitReceiveStatus();
-  // Clear queues to reduce transient.
-  Q_in_L.clear();
-  Q_in_R.clear();
-  centerFreq = TxRxFreq;
-  NCOFreq = 0L;
-  currentScale = userScale;                     //  Restore vertical scale to user preference.  KF5N
-  ShowSpectrumdBScale();
-  radioMode = userXmtMode;   // Restore the user's floor setting.  KF5N July 27, 2023
+
   transmitPowerLevel = transmitPowerLevelTemp;  // Restore the user's transmit power level setting.  KF5N August 15, 2023
-  EEPROMWrite();                                // Save calibration numbers and configuration.  KF5N August 12, 2023
+
   // Restore the user's zoom setting
   SetZoom(userZoomIndex); // ... and zoom display
-  EEPROMWrite();                                // Save calibration numbers and configuration.  KF5N August 12, 2023
-  tft.writeTo(L2);  // Clear layer 2.  KF5N July 31, 2023
+
+  // restore screen
+  tft.writeTo(L2);
   tft.clearMemory();
-  tft.writeTo(L1);  // Exit function in layer 1.  KF5N August 3, 2023
-  RedrawDisplayScreen();
-  calOnFlag = 0;
-  lastState = -1;  // This is required due to the function deactivating the receiver.  This forces a pass through the receiver set-up code.  KF5N October 16, 2023
-  return;
-}
-
-void UpdateIQCorrection(bool xmit = true) {
-  if(xmit) {
-    //  Read encoder and update values.
-    if(IQCalType == 0) {
-      IQXAmpCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQXAmpCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Gain X");
-    } else {
-      IQXPhaseCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQXPhaseCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Phase X");
-    }
-  } else {
-    if(IQCalType == 0) {
-      IQAmpCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQAmpCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Gain");
-    } else {
-      IQPhaseCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQPhaseCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Phase");
-    }
-  }
-}
-
-/*****
-  Purpose: Combined input/ output for the purpose of calibrating the receive IQ
-
-   Parameter List:
-      void
-
-   Return value:
-      void
- *****/
-FLASHMEM void DoReceiveCalibrate() {
-  int task = -1;
-  int lastUsedTask = -2;
-  int IQChoice = 0;
-  long calFreqShift = 0;
-
-  CalibratePreamble(0);                                                   // Set zoom to 1X.
-  if(bands[currentBand].demod == DEMOD_LSB) calFreqShift = 24000 - 2000;  // LSB offset
-  if(bands[currentBand].demod == DEMOD_USB) calFreqShift = 24000 + 2250;  // USB offset
-  SetFreqCal(calFreqShift);
-  calTypeFlag = 0;  // RX cal
-  // Receive calibration loop
-  while(true) {
-    ShowSpectrum2();
-    val = ReadSelectedPushButton();
-    if(val != BOGUS_PIN_READ) {
-      val = ProcessButtonPress(val);
-      if(val != lastUsedTask && task == -100) task = val;
-      else task = BOGUS_PIN_READ;
-    }
-    switch(task) {
-        // Toggle gain and phase
-      case UNUSED_1:
-        IQCalType = !IQCalType;
-        break;
-        // Toggle increment value
-      case BEARING:  // UNUSED_2 is now called BEARING
-        corrChange = !corrChange;
-        if(corrChange == 1) {
-          correctionIncrement = 0.001;
-        } else {                        //if(corrChange == 0)                   // corrChange is a toggle, so if not needed
-          correctionIncrement = 0.01;
-        }
-        tft.setFontScale((enum RA8875tsize)0);
-        tft.fillRect(400, 110, 50, tft.getFontHeight(), RA8875_BLACK);
-        tft.setCursor(400, 110);
-        tft.print(correctionIncrement, 3);
-        break;
-      case MENU_OPTION_SELECT:
-        tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        EEPROMData.IQAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
-        EEPROMData.IQPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
-        IQChoice = 6;
-        break;
-      default:
-        break;
-    }  // End switch
-    if(task != -1) lastUsedTask = task;  //  Save the last used task.
-    task = -100;                          // Reset task after it is used.
-
-    // read encoder and update values
-    UpdateIQCorrection(false);
-
-    if(IQChoice == 6) break;  // Exit the while loop.
-  }
-  CalibratePrologue();
-}
-
-
-/*****
-  Purpose: Combined input/ output for the purpose of calibrating the transmit IQ
-           calibrateFlag = 3
- *****/
-FLASHMEM void DoXmitCalibrate() {
-  int IQChoice = 0;
-
-  RedrawDisplayScreen();
-
-  CalibratePreamble(2);  // Set zoom to 4x
-  calTypeFlag = 1;       // TX cal
-  SetFreqCal(750);
   tft.writeTo(L1);
+  tft.clearMemory();
 
-  // Transmit Calibration Loop
-  while(true) {
-    ShowSpectrum2();
-    val = ReadSelectedPushButton();
-    if(val != BOGUS_PIN_READ) {
-      val = ProcessButtonPress(val);
-    }
-    switch(val) {
-      // Toggle gain and phase
-      case UNUSED_1:
-        IQCalType = !IQCalType;
-        break;
+  RedrawDisplayScreen();
 
-      // Toggle increment value
-      case BEARING:  // UNUSED_2 is now called BEARING
-        corrChange = !corrChange;
-        if(corrChange == 1) {          // Toggle increment value
-          correctionIncrement = 0.001;
-        } else {
-          correctionIncrement = 0.01;
-        }
-        tft.setFontScale((enum RA8875tsize)0);
-        tft.fillRect(400, 110, 50, tft.getFontHeight(), RA8875_BLACK);
-        tft.setCursor(400, 110);
-        tft.print(correctionIncrement, 3);
-        break;
-
-      case (MENU_OPTION_SELECT):  // Save values and exit calibration.
-        tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        //EEPROMData.IQXAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
-        //EEPROMData.IQXPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
-        IQChoice = 6;
-        break;
-
-      default:
-        break;
-    }
-
-    // read encoder and update values
-    UpdateIQCorrection();
-
-    if(IQChoice == 6) break;  //  Exit the while loop.
-  }
-  CalibratePrologue();
+  lastState = -1; // force radio state reset
 }
 
+FLASHMEM void DisplayIQAdjustIncrement(int adjChars) {
+  int adjX;
 
-/*****
-  Purpose: Signal processing for the purpose of calibrating the transmit IQ
+  tft.setFontScale((enum RA8875tsize)0);
+  adjX = adjChars * tft.getFontWidth();
+  tft.fillRect(menuX + adjX, iqCorIncY, 50, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_GREEN);
+  tft.setCursor(menuX + adjX, iqCorIncY);
+  tft.print(iqCorInc, 3);
+}
 
-   Parameter List:
-      void
-
-   Return value:
-      void
- *****/
-FLASHMEM bool ProcessIQData2(bool updateSpectrumData) {
-  float bandCouplingFactor[7] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };
-  float bandOutputFactor;
-  float rfGainValue;
-  float recBandFactor[7] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-  static int reqPasses = 20;
-  static int passes = 20;
-  bool updateFreqSpec = false; // true: spectrums updated, otherwise false
-
-  /**********************************************************************************
-        Get samples from queue buffers
-        Teensy Audio Library stores ADC data in two buffers size=128, Q_in_L and Q_in_R as initiated from the audio lib.
-        Then the buffers are  read into two arrays sp_L and sp_R in blocks of 128 up to 2048 bytes.  The arrarys are
-        of size BUFFER_SIZE*N_BLOCKS.  BUFFER_SIZE is 128, N_BLOCKS = FFT_L / 2 / BUFFER_SIZE * DF = 16 with DF = 8 and FFT_L = 512
-        BUFFER_SIZE*N_BLOCKS = 2048 samples
-     **********************************************************************************/
-
-  bandOutputFactor = bandCouplingFactor[currentBand] * CWPowerCalibrationFactor[currentBand] / CWPowerCalibrationFactor[1];
-  //bandOutputFactor = bandCouplingFactor[currentBand] * 1.0;
-
-  // Generate I and Q for the transmit or receive calibration
-  if(calibrateFlag == 2 || calibrateFlag == 3) {
-    arm_scale_f32(cosBuffer3, bandOutputFactor, audioBufferL_EX, 256);  //Use pre-calculated sin & cos instead of Hilbert
-    arm_scale_f32(sinBuffer3, bandOutputFactor, audioBufferR_EX, 256);  //Sidetone = 3000
+FLASHMEM void UpdateIQDisplay(bool autoFlag = false) {
+  tft.fillRect(680, 320, 150, CHAR_HEIGHT, RA8875_BLACK);
+  tft.setFontScale((enum RA8875tsize)1);
+  if(autoFlag) {
+    tft.setTextColor(RA8875_YELLOW);
+  } else {
+    tft.setTextColor(RA8875_GREEN);
   }
-
-  UpdateIQCorrection();
-
-  // adjust IQ signal amplitude and phase
-  if(bands[currentBand].demod == DEMOD_LSB) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
-  } else if(bands[currentBand].demod == DEMOD_USB) {
-    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
+  tft.setCursor(680, 320);
+  if(transmitCal) {
+    tft.print(IQXAmpCorrectionFactor[currentBand], 3);
+  } else {
+    tft.print(IQAmpCorrectionFactor[currentBand], 3);
   }
+  tft.fillRect(680, 360, 150, CHAR_HEIGHT, RA8875_BLACK);
+  tft.setCursor(680, 360);
+  if(transmitCal) {
+    tft.print(IQXPhaseCorrectionFactor[currentBand], 3);
+  } else {
+    tft.print(IQPhaseCorrectionFactor[currentBand], 3);
+  }
+}
 
-  //24KHz effective sample rate here
-  arm_fir_interpolate_f32(&FIR_int1_EX_I, audioBufferL_EX, audioBufferTemp, 256);
+FLASHMEM bool AdjustIQFactors() {
+  bool adjustFlag = false;
 
-  // interpolation-by-4,  48KHz effective sample rate here
-  arm_fir_interpolate_f32(&FIR_int2_EX_I, audioBufferTemp, audioBufferL_EX, 512);
-
-  // and again for R channel
-  arm_fir_interpolate_f32(&FIR_int1_EX_Q, audioBufferR_EX, audioBufferTemp, 256);
-  arm_fir_interpolate_f32(&FIR_int2_EX_Q, audioBufferTemp, audioBufferR_EX, 512);
-
-  // are there at least 16 blocks available in each channel
-  if((uint32_t)Q_in_L.available() > 16 && (uint32_t)Q_in_R.available() > 16) {
-
-    q15_t q15_buffer_LTemp[2048];
-    q15_t q15_buffer_RTemp[2048];
-    Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
-    Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
-    arm_float_to_q15(audioBufferL_EX, q15_buffer_LTemp, 2048);
-    arm_float_to_q15(audioBufferR_EX, q15_buffer_RTemp, 2048);
-    Q_out_L_Ex.play(q15_buffer_LTemp, 2048);
-    Q_out_R_Ex.play(q15_buffer_RTemp, 2048);
-    //Q_out_L_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
-    //Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
-
-    // get audio samples from the audio  buffers and convert them to float
-    // read in 32 blocks á 128 samples in I and Q
-    for(unsigned i = 0; i < 16; i++) {
-      /**********************************************************************************
-          Using arm_Math library, convert to float one buffer_size.
-          Float_buffer samples are now standardized from > -1.0 to < 1.0
-      **********************************************************************************/
-      arm_q15_to_float(Q_in_R.readBuffer(), &audioBufferL[128 * i], 128);
-      arm_q15_to_float(Q_in_L.readBuffer(), &audioBufferR[128 * i], 128);
-      Q_in_L.freeBuffer();
-      Q_in_R.freeBuffer();
-    }
-
-    rfGainValue = pow(10, (float)rfGainAllBands / 20);
-    arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, 2048);
-    arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 2048);
-
-    /**********************************************************************************
-      Scale the data buffers by the RFgain value defined in bands[currentBand] structure
-    **********************************************************************************/
-    arm_scale_f32(audioBufferL, recBandFactor[currentBand], audioBufferL, 2048);
-    arm_scale_f32(audioBufferR, recBandFactor[currentBand], audioBufferR, 2048);
-
-    // Manual IQ amplitude correction
-    if(bands[currentBand].demod == DEMOD_LSB) {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 2048);  //AFP 04-14-22
-      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 2048);
+  // IQ amp correction factor
+  if(menuEncoderMove != 0) {
+    if(transmitCal) {
+      IQXAmpCorrectionFactor[currentBand] += menuEncoderMove * iqCorInc;
     } else {
-      if(bands[currentBand].demod == DEMOD_USB) {
-        arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 2048);  //AFP 04-14-22 KF5N changed sign
-        IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 2048);
-      }
+      IQAmpCorrectionFactor[currentBand] += menuEncoderMove * iqCorInc;
     }
 
-    FreqShift1(2048);
-
-    if(spectrumZoom == 0) {  // && display_S_meter_or_spectrum_state == 1)
-      Calc1xFreqSpec();
-    }
-
-    //if(spectrumZoom != 0 && updateSpectrumData) {
-    ////if(spectrumZoom != 0) {
-    //  CalcZoomFreqSpec(2048, updateSpectrumData);
-    //}
-    // Kick off frequency spectrum FFT routine only once for each audio process loop
-    if(spectrumZoom != 0) {
-      if(updateSpectrumData && (reqPasses == 20)) {
-        passes = 0;
-
-        // calc passes needed to buffer a complete frequency spectrum at the current zoom factor
-        // and sample rate.  At 192kkHz sample rate, the zoom factor alone determines the passes
-        // required as the sample rate term below is 0.  At 44.1kHz sample rate, zoom is limited
-        // to 2x and 4x (22kHz/11kHz BW which is roughly equivalent to an 8x or 16x zoom).
-        // so the passes required based on zoom factor will always be 1 but the passes required
-        // based on sample rate are 4 or 8.
-        //          <----------------- zoom factor ------------------>   <----- sample rate ----->
-        reqPasses = (spectrumZoom < 3 ? 1 : ((1 << spectrumZoom) / 4)) + 2048 / (2048) - 1;
-      }
-      if(passes < reqPasses) {
-        passes++;
-        if(passes == reqPasses) {
-          // flag that we're ready to update frequency spectrum
-          // no need to reset passes, we won't pass through this
-          // block again until the next time updateSpectrumData is set
-          updateFreqSpec = true;
-          reqPasses = 20;
-          passes = 20;
-        }
-        CalcZoomFreqSpec(2048, updateFreqSpec);
-      }
-    }
+    menuEncoderMove = 0;
+    adjustFlag = true;
   }
-  return updateFreqSpec;
+
+  // IQ phase correction factor
+  if(adjustVolEncoder != 0) {
+    if(transmitCal) {
+      IQXPhaseCorrectionFactor[currentBand] += adjustVolEncoder * iqCorInc;
+    } else {
+      IQPhaseCorrectionFactor[currentBand] += adjustVolEncoder * iqCorInc;
+    }
+
+    adjustVolEncoder = 0;
+    adjustFlag = true;
+  }
+
+  if(adjustFlag) {
+    UpdateIQDisplay();
+  }
+  return adjustFlag;
 }
 
-/*****
-  Purpose: Show Spectrum display modified for IQ calibration.
-           This is similar to the function used for normal reception, however, it has
-           been simplified and streamlined for calibration.
-*****/
-static int hLo = 0;
-static int hHi = 0;
-FLASHMEM void ShowSpectrum2() {
-  int x1 = 0;
-  float adjdB = 0.0;
-  int capture_bins = 10;  // ets the number of bins to scan for signal peak
+FLASHMEM bool AdjustRxTxAtten(bool receiveFlag = true) {
+  return true;
+}
+
+FLASHMEM void AdjustCalFactors() {
+  AdjustIQFactors();
+  AdjustRxTxAtten();
+
+  // adjust image value
+  EncoderCenterTune();
+  if(tuneChange != 0) {
+    plotValue += tuneChange * (plotValueInc ? 1.0 : 0.1);
+    tuneChange = 0;
+
+    tft.setFontScale((enum RA8875tsize)1);
+    tft.fillRect(680, 440, 150, tft.getFontHeight(), RA8875_BLACK);
+    tft.setTextColor(RA8875_GREEN);
+    tft.setCursor(680, 440);
+    tft.print(plotValue, 1);
+  }
+}
+
+FLASHMEM void PrintAtten() {
+}
+
+//-------------------------------------------------------------------------------------------------------------
+// Menus and Displays
+//-------------------------------------------------------------------------------------------------------------
+
+FLASHMEM void ShowCalibrationMenu() {
+  int menuY = iqCorIncY - 30;
+
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.setTextColor(RA8875_YELLOW);
+  tft.setCursor(menuX, menuY);
+  tft.print("9: Plot value");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("10: Plot val inc");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("11: IQ inc");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("12: Sig Source");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("13: All bands cal");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("14: Auto cal");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("15: Attn In/Out toggle");
+  menuY += 15;
+  //tft.setCursor(menuX, menuY);
+  //tft.print("16: Toggle directions");
+  //menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("17: Cancel");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("Select: Save/Exit");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("Band+/-: Change band");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("Encoders:");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("Filter: Gain adj");
+  menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("Vol: Phase adj");
+  menuY += 15;
+  //tft.setCursor(menuX, menuY);
+  //tft.print("Fine: Atten adj");
+  //menuY += 15;
+  tft.setCursor(menuX, menuY);
+  tft.print("Center: Sig str adj");
+
+  // display IQ adjust increment
+  DisplayIQAdjustIncrement(20);
+}
+
+FLASHMEM void ShowCalibrationDisplay() {
+  ClearScreen();
+
+  // display instructions
+  tft.setFontScale((enum RA8875tsize)1);
+  tft.setTextColor(RA8875_WHITE);
+  tft.setCursor(100, 10);
+  if(transmitCal) {
+    tft.print("Calibrate TX IQ");
+  } else {
+    tft.print("Calibrate RX IQ");
+  }
+
+  ShowCalibrationMenu();
+
+  // display IQ factors and image value
+  tft.setFontScale((enum RA8875tsize)1);
+  tft.setTextColor(RA8875_WHITE);
+  tft.setCursor(menuX, 320);
+  tft.print("IQ Gain");
+  tft.setCursor(menuX, 360);
+  tft.print("IQ Phase");
+
+  tft.setCursor(menuX, 400);
+  tft.print("Sig Sup");
+  tft.setCursor(menuX, 440);
+  tft.print("Plot Val");
+  tft.fillRect(680, 440, 150, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_GREEN);
+  tft.setCursor(680, 440);
+  tft.print(plotValue, 1);
+
+  UpdateIQDisplay();
+
+  DrawIQGainPlot();
+}
+
+FLASHMEM void UpdateCalDisplayData() {
+  tft.setFontScale((enum RA8875tsize)1);
+  tft.fillRect(680, 400, 150, tft.getFontHeight(), RA8875_BLACK);
+  tft.fillRect(680, 440, 150, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_YELLOW);
+  tft.setCursor(680, 400);
+  tft.print(signalStrength, 1);
+  tft.setCursor(680, 440);
+  tft.print(minSignalStrength, 1);
+
+  UpdateIQDisplay(true);
+}
+
+//-------------------------------------------------------------------------------------------------------------
+// Signals and Yield
+//-------------------------------------------------------------------------------------------------------------
+
+FLASHMEM void PrepareExciterIQDataCal(int mode) {
+  // apply any mode specific processing
+  switch(mode) {
+    case 0:
+      // Two-tone signal generation - uses Hilbert transfor to generate IQ signals
+      break;
+
+    case 1: // receive/transmit calibration
+      //arm_scale_f32(sinBuffer3, 0.5, audioBufferL_EX, 256);
+      //arm_scale_f32(cosBuffer3, 0.5, audioBufferR_EX, 256);
+      //arm_scale_f32(sinBuffer3, 0.05, audioBufferL_EX, 256);
+      //arm_scale_f32(cosBuffer3, 0.05, audioBufferR_EX, 256);
+      //arm_scale_f32(sinBuffer3, 0.01, audioBufferL_EX, 256);
+      //arm_scale_f32(cosBuffer3, 0.01, audioBufferR_EX, 256);
+      arm_scale_f32(sinBuffer3, 0.005, audioBufferL_EX, 256);
+      arm_scale_f32(cosBuffer3, 0.005, audioBufferR_EX, 256);
+      //arm_scale_f32(sinBuffer3, 0.001, audioBufferL_EX, 256);
+      //arm_scale_f32(cosBuffer3, 0.001, audioBufferR_EX, 256);
+
+
+      //arm_scale_f32(sinBuffer3, 0.2, audioBufferL_EX, 256);
+      //arm_scale_f32(cosBuffer3, 0.2, audioBufferR_EX, 256);
+
+
+      //arm_scale_f32(cosBuffer3, 0.005, audioBufferL_EX, 256);
+      //arm_scale_f32(sinBuffer3, 0.005, audioBufferR_EX, 256);
+      //arm_scale_f32(cosBuffer3, 1.005, audioBufferL_EX, 256);
+      //arm_scale_f32(sinBuffer3, 1.005, audioBufferR_EX, 256);
+
+      PlayExciterIQData();
+      break;
+
+    // Passthrough
+    case 2:
+    default:
+      break;
+  }
+}
+
+//-------------------------------------------------------------------------------------------------------------
+// Plot Routines
+//-------------------------------------------------------------------------------------------------------------
+/*
+FASTRUN void PlotSpectrum(int *calBins, int binSize) {
+  int yPlot, y1Plot;
+  static int yOldPlot[SPECTRUM_RES];
+  static int yOldAudioPlot[AUDIO_SPEC_RES];
   static int currentNF = 0;
 
-  pixelnew[0] = 0;
-  pixelnew[1] = 0;
+  YieldToProcess(true);
 
-  if(liveNoiseFloorFlag != 1) {
-    currentNF = currentNoiseFloor[currentBand];
+  // initialize yOldPlot if this is a new spectrum
+  // otherwise copy y values from last loop
+  if(newSpectrumFlag == 0) {
+    memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
+    newSpectrumFlag = 1;
   }
 
+  // Draw the frequency and audio spectrums, gather data for waterfall
+  for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
+    bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
+
+    // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
+    yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF;
+    y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF;
+
+    // clear erase flag if we don't need to erase anything
+    if((yOldPlot[x1] == SPECTRUM_BOTTOM) && (yOldPlot[x1 + 1] == SPECTRUM_BOTTOM)) {
+      eraseSpec = false;
+    }
+    if((yOldPlot[x1] == SPECTRUM_TOP_Y) && (yOldPlot[x1 + 1] == SPECTRUM_TOP_Y)) {
+      eraseSpec = false;
+    }
+
+    // erase the old spectrum if needed
+    if(eraseSpec && (displayState == DISPLAY_T41)) {
+      //tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+    }
+    tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+
+    // prevent drawing spectrum outside of the spectrum area
+    // also clear draw flag if we don't need to draw anything
+    if(yPlot > SPECTRUM_BOTTOM) {
+      yPlot = SPECTRUM_BOTTOM;
+      inBoxLow = false;
+    }
+    if(y1Plot > SPECTRUM_BOTTOM) {
+      y1Plot = SPECTRUM_BOTTOM;
+      drawSpec = inBoxLow ? true : false;
+    }
+    if(yPlot < SPECTRUM_TOP_Y) {
+      yPlot = SPECTRUM_TOP_Y;
+      inBoxHigh = drawSpec ? false : true;
+    }
+    if(y1Plot < SPECTRUM_TOP_Y) {
+      y1Plot = SPECTRUM_TOP_Y;
+      drawSpec = inBoxHigh ? true : false;
+    }
+
+    // draw the new spectrum if needed
+    if(drawSpec && (displayState == DISPLAY_T41)) {
+      //tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, RA8875_YELLOW);
+    }
+    tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, RA8875_YELLOW);
+
+    // save plot value to erase spectrum next loop
+    yOldPlot[x1] = yPlot;
+
+    YieldToProcess();
+  }
+
+  // save last plot value for erasing on next loop
+  yOldPlot[SPECTRUM_RES - 1] = y1Plot;
+
+}
+*/
+
+FLASHMEM void PlotSpectrum(int *calBins, int binSize) {
+  int16_t yPlot, y1Plot;
+  static int yOldPlot[SPECTRUM_RES];
+  bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
+  int x, y;
+
+  YieldToProcess(true);
+
+  for(int i = 0; i < 2; i++)
+  {
+    //int i = 0;
+    if(i == 0) {
+      x = calBins[0] - binSize;
+      y = calBins[0] + binSize;
+    } else {
+      x = calBins[1] - binSize;
+      y = calBins[1] + binSize;
+    }
+    for(int x1 = x; x1 < y; x1++) {
+    //for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
+    //for(int x1 = 200; x1 < 300; x1++) {
+
+      // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
+      yPlot = spectrumNoiseFloor - pixelnew[x1]; // - currentNF;
+      y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1]; // - currentNF;
+      //yPlot = spectrumNoiseFloor - pixelnew[x1] + 100;
+      //y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] + 100;
+      //yPlot = spectrumNoiseFloor - pixelnew[x1] + 150;
+      //y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] + 150;
+
+      // clear erase flag if we don't need to erase anything
+      if((yOldPlot[x1] == SPECTRUM_BOTTOM) && (yOldPlot[x1 + 1] == SPECTRUM_BOTTOM)) {
+        eraseSpec = false;
+      }
+      if((yOldPlot[x1] == SPECTRUM_TOP_Y) && (yOldPlot[x1 + 1] == SPECTRUM_TOP_Y)) {
+        eraseSpec = false;
+      }
+
+      // erase the old spectrum if needed
+      //if(eraseSpec && (displayState == DISPLAY_T41)) {
+      //  tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+      //}
+      tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+
+      // prevent drawing spectrum outside of the spectrum area
+      // also clear draw flag if we don't need to draw anything
+      //if(yPlot > SPECTRUM_BOTTOM) {
+      //  //Serial.println(yPlot);
+      //  yPlot = SPECTRUM_BOTTOM;
+      //  inBoxLow = false;
+      //}
+      //if(y1Plot > SPECTRUM_BOTTOM) {
+      //  y1Plot = SPECTRUM_BOTTOM;
+      //  drawSpec = inBoxLow ? true : false;
+      //}
+      //if(yPlot < SPECTRUM_TOP_Y) {
+      //  yPlot = SPECTRUM_TOP_Y;
+      //  inBoxHigh = drawSpec ? false : true;
+      //}
+      //if(y1Plot < SPECTRUM_TOP_Y) {
+      //  y1Plot = SPECTRUM_TOP_Y;
+      //  drawSpec = inBoxHigh ? true : false;
+      //}
+
+      // draw the new spectrum if needed
+      if(drawSpec && (displayState == DISPLAY_T41)) {
+        //tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, RA8875_YELLOW);
+      }
+      tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, RA8875_YELLOW);
+
+      // save plot value to erase spectrum next loop
+      yOldPlot[x1] = yPlot;
+
+      PrepareExciterIQDataCal(1);
+      YieldToProcess();
+    }
+  }
+  yOldPlot[SPECTRUM_RES - 1] = y1Plot;
+  //delay(250);
+}
+
+
+// plotType: type of adjustment: false = phase; true = amplitude
+FLASHMEM void PlotIQGainValue(float sigStr, bool plotType = true, bool dbm = false) {
+  char msg[60], f1[10], f2[10];
+  int color;
+  float plotX, plotY, plotValue;
+  static float minGainX = 0.0, minGainY = 80.0;
+  static float minPhaseX = 0.0, minPhaseY = 80.0;
+
+  //Serial.println("at PlotIQGainValue");
+  //Serial.println(sigStr);
+  if(dbm) {
+    if(sigStr > -73.0) {
+      plotValue = (sigStr + 73.0) / 10.0;
+    } else {
+      plotValue = (sigStr + 127.0) / 6.0;
+    }
+  } else {
+    plotValue = sigStr;
+  }
+
+  // map and plot value on graph
+  plotY = map((int)(10.0 * plotValue), 0, SIG_STRENGTH_MAX * 10, 440, 200);
+  if(plotType) {
+    //plotX = map(IQXAmpCorrectionFactor[currentBand], 0.8, 1.2, 40, 440);
+    plotX = map(IQXAmpCorrectionFactor[currentBand], GAIN_COARSE_MIN, GAIN_COARSE_MAX, 40, 440);
+    color = RA8875_YELLOW;
+
+    if(plotValue < minGainY) {
+      minGainX = IQXAmpCorrectionFactor[currentBand];
+      minGainY = plotValue;
+    }
+
+    dtostrf(minGainX, 5, 3, f1);
+    dtostrf(minGainY, 3, 1, f2);
+
+    tft.setFontScale((enum RA8875tsize)0);
+    tft.fillRect(0, 150, 60 * tft.getFontWidth(), tft.getFontHeight(), RA8875_BLACK);
+    tft.setTextColor(RA8875_YELLOW);
+    sprintf(msg, " Gain = %.5s @  %.3s", f1, f2);
+    tft.setCursor(0, 150);
+  } else {
+    plotX = map(IQXPhaseCorrectionFactor[currentBand], PHASE_COARSE_MIN, PHASE_COARSE_MAX, 40, 440);
+    color = RA8875_CYAN;
+
+    if(plotValue < minPhaseY) {
+      minPhaseX = IQXPhaseCorrectionFactor[currentBand];
+      minPhaseY = plotValue;
+    }
+
+    dtostrf(minPhaseX, 5, 3, f1);
+    dtostrf(minPhaseY, 3, 1, f2);
+
+    tft.setFontScale((enum RA8875tsize)0);
+    tft.fillRect(0, 165, 60 * tft.getFontWidth(), tft.getFontHeight(), RA8875_BLACK);
+    tft.setTextColor(RA8875_CYAN);
+    sprintf(msg, " Phase = %.5s @  %.3s", f1, f2);
+    tft.setCursor(0, 165);
+  }
+  tft.fillCircle(plotX, plotY, 2, color);
+  tft.print(msg);
+
+  //Serial.println("at PlotIQGainValue end");
+}
+
+FLASHMEM void DrawIQGainPlot() {
+  // erase only plot
+  tft.fillRect(0, 185, 480, 294, RA8875_BLACK);
+
+  // draw gain correction plot
+  tft.drawRect(0, 185, 480, 294, RA8875_GREEN);
+  tft.drawFastHLine(40, 430, 400, RA8875_GREEN);
+  tft.drawFastVLine(40, 200, 230, RA8875_GREEN);
+
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.setTextColor(RA8875_WHITE);
+  //tft.setCursor(13, 275);
+  tft.setCursor(5, 275);
+  tft.print("S");
+  tft.setCursor(180, 436);
+  tft.print("Gain");
+  tft.setCursor(175, 436 + 15);
+  tft.print("Phase");
+  for(int k = 0; k < 5; k++) {
+    tft.drawFastVLine(40 + k * 100, 430, 7, RA8875_GREEN);
+
+    tft.setCursor(30 + k * 100, 438);
+    tft.print((float)GAIN_COARSE_MIN + ((float)(GAIN_COARSE_MAX - GAIN_COARSE_MIN)) / 4.0 * (float)k, 1);
+    tft.setCursor(30 + k * 100, 438 + 15);
+    tft.print((float)PHASE_COARSE_MIN + ((float)(PHASE_COARSE_MAX - PHASE_COARSE_MIN)) / 4.0 * (float)k, 1);
+    //tft.setCursor(10, 190 + k * 57.5);
+    tft.setCursor(18, 190 + k * 57.5);
+    tft.print(SIG_STRENGTH_MAX * (1 - (float)k / 4.0), 0);
+    tft.drawFastHLine(33, 200 + k * 57.5, 7, RA8875_GREEN);
+  }
+
+  tft.setCursor(0, 135);
+  tft.print("Min Points:");
+}
+
+//-------------------------------------------------------------------------------------------------------------
+// Signal Strength
+//-------------------------------------------------------------------------------------------------------------
+
+FLASHMEM void GetSignalStrength(float *pSS, int passes = 0, bool getMeanSS = true) {
+  bool result = false;
+  int capture_bins = 10;  // sets the number of bins to scan for signal peak
+  int cal_bins[2] = {0, 0};
+  int16_t adjAmplitude = 0;
+  int16_t refAmplitude = 0;
+  uint32_t index_of_max;
+  int ssIndex = 0;
+  const int numSamples = 10;
+  float samples[numSamples], stdev;
+  int count = 0;
+
+  //Serial.println("at 5");
+  //Serial.println();
+
+  // set bin values depending on calibration type
   //  This is the "spectra scanning" for loop.  During calibration, only small areas of the spectrum need to be examined.
   //  If the entire 512 wide spectrum is used, the calibration loop will be slow and unresponsive.
   //  The scanning areas are determined by receive versus transmit calibration, and LSB or USB.  Thus there are 4 different scanning zones.
   //  All calibrations use a 0 dB reference signal and an "undesired sideband" signal which is to be minimized relative to the reference.
   //  Thus there is a target "bin" for the reference signal and another "bin" for the undesired sideband.
   //  The target bin locations are used by the for-loop to sweep a small range in the FFT.  A maximum finding function finds the peak signal strength.
-  int cal_bins[2] = {0, 0};
-  if(calTypeFlag == 0 && bands[currentBand].demod == DEMOD_LSB) {
-    cal_bins[0] = 310;
-    cal_bins[1] = 460;
-  }  // Receive calibration, LSB
-  if(calTypeFlag == 0 && bands[currentBand].demod == DEMOD_USB) {
-    cal_bins[0] = 65;
-    cal_bins[1] = 192;
-  }  // Receive calibration, USB
-  if(calTypeFlag == 1 && bands[currentBand].demod == DEMOD_LSB) {
-    cal_bins[0] = 240;
-    cal_bins[1] = 305;
-  }  // Transmit calibration, LSB
-  if(calTypeFlag == 1 && bands[currentBand].demod == DEMOD_USB) {
-    cal_bins[0] = 209;
-    cal_bins[1] = 273;
-  }  // Transmit calibration, USB
-
-  //  There are 2 for-loops, one for the reference signal and another for the undesired sideband.
-  //for(x1 = 0; x1 < SPECTRUM_RES -1; x1++) adjdB = PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
-  for(x1 = cal_bins[0] - capture_bins; x1 < cal_bins[0] + capture_bins; x1++) adjdB = PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
-  for(x1 = cal_bins[1] - capture_bins; x1 < cal_bins[1] + capture_bins; x1++) adjdB = PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
-
-  // Plot carrier during transmit cal, do not return a dB value:
-  if(calTypeFlag == 1) {
-    for(x1 = cal_bins[0] + 20; x1 < cal_bins[1] - 20; x1++) PlotCalSpectrum(x1, cal_bins, capture_bins, currentNF);
-  }
-
-
-  // adjust noise floor if auto noise floor is active
-  if(liveNoiseFloorFlag == 1) {
-    // auto noise floor give priority to ensuring the noise floor is visible in the lower portion of the spectrum display
-    // the spectrum is 512 pixels wide, the noise floor is adjusted as follows (in order of priority):
-    //    1) increased if more than a 20% of the spectrum is the bottom bin
-    //    2) decreased if more than 5% is in the top bin
-    //    3) decrease if less than 10% is in bottom bin
-    // *** TODO: consider using other histogram bins to more rapidly set noise flow ***
-    if(hLo > 102) {
-      currentNF += 1;
-    } else if((hHi > 25) || (hLo < 51)) {
-      currentNF -= 1;
+  if(transmitCal) {
+    // transmit calibration
+    if(bands[currentBand].demod == DEMOD_LSB) {
+      //cal_bins[0] = 240;
+      //cal_bins[1] = 305;
+      cal_bins[0] = 230;
+      cal_bins[1] = 295;
     }
-    //Serial.println("at 3");
+    if(bands[currentBand].demod == DEMOD_USB) {
+      cal_bins[0] = 209;
+      cal_bins[1] = 273;
+    }
+  } else {
+    // receive calibration
+    if(bands[currentBand].demod == DEMOD_LSB) {
+      //cal_bins[0] = 310;
+      //cal_bins[1] = 460;
+      //cal_bins[0] = 315;
+      //cal_bins[1] = 455;
+      cal_bins[0] = 325;
+      cal_bins[1] = 445;
+    }
+    if(bands[currentBand].demod == DEMOD_USB) {
+      cal_bins[0] = 65;
+      cal_bins[1] = 192;
+    }
   }
 
-  // print sideband supression
-  tft.fillRect(350, 125, 50, tft.getFontHeight(), RA8875_BLACK);
-  tft.setFontScale((enum RA8875tsize)0);
-  tft.setCursor(350, 125);  // 350, 125
-  tft.print(adjdB, 1);
+  PrepareExciterIQDataCal(1);
+  long prevUpdate = millis();
+  // update frequency spectrum and get average signal strength
+  while(!result) {
+    if(millis() - prevUpdate > 10) {
+      PrepareExciterIQDataCal(1);
+      prevUpdate = millis();
+    }
 
-  //  at least a partial waterfall is necessary.  It seems to provide some important timing function
-  //tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, WATERFALL_H, WATERFALL_L, WATERFALL_T + 1, 1, 2);
-  //while(tft.readStatus())
-  //  ;
+    // plot spectrum
+    if((passes > 0) && (count++ == passes)) {
+      //PrepareExciterIQDataCal(1);
+      PlotSpectrum(cal_bins, capture_bins);
+      count = 0;
+    } else {
+      PrepareExciterIQDataCal(1);
+      prevUpdate = millis();
+      YieldToProcess(true);
+    }
+
+    // calculate sideband signal strength
+    if(bands[currentBand].demod == DEMOD_LSB) {
+      arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
+      arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
+    }
+    if(bands[currentBand].demod == DEMOD_USB) {
+      arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
+      arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
+    }
+
+    signalStrength = ((float)adjAmplitude - (float)refAmplitude) / 1.95;
+
+    if(getMeanSS) {
+      // calc sideband rejection
+      // collect numSamples samples
+      samples[ssIndex++] = signalStrength;
+
+      //Serial.print(samples[ssIndex-1]); Serial.print(", ");
+
+      if(ssIndex == numSamples) {
+        // we've got all numSamples samples, process
+        arm_std_f32(samples, numSamples, &stdev);
+
+        //if(stdev > 1.0) {
+        if(stdev > 1.5) {
+          Serial.print(stdev); Serial.print(", ");
+
+          // standard deviation is too high, start again
+          ssIndex = 0;
+        } else {
+          arm_mean_f32(samples, numSamples, &signalStrength);
+          *pSS = signalStrength;
+          result = true;
+        }
+      }
+    } else {
+      if(count == 0) break;
+    }
+  }
+
+  //Serial.println();
+  UpdateCalDisplayData();
 }
 
-/*****
-  Purpose:  Plot Calibration Spectrum   //  KF5N 7/2/2023
-            This function plots a partial spectrum during calibration only.
-            This is intended to increase the efficiency and therefore the responsiveness of the calibration encoder.
-            This function is called by ShowSpectrum2() in two for-loops.  One for-loop is for the refenence signal,
-            and the other for-loop is for the undesired sideband.
-  Parameter list:
-    int x1, where x1 is the FFT bin.
-    cal_bins[2] locations of the desired and undesired signals
-    capture_bins width of the bins used to display the signals
-  Return value:
-    float returns the adjusted value in dB
-*****/
-FLASHMEM float PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int currentNF) {
-  float adjdB = 0.0;
-  int16_t adjAmplitude = 0;  // Was float; cast to float in dB calculation.  KF5N
-  int16_t refAmplitude = 0;  // Was float; cast to float in dB calculation.  KF5N
-  uint32_t index_of_max;     // This variable is not currently used, but it is required by the ARM max function.  KF5N
-  int16_t yPlot, y1Plot;
-  static int yOldPlot[SPECTRUM_RES];
-  bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
-  bool updateSpectrumData = x1 == 0 ? true : false;
+void SetupSignalStrengthSource(int source) {
+  unsigned long prevMillis;
 
-  if(x1 == (cal_bins[0] - capture_bins)) {  // Set flag at revised beginning.  KF5N
-    updateSpectrumData = true;                   //Set flag so the display data are saved only once during each display refresh cycle at the start of the cycle, not 512 times
-    ShowBandwidthBarValues();                         // Without this call, the calibration value in dB will not be updated.  KF5N
-  } else updateSpectrumData = false;              //  Do not save the the display data for the remainder of the
-  //}
+  // set up signal strength source
+  switch(source) {
+    case 0: // manual
+      tft.setTextColor(RA8875_WHITE);
+      tft.setCursor(menuX, 400);
+      tft.print("Sig Sup");
+      tft.setCursor(menuX, 440);
+      tft.print("Plot Val");
+      //tft.fillRect(680, 440, 150, tft.getFontHeight(), RA8875_BLACK);
+      PrintAtten(); // v12
+      minSignalStrength = 0;
+      break;
 
-  if(updateSpectrumData) {
-    while(!ProcessIQData2(updateSpectrumData)) ;  // Call the Audio process from within the display routine to eliminate conflicts with drawing the spectrum and waterfall displays
-
-  } else {
-    ProcessIQData2(updateSpectrumData);  // Call the Audio process from within the display routine to eliminate conflicts with drawing the spectrum and waterfall displays
-  }
-
-  // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
-  yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF;
-  y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF;
-
-  // create rough spectrum histogram if auto noise floor is active
-  // the frequency spectrum is 150 pixels high, let's create
-  // rough histogram 30 bins wide (or 5 pixels each, ie, divide by 5)
-  // you might think divide by 4 would be more efficient as 2 right shifts
-  // but right shift of a negative number is implimentation specific
-  // and I want to keep the negative numbers here
-  if(liveNoiseFloorFlag == 1) {
-    int specPlotY = spectrumNoiseFloor - yPlot; // actual spectrum value at current noise floor
-    int bin = specPlotY / 5;                    // divide by 5 to get histogram bin
-
-    // hLo and hHi capture spectrum at or outside the spectrum display extremes
-    // this is all we need to automatically set the noise floor
-    // *** TODO: consider using other histogram bins to more rapidly set noise flow ***
-    if(bin < 1) {
-      hLo += 1;
-    } else if(bin >= 29) {
-      hHi += 1;
-    }
-  }
-
-  // clear erase flag if we don't need to erase anything
-  if((yOldPlot[x1] == SPECTRUM_BOTTOM) && (yOldPlot[x1 + 1] == SPECTRUM_BOTTOM)) {
-    eraseSpec = false;
-  }
-  if((yOldPlot[x1] == SPECTRUM_TOP_Y) && (yOldPlot[x1 + 1] == SPECTRUM_TOP_Y)) {
-    eraseSpec = false;
-  }
-
-  // erase the old spectrum if needed
-  //if(eraseSpec && (displayState == DISPLAY_T41)) {
-  //  tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
-  //}
-  tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
-
-  // Find the maximums of the desired and undesired signals.
-  if(bands[currentBand].demod == DEMOD_LSB) {
-    arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
-    arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
-  }
-  if(bands[currentBand].demod == DEMOD_USB) {
-    arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
-    arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
-  }
-
-  // prevent drawing spectrum outside of the spectrum area
-  // also clear draw flag if we don't need to draw anything
-  if(yPlot > SPECTRUM_BOTTOM) {
-    //Serial.println(yPlot);
-    yPlot = SPECTRUM_BOTTOM;
-    inBoxLow = false;
-  }
-  if(y1Plot > SPECTRUM_BOTTOM) {
-    y1Plot = SPECTRUM_BOTTOM;
-    drawSpec = inBoxLow ? true : false;
-  }
-  if(yPlot < SPECTRUM_TOP_Y) {
-    yPlot = SPECTRUM_TOP_Y;
-    inBoxHigh = drawSpec ? false : true;
-  }
-  if(y1Plot < SPECTRUM_TOP_Y) {
-    y1Plot = SPECTRUM_TOP_Y;
-    drawSpec = inBoxHigh ? true : false;
-  }
-
-  // draw the new spectrum if needed
-  //if(drawSpec && (displayState == DISPLAY_T41)) {
-  //  tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, RA8875_YELLOW);
-  //  Serial.println("at 1");
-  //} else {
-  //  Serial.println("at 2");
-  //}
-    tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, RA8875_YELLOW);
-
-  // save plot value to erase spectrum next loop
-  yOldPlot[x1] = yPlot;
-
-  if(calTypeFlag == 0) {  // Receive Cal
-    adjdB = ((float)adjAmplitude - (float)refAmplitude) / 1.95;
-    tft.writeTo(L2);
-    if(bands[currentBand].demod == DEMOD_LSB) {
-      tft.fillRect(450, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);     // SPECTRUM_TOP_Y = 100
-      tft.fillRect(300, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);  // h = SPECTRUM_HEIGHT + 3
-    } else {                                                           // SPECTRUM_HEIGHT = 150 so h = 153
-      tft.fillRect(55, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);
-      tft.fillRect(182, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);
-    }
-  } else {                                                       //Transmit Cal
-    adjdB = ((float)adjAmplitude - (float)refAmplitude) / 1.95;  // Cast to float and calculate the dB level.  KF5N
-    tft.writeTo(L2);
-    if(bands[currentBand].demod == DEMOD_LSB) {
-      tft.fillRect(295, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);  // Adjusted height due to other graphics changes.  KF5N August 3, 2023
-      tft.fillRect(230, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);
-    } else {
-      if(bands[currentBand].demod == DEMOD_USB) {  //mode == DEMOD_LSB
-        tft.fillRect(199, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);
-        tft.fillRect(263, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);
+    case 1: // external
+      // set up this and external unit for calibration
+      minSignalStrength = 0;
+      signalStrengthSource = 1;
+      SendSetFreq(centerFreq + intermediateFreq);
+      if(bands[currentBand].demod == DEMOD_LSB) {
+        SendSetMode(DEMOD_USB);
+      } else {
+        SendSetMode(DEMOD_LSB);
       }
+      SendSetDisplayZoom(2);
+      SendSetNarrowFilter();
+
+      // allow frequency to stabilize
+      prevMillis = millis();
+      while(millis() - prevMillis < 5000) {
+        PrepareMicExciterData();
+        T41ControlLoop();
+      }
+
+      tft.fillRect(menuX, 400, 150, tft.getFontHeight(), RA8875_BLACK);
+      tft.fillRect(menuX, 440, 150, tft.getFontHeight(), RA8875_BLACK);
+      tft.setCursor(menuX, 400);
+      tft.print("Sig Sup");
+      tft.setCursor(menuX, 440);
+      tft.print("Max Sup");
+
+      UpdateCalDisplayData();
+      break;
+
+    case 2: // loopback
+    default:
+      break;
+  }
+}
+
+//-------------------------------------------------------------------------------------------------------------
+// Auto Calibration
+//-------------------------------------------------------------------------------------------------------------
+
+FLASHMEM void TuneCalParameter(int indexStart, int indexEnd, float increment, float *IQCorrectionFactor) {
+  int minIndex = 0;
+  int index = indexStart;
+  float correctionFactor = *IQCorrectionFactor;
+  //unsigned long prevMillis = millis();
+  float meanSignalStrength;
+
+  // reset globals
+  *IQCorrectionFactor = correctionFactor + index * increment;
+  signalStrengthReceivedIndex = -1;
+  signalStrengthReceived = false;
+  while(index < indexEnd) {
+    // *** calibration times ***
+    // Mode: loopback
+    //  cal type  w/o spectrum    w/ spectrum
+    //  transmit  ~30 sec         ~5 min
+    //  receive
+    //GetSignalStrength(&meanSignalStrength); // w/o spectrum
+    GetSignalStrength(&meanSignalStrength, 1); // with spectrum
+
+    if(meanSignalStrength < minSignalStrength) {
+      minSignalStrength = meanSignalStrength;
+      minIndex = index;
+      //Serial.println();
+      Serial.print("min factor "); Serial.print(correctionFactor + index * increment); Serial.print(" found @: "); Serial.println(minSignalStrength);
+    } else {
+      //Serial.println(minSignalStrength);
+    }
+
+    PlotIQGainValue(meanSignalStrength, IQCorrectionFactor == &IQXAmpCorrectionFactor[currentBand], true);
+
+    // update IQ correction factor for next increment
+    index++;
+    *IQCorrectionFactor = correctionFactor + index * increment;
+    UpdateCalDisplayData();
+  }
+
+  *IQCorrectionFactor = correctionFactor + minIndex * increment;
+  UpdateCalDisplayData();
+}
+
+FLASHMEM void AutoTune(float *amp, float *phase,
+                float gain_coarse_max, float gain_coarse_min,
+                float phase_coarse_max, float phase_coarse_min,
+                int gain_coarse_step2_N, int phase_coarse_step2_N,
+                int gain_fine_N, int phase_fine_N, bool phase_first) {
+
+  *amp = 1.0;
+  *phase = 0.0;
+
+  ShowTransmitReceiveStatus();
+
+  tft.setFontScale((enum RA8875tsize)1);
+  tft.fillRect(menuX, 240, 250, tft.getFontHeight(), RA8875_BLACK);
+  tft.fillRect(menuX, 280, 250, tft.getFontHeight(), RA8875_BLACK);
+  tft.fillRect(menuX, 400, 250, tft.getFontHeight(), RA8875_BLACK);
+  tft.fillRect(menuX, 440, 250, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_WHITE);
+  tft.setCursor(menuX, 240);
+  tft.print("Auto Xmit Cal");
+  tft.setCursor(menuX, 400);
+  tft.setTextColor(RA8875_YELLOW);
+  tft.print("Sig Sup");
+  tft.setCursor(menuX, 440);
+  tft.print("Max Sup");
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.setCursor(menuX, 280);
+  tft.print("  starting auto cal...");
+  tft.setTextColor(RA8875_YELLOW);
+  tft.setCursor(menuX, 295);
+  tft.print("  (press 17 to cancel)");
+
+  UpdateCalDisplayData();
+
+  if(phase_first) {
+    // Step 2: phase changes in 0.01 steps from -0.2 to 0.2. Find the minimum.
+    int phaseStepsCoarseN = (int)((phase_coarse_max - phase_coarse_min) / 0.01 / 2);
+    TuneCalParameter(-phaseStepsCoarseN, phaseStepsCoarseN + 1, 0.01, phase);
+
+    // Step 1: Gain in 0.01 steps from 0.5 to 1.5
+    int gainStepsCoarseN = (int)((gain_coarse_max - gain_coarse_min) / 0.01 / 2);
+    TuneCalParameter(-gainStepsCoarseN, gainStepsCoarseN + 1, 0.01, amp);
+  } else {
+    // Step 1: Gain in 0.01 steps from 0.5 to 1.5
+    int gainStepsCoarseN = (int)((gain_coarse_max - gain_coarse_min) / 0.01 / 2);
+
+    tft.setFontScale((enum RA8875tsize)0);
+    tft.fillRect(menuX, 280, 250, tft.getFontHeight(), RA8875_BLACK);
+    tft.setTextColor(RA8875_YELLOW);
+    tft.setCursor(menuX, 280);
+    tft.print("  1. Adjusting course gain...");
+
+    TuneCalParameter(-gainStepsCoarseN, gainStepsCoarseN + 1, 0.01, amp);
+
+    // Step 2: phase changes in 0.01 steps from -0.2 to 0.2. Find the minimum.
+    int phaseStepsCoarseN = (int)((phase_coarse_max - phase_coarse_min) / 0.01 / 2);
+
+    tft.setFontScale((enum RA8875tsize)0);
+    tft.fillRect(menuX, 280, 250, tft.getFontHeight(), RA8875_BLACK);
+    tft.setTextColor(RA8875_YELLOW);
+    tft.setCursor(menuX, 280);
+    tft.print("  2. Adjusting course phase...");
+
+    TuneCalParameter(-phaseStepsCoarseN, phaseStepsCoarseN + 1, 0.01, phase);
+  }
+
+  // Step 3: Gain in 0.01 steps from 4 steps below previous minimum to 4 steps above
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.fillRect(menuX, 280, 250, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_YELLOW);
+  tft.setCursor(menuX, 280);
+  tft.print("  3. Adjusting gain...");
+
+  TuneCalParameter(-gain_coarse_step2_N, gain_coarse_step2_N + 1, 0.01, amp);
+
+  // Step 4: phase in 0.01 steps from 4 steps below previous minimum to 4 steps above
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.fillRect(menuX, 280, 250, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_YELLOW);
+  tft.setCursor(menuX, 280);
+  tft.print("  4. Adjusting phase...");
+
+  TuneCalParameter(-phase_coarse_step2_N, phase_coarse_step2_N + 1, 0.01, phase);
+
+  // Step 5: gain in 0.001 steps 10 steps below to 10 steps above
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.fillRect(menuX, 280, 250, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_YELLOW);
+  tft.setCursor(menuX, 280);
+  tft.print("  5. Adjusting fine gain...");
+
+  TuneCalParameter(-gain_fine_N, gain_fine_N + 1, 0.001, amp);
+
+  // Step 6: phase in 0.001 steps 10 steps below to 10 steps above
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.fillRect(menuX, 280, 250, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_YELLOW);
+  tft.setCursor(menuX, 280);
+  tft.print("  6. Adjusting fine phase...");
+
+  TuneCalParameter(-phase_fine_N, phase_fine_N + 1, 0.001, phase);
+
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.fillRect(menuX, 280, 250, 2 * tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_WHITE);
+  tft.setCursor(menuX, 280);
+  tft.print("  Auto Cal Done");
+}
+
+FLASHMEM void AutoCal() {
+  if(transmitCal) {
+    // transmit calibration
+    AutoTune(&IQXAmpCorrectionFactor[currentBand], &IQXPhaseCorrectionFactor[currentBand],
+              GAIN_COARSE_MAX, GAIN_COARSE_MIN,
+              PHASE_COARSE_MAX, PHASE_COARSE_MIN,
+              GAIN_COARSE_STEP2_N, PHASE_COARSE_STEP2_N,
+              GAIN_FINE_N, PHASE_FINE_N, false);
+  } else {
+    // receive calibration
+    AutoTune(&IQAmpCorrectionFactor[currentBand], &IQPhaseCorrectionFactor[currentBand],
+              GAIN_COARSE_MAX, GAIN_COARSE_MIN,
+              PHASE_COARSE_MAX, PHASE_COARSE_MIN,
+              GAIN_COARSE_STEP2_N, PHASE_COARSE_STEP2_N,
+              GAIN_FINE_N, PHASE_FINE_N, false);
+  }
+  UpdateIQDisplay();
+}
+
+
+//-------------------------------------------------------------------------------------------------------------
+// Frequency Calibration
+//-------------------------------------------------------------------------------------------------------------
+
+
+
+//-------------------------------------------------------------------------------------------------------------
+// IQ Calibration
+//-------------------------------------------------------------------------------------------------------------
+
+/*****
+  Purpose: Combined input/output to calibrate the transmit or receive IQ signals
+ *****/
+FLASHMEM void CalibrateIQ(bool calType) {
+  int calFlag = 1; // 1 = do calibration, 0 = done
+  int val, bandCalBand;
+  unsigned long prevMillis;
+
+  transmitCal = calType;
+
+  // set up for calibration
+  if(transmitCal) {
+    CalibratePreamble(2, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
+  } else {
+    //CalibratePreamble(1, CW_TRANSMIT_STRAIGHT_STATE, CALIBRATE_RECEIVE_STATE);
+    CalibratePreamble(1, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
+  }
+
+  ShowCalibrationDisplay();
+
+  // show manual plot value increment
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.fillRect(menuX + 20 * tft.getFontWidth(), iqCorIncY - 15, 50, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_GREEN);
+  tft.setCursor(menuX + 20 * tft.getFontWidth(), iqCorIncY - 15);
+  tft.print(plotValueInc ? 1.0 : 0.1, 1);
+
+  signalStrengthSource = 0; // use manual signal strength source
+
+  // show signal source
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.fillRect(menuX + 20 * tft.getFontWidth(), iqCorIncY + 15, 50, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_GREEN);
+  tft.setCursor(menuX + 20 * tft.getFontWidth(), iqCorIncY + 15);
+  tft.print(signalStrengthSources[signalStrengthSource]);
+
+  signalStrengthReceived = false;
+
+  prevMillis = millis();
+
+  // calibration loop
+  while(true) {
+    if(calFlag == 0) {
+      // calibration has finished
+      // clean up and exit
+      if(transmitCal) {
+        CalibratePost(2);
+      } else {
+        CalibratePost(1);
+      }
+      break;
+    }
+
+    ShowTransmitReceiveStatus();
+    AdjustCalFactors();
+
+    // *** TODO: consider manual cal ***
+    GetSignalStrength(&signalStrength, 1, false);
+    UpdateCalDisplayData();
+
+    // check for and process button input
+    val = ReadSelectedPushButton();
+    if(val != BOGUS_PIN_READ) {
+      val = ProcessButtonPress(val);
+    }
+
+    switch(val) {
+      case MENU_OPTION_SELECT: // 0
+        // save and exit
+        //EEPROMWrite();
+        calFlag = 0;
+        break;
+
+      case BAND_UP: // 2
+        ChangeBand(1);
+        centerFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(centerFreq);
+        //si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+        UpdateIQDisplay();
+        break;
+
+      case BAND_DN: // 3
+        ChangeBand(-1);
+        centerFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(centerFreq);
+        //si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+        UpdateIQDisplay();
+        break;
+
+      case SET_MODE: // 8
+        // experimental stuff
+        // request signal strength
+        if(!signalStrengthReceived) {
+          SendSignalStrengthRequest();
+        }
+
+        /*
+        // toggle calibration relay
+        calRelayOn = !calRelayOn;
+        if(calRelayOn) {
+          priorInAtten = inAtten;
+          priorOutAtten = outAtten;
+          inAtten = 51; // gives about same level as normal transmit w/o CAL relay on
+          outAtten = 51;
+          Serial.print(inAtten); Serial.print(", "); Serial.print(outAtten); Serial.print(", "); Serial.print(currentRF_InAtten); Serial.print(", "); Serial.println(currentRF_OutAtten);
+          SetRF_InAtten(inAtten);
+          SetRF_OutAtten(outAtten);
+          digitalWrite(RF_CAL_RELAY, ON);
+
+        } else {
+          digitalWrite(RF_CAL_RELAY, OFF);
+          inAtten = priorInAtten;
+          outAtten = priorOutAtten;
+          SetRF_InAtten(inAtten);
+          SetRF_OutAtten(outAtten);
+        }
+        PrintAtten();
+        */
+        break;
+
+      case NOISE_REDUCTION:  // 9
+        // plot sginal level value
+        PlotIQGainValue(plotValue);
+        break;
+
+      case NOTCH_FILTER: // 10
+        // toggle image level change, true = 1.0, false = 0.1
+        plotValueInc = !plotValueInc;
+
+        tft.setFontScale((enum RA8875tsize)0);
+        tft.fillRect(menuX + 20 * tft.getFontWidth(), iqCorIncY - 15, 50, tft.getFontHeight(), RA8875_BLACK);
+        tft.setTextColor(RA8875_GREEN);
+        tft.setCursor(menuX + 20 * tft.getFontWidth(), iqCorIncY - 15);
+        tft.print(plotValueInc ? 1.0 : 0.1, 1);
+        break;
+
+      case NOISE_FLOOR: // 11
+        // toggle IQ calibration increment
+        iqIncrementIndex++;
+        if(iqIncrementIndex >= 3) iqIncrementIndex = 0;
+        iqCorInc = iqIncrementValues[iqIncrementIndex];
+
+        DisplayIQAdjustIncrement(20);
+        break;
+
+      case FINE_TUNE_INCREMENT: // 12
+        // toggle signal strength source
+        signalStrengthSource++;
+        if(signalStrengthSource > 2) signalStrengthSource = 0;
+
+        // show signal source
+        tft.setFontScale((enum RA8875tsize)0);
+        tft.fillRect(menuX + 20 * tft.getFontWidth(), iqCorIncY + 15, 50, tft.getFontHeight(), RA8875_BLACK);
+        tft.setTextColor(RA8875_GREEN);
+        tft.setCursor(menuX + 20 * tft.getFontWidth(), iqCorIncY + 15);
+        tft.print(signalStrengthSources[signalStrengthSource]);
+
+        tft.setFontScale((enum RA8875tsize)1);
+        tft.setTextColor(RA8875_WHITE);
+        if(signalStrengthSource == 0) {
+          // manual signal strength
+          tft.setCursor(menuX, 440);
+          tft.print("Plot Val");
+          //tft.fillRect(680, 440, 150, tft.getFontHeight(), RA8875_BLACK);
+          PrintAtten();
+        } else {
+          // set up signal strength source
+          SetupSignalStrengthSource(signalStrengthSource);
+
+          tft.fillRect(menuX, 400, 150, tft.getFontHeight(), RA8875_BLACK);
+          tft.fillRect(menuX, 440, 150, tft.getFontHeight(), RA8875_BLACK);
+          tft.setCursor(menuX, 400);
+          tft.print("Sig Sup");
+          tft.setCursor(menuX, 440);
+          tft.print("Max Sup");
+
+          UpdateCalDisplayData();
+        }
+        break;
+
+      case DECODER_TOGGLE: // 13
+        // auto calibrate all bands, starting with the first band
+
+        // setup display and serial tables
+        tft.setFontScale((enum RA8875tsize)0);
+        tft.fillRect(menuX, iqCorIncY - 30, 250, 14 * tft.getFontHeight(), RA8875_BLACK);
+        tft.setTextColor(RA8875_WHITE);
+        tft.setCursor(menuX, 10);
+        tft.print("All Bands Auto Cal Factors");
+        tft.setCursor(menuX, 25);
+        //         80M   1.003  0.000
+        tft.print("Band  Gain   Phase");
+
+        Serial.println("All Bands Auto Transmit IQ Calibration Factors");
+        Serial.println("Band\tGain\tPhase");
+
+        // save current band and set to 80m band here and on external T41
+        // *** this code assumes external T41 starts on 40m band ***
+        bandCalBand = currentBand;
+        ChangeBand(BAND_80M - currentBand);
+        SendSetBandChange(-1);
+
+        // cycle through bands doing auto cal
+        for(int i = BAND_80M; i < NUMBER_OF_BANDS; i++) {
+          // clear previous plot
+          DrawIQGainPlot();
+
+          if(bands[currentBand].calFreq > 0) {
+            centerFreq = bands[currentBand].calFreq;
+            SetTxRxFreq(centerFreq);
+            //si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
+            UpdateIQDisplay();
+
+            // set up signal strength source
+            SetupSignalStrengthSource(signalStrengthSource);
+
+            // auto calibrate this band
+            AutoCal();
+
+            // print factors to display and serial
+            tft.setFontScale((enum RA8875tsize)0);
+            tft.setTextColor(RA8875_WHITE);
+            tft.setCursor(menuX, 10 + 15 * (i + 2));
+            tft.print(bands[currentBand].name); tft.print("   "); tft.print(IQXAmpCorrectionFactor[currentBand], 3); tft.print("  "); tft.println(IQXPhaseCorrectionFactor[currentBand], 3);
+
+            Serial.print(bands[currentBand].name); Serial.print("\t"); Serial.print(IQXAmpCorrectionFactor[currentBand], 3); Serial.print("\t"); Serial.println(IQXPhaseCorrectionFactor[currentBand], 3);
+          }
+
+          ChangeBand(1);
+          SendSetBandChange(1);
+        }
+
+        Serial.println();
+
+        // return to original band
+        ChangeBand(bandCalBand - currentBand);
+        centerFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(centerFreq);
+        //si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
+        UpdateIQDisplay();
+        break;
+
+      case MAIN_TUNE_INCREMENT: // 14
+        // auto calibrate current band
+
+        // erase menu
+        tft.setFontScale((enum RA8875tsize)0);
+        tft.fillRect(menuX, iqCorIncY - 30, 250, 14 * tft.getFontHeight(), RA8875_BLACK);
+
+        // set up signal strength source
+        SetupSignalStrengthSource(signalStrengthSource);
+
+        // begin auto calibration for current band
+        AutoCal();
+        break;
+
+      case BEARING: // 17
+        // cancel calibration
+        if(transmitCal) {
+          IQXAmpCorrectionFactor[currentBand] = userIQAmpFactor;
+          IQXPhaseCorrectionFactor[currentBand] = userIQPhaseFactor;
+        } else {
+          IQAmpCorrectionFactor[currentBand] = userIQAmpFactor;
+          IQPhaseCorrectionFactor[currentBand] = userIQPhaseFactor;
+        }
+        calFlag = 0;
+        break;
+
+      default:
+        break;
     }
   }
-  tft.writeTo(L1);
-  return adjdB;
 }

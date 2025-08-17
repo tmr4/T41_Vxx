@@ -9,6 +9,5 @@
 //-------------------------------------------------------------------------------------------------------------
 
 void CalibrateFrequency();
-void CalibrateReceiveIQ();
-void CalibrateTransmitIQ();
+void CalibrateIQ(bool transmitCal);
 void TwoToneTest();

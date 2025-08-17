@@ -330,11 +330,11 @@ int ProcessReceiverData(bool updateSpectrumData) {
       https://new.reddit.com/r/T41_EP/comments/1dus4d0/clearing_up_some_artifacts_in_my_t41_audio_stream/
     **********************************************************************************/
     // this is still helpful for troubleshooting at times when the audio process isn't working correctly
-    //if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
-    //  Serial.println("clearing...");
-    //  Q_in_L.clear();
-    //  Q_in_R.clear();
-    //}
+    if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
+      Serial.println("clearing...");
+      Q_in_L.clear();
+      Q_in_R.clear();
+    }
 
     /**********************************************************************************
       IQ amplitude and phase correction.  For this scaled down version the I an Q channels are
@@ -422,7 +422,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
 
     // *** TODO: this is from v11 - reconcile calibration calls within Process.cpp ***
     if(calibrateFlag >= 0) {
-      CalibrateOptions();
+      //CalibrateOptions();
     }
 
     /*************************************************************************************************

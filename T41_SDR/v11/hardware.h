@@ -92,13 +92,6 @@ void RemoveDCBias();
 float32_t CalcSignalStrength();
 
 //------------
-// T41Control.h
-
-extern bool signalStrengthReceived;
-extern float signalStrength;
-extern int signalStrengthReceivedIndex;
-
-//------------
 // T41_SDR.ino
 
 void InitHardware();

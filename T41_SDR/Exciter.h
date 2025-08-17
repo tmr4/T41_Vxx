@@ -7,6 +7,7 @@
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void ExciterIQData();
+void PrepareMicExciterData();
+void PrepareExciterIQData();
 void PlayExciterIQData();
 void SetBandRelay(int state);

@@ -137,32 +137,35 @@ FLASHMEM void CalibrateOptions() {
       }
       break;
 
-    case 2:                  // IQ Receive Cal - Gain and Phase
-      DoReceiveCalibrate();
-      calibrateFlag = 5;
+    case 2: // IQ Receive Cal - Gain and Phase
+      CalibrateIQ(false);
+      //calibrateFlag = 5;
+      calibrateFlag = -1;
       break;
 
-    case 3:               // IQ Transmit Cal - Gain and Phase
-    if(bands[currentBand].demod == DEMOD_FT8) {
-      FT8DoXmitCalibrate();
-    } else {
-      DoXmitCalibrate();
-    }
-      calibrateFlag = 5;
+    case 3: // IQ Transmit Cal - Gain and Phase
+      if(bands[currentBand].demod == DEMOD_FT8) {
+        FT8DoXmitCalibrate();
+      } else {
+        CalibrateIQ(true);
+      }
+      //calibrateFlag = 5;
+      calibrateFlag = -1;
       break;
 
     case 4:  // SSB PA Cal
-      SSBPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[currentBand], 0.001, (char *)"SSB PA Cal: ");
-      powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // AFP 10-21-22
-      val = ReadSelectedPushButton();
-      if(val != BOGUS_PIN_READ) {        // Any button press??
-        val = ProcessButtonPress(val);    // Use ladder value to get menu choice
-        if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
-          tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMWrite();
-          calibrateFlag = 5;
-        }
-      }
+      //SSBPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[currentBand], 0.001, (char *)"SSB PA Cal: ");
+      //powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // AFP 10-21-22
+      //val = ReadSelectedPushButton();
+      //if(val != BOGUS_PIN_READ) {        // Any button press??
+      //  val = ProcessButtonPress(val);    // Use ladder value to get menu choice
+      //  if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
+      //    tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
+      //    EEPROMWrite();
+      //    calibrateFlag = 5;
+      //  }
+      //}
+      calibrateFlag = -1;
       break;
 
     case 5: // wrap up calibration
@@ -215,14 +218,6 @@ float32_t CalcSignalStrength() {
 
   return dbm;
 }
-
-//------------
-// T41Control.cpp
-
-// calibration data
-bool signalStrengthReceived = false;
-float signalStrength = 0.0;
-int signalStrengthReceivedIndex = -1;
 
 //------------
 // T41_SDR.ino

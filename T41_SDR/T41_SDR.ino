@@ -612,7 +612,7 @@ FASTRUN void loop() {
       digitalWrite(RXTX, HIGH); // turn on TX relay
 
       while(digitalRead(PTT) == LOW) {
-        ExciterIQData();
+        PrepareMicExciterData();
         UpdateClock();
       }
 
@@ -705,7 +705,7 @@ FASTRUN void loop() {
       ShowTransmitReceiveStatus();
 
       while(ft8PTT) {
-        ExciterIQData();
+        PrepareMicExciterData();
         UpdateClock();
         WSJTLoop(); // update ft8PTT
       }

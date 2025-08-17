@@ -38,10 +38,11 @@ extern Rotary_V12 menuChangeEncoder;
 extern Rotary_V12 tuneEncoder;
 extern Rotary_V12 fineTuneEncoder;
 
+#endif
+#endif
+
 extern float adjustVolEncoder;
 extern int tuneChange;
-#endif
-#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
