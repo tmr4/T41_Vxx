@@ -64,6 +64,8 @@ float sampleRate, intermediateFreq;
 
 int radioState, lastState;
 
+int volSetting = 0;
+
 float32_t DMAMEM audioBufferL[2048];
 float32_t DMAMEM audioBufferR[2048];
 float32_t DMAMEM audioBufferL_EX[2048];
@@ -99,7 +101,8 @@ band bands[NUMBER_OF_BANDS] = {
     18100000, 18068000, 18168000,  "17M",  DEMOD_USB,  3000, 200,    1,    18118000,    GAIN_CORRECTION_17M,    20,    20,
     21200000, 21000000, 21450000,  "15M",  DEMOD_USB,  3000, 200,    1,    21225000,    GAIN_CORRECTION_15M,    20,    20,
     24920000, 24890000, 24990000,  "12M",  DEMOD_USB,  3000, 200,    1,    24940000,    GAIN_CORRECTION_12M,    20,    20,
-    28350000, 28000000, 29700000,  "10M",  DEMOD_USB,  3000, 200,    1,    28850000,    GAIN_CORRECTION_10M,    20,    20 // gainCorrection set to 12m band value as AD3 can't generate this signal
+//    28350000, 28000000, 29700000,  "10M",  DEMOD_USB,  3000, 200,    1,    28850000,    GAIN_CORRECTION_10M,    20,    20 // gainCorrection set to 12m band value as AD3 can't generate this signal
+    28350000, 28000000, 29700000,  "10M",  DEMOD_USB,  3000, 200,    1,           0,    GAIN_CORRECTION_10M,    20,    20 // gainCorrection set to 12m band value as AD3 can't generate this signal
 };
 
 int bandswitchPins[] = {
@@ -574,6 +577,9 @@ FASTRUN void loop() {
         digitalWrite(RXTX, LOW); // turn off TX relay
         break;
 
+      case CALIBRATE_TRANSMIT_STATE:
+        break;
+
       default:
         break;
     }
@@ -730,6 +736,16 @@ FASTRUN void loop() {
 
   UpdateClock();
   UpdateMemTempLoad();
+
+  // slowly raise volume to avoid artifacts
+  if(volSetting > 0) {
+    if(audioVolume < volSetting) {
+      audioVolume++;
+      volumeChangeFlag = true;
+    } else {
+      volSetting = 0;
+    }
+  }
 
 #ifdef T41_REMOTE_DISPLAY
   RemoteLoop();

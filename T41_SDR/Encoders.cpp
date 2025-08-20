@@ -48,6 +48,8 @@ Rotary tuneEncoder = Rotary(TUNE_ENCODER_A, TUNE_ENCODER_B);              // (16
 Rotary volumeEncoder = Rotary(VOLUME_ENCODER_A, VOLUME_ENCODER_B);        // ( 2,  3)
 #endif
 
+extern int calNFAdjust;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -274,25 +276,21 @@ void EncoderVolumeISR() {
 // TODO: front panel placeholders for now
 void EncoderFineTune() {
   int result;
-  #endif
+#endif
 #ifdef FOURSQRP_FRONTPANEL
 FASTRUN void EncoderFineTuneISR() {
   char result;
 #endif
+  // *** TODO: we'll go through here many times if fine tune encoder bounces ***
+  // *** If fineTuneEncoderMove isn't processed in the meantime,
+  //    and result == 0, then fineTuneEncoderMove will be reset to zero ***
 
   result = fineTuneEncoder.process();  // Read the encoder
   if(result == 0) {                   // Nothing read
     fineTuneEncoderMove = 0L;
     return;
-#ifdef FOURSQRP_FRONTPANEL
-  } else {
-    if(result == DIR_CW) {  // 16 = CW, 32 = CCW
-      fineTuneEncoderMove = 1L;
-    } else {
-      fineTuneEncoderMove = -1L;
-    }
   }
-
+#ifdef FOURSQRP_FRONTPANEL
   switch(result) {
     case DIR_CW:  // Turned it clockwise, 16
       fineTuneEncoderMove = 1;
@@ -303,8 +301,6 @@ FASTRUN void EncoderFineTuneISR() {
       break;
   }
 #else
-  }
-
   fineTuneEncoderMove = result;
 #endif
 
@@ -313,7 +309,11 @@ FASTRUN void EncoderFineTuneISR() {
   //   - receive calibrate adjusts In/Out attenuation
   //   - transmit calibrate adjusts In/Out attenuation
   //   - two tone adjusts tone 2
-  if((calibrateFlag >= 1) && (calibrateFlag <= 3)) return;
+  if((calibrateFlag >= 1) && (calibrateFlag <= 3)) {
+    calNFAdjust -= fineTuneEncoderMove;
+    fineTuneEncoderMove = 0;
+    return;
+  }
 
   SetFineTune(ftIncrement * fineTuneEncoderMove);
 

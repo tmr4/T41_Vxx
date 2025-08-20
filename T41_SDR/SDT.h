@@ -93,6 +93,8 @@ extern float sampleRate, intermediateFreq;
 
 extern int radioState, lastState;  // Used by the loop to monitor current state.
 
+extern int volSetting;
+
 extern float32_t audioBufferL[];
 extern float32_t audioBufferR[];
 extern float32_t audioBufferL_EX[];

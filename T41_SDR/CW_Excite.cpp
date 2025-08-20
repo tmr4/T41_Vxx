@@ -173,7 +173,10 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
 
   Q_out_L_Ex.play(q15_buffer_LTemp, 2048);
   Q_out_R_Ex.play(q15_buffer_RTemp, 2048);
-  Q_out_L.play(q15_buffer_LTemp, 2048);
+
+  // play sidetone
+  // *** TODO: this needs scaled ***
+  //Q_out_L.play(q15_buffer_LTemp, 2048);
 
   if(state == ON && ramp) {
     while(cwAtomTimer < timeAdjust) {

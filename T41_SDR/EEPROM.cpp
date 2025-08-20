@@ -125,6 +125,8 @@ config_t EEPROMData {
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+// *** TODO: writes to EEPROM disabled for testing purposes ***
+
 /*****
   Purpose: To save the configuration data (working variables) to EEPROM.
            Skip 4 bytes to allow for the struct size variable.
@@ -133,7 +135,7 @@ config_t EEPROMData {
     struct EEPROMData       pointer to the EEPROM structure
 *****/
 FLASHMEM void EEPROMWrite() {
-  EEPROM.put(EEPROM_BASE_ADDRESS + sizeof(int), EEPROMData);
+  //EEPROM.put(EEPROM_BASE_ADDRESS + sizeof(int), EEPROMData);
 }
 
 /*****
@@ -153,7 +155,7 @@ FLASHMEM void EEPROMRead() {
   None
 *****/
 FLASHMEM void EEPROMWriteSize(int structSize) {
-  EEPROM.put(EEPROM_BASE_ADDRESS, structSize);
+  //EEPROM.put(EEPROM_BASE_ADDRESS, structSize);
 }
 
 /*****

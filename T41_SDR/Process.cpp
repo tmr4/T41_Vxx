@@ -1045,13 +1045,13 @@ void FreqShift2() {
   double Osc_Q = 0.0;
   double Osc_I = 0.0;
 
-  if(fineTuneEncoderMove != 0L) {
-    if(NCOFreq > 40000L) {
-      NCOFreq = 40000L;
-    }
-
-    currentFreqA = centerFreq + NCOFreq;
-  }
+  //if(fineTuneEncoderMove != 0L) {
+  //  if(NCOFreq > 40000L) {
+  //    NCOFreq = 40000L;
+  //  }
+  //
+  //  currentFreqA = centerFreq + NCOFreq;
+  //}
 
   TxRxFreq = centerFreq + NCOFreq;
 
