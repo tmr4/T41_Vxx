@@ -1320,10 +1320,19 @@ FLASHMEM void SetZoom(int zoom) {
   }
 
   InitZoomFFTFilter();
-  UpdateInfoBoxItem(IB_ITEM_ZOOM);
-  DrawBandwidthBar();
-  ShowSpectrumFreqValues();
-  ShowOperatingStats(); // needes for to or from 1x zoom
+
+  switch(displayState) {
+    case DISPLAY_T41:
+      UpdateInfoBoxItem(IB_ITEM_ZOOM);
+      DrawBandwidthBar();
+      ShowSpectrumFreqValues();
+      ShowOperatingStats(); // needes for to or from 1x zoom
+      break;
+
+    default:
+    // no screen updates at all
+    break;
+  }
 }
 
 /*****

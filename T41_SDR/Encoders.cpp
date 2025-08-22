@@ -168,7 +168,7 @@ void EncoderCenterTune() {
   //   - receive calibrate adjusts noise floor
   //   - transmit calibrate adjusts image value
   //   - two tone adjusts tone 1
-  if((calibrateFlag >= 1) && (calibrateFlag <= 3)) return;
+  if((calibrateItem >= 3) && (calibrateItem <= 4)) return;
 
   SetCenterTune((long)freqIncrement * tuneChange);
 }
@@ -255,7 +255,7 @@ void EncoderVolumeISR() {
 #else
   adjustVolEncoder = result;
 #endif
-  if((calibrateFlag >= 1) && (calibrateFlag <= 3)) return;
+  if((calibrateItem >= 3) && (calibrateItem <= 4)) return;
 
   audioVolume += adjustVolEncoder;
   adjustVolEncoder = 0;
@@ -309,7 +309,7 @@ FASTRUN void EncoderFineTuneISR() {
   //   - receive calibrate adjusts In/Out attenuation
   //   - transmit calibrate adjusts In/Out attenuation
   //   - two tone adjusts tone 2
-  if((calibrateFlag >= 1) && (calibrateFlag <= 3)) {
+  if((calibrateItem >= 3) && (calibrateItem <= 4)) {
     calNFAdjust -= fineTuneEncoderMove;
     fineTuneEncoderMove = 0;
     return;
@@ -353,7 +353,7 @@ FASTRUN void EncoderMenuChangeFilterISR() {
   menuEncoderMove = result;
 #endif
 
-  if((calibrateFlag >= 1) && (calibrateFlag <= 3)) return;
+  if((calibrateItem >= 3) && (calibrateItem <= 4)) return;
 
   // interpret encoder according to flag settings
   if(getEncoderValueFlag || (displayState == DISPLAY_FULL_MENU)) {

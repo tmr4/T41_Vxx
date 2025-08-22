@@ -78,12 +78,12 @@ FLASHMEM void CalibrateOptions() {
 
   tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 30, CHAR_HEIGHT, RA8875_BLACK);
 
-  if(calibrateFlag < 0) {
-    calibrateFlag = secondaryMenuIndex;
+  if(calibrateItem < 0) {
+    calibrateItem = secondaryMenuIndex;
   }
 
-  switch(calibrateFlag) {
-    case 0:  // Calibrate Frequency  - uses WWV
+  switch(calibrateItem) {
+    case 0:  // Frequency Cal - uses WWV
       freqCorrectionFactor = GetEncoderValueLive(-200000, 200000, freqCorrectionFactor, increment, (char *)"Freq Cal: ");
       if(freqCorrectionFactor != freqCorrectionFactorOld) {
         //si5351.init(SI5351_CRYSTAL_LOAD_10PF, Si_5351_crystal, freqCorrectionFactor);
@@ -100,7 +100,7 @@ FLASHMEM void CalibrateOptions() {
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
           EEPROMWrite();
-          calibrateFlag = 5;
+          calibrateItem = 5;
         }
       }
       break;
@@ -132,28 +132,12 @@ FLASHMEM void CalibrateOptions() {
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
           EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
           EEPROMWrite();
-          calibrateFlag = 5;
+          calibrateItem = 5;
         }
       }
       break;
 
-    case 2: // IQ Receive Cal - Gain and Phase
-      CalibrateIQ(false);
-      //calibrateFlag = 5;
-      calibrateFlag = -1;
-      break;
-
-    case 3: // IQ Transmit Cal - Gain and Phase
-      if(bands[currentBand].demod == DEMOD_FT8) {
-        FT8DoXmitCalibrate();
-      } else {
-        CalibrateIQ(true);
-      }
-      //calibrateFlag = 5;
-      calibrateFlag = -1;
-      break;
-
-    case 4:  // SSB PA Cal
+    case 2:  // SSB PA Cal
       //SSBPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[currentBand], 0.001, (char *)"SSB PA Cal: ");
       //powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // AFP 10-21-22
       //val = ReadSelectedPushButton();
@@ -162,22 +146,23 @@ FLASHMEM void CalibrateOptions() {
       //  if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
       //    tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
       //    EEPROMWrite();
-      //    calibrateFlag = 5;
+      //    calibrateItem = 5;
       //  }
       //}
-      calibrateFlag = -1;
+      calibrateItem = -1;
       break;
 
-    case 5: // wrap up calibration
-      //EraseMenus();
-      //RedrawDisplayScreen();
-      TxRxFreq = centerFreq + NCOFreq;
-      //DrawBandwidthBar();
-      //ShowFrequency();
-      //ShowOperatingStats();
-      calibrateFlag = -1;
-      //modeSelectOutExL.gain(0, 0);
-      //modeSelectOutExR.gain(0, 0);
+    case 3: // IQ Cal - Gain and Phase
+      CalibrateIQ();
+      calibrateItem = -1;
+      break;
+
+    case 4: // Two Tone
+      calibrateItem = -1;
+      break;
+
+    case 5: // cancel wrap up calibration
+      calibrateItem = -1;
       break;
 
     default:  // Cancelled choice

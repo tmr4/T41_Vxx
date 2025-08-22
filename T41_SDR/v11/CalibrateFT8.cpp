@@ -242,7 +242,7 @@ FLASHMEM void FT8DoReceiveCalibrate() {
 
 /*****
   Purpose: Combined input/ output for the purpose of calibrating the transmit IQ
-           calibrateFlag = 3
+           calibrateItem = 3
  *****/
 FLASHMEM void FT8DoXmitCalibrate() {
   int IQChoice = 0;
@@ -334,7 +334,7 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
   bandOutputFactor = 0.1;
 
   // generate I and Q for the transmit or receive calibration
-  if(calibrateFlag == 2 || calibrateFlag == 3) {
+  if(calibrateItem == 2 || calibrateItem == 3) {
     arm_scale_f32(cosBuffer3, bandOutputFactor, audioBufferL_EX, 256);  // use pre-calculated sin & cos instead of Hilbert
     arm_scale_f32(sinBuffer3, bandOutputFactor, audioBufferR_EX, 256);  // sidetone = 3000
   }

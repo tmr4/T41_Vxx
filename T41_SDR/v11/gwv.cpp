@@ -76,21 +76,21 @@ float32_t powerOutCW[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
 float CWPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.019, 0.06, .0190, .019, .019, .019, .019 };       // 0.019;
 float SSBPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008 };  // 0.008
 
-float IQAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
-float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
+//float IQAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
+//float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 
 // all band receive auto calibration performed on 8/18/2025 (*** 10m band skipped ***)
 //                                                  80m     40m    20m    17m    15m    12m     10m
-//float IQAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  0.988,  0.988, 1.009, 1.030, 1.065, 1.092,  1.000 };
-//float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.027, 0.059, 0.035, 0.080, 0.122,  0.000 };
+float IQAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  0.988,  0.988, 1.009, 1.030, 1.065, 1.092,  1.000 };
+float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.027, 0.059, 0.035, 0.080, 0.122,  0.000 };
 
-float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
-float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
+//float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
+//float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 
 // all band transmit auto calibration performed on 8/18/2025 (*** 10m band skipped ***)
 //                                                   80m     40m     20m     17m     15m     12m    10m
-//float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  1.010,  1.003,  0.965,  0.930,  0.900,  0.880, 1.000 };
-//float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.010, -0.027, -0.055, -0.100, -0.090, 0.000 };
+float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  1.010,  1.003,  0.965,  0.930,  0.900,  0.880, 1.000 };
+float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.010, -0.027, -0.055, -0.100, -0.090, 0.000 };
 
 long favoriteFreqs[13] = { 3560000, 3690000, 7030000, 7200000, 14060000, 14200000, 21060000, 21285000, 28060000, 28365000, 5000000, 10000000, 15000000 };
 //int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7048000, 7030000 }, { 14048000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };

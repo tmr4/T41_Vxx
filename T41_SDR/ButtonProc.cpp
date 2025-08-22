@@ -111,7 +111,7 @@ FLASHMEM void ChangeBand(int change) {
 
   // save band info if not calibrating
   // *** TODO: calibrate check from v12, validate for v11 calibration routines
-  if(calibrateFlag != 1) {
+  if(calibrateItem != 1) {
     EEPROMWrite();
   }
 

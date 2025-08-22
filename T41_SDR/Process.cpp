@@ -212,7 +212,7 @@ void AudioDSP(bool updateSpectrumData, int offset, bool imComp = true) {
     // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
     // this was added May 5, 2025 when adding frequency calibration
     // *** TODO: why??? ***
-    //if(calibrateFlag < 0) {
+    //if(calibrateItem < 0) {
     //  DrawSmeterBar();
     //}
   }
@@ -367,10 +367,10 @@ int ProcessReceiverData(bool updateSpectrumData) {
       updateFreqSpec = true;
 
     // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
-      if(calibrateFlag == 1) {
-        FFTupdated = true; // *** TODO: consolidate this as return from ShowSpectrum2 ***
-        return true; // *** TODO: check that receive calibrate is coded to get the data it needs ***
-      }
+      //if(calibrateItem == 1) {
+      //  FFTupdated = true; // *** TODO: consolidate this as return from ShowSpectrum2 ***
+      //  return true; // *** TODO: check that receive calibrate is coded to get the data it needs ***
+      //}
     }
 
     /**********************************************************************************
@@ -421,9 +421,9 @@ int ProcessReceiverData(bool updateSpectrumData) {
     }
 
     // *** TODO: this is from v11 - reconcile calibration calls within Process.cpp ***
-    if(calibrateFlag >= 0) {
-      //CalibrateOptions();
-    }
+    //if(calibrateItem >= 0) {
+    //  //CalibrateOptions();
+    //}
 
     /*************************************************************************************************
         freq_conv2()

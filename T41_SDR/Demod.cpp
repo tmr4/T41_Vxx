@@ -118,7 +118,7 @@ void AMDecodeSAM() {
   SAM_carrier_freq_offset = 0.95 * SAM_carrier_freq_offsetOld + 0.05 * SAM_carrier_freq_offset;
 
   // *** TODO: calibrate check from v12, validate for v11 routines
-  if(calibrateFlag < 0) {
+  if(calibrateItem < 0) {
     tft.setFontScale( (enum RA8875tsize) 0);
     tft.setCursor(OPERATION_STATS_DMD + 25, OPERATION_STATS_T);
     tft.fillRect(OPERATION_STATS_DMD + 25, OPERATION_STATS_T, tft.getFontWidth() * 7, tft.getFontHeight(), RA8875_BLUE);

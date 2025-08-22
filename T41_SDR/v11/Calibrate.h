@@ -11,4 +11,4 @@ extern int calNFAdjust;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void CalibrateIQ(bool transmitCal);
+void CalibrateIQ();

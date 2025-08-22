@@ -185,30 +185,30 @@ FLASHMEM void CalibrateOptions() {
 
   tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 30, CHAR_HEIGHT, RA8875_BLACK);
 
-  if(calibrateFlag < 0) {
-    calibrateFlag = secondaryMenuIndex;
+  if(calibrateItem < 0) {
+    calibrateItem = secondaryMenuIndex;
   }
 
-  switch(calibrateFlag) {
+  switch(calibrateItem) {
     case 0: // Calibrate Frequency  - uses WWV
       ResetTuning();
       CalibrateFrequency();
-      calibrateFlag = -1;
+      calibrateItem = -1;
       break;
 
     case 1: // IQ Receive Cal - Gain and Phase
       CalibrateReceiveIQ();
-      calibrateFlag = -1;
+      calibrateItem = -1;
       break;
 
     case 2: // IQ Transmit Cal - Gain and Phase
       CalibrateTransmitIQ();
-      calibrateFlag = -1;
+      calibrateItem = -1;
       break;
 
     case 3:  // Two tone
       TwoToneTest();
-      calibrateFlag = -1;
+      calibrateItem = -1;
       break;
 
     case 4:  // CW PA Cal
@@ -238,7 +238,7 @@ FLASHMEM void CalibrateOptions() {
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
           EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
           EEPROMWrite();
-          calibrateFlag = 5;
+          calibrateItem = 5;
         }
       }
       break;
@@ -252,7 +252,7 @@ FLASHMEM void CalibrateOptions() {
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
           EEPROMWrite();
-          calibrateFlag = 5;
+          calibrateItem = 5;
         }
       }
       break;
@@ -264,7 +264,7 @@ FLASHMEM void CalibrateOptions() {
       //DrawBandwidthBar();
       //ShowFrequency();
       //ShowOperatingStats();
-      calibrateFlag = -1;
+      calibrateItem = -1;
       //modeSelectOutExL.gain(0, 0);
       //modeSelectOutExR.gain(0, 0);
       break;

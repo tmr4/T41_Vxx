@@ -516,7 +516,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
       } else {
         // *** TODO: from v12, validate v11 calibration routines
         // changed from v11: if(calOnFlag == 0) {
-        if(calibrateFlag < 0) {
+        if(calibrateItem < 0) {
           ButtonFrequencyEntry();
         }
       }

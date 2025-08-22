@@ -64,7 +64,7 @@ void SetTxRxFreq(int freq) {
     case DISPLAY_CALIBRATION:
       ShowOperatingStats();
 
-      if(calibrateFlag == 1) {
+      if(calibrateItem == 1) {
         // receive IQ calibration
         ShowSpectrumFreqValues();
       }
