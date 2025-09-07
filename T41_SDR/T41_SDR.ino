@@ -429,7 +429,6 @@ void ConfigRadioState() {
 FASTRUN void loop() {
   int pushButtonSwitchIndex = -1;
   int valPin;
-  int oldVal = HIGH;
   unsigned long cwTransmitTimer;
 
 #ifdef PROFILER_ACTIVE
@@ -627,52 +626,7 @@ FASTRUN void loop() {
       break;
 
     case CW_TRANSMIT_STRAIGHT_STATE:
-      // turn on TX relay and initialize CW signal timer
-      digitalWrite(RXTX, HIGH); // turn on TX relay
-      cwTransmitTimer = millis();
-
-      // start generating CW signal
-      while(millis() - cwTransmitTimer <= cwTransmitDelay) {
-        valPin = digitalRead(paddleDit);
-
-        // start CW transmit, CW signal timer is on
-        switch(valPin) {
-          case LOW:
-            cwTransmitTimer = millis();
-            if(oldVal == HIGH) {
-              // begin ramp up
-              CW_ExciterIQData(ON, true);
-            } else {
-              // continue signal
-              CW_ExciterIQData();
-            }
-            break;
-
-          case HIGH:
-            if(oldVal == LOW) {
-              // begin ramp down
-              CW_ExciterIQData(OFF, true);
-
-              // reset CW signal timer
-              cwTransmitTimer = millis();
-            } else {
-              // continue signal
-              CW_ExciterIQData(OFF);
-            }
-            break;
-
-          default:
-            break;
-        }
-
-        oldVal = valPin;
-      }
-
-      digitalWrite(RXTX, LOW);
-
-      // delay a bit to allow play buffer to empty, otherwise
-      // the remaining buffer will be played next time it's connected
-      CWPause(50);
+      CWTransmit();
       break;
 
     case CW_TRANSMIT_KEYER_STATE:

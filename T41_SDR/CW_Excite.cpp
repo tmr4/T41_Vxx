@@ -20,6 +20,9 @@
 //     code if lag becomes noticable. ***
 uint8_t keyPressedOn = 0;
 
+// pwrScale scales CW signal for: true=pwr out eqn, false=cal factor only
+bool pwrScale = true;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -57,16 +60,49 @@ void KeyRingOn() {
     bool ramp       add a ramp (upwards for on, downwards for off)
     bool pause      pause for 10ms while signal plays
     int timeAdjust  shorten the ramp block by timeAdjust ms
-    bool pwrScale   scale signal for loses during interpolation
 *****/
-void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, float timeAdjust = 0.0, bool pwrScale = true) {
-  // calibrated for 1W on: 40m
-  float cwPwr = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
+void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, float timeAdjust = 0.0) {
+  double tp = transmitPowerLevel;
+  double cwPwr;
   float fac;
+  //float cwPwr = (pwrScale ? (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand] / CWPowerCalibrationFactor[1] : 8.0);
+  //float cwPwr = (pwrScale ? (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) : 8.0);
+  // using Pt=1W measurement
+  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel)) * 0.78938 * CWPowerCalibrationFactor[currentBand]) : 8.0);
+  // using Pt=10W measurement
+  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel / 10.0)) * 3.5459 * CWPowerCalibrationFactor[currentBand]) : 8.0);
+  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel / 10.0)) * 3.5459) : 8.0);
+  // using theoretical pwr to voltage formula
+  //float cwPwr = (pwrScale ? (.70711 * pow(transmitPowerLevel, 0.5)) : 8.0);
+  // using empirical pwr to voltage formula
+  //float cwPwr = (pwrScale ? (.675 * pow(transmitPowerLevel, 0.5552) / 5.25 * CWPowerCalibrationFactor[currentBand]) : 8.0);
+  //float cwPwr = (pwrScale ? (7.0711 * pow(transmitPowerLevel, 0.5) * CWPowerCalibrationFactor[currentBand]) : 8.0);
+  // empirical formula y = -0.0002x4 + 0.0062x3 - 0.0653x2 + 0.4673x + 0.2741
+  // works well with dummy load at 7MHz considering the tap atten of -20dB
+  //float cwPwr = (pwrScale ? (-.0002 * pow(tp, 4.0) + 0.0062 * pow(tp, 3.0) - 0.0653 * pow(tp, 2.0) + 0.4673 * tp + 0.2741) : 8.0);
+  // however that gives a 41.3dBm at Pt=1
+  //float cwPwr = (pwrScale ? ((-.0002 * pow(tp, 4.0) + 0.0062 * pow(tp, 3.0) - 0.0653 * pow(tp, 2.0) + 0.4673 * tp + 0.2741) / 5.58) : 8.0);
+  //float cwPwr = CWPowerCalibrationFactor[currentBand];
+  // y = 6.3749x^5 - 154.46x^4 + 1437.3x^3 - 6384.5x^2 + 17189x + 962.75
+  //float cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0;
+
+  //Serial.println(cwPwr);
 
   // create I/Q from precalculated buffers (750 Hz signal at a 24kHz sample rate)
-  arm_scale_f32(sinBuffer2, 0.2, audioBufferL_EX, 256);
-  arm_scale_f32(cosBuffer2, 0.2, audioBufferR_EX, 256);
+  arm_scale_f32(sinBuffer2, 1.0, audioBufferL_EX, 256);
+  arm_scale_f32(cosBuffer2, 1.0, audioBufferR_EX, 256);
+  //arm_scale_f32(sinBuffer2, 0.5, audioBufferL_EX, 256);
+  //arm_scale_f32(cosBuffer2, 0.5, audioBufferR_EX, 256);
+  //arm_scale_f32(sinBuffer2, 0.2, audioBufferL_EX, 256);
+  //arm_scale_f32(cosBuffer2, 0.2, audioBufferR_EX, 256);
+  // scaled to give 1W output on 40m when CWPowerCalibrationFactor = 1.0
+  // output pwr measured with AD3 (Exp dB ave weight 100 for 500 samples) on -30dB tap of 20W dummy load
+  //arm_scale_f32(sinBuffer2, 0.03385 / CWPowerCalibrationFactor[1], audioBufferL_EX, 256);
+  //arm_scale_f32(cosBuffer2, 0.03385 / CWPowerCalibrationFactor[1], audioBufferR_EX, 256);
+  //arm_scale_f32(sinBuffer2, 0.02, audioBufferL_EX, 256);
+  //arm_scale_f32(cosBuffer2, 0.02, audioBufferR_EX, 256);
+  //arm_scale_f32(sinBuffer2, 0.05368 / CWPowerCalibrationFactor[1], audioBufferL_EX, 256);
+  //arm_scale_f32(cosBuffer2, 0.05368 / CWPowerCalibrationFactor[1], audioBufferR_EX, 256);
 
   /**********************************************************************************
       Additional scaling, if nesessary to compensate for down-stream gain variations
@@ -146,14 +182,14 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
   arm_fir_interpolate_f32(&FIR_int1_EX_Q, audioBufferR_EX, audioBufferTemp, 256);
   arm_fir_interpolate_f32(&FIR_int2_EX_Q, audioBufferTemp, audioBufferR_EX, 512);
 
-  // scale to compensate for losses in interpolation
+  // scale to compensate for losses in interpolation and output pwr
   if(pwrScale) {
-    arm_scale_f32(audioBufferL_EX, 20 * cwPwr, audioBufferL_EX, 2048);
-    arm_scale_f32(audioBufferR_EX, 20 * cwPwr, audioBufferR_EX, 2048);
+    cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0 * CWPowerCalibrationFactor[currentBand];
   } else {
-    arm_scale_f32(audioBufferL_EX, 20, audioBufferL_EX, 2048);
-    arm_scale_f32(audioBufferR_EX, 20, audioBufferR_EX, 2048);
+    cwPwr = CWPowerEqnCalFactor[currentBand];
   }
+  arm_scale_f32(audioBufferL_EX, cwPwr, audioBufferL_EX, 2048);
+  arm_scale_f32(audioBufferR_EX, cwPwr, audioBufferR_EX, 2048);
 
   /**********************************************************************************
     CONVERT TO INTEGER AND PLAY AUDIO
@@ -171,8 +207,14 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
     cwAtomTimer = 0;
   }
 
+  // we'll get discountinuities without this
+  // *** TODO: set a default for this and return to that upon any change ***
+  Q_out_L_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
+  Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
   Q_out_L_Ex.play(q15_buffer_LTemp, 2048);
   Q_out_R_Ex.play(q15_buffer_RTemp, 2048);
+  Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
+  Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
 
   // play sidetone
   // *** TODO: this needs scaled ***
@@ -235,4 +277,57 @@ void CreateCWSignal(unsigned long signalLength) {
   while(cwAtomTimer < signalLength) {
     ;
   }
+}
+
+void CWTransmit() {
+  int valPin;
+  int oldVal = HIGH;
+  unsigned long cwTransmitTimer;
+
+  // turn on TX relay and initialize CW signal timer
+  digitalWrite(RXTX, HIGH); // turn on TX relay
+  cwTransmitTimer = millis();
+
+  // start generating CW signal
+  while(millis() - cwTransmitTimer <= cwTransmitDelay) {
+    valPin = digitalRead(paddleDit);
+
+    // start CW transmit, CW signal timer is on
+    switch(valPin) {
+      case LOW:
+        cwTransmitTimer = millis();
+        if(oldVal == HIGH) {
+          // begin ramp up
+          CW_ExciterIQData(ON, true);
+        } else {
+          // continue signal
+          CW_ExciterIQData();
+        }
+        break;
+
+      case HIGH:
+        if(oldVal == LOW) {
+          // begin ramp down
+          CW_ExciterIQData(OFF, true);
+
+          // reset CW signal timer
+          cwTransmitTimer = millis();
+        } else {
+          // continue signal
+          CW_ExciterIQData(OFF);
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    oldVal = valPin;
+  }
+
+  digitalWrite(RXTX, LOW);
+
+  // delay a bit to allow play buffer to empty, otherwise
+  // the remaining buffer will be played next time it's connected
+  CWPause(50);
 }

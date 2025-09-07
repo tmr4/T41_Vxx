@@ -1281,7 +1281,7 @@ FLASHMEM void ShowTransmitReceiveStatus() {
 
     case CALIBRATE_TRANSMIT_STATE:
     case CALIBRATE_TWOTONE_STATE:
-      if(digitalRead(PTT) == LOW) {
+      if((digitalRead(PTT) == LOW) || (digitalRead(paddleDit) == LOW)) {
         tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 25, RA8875_RED);
         tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y - 5);
         tft.print("XMT");

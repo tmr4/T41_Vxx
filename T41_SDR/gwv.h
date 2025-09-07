@@ -62,10 +62,13 @@ extern float powerOutCW[];
 extern float powerOutSSB[];
 extern float CWPowerCalibrationFactor[];
 extern float SSBPowerCalibrationFactor[];
+extern float FT8PowerCalibrationFactor[];
 extern float IQAmpCorrectionFactor[];
 extern float IQPhaseCorrectionFactor[];
 extern float IQXAmpCorrectionFactor[];
 extern float IQXPhaseCorrectionFactor[];
+
+extern float CWPowerEqnCalFactor[];
 
 extern long favoriteFreqs[13];
 extern int lastFrequencies[][2];

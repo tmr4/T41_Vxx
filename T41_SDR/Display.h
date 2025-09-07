@@ -76,7 +76,7 @@
 #define OPERATION_STATS_DMD   310 // demod mode
 #define OPERATION_STATS_PWR   405 // power level
 
-#define X_R_STATUS_X          730
+#define X_R_STATUS_X          735
 #define X_R_STATUS_Y          70
 
 #define SMETER_X              SPECTRUM_LEFT_X + SPECTRUM_RES + 15

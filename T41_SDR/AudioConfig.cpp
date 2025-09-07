@@ -238,6 +238,7 @@ void AudioSetup() {
   Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
 
 
+  // *** TODO: cause discountinuities in calibration tones ***
   Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
   Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
 
