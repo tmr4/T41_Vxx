@@ -155,6 +155,7 @@ FLASHMEM void SetupBPF() {
 
   // Set to 40m band
   GPAB_state = BPF_BAND_40M;
+  //GPAB_state = BPF_BAND_BYPASS;
   mcpBPF.writeGPIOAB(GPAB_state);
 }
 
@@ -1386,7 +1387,7 @@ FLASHMEM bool ProcessPwrMenu() {
     case BEARING: // 17
       // cancel calibration
       Serial.println("cancel received");
-      //calFlag = 0;
+      calFlag = 0;
       break;
 
     default:
@@ -1423,12 +1424,12 @@ FLASHMEM void PrepareExciterIQDataCal(int mode) {
       // *** TODO: why use a different buffer and scaling factor? compare CW vs SSB exciter chain ***
       // scaled to give 1W output when CWPowerCalibrationFactor = 1.0
       // output pwr measured with AD3 (Exp dB ave weight 100 for 500 samples) on -30dB tap of 20W dummy load
-      arm_scale_f32(sinBuffer2, 0.03385, audioBufferL_EX, 256);
-      arm_scale_f32(cosBuffer2, 0.03385, audioBufferR_EX, 256);
+      //arm_scale_f32(sinBuffer2, 0.03385, audioBufferL_EX, 256);
+      //arm_scale_f32(cosBuffer2, 0.03385, audioBufferR_EX, 256);
 
 
-      //arm_scale_f32(sinBuffer3, 0.2, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer3, 0.2, audioBufferR_EX, 256);
+      arm_scale_f32(sinBuffer3, 0.2, audioBufferL_EX, 256);
+      arm_scale_f32(cosBuffer3, 0.2, audioBufferR_EX, 256);
 
 
       //arm_scale_f32(cosBuffer3, 0.005, audioBufferL_EX, 256);
@@ -2061,7 +2062,7 @@ FLASHMEM void CalibrateIQBoth() {
 FLASHMEM void CalibrateIQ() {
   int calFlag = 1; // 1 = do calibration, 0 = done
 
-  SetupBPF();
+  //SetupBPF();
 
   calID = 0;
 
@@ -2264,6 +2265,8 @@ FLASHMEM void CalibratePwr() {
   ShowPwrCalMenu();
 
   ChangeCalMode(pwrIndex);
+
+  Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
 
   // calibration loop
   while(true) {
