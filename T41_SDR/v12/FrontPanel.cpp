@@ -31,6 +31,8 @@
 
 #include <Adafruit_MCP23X17.h>
 
+#include "FrontPanel.h"
+
 #include "..\Encoders.h"
 #include "..\Utility.h"
 
@@ -42,6 +44,11 @@ int ButtonPressed = -1;
 int my_ptt=HIGH;  // active LOW
 
 #define DEBOUNCE_DELAY 250
+
+extern Rotary_V12 volumeEncoder;
+extern Rotary_V12 menuChangeEncoder;
+extern Rotary_V12 tuneEncoder;
+extern Rotary_V12 fineTuneEncoder;
 
 #define e1 volumeEncoder
 #define e2 menuChangeEncoder
@@ -63,6 +70,14 @@ static Adafruit_MCP23X17 mcp2;
 
 #define LED_1_PORT 6
 #define LED_2_PORT 7
+
+//-------------------------------------------------------------------------------------------------------------
+// Forwards
+//-------------------------------------------------------------------------------------------------------------
+
+void EncoderVolume();
+void EncoderFineTune();
+void EncoderFilter();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

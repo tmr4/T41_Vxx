@@ -107,7 +107,7 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
   /**********************************************************************************
       Additional scaling, if nesessary to compensate for down-stream gain variations
    **********************************************************************************/
-
+/*
   // adjust IQ signal amplitude and phase
   if(bands[currentBand].demod == DEMOD_LSB) {
     arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
@@ -116,7 +116,7 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
   }
-
+*/
   // ramp signal if requested
   if(ramp) {
     // adjust start or end 10 ms block for a variable time and a 5 ms raised cosine ramp
@@ -186,7 +186,8 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
   if(pwrScale) {
     cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0 * CWPowerCalibrationFactor[currentBand];
   } else {
-    cwPwr = CWPowerEqnCalFactor[currentBand];
+    //cwPwr = CWPowerEqnCalFactor[currentBand];
+    cwPwr = 1.0;
   }
   arm_scale_f32(audioBufferL_EX, cwPwr, audioBufferL_EX, 2048);
   arm_scale_f32(audioBufferR_EX, cwPwr, audioBufferR_EX, 2048);

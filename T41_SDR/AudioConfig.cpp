@@ -235,12 +235,12 @@ void AudioSetup() {
   // I haven't found setMaxBuffers solving a high memory use
   //Q_out_L.setMaxBuffers(40);
   //Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL); // memory buffer for output queues are limited so this can be set without effect if problem is with input queue
-  Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
+  //Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
 
 
   // *** TODO: cause discountinuities in calibration tones ***
-  Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
-  Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
+  //Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
+  //Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
 
 #ifdef USE_MIC_COMPRESSION
   comp1.setPreGain_dB(-10);
@@ -312,6 +312,13 @@ void ConfigAudioState(int audioState) {
   Q_in_Ex_Stop();
   Q_out_Stop();
   Q_out_Ex_Stop();
+
+  // Some modes change AudioPlayQueue objects to NON_STALLING behavior as required for best performance.
+  // Return AudioPlayQueue objects to default ORIGINAL behavior (enum behaviour_e {ORIGINAL, NON_STALLING}).
+  // *** TODO: determine which modes require NON_STALLING behavior and code below ***
+  Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL);
+  Q_out_L_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
+  Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
 
   switch(audioState) {
     case SSB_RECEIVE_STATE:

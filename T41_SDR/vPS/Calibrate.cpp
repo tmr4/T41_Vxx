@@ -2,19 +2,14 @@
 
 #include "..\SDT.h"
 
-#include <Wire.h>
-#include <Adafruit_MCP23X17.h>
-
 #include "..\AudioConfig.h"
 #include "..\Button.h"
 #include "..\ButtonProc.h"
-#include "..\CW_Excite.h"
 #include "..\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\Exciter.h"
 #include "..\FIR.h"
-#include "..\keyer.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"
@@ -48,9 +43,9 @@ long userCenterFreq, userTxRxFreq, userNCOFreq;
 float userIQAmpFactor, userIQPhaseFactor;
 
 // common to several routines
-float adjIncrementValues[] = { 0.001, 0.01, 0.1, 1.0 };
-int adjIncrementIndex = 1;
-float adjIncrement = adjIncrementValues[adjIncrementIndex];
+float iqIncrementValues[] = { 0.001, 0.01, 0.1 };
+int iqIncrementIndex = 1;
+float iqCorInc = iqIncrementValues[iqIncrementIndex];
 const int menuPosX = 530;
 const int menuPosY = 45;
 int minPointsY = 165;
@@ -60,29 +55,20 @@ int fftBins = 5;  // the number of FFT bins to examine on either side of binCent
 float minSignalStrength;
 bool transmitCal; // calibration mode: true=transmit, false=receive
 
-static int calID = 0;
-static int modeIndex = 0;
-static int typeIndex = 0;
-static int speedIndex = 0;
-static int spectrumIndex = 0;
-static int iqIndex = 0;
-static int autoIndex = 0;
+int calModeIndex = 0;
+int calTypeIndex = 0;
+int calSpeedIndex = 0;
+int spectrumIndex = 0;
+int calIQIndex = 0;
+int autoCalIndex = 0;
 
-static int pwrIndex = 0;
-static int pwrTypeIndex = 0;
-static int bpfIndex = 0;
-
-const char *iqModes[] = { "receive", "transmit", "both" };
-const char *iqTypes[] = { "course", "full" };
-const char *iqSpeeds[] = { "slow", "med", "fast" };
-const char *spectrumOptions[] = { "auto", "on", "off", "full" };
-const char *iqOptions[] = { "gain", "phase" };
-//const char *autoOptions[] = { "1 band", "all bands", "reset 1", "reset all" };
-const char *autoOptions[] = { "current band", "all bands", "reset current", "reset all" };
-
-const char *pwrModes[] = { "CW", "SSB", "FT8", "Two Tone" };
-const char *pwrTypes[] = { "cal factor", "pwr eqn" };
-const char *bpfModes[] = { "active", "bypass" };
+const char *calModes[] = { "receive", "transmit", "both" };
+const char *calTypes[] = { "course", "full" };
+const char *calSpeeds[] = { "slow", "med", "fast" };
+const char *calSpectrumOptions[] = { "auto", "on", "off", "full" };
+const char *calIQOptions[] = { "gain", "phase" };
+//const char *autoCalOptions[] = { "1 band", "all bands", "reset 1", "reset all" };
+const char *autoCalOptions[] = { "current band", "all bands", "reset current", "reset all" };
 
 // frequency calibration
 
@@ -95,15 +81,6 @@ int signalStrengthSource = 2; // signal strength source: 0 = manual user entry, 
 const char *signalStrengthSources[3] =  {"man", "ext", "loop"};
 
 // two tone variables
-uint16_t GPAB_state;
-#define BPF_BOARD_MCP23017_ADDR 0x20   // For BPF #0 Address
-
-// Define BPF Band words
-// Word definition: GPB7 GPB6 ... GPB0 GPA7 GPA6 ... GPA0
-#define BPF_BAND_BYPASS 0x0008
-#define BPF_BAND_40M    0x0800
-
-static Adafruit_MCP23X17 mcpBPF;
 
 
 int userTransmitPowerLevel;
@@ -125,41 +102,10 @@ void PrepareExciterIQDataCal(int mode);
 void SetupSignalStrengthSource(int source);
 void AutoCal();
 void StabilizeSignal(unsigned long ms);
-void ChangeCalMode(int mode);
+void ChangeCalMode();
 void PrepareSpectrumArea();
 void ShowAutoCalTitle();
 void CalibrateIQAllBands();
-
-
-
-
-
-FLASHMEM void SetupBPF() {
-  // Set Wire2 I2C bus to 100KHz and start
-  Wire2.setClock(100000UL);
-  Wire2.begin();
-
-  while (!mcpBPF.begin_I2C(BPF_BOARD_MCP23017_ADDR,&Wire2)){
-    Serial.println("BPF MCP23017 not found at 0x"+String(BPF_BOARD_MCP23017_ADDR,HEX));
-    delay(5000);
-  }
-
-  Serial.println("BPF connected");
-
-  // Enable the address pins A0, A1, and A2.
-  mcpBPF.enableAddrPins();
-  // Set all chip pins to be outputs
-  for (int i=0;i<16;i++){
-    mcpBPF.pinMode(i, OUTPUT);
-  }
-
-  // Set to 40m band
-  GPAB_state = BPF_BAND_40M;
-  //GPAB_state = BPF_BAND_BYPASS;
-  mcpBPF.writeGPIOAB(GPAB_state);
-}
-
-
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -277,13 +223,14 @@ FLASHMEM void RestoreRadioState() {
     aState  - audio configuration state for calibration
  *****/
 FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
+  PrepareSpectrumArea();
+
   // calibration specific configuration
   switch(calType) {
     case 0: // frequency cal
       break;
 
     case 1: // receive IQ cal
-      PrepareSpectrumArea();
       //SetFreqCal(24000);
       //SetFreqCal(22000);
       SetFreqCal(0);
@@ -297,7 +244,6 @@ FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
       break;
 
     case 2: // transmit IQ cal
-      PrepareSpectrumArea();
       SetFreqCal(0);
       SetZoom(2); // 4x
       //SetZoom(3); // 8x
@@ -308,14 +254,7 @@ FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
       digitalWrite(RXTX, HIGH);  // Turn on transmitter.
       break;
 
-    case 3: // pwr cal
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
-      SetFreq();  // Update frequencies if the radio state has changed
-      break;
-
-    case 4: // two tone test
-      break;
-
+    case 3: // two tone test
     default:
       break;
   }
@@ -332,66 +271,58 @@ FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
 // Menu Items Related
 //-------------------------------------------------------------------------------------------------------------
 
-FLASHMEM void UpdateMenuItem(int row, const char *msg) {
-  int yOffset;
+FLASHMEM void UpdateMenuItem(int offset, const char *msg) {
+  int yOffset = menuPosY + offset;
 
   tft.setFontScale((enum RA8875tsize)0);
-  yOffset = menuPosY + (row - 1) * tft.getFontHeight();
   tft.fillRect(menuPosX + 20 * tft.getFontWidth(), yOffset, 105, tft.getFontHeight(), RA8875_BLACK);
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(menuPosX + 20 * tft.getFontWidth(), yOffset);
   tft.print(msg);
 }
 
-FLASHMEM void ShowValue(int row, float value, int digits) {
-  int adjX;
-  int yOffset;
-
-  tft.setFontScale((enum RA8875tsize)0);
-  yOffset = menuPosY + (row - 1) * tft.getFontHeight();
-  adjX = 20 * tft.getFontWidth();
-  tft.fillRect(menuPosX + adjX, yOffset, 50, tft.getFontHeight(), RA8875_BLACK);
-  tft.setTextColor(RA8875_GREEN);
-  tft.setCursor(menuPosX + adjX, yOffset);
-  tft.print(value, digits);
-}
-
-FLASHMEM void ShowAdjustIncrement(int row) {
-  ShowValue(row, adjIncrement, 3);
-}
-
 FLASHMEM void ShowBand() {
-  UpdateMenuItem(1, bands[currentBand].name);
+  UpdateMenuItem(0, bands[currentBand].name);
 }
 
-FLASHMEM void ShowIQCalMode() {
-  UpdateMenuItem(2, iqModes[modeIndex]);
+FLASHMEM void ShowCalMode() {
+  UpdateMenuItem(15, calModes[calModeIndex]);
 }
 
 FLASHMEM void ShowCalType() {
-  UpdateMenuItem(3, iqTypes[typeIndex]);
+  UpdateMenuItem(30, calTypes[calTypeIndex]);
 }
 
 FLASHMEM void ShowCalSpeed() {
-  UpdateMenuItem(4, iqSpeeds[speedIndex]);
+  UpdateMenuItem(45, calSpeeds[calSpeedIndex]);
 }
 
 FLASHMEM void ShowSpectrumOption() {
-  UpdateMenuItem(5, spectrumOptions[spectrumIndex]);
+  UpdateMenuItem(60, calSpectrumOptions[spectrumIndex]);
 }
 
 FLASHMEM void ShowIQOption() {
-  UpdateMenuItem(6, iqOptions[iqIndex]);
+  UpdateMenuItem(75, calIQOptions[calIQIndex]);
 }
 
 FLASHMEM void ShowSignalSource() {
-  UpdateMenuItem(7, signalStrengthSources[signalStrengthSource]);
+  UpdateMenuItem(90, signalStrengthSources[signalStrengthSource]);
 }
 
-// ShowAdjustIncrement for IQ cal is row 8
+FLASHMEM void ShowIQAdjustIncrement(int adjChars) {
+  int adjX;
+  const int yOffset = menuPosY + 105;
+
+  tft.setFontScale((enum RA8875tsize)0);
+  adjX = adjChars * tft.getFontWidth();
+  tft.fillRect(menuPosX + adjX, yOffset, 50, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_GREEN);
+  tft.setCursor(menuPosX + adjX, yOffset);
+  tft.print(iqCorInc, 3);
+}
 
 FLASHMEM void ShowAutoCalMode() {
-  UpdateMenuItem(9, autoOptions[autoIndex]);
+  UpdateMenuItem(120, autoCalOptions[autoCalIndex]);
 }
 
 FLASHMEM void ShowPlotIncrement() {
@@ -402,86 +333,6 @@ FLASHMEM void ShowPlotIncrement() {
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(menuPosX + 20 * tft.getFontWidth(), yOffset);
   tft.print(plotValueInc ? 1.0 : 0.1, 1);
-}
-
-FLASHMEM void ShowPwrCalMode() {
-  UpdateMenuItem(2, pwrModes[pwrIndex]);
-}
-
-FLASHMEM void ShowPwrCalType() {
-  UpdateMenuItem(3, pwrTypes[pwrTypeIndex]);
-}
-
-FLASHMEM void ShowBPF() {
-  UpdateMenuItem(5, bpfModes[bpfIndex]);
-}
-
-FLASHMEM void ShowPwrFactor() {
-  float pwr;
-
-  if(pwrTypeIndex == 1) {
-    pwr = CWPowerEqnCalFactor[currentBand];
-  } else {
-    switch(pwrIndex) {
-      case 0: // CW
-        pwr = CWPowerCalibrationFactor[currentBand];
-        break;
-
-      case 1: // SSB
-        pwr = SSBPowerCalibrationFactor[currentBand];
-        break;
-
-      case 2: // FT8
-        pwr = FT8PowerCalibrationFactor[currentBand];
-        break;
-
-      case 3: // two-tone
-        pwr = CWPowerCalibrationFactor[currentBand];
-        break;
-
-      default:
-        pwr = 0.0;
-        break;
-    }
-  }
-
-  ShowValue(9, pwr, 3);
-}
-
-FLASHMEM void UpdatePwrFactor(float factor) {
-  float pwr;
-
-  if(pwrTypeIndex == 1) {
-    pwr = CWPowerEqnCalFactor[currentBand] += factor;
-  } else {
-    switch(pwrIndex) {
-      case 0: // CW
-        pwr = CWPowerCalibrationFactor[currentBand] += factor;
-        break;
-
-      case 1: // SSB
-        pwr = SSBPowerCalibrationFactor[currentBand] += factor;
-        break;
-
-      case 2: // FT8
-        pwr = FT8PowerCalibrationFactor[currentBand] += factor;
-        break;
-
-      case 3: // two-tone
-        pwr = CWPowerCalibrationFactor[currentBand] += factor;
-        break;
-
-      default:
-        pwr = 0.0;
-        break;
-    }
-  }
-
-  ShowValue(9, pwr, 3);
-}
-
-FLASHMEM void ShowPwr() {
-  ShowValue(10, transmitPowerLevel, 0);
 }
 
 //-------------------------------------------------------------------------------------------------------------
@@ -550,9 +401,9 @@ FLASHMEM bool AdjustIQFactors() {
   // IQ amp correction factor
   if(menuEncoderMove != 0) {
     if(transmitCal) {
-      IQXAmpCorrectionFactor[currentBand] += menuEncoderMove * adjIncrement;
+      IQXAmpCorrectionFactor[currentBand] += menuEncoderMove * iqCorInc;
     } else {
-      IQAmpCorrectionFactor[currentBand] += menuEncoderMove * adjIncrement;
+      IQAmpCorrectionFactor[currentBand] += menuEncoderMove * iqCorInc;
     }
 
     menuEncoderMove = 0;
@@ -562,9 +413,9 @@ FLASHMEM bool AdjustIQFactors() {
   // IQ phase correction factor
   if(adjustVolEncoder != 0) {
     if(transmitCal) {
-      IQXPhaseCorrectionFactor[currentBand] += adjustVolEncoder * adjIncrement;
+      IQXPhaseCorrectionFactor[currentBand] += adjustVolEncoder * iqCorInc;
     } else {
-      IQPhaseCorrectionFactor[currentBand] += adjustVolEncoder * adjIncrement;
+      IQPhaseCorrectionFactor[currentBand] += adjustVolEncoder * iqCorInc;
     }
 
     adjustVolEncoder = 0;
@@ -617,29 +468,6 @@ FLASHMEM void AdjustCalFactors() {
 FLASHMEM void PrintAtten() {
 }
 
-FLASHMEM bool AdjustPwrFactors() {
-  bool adjustFlag = false;
-
-  // power calibration factor
-  if(menuEncoderMove != 0) {
-    UpdatePwrFactor(menuEncoderMove * adjIncrement);
-    menuEncoderMove = 0;
-    adjustFlag = true;
-  }
-
-  // transmit power
-  if(adjustVolEncoder != 0) {
-    transmitPowerLevel += adjustVolEncoder;
-
-    adjustVolEncoder = 0;
-    if(transmitPowerLevel > 20) transmitPowerLevel = 20;
-    if(transmitPowerLevel < 1) transmitPowerLevel = 1;
-    ShowPwr();
-    adjustFlag = true;
-  }
-  return adjustFlag;
-}
-
 //-------------------------------------------------------------------------------------------------------------
 // Plot Routines
 //-------------------------------------------------------------------------------------------------------------
@@ -651,7 +479,7 @@ FLASHMEM void ShowSpectrumTitle() {
   tft.fillRect(0, 0, 512, tft.getFontHeight(), RA8875_BLACK);
   tft.setTextColor(RA8875_WHITE);
   tft.setCursor(0, 0);
-  sprintf(msg, "Spectrum - Band: %.4s  Cal Mode: %.10s, %.7s, %.5s", bands[currentBand].name, iqModes[modeIndex], iqTypes[typeIndex], iqSpeeds[speedIndex]);
+  sprintf(msg, "Spectrum - Band: %.4s  Cal Mode: %.10s, %.7s, %.5s", bands[currentBand].name, calModes[calModeIndex], calTypes[calTypeIndex], calSpeeds[calSpeedIndex]);
   tft.print(msg);
 
 }
@@ -859,166 +687,106 @@ FLASHMEM void DrawIQGainPlot() {
 // Menus and Overall Display
 //-------------------------------------------------------------------------------------------------------------
 
-FLASHMEM void ShowIQCalMenu() {
+FLASHMEM void ShowCalibrationMenu() {
   int menuY = menuPosY;
-  int height;
-
-  tft.setFontScale((enum RA8875tsize)1);
-  tft.setTextColor(RA8875_WHITE);
-  tft.setCursor(menuPosX, 10);
-  tft.print("IQ Cal");
 
   tft.setFontScale((enum RA8875tsize)0);
   tft.fillRect(menuPosX, menuPosY, 800 - menuPosX, 290 - 1, RA8875_BLACK);
   tft.setTextColor(RA8875_YELLOW);
-  height = tft.getFontHeight();
 
   tft.setCursor(menuPosX, menuY);
   tft.print("Band+-: Change band");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("1: Cal mode");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("3: Type");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("4: Speed");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("6: Spectrum");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("7: First IQ");
-  menuY += height;
+  menuY += 15;
   //tft.setCursor(menuPosX, menuY);
   //tft.print("9: Plot value");
-  //menuY += height;
+  //menuY += 15;
   //tft.setCursor(menuPosX, menuY);
   //tft.print("10: Plot val inc");
-  //menuY += height;
+  //menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("10: Sig Source");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("11: IQ inc");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("13: Auto cal mode");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("14: Auto cal");
-  menuY += height;
+  menuY += 15;
   //tft.setCursor(menuPosX, menuY);
   //tft.print("15: Attn In/Out toggle");
-  //menuY += height;
+  //menuY += 15;
   //tft.setCursor(menuPosX, menuY);
   //tft.print("16: Toggle directions");
-  //menuY += height;
+  //menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("17: Cancel");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("Select: Save/Exit");
-  menuY += height;
+  menuY += 15;
   //tft.setCursor(menuPosX, menuY);
   //tft.print("Band+/-: Change band");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("Encoders:");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("Filter: Gain adj");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("Vol: Phase adj");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   //tft.print("Fine: Atten adj");
   tft.print("Fine: NF adj");
-  menuY += height;
+  menuY += 15;
   tft.setCursor(menuPosX, menuY);
   tft.print("Center: FFT bin <>");
   //tft.print("Center: Sig str adj");
-  //menuY += height;
+  //menuY += 15;
   //tft.setCursor(menuPosX, menuY);
 
   // display menu item values
   ShowBand();
-  ShowIQCalMode();
+  ShowCalMode();
   ShowCalType();
   ShowCalSpeed();
   ShowSpectrumOption();
   ShowIQOption();
   ShowSignalSource();
-  ShowAdjustIncrement(8);
+  ShowIQAdjustIncrement(20);
   ShowAutoCalMode();
   //ShowPlotIncrement();
-}
-
-FLASHMEM void ShowPwrCalMenu() {
-  int menuY = menuPosY;
-  int height;
-
-  ClearScreen();
-
-  tft.setFontScale((enum RA8875tsize)1);
-  tft.setTextColor(RA8875_WHITE);
-  tft.setCursor(menuPosX, 10);
-  tft.print("Pwr Cal");
-
-  tft.setFontScale((enum RA8875tsize)0);
-  tft.fillRect(menuPosX, menuPosY, 800 - menuPosX, 290 - 1, RA8875_BLACK);
-  tft.setTextColor(RA8875_YELLOW);
-  height = tft.getFontHeight();
-
-  tft.setCursor(menuPosX, menuY);
-  tft.print("Band+-: Change band");
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("1: Cal mode");
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("3: Type");
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("4: Factor inc");
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("8: BPF");
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("17: Cancel");
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("Select: Save/Exit");
-  menuY += height;
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("Encoders:");
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("Filter: Factor adj");
-  menuY += height;
-  tft.setCursor(menuPosX, menuY);
-  tft.print("Vol: Xmit pwr");
-  //menuY += height;
-  //tft.setCursor(menuPosX, menuY);
-
-  // display menu item values
-  ShowBand();
-  ShowPwrCalMode();
-  ShowPwrCalType();
-  ShowAdjustIncrement(4);
-  ShowPwrFactor();
-  ShowPwr();
-  ShowBPF();
 }
 
 FLASHMEM void ShowIQCalDisplay() {
   ClearScreen();
 
-  ShowIQCalMenu();
+  // display instructions
+  tft.setFontScale((enum RA8875tsize)1);
+  tft.setTextColor(RA8875_WHITE);
+  tft.setCursor(menuPosX, 10);
+  tft.print("IQ Cal");
+
+  ShowCalibrationMenu();
 
   // display IQ factors and image value
   tft.setFontScale((enum RA8875tsize)1);
@@ -1060,7 +828,7 @@ FLASHMEM void UpdateCalDisplayData() {
   UpdateIQDisplay(true);
 }
 
-FLASHMEM bool ProcessIQMenu() {
+FLASHMEM bool ProcessMenu() {
   int calFlag = 1; // 1 = do calibration, 0 = done
   int val;
 
@@ -1079,10 +847,10 @@ FLASHMEM bool ProcessIQMenu() {
 
     case MAIN_MENU_UP: // 1
       // change calibration mode
-      modeIndex++;
-      if(modeIndex > 2) modeIndex = 0;
-      ShowIQCalMode();
-      ChangeCalMode(modeIndex);
+      calModeIndex++;
+      if(calModeIndex > 2) calModeIndex = 0;
+      ShowCalMode();
+      ChangeCalMode();
       ShowSpectrumTitle();
       break;
 
@@ -1101,16 +869,16 @@ FLASHMEM bool ProcessIQMenu() {
 
     case ZOOM: // 3
       // change calibration type
-      typeIndex++;
-      if(typeIndex > 1) typeIndex = 0;
+      calTypeIndex++;
+      if(calTypeIndex > 1) calTypeIndex = 0;
       ShowCalType();
       ShowSpectrumTitle();
       break;
 
     case MAIN_MENU_DN: // 4
       // change calibration speed
-      speedIndex++;
-      if(speedIndex > 2) speedIndex = 0;
+      calSpeedIndex++;
+      if(calSpeedIndex > 2) calSpeedIndex = 0;
       ShowCalSpeed();
       ShowSpectrumTitle();
       break;
@@ -1138,8 +906,8 @@ FLASHMEM bool ProcessIQMenu() {
 
     case DEMODULATION: // 7
       // change spectrum option
-      iqIndex++;
-      if(iqIndex > 1) iqIndex = 0;
+      calIQIndex++;
+      if(calIQIndex > 1) calIQIndex = 0;
       ShowIQOption();
       break;
 
@@ -1223,11 +991,11 @@ FLASHMEM bool ProcessIQMenu() {
 
     case NOISE_FLOOR: // 11
       // toggle IQ calibration increment
-      adjIncrementIndex++;
-      if(adjIncrementIndex > 2) adjIncrementIndex = 0;
-      adjIncrement = adjIncrementValues[adjIncrementIndex];
+      iqIncrementIndex++;
+      if(iqIncrementIndex > 2) iqIncrementIndex = 0;
+      iqCorInc = iqIncrementValues[iqIncrementIndex];
 
-      ShowAdjustIncrement(8);
+      ShowIQAdjustIncrement(20);
       break;
 
     case FINE_TUNE_INCREMENT: // 12
@@ -1235,21 +1003,21 @@ FLASHMEM bool ProcessIQMenu() {
 
     case DECODER_TOGGLE: // 13
       // toggle auto calibration options
-      autoIndex++;
-      if(autoIndex > 3) autoIndex = 0;
+      autoCalIndex++;
+      if(autoCalIndex > 3) autoCalIndex = 0;
       ShowAutoCalMode();
       break;
 
     case MAIN_TUNE_INCREMENT: // 14
       // auto calibrate per auto cal option
-      switch(autoIndex) {
+      switch(autoCalIndex) {
         case 0:
           // begin auto calibration for current band and cal mod
           // *** receive cal is setup if cal mode = both ***
           AutoCal();
 
           // perform transmit cal if cal mode = both
-          if(modeIndex == 2) {
+          if(calModeIndex == 2) {
             transmitCal = true;
             CalibrationSetup(2, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
             AutoCal();
@@ -1263,10 +1031,10 @@ FLASHMEM bool ProcessIQMenu() {
 
         case 2:
           // reset IQ factors for current band
-          if((modeIndex == 0) || (modeIndex == 2)) {
+          if((calModeIndex == 0) || (calModeIndex == 2)) {
             ResetReceiveIQFactors();
           }
-          if((modeIndex == 1) || (modeIndex == 2)) {
+          if((calModeIndex == 1) || (calModeIndex == 2)) {
             ResetTransmitIQFactors();
           }
           UpdateIQDisplay();
@@ -1275,10 +1043,10 @@ FLASHMEM bool ProcessIQMenu() {
         case 3:
           // reset IQ factors for all bands
           for(int i = 0; i < NUMBER_OF_BANDS; i++) {
-            if((modeIndex == 0) || (modeIndex == 2)) {
+            if((calModeIndex == 0) || (calModeIndex == 2)) {
               ResetReceiveIQFactors(i);
             }
-            if((modeIndex == 1) || (modeIndex == 2)) {
+            if((calModeIndex == 1) || (calModeIndex == 2)) {
               ResetTransmitIQFactors(i);
             }
           }
@@ -1307,96 +1075,6 @@ FLASHMEM bool ProcessIQMenu() {
   return calFlag;
 }
 
-FLASHMEM bool ProcessPwrMenu() {
-  int calFlag = 1; // 1 = do calibration, 0 = done
-  int val;
-
-  // check for and process button input
-  val = ReadSelectedPushButton();
-  if(val != BOGUS_PIN_READ) {
-    val = ProcessButtonPress(val);
-  }
-
-  switch(val) {
-    case MENU_OPTION_SELECT: // 0
-      // save and exit
-      //EEPROMWrite();
-      Serial.println("select received");
-      //calFlag = 0;
-      break;
-
-    case MAIN_MENU_UP: // 1
-      // change calibration mode
-      pwrIndex++;
-      if(pwrIndex > 3) pwrIndex = 0;
-      ShowPwrCalMode();
-      break;
-
-    case BAND_UP: // 2
-      ChangeBand(1);
-      if(currentBand == BAND_10M) ChangeBand(1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
-      SetFreqCal(0);
-      ShowBand();
-      break;
-
-    case ZOOM: // 3
-      // change calibration type
-      pwrTypeIndex++;
-      if(pwrTypeIndex > 1) pwrTypeIndex = 0;
-      if(pwrTypeIndex == 1) {
-        pwrScale = false;
-      } else {
-        pwrScale = true;
-      }
-      ShowPwrCalType();
-      ShowPwrFactor();
-      break;
-
-    case MAIN_MENU_DN: // 4
-      // change adjustment inc
-      adjIncrementIndex++;
-      if(adjIncrementIndex > 3) adjIncrementIndex = 0;
-      adjIncrement = adjIncrementValues[adjIncrementIndex];
-      ShowAdjustIncrement(4);
-      break;
-
-    case BAND_DN: // 5
-      ChangeBand(-1);
-      if(currentBand == BAND_10M) ChangeBand(-1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
-      SetFreqCal(0);
-      ShowBand();
-      break;
-
-    case SET_MODE: // 8
-      // change BPF mode
-      bpfIndex++;
-      if(bpfIndex > 1) bpfIndex = 0;
-      ShowBPF();
-      if(bpfIndex == 1) {
-        // bypass BPF
-        GPAB_state = BPF_BAND_BYPASS;
-      } else {
-        // set BPF to 40m band
-        GPAB_state = BPF_BAND_40M;
-      }
-      mcpBPF.writeGPIOAB(GPAB_state);
-      break;
-
-    case BEARING: // 17
-      // cancel calibration
-      Serial.println("cancel received");
-      calFlag = 0;
-      break;
-
-    default:
-      break;
-  }
-
-  return calFlag;
-}
-
 //-------------------------------------------------------------------------------------------------------------
 // Signals and Yield
 //-------------------------------------------------------------------------------------------------------------
@@ -1415,21 +1093,14 @@ FLASHMEM void PrepareExciterIQDataCal(int mode) {
       //arm_scale_f32(cosBuffer3, 0.05, audioBufferR_EX, 256);
       //arm_scale_f32(sinBuffer3, 0.01, audioBufferL_EX, 256);
       //arm_scale_f32(cosBuffer3, 0.01, audioBufferR_EX, 256);
-      //arm_scale_f32(sinBuffer3, 0.005, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer3, 0.005, audioBufferR_EX, 256);
+      arm_scale_f32(sinBuffer3, 0.005, audioBufferL_EX, 256);
+      arm_scale_f32(cosBuffer3, 0.005, audioBufferR_EX, 256);
       //arm_scale_f32(sinBuffer3, 0.001, audioBufferL_EX, 256);
       //arm_scale_f32(cosBuffer3, 0.001, audioBufferR_EX, 256);
 
-      // use same scaling factor as for CW
-      // *** TODO: why use a different buffer and scaling factor? compare CW vs SSB exciter chain ***
-      // scaled to give 1W output when CWPowerCalibrationFactor = 1.0
-      // output pwr measured with AD3 (Exp dB ave weight 100 for 500 samples) on -30dB tap of 20W dummy load
-      //arm_scale_f32(sinBuffer2, 0.03385, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer2, 0.03385, audioBufferR_EX, 256);
 
-
-      arm_scale_f32(sinBuffer3, 0.2, audioBufferL_EX, 256);
-      arm_scale_f32(cosBuffer3, 0.2, audioBufferR_EX, 256);
+      //arm_scale_f32(sinBuffer3, 0.2, audioBufferL_EX, 256);
+      //arm_scale_f32(cosBuffer3, 0.2, audioBufferR_EX, 256);
 
 
       //arm_scale_f32(cosBuffer3, 0.005, audioBufferL_EX, 256);
@@ -1465,7 +1136,7 @@ FLASHMEM void GetSignalStrength(float *pSS, int passes = 0, bool getMeanSS = tru
   float stdevLimit = 0.8;
   int meanCountLimit = 3;
 
-  switch(speedIndex) {
+  switch(calSpeedIndex) {
     case 0: // slow
       numSamples = 10;
       stdevLimit = 0.5;
@@ -1668,15 +1339,15 @@ FLASHMEM bool ProcessAutoCalMenu() {
     switch(val) {
       case MAIN_MENU_UP: // 1
         // change calibration type
-        typeIndex++;
-        if(typeIndex > 1) typeIndex = 0;
+        calTypeIndex++;
+        if(calTypeIndex > 1) calTypeIndex = 0;
         ShowAutoCalTitle();
         break;
 
       case MAIN_MENU_DN: // 4
         // change calibration speed
-        speedIndex++;
-        if(speedIndex > 2) speedIndex = 0;
+        calSpeedIndex++;
+        if(calSpeedIndex > 2) calSpeedIndex = 0;
         ShowAutoCalTitle();
         break;
 
@@ -1805,7 +1476,7 @@ FLASHMEM bool AutoTune(float *amp, float *phase) {
   UpdateCalDisplayData();
 
   //  proceed with auto calibration with preset step size and increments (defines at top of file)
-  if(iqIndex == 1) {
+  if(calIQIndex == 1) {
     // Step 1: phase in 0.01 steps
     PrintStepMsg("  1. Adjusting course phase...");
     if(TuneCalParameter(-phaseStepsCoarseN, phaseStepsCoarseN + 1, 0.01, phase)) return false;
@@ -1823,7 +1494,7 @@ FLASHMEM bool AutoTune(float *amp, float *phase) {
     if(TuneCalParameter(-phaseStepsCoarseN, phaseStepsCoarseN + 1, 0.01, phase)) return false;
   }
 
-  if(typeIndex == 0) return true; // course calibration complete
+  if(calTypeIndex == 0) return true; // course calibration complete
 
   // Step 3: gain in 0.005 steps
   PrintStepMsg("  3. Adjusting gain...");
@@ -1883,7 +1554,7 @@ FLASHMEM void AutoCal() {
   StabilizeSignal(5000);
 
   // redraw menu
-  ShowIQCalMenu();
+  ShowCalibrationMenu();
   UpdateIQDisplay();
 }
 
@@ -2031,6 +1702,7 @@ FLASHMEM void CalibrateIQBoth() {
 
   // calibrate transmit next
   transmitCal = true;
+  calibrateItem = 3;
   CalibrationSetup(2, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
 
   ShowIQCalDisplay();
@@ -2062,15 +1734,11 @@ FLASHMEM void CalibrateIQBoth() {
 FLASHMEM void CalibrateIQ() {
   int calFlag = 1; // 1 = do calibration, 0 = done
 
-  //SetupBPF();
-
-  calID = 0;
-
   CalibrationInit();
 
   ShowIQCalDisplay();
 
-  ChangeCalMode(modeIndex);
+  ChangeCalMode();
 
   // calibration loop
   while(true) {
@@ -2085,25 +1753,13 @@ FLASHMEM void CalibrateIQ() {
     GetSignalStrength(&signalStrength, 1, false);
     UpdateCalDisplayData();
 
-    calFlag = ProcessIQMenu();
+    calFlag = ProcessMenu();
   }
 }
 
-FLASHMEM void ChangeCalMode(int mode) {
-  int calType = 0;
-
-  switch(calID) {
-    case 1: // pwr cal
-      calType = 3;
-      break;
-
-    default:
-      break;
-  }
-
+FLASHMEM void ChangeCalMode() {
   //Serial.println(displayState);
-  switch(calType + mode) {
-    // IQ cal: case 0-2
+  switch(calModeIndex) {
     case 0: // receive
       transmitCal = false;
       CalibrationSetup(1, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
@@ -2120,223 +1776,8 @@ FLASHMEM void ChangeCalMode(int mode) {
       CalibrationSetup(1, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
       break;
 
-    // pwr cal: case 3-5
-
-    case 3 ... 5: // CW, SSB, FT8
-      radioMode = CW_MODE;
-      //CalibrationSetup(3, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
-      //CalibrationSetup(3, CALIBRATE_TRANSMIT_STATE, CW_TRANSMIT_STRAIGHT_STATE);
-      CalibrationSetup(3, CW_RECEIVE_STATE, CW_RECEIVE_STATE);
-      break;
-
     default:
       break;
   }
   //Serial.println(displayState);
-}
-
-//-------------------------------------------------------------------------------------------------------------
-// Power Calibration
-//-------------------------------------------------------------------------------------------------------------
-
-float twoToneScaler = 1.0;
-
-FLASHMEM void AdjustTwoToneScaler() {
-  EncoderCenterTune();
-  if(tuneChange != 0) {
-    twoToneScaler += tuneChange * adjIncrement;
-    tuneChange = 0;
-    Serial.println(twoToneScaler*1000);
-  }
-}
-
-FLASHMEM void PrepareTwoToneData() {
-  static unsigned long long time = 0;
-  //const int x = 3;
-  //const float w1 = 2.0 * PI * 700.0 / 24000.0;
-  //const float w2 = 2.0 * PI * 1900.0 / 24000.0;
-  const float w1 = 2.0 * PI * 700.0 / 192000.0;
-  const float w2 = 2.0 * PI * 1900.0 / 192000.0;
-  //const float w1 = 2.0 * PI * 700.0 * x / 192000.0;
-  //const float w2 = 2.0 * PI * 1900.0 * x / 192000.0;
-
-  // prepare exciter IQ buffers with two tone signal at 24000Hz sample rate
-  //for(int i = 0; i < 256; i++) {
-  for(int i = 0; i < 2048; i++) {
-    audioBufferL_EX[i] = twoToneScaler * 0.5 * (arm_sin_f32(w1 * (float)time) + arm_sin_f32(w2 * (float)time));
-    audioBufferR_EX[i] = 0.5 * (arm_cos_f32(w1 * (float)time) + arm_cos_f32(w2 * (float)time));
-
-    // increment time and loop at sample rate
-    time++;
-    //if(time == 24000) time = 0;
-  }
-}
-
-FLASHMEM void TwoToneTransmit() {
-  double tp = transmitPowerLevel;
-  double cwPwr;
-
-  digitalWrite(RXTX, HIGH); // turn on TX relay
-
-  // start generating CW signal
-  // *** TODO: don't really care here if we press a key or PTT. Somewhere else might??? ***
-  while(digitalRead(paddleDit) == LOW || digitalRead(PTT) == LOW) {
-    // check for two-tone adjustment
-    AdjustTwoToneScaler();
-    AdjustPwrFactors();
-
-    // prepare two-tone data
-    PrepareTwoToneData();
-
-    if(bands[currentBand].demod == DEMOD_LSB) {
-      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 2048);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 2048);
-    } else if(bands[currentBand].demod == DEMOD_USB) {
-      arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 2048);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 2048);
-    }
-
-    /*
-    // *** TODO: refactor some exciter routine for this ***
-    // play it
-    // adjust IQ signal amplitude and phase
-    if(bands[currentBand].demod == DEMOD_LSB) {
-      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
-    } else if(bands[currentBand].demod == DEMOD_USB) {
-      arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
-    }
-
-    // interpolation I channel by 2 to 48kHz
-    arm_fir_interpolate_f32(&FIR_int1_EX_I, audioBufferL_EX, audioBufferTemp, 256);
-
-    // interpolation I channel by 4 to 192 kHz
-    arm_fir_interpolate_f32(&FIR_int2_EX_I, audioBufferTemp, audioBufferL_EX, 512);
-
-    // interpolate 2x and 4x again with Q channel
-    arm_fir_interpolate_f32(&FIR_int1_EX_Q, audioBufferR_EX, audioBufferTemp, 256);
-    arm_fir_interpolate_f32(&FIR_int2_EX_Q, audioBufferTemp, audioBufferR_EX, 512);
-    */
-
-    // scale to compensate for losses in interpolation and output pwr
-    if(pwrScale) {
-      cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0 * CWPowerCalibrationFactor[currentBand];
-    } else {
-      //cwPwr = CWPowerEqnCalFactor[currentBand] / 8.0;
-      cwPwr = CWPowerEqnCalFactor[currentBand] / 4.0;
-    }
-    arm_scale_f32(audioBufferL_EX, cwPwr, audioBufferL_EX, 2048);
-    arm_scale_f32(audioBufferR_EX, cwPwr, audioBufferR_EX, 2048);
-
-    q15_t q15_buffer_LTemp[2048];
-    q15_t q15_buffer_RTemp[2048];
-
-    arm_float_to_q15(audioBufferL_EX, q15_buffer_LTemp, 2048);
-    arm_float_to_q15(audioBufferR_EX, q15_buffer_RTemp, 2048);
-
-    // we'll get discountinuities without this
-    // *** TODO: set a default for this and return to that upon any change ***
-    Q_out_L_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
-    Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
-    Q_out_L_Ex.play(q15_buffer_LTemp, 2048);
-    Q_out_R_Ex.play(q15_buffer_RTemp, 2048);
-    Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
-    Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
-  }
-
-  digitalWrite(RXTX, LOW);
-
-  // delay a bit to allow play buffer to empty, otherwise
-  // the remaining buffer will be played next time it's connected
-  CWPause(50);
-}
-
-FLASHMEM void CalibratePwr() {
-  int calFlag = 1; // 1 = do calibration, 0 = done
-  int audioState = radioState;
-
-  SetupBPF();
-
-  calID = 1;
-
-  CalibrationInit();
-
-  ShowPwrCalMenu();
-
-  ChangeCalMode(pwrIndex);
-
-  Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
-
-  // calibration loop
-  while(true) {
-    if(calFlag == 0) {
-      // calibration has finished, clean up and exit
-      RestoreRadioState();
-      break;
-    }
-
-    if(radioState != lastState) {
-      radioState = CALIBRATE_TRANSMIT_STATE;
-      ConfigAudioState(radioState);
-      ShowTransmitReceiveStatus();
-      ShowPwrCalMode();
-      ShowPwrCalType();
-
-      // save radio state for next loop
-      lastState = radioState;
-    }
-
-    AdjustPwrFactors();
-
-    while(digitalRead(paddleDit) == LOW || digitalRead(PTT) == LOW) {
-      // prepare radio
-      switch(pwrIndex) {
-        case 0: // CW
-          radioState = CW_TRANSMIT_STRAIGHT_STATE;
-          audioState = CW_TRANSMIT_STRAIGHT_STATE;
-          break;
-
-        case 1: // SSB
-          break;
-
-        case 2: // FT8
-          break;
-
-        case 3: // two-tone
-          radioState = SSB_TRANSMIT_STATE;
-          audioState = CW_TRANSMIT_STRAIGHT_STATE;
-          break;
-
-        default:
-          break;
-      }
-
-      ConfigAudioState(audioState);
-      SetFreq();  // Update frequencies if the radio state has changed
-      ShowTransmitReceiveStatus();
-
-      // play signal
-      switch(pwrIndex) {
-        case 0: // CW
-          CWTransmit();
-          break;
-
-        case 1: // SSB
-          break;
-
-        case 2: // FT8
-          break;
-
-        case 3: // two-tone
-          TwoToneTransmit();
-          break;
-
-        default:
-          break;
-      }
-    }
-
-    calFlag = ProcessPwrMenu();
-  }
 }

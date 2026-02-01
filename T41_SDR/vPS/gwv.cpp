@@ -73,19 +73,8 @@ float pll_fmax = +4000.0;
 float32_t powerOutSSB[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
 float32_t powerOutCW[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
 
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.019, 0.06, .0190, .019, .019, .019, .019 };       // 0.019;
-//float SSBPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008 };  // 0.008
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 1.0, 1.5858, 1.0, 1.0, 1.0, 1.0, 1.0 };
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 1.0, 3.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-//                                                   80m     40m     20m     17m  15m     12m      10m
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 4.1732, 4.8860, 6.8056, 1.0, 9.9390, 12.2837, 1.0 };
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 3.6289, 4.2487, 5.2351, 1.0, 7.6453, 9.4490, 1.0 };
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 0.7932, 0.9947, 1.6138, 1.0, 2.7056, 3.1022, 1.0 };
-float CWPowerCalibrationFactor[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-float SSBPowerCalibrationFactor[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-float FT8PowerCalibrationFactor[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-
-float CWPowerEqnCalFactor[NUMBER_OF_BANDS] = { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 };
+float CWPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.019, 0.06, .0190, .019, .019, .019, .019 };       // 0.019;
+float SSBPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008 };  // 0.008
 
 //float IQAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
 //float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };

@@ -20,7 +20,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define NOTHING_TO_SEE_HERE         950     // If the analog pin is greater than this value, nothing's going on
 #define TMS0_POWER_DOWN_MASK        (0x1U)
 #define TMS1_MEASURE_FREQ(x)        (((uint32_t)(((uint32_t)(x)) << 0U)) & 0xFFFFU)
 #define TEMPMON_ROOMTEMP    25.0f
@@ -29,14 +28,6 @@ Metro ms_500 = Metro(500); // display clock updates
 Metro ms_5000 = Metro(5000); // memory, temp and load updates
 
 uint8_t display_dbm = DISPLAY_S_METER_DBM; // DISPLAY_S_METER_DBM or DISPLAY_S_METER_DBMHZ
-
-// T41 Switch Labels
-const char *labels[] = { "Select", "Menu Up", "Band Up",
-                         "Zoom", "Menu Dn", "Band Dn",
-                         "Filter", "DeMod", "Mode",
-                         "NR", "Notch", "Noise Floor",
-                         "Fine Tune", "Decoder", "Tune Increment",
-                         "Reset Tuning", "Frequ Entry", "User 2" };
 
 // used in DoCWReceiveProcessing
 float32_t sinBuffer[256];
@@ -280,86 +271,6 @@ float ApproxAtan(float z) {
   const float n2 = -0.19194795f;
   return (n1 + n2 * z * z) * z;
 }
-
-#ifdef FOURSQRP_FRONTPANEL
-/*****
-  Purpose: function reads the analog value for each matrix switch and stores that value in EEPROM.
-*****/
-FLASHMEM void SaveAnalogSwitchValues() {
-  int index;
-  int minVal;
-  int value;
-  int origRepeatDelay;
-
-  tft.clearMemory();  // Need to clear overlay too
-  tft.writeTo(L2);
-  tft.fillWindow();
-  tft.writeTo(L1);
-  tft.clearScreen(RA8875_BLACK);
-  tft.setFontScale(1);
-  tft.setTextColor(RA8875_GREEN);
-  tft.setCursor(10, 10);
-  tft.print("Press button you");
-  tft.setCursor(10, 30);
-  tft.print("have assigned to");
-  tft.setCursor(10, 50);
-  tft.print("the switch shown.");
-
-  // Disable button repeat for interrupt driven buttons
-  origRepeatDelay = EEPROMData.buttonRepeatDelay;
-  EEPROMData.buttonRepeatDelay = 0;
-
-  for(index = 0; index < NUMBER_OF_SWITCHES;) {
-    tft.setCursor(20, 100);
-    tft.print(index + 1);
-    tft.print(". ");
-    tft.print(labels[index]);
-
-    if(buttonInterruptsEnabled) {
-      while((value = ReadSelectedPushButton()) == -1) {
-        // Wait until a button is pressed
-      }
-    } else {
-      value = -1;
-      minVal = NOTHING_TO_SEE_HERE;
-      while(true) {
-        value = ReadSelectedPushButton();
-        if(value < NOTHING_TO_SEE_HERE && value > 0) {
-          delay(100L);
-          if(value < minVal) {
-            minVal = value;
-          } else {
-            value = minVal;
-            break;
-          }
-        }
-      }
-    }
-
-    tft.fillRect(20, 100, 300, 40, RA8875_BLACK);
-    tft.setCursor(350, 20 + index * 25);
-    tft.print(index + 1);
-    tft.print(". ");
-    tft.print(labels[index]);
-    tft.setCursor(660, 20 + index * 25);
-    tft.print(value);
-    EEPROMData.switchValues[index] = value;
-
-    // Set interrupt press/release thresholds based on the Select button, which has the highest ADC value
-    if(index == 0) {
-      EEPROMData.buttonThresholdPressed = EEPROMData.switchValues[0] + WIGGLE_ROOM;
-      EEPROMData.buttonThresholdReleased = EEPROMData.buttonThresholdPressed + WIGGLE_ROOM;
-    }
-
-    index++;
-    while((value = ReadSelectedPushButton()) != -1 && value < NOTHING_TO_SEE_HERE) {
-      // Wait until the button is released
-    }
-  }
-
-  EEPROMData.buttonRepeatDelay = origRepeatDelay;  // Restore original repeat delay
-}
-#endif
 
 // ================== Clock stuff
 /*****

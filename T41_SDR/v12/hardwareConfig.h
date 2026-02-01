@@ -38,13 +38,9 @@
 //#define I2C_DELAY_LONG 10000L   // How long to show I2C screen with errors
 #define I2C_DELAY_SHORT 1000L   // How long to show I2C screen when no error
 
-// hardware specific pin assignmens
-//#define  PROJECTSYSTEM // uncomment if running on Project System (some pin assignments change per project system design)
-
 // ==== Pick one of the following front panel configurations
 #define MCP23017_FRONTPANEL // MCP23017 driven front panel
 //#define FOURSQRP_FRONTPANEL // resistive switch matrix front panel
-//#define PROJECTSYSTEM_EXPANDED_IO
 
 #ifdef MCP23017_FRONTPANEL
 #define V12_PANEL_MCP23017_ADDR_1 0x20
@@ -60,14 +56,3 @@
 #define V12_LPF_MCP23017_ADDR 0x25
 #define BPF_MCP23017_ADDR 0x24
 #define RF_MCP23017_ADDR 0x27
-
-// can also use Project System I/O Expanders
-#ifdef PROJECTSYSTEM_EXPANDED_IO
-// the Project System only has one MCP23017
-// can test other half of front panel by selecting address 0x24 (or 0x20) below
-// (consider coding for the sn74cbtlv3251 if fully functional front panel on Project System is needed)
-#define V12_PANEL_MCP23017_ADDR_1 0x24
-
-// can also solder JP1 for address 0x20
-//#define V12_PANEL_MCP23017_ADDR_1 0x20
-#endif

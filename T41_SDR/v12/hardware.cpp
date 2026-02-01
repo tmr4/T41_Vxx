@@ -50,9 +50,14 @@ I2C bit_results;
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+void EncodersInit();
+
 void RFPowerFollowup();
 void RFGainFollowup();
 void T41ControlSendCmd(char *cmd);
+
+void CalibrateReceiveIQ();
+void CalibrateTransmitIQ();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -354,7 +359,7 @@ void InitHardware() {
 
   SetRF_InAtten(currentRF_InAtten);
 
-  #ifdef MCP23017_FRONTPANEL
+#ifdef MCP23017_FRONTPANEL
   InitFrontPanel();
 #endif
 

@@ -313,7 +313,7 @@ FLASHMEM void FT8DoXmitCalibrate() {
       void
  *****/
 FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
-  float bandCouplingFactor[7] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };
+  //float bandCouplingFactor[7] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };
   float bandOutputFactor;
   float rfGainValue;
   float recBandFactor[7] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
@@ -611,10 +611,9 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
   }
 
   // erase the old spectrum if needed
-  //if(eraseSpec && (displayState == DISPLAY_T41)) {
-  //  tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
-  //}
-  tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+  if(eraseSpec && (displayState == DISPLAY_T41)) {
+    tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+  }
 
   // Find the maximums of the desired and undesired signals.
   if(bands[currentBand].demod == DEMOD_LSB) {

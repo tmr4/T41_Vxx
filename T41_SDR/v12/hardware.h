@@ -47,13 +47,8 @@
 #define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
 #endif
 
-#ifdef PROJECTSYSTEM_EXPANDED_IO
-#define INT_PIN_1 41
-#define INT_PIN_2 40
-#else
 #define INT_PIN_1 14
 #define INT_PIN_2 15
-#endif
 
 //------------
 // T41_SDR.ino

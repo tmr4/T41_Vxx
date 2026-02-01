@@ -39,6 +39,8 @@ extern long long oldCenterFreq;
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+void EncodersInit();
+
 void RFPowerFollowup();
 void RFGainFollowup();
 void FT8DoXmitCalibrate();

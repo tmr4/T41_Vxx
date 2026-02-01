@@ -21,6 +21,13 @@
 //-------------------------------------------------------------------------------------------------------------
 
 //------------
+// Encoders.cpp
+
+#ifdef PROJECTSYSTEM_ENCODER_1
+Rotary volumeEncoder = Rotary(VOLUME_ENCODER_A, VOLUME_ENCODER_B);        // ( 2,  3)
+#endif
+
+//------------
 // Process.h
 
 extern float32_t HP_DC_Filter_Coeffs2[];
@@ -39,6 +46,8 @@ extern long long oldCenterFreq;
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+void EncoderVolumeISR();
+
 void RFPowerFollowup();
 void RFGainFollowup();
 void FT8DoXmitCalibrate();
@@ -46,6 +55,81 @@ void FT8DoXmitCalibrate();
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+
+//------------
+// Button.cpp
+
+/*****
+  Purpose: Check for UI button press. If pressed, return the ADC value
+
+  Parameter list:
+    none
+
+  Return value:
+    int                   -1 if not valid push button, ADC value if valid
+*****/
+int ReadSelectedPushButton() {
+  return 0;
+}
+
+int ProcessButtonPress(int valPin) {
+  return 0;
+}
+
+//------------
+// Encoders.cpp
+
+// set up encoders
+#ifdef PROJECTSYSTEM_ENCODER_1
+void EncodersInit() {
+  volumeEncoder.begin(true);
+  attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_A), EncoderVolumeISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_B), EncoderVolumeISR, CHANGE);
+}
+#endif
+
+/*****
+  Purpose: Encoder volume control ISR
+*****/
+// why not FASTRUN
+#ifdef PROJECTSYSTEM_ENCODER_1
+void EncoderVolumeISR() {
+  char result = 0;
+
+  result = volumeEncoder.process();  // Read the encoder
+
+  if(result == 0) {  // Nothing read
+    return;
+  }
+
+  // TODO: check encoder setup as this is opposite T41
+  switch(result) {
+    case DIR_CW:  // Turned it clockwise, 16
+      adjustVolEncoder = -1;
+      break;
+
+    case DIR_CCW:  // Turned it counter-clockwise
+      adjustVolEncoder = 1;
+      break;
+  }
+
+  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
+
+  audioVolume += adjustVolEncoder;
+  adjustVolEncoder = 0;
+
+  if(audioVolume > MAX_AUDIO_VOLUME) {
+    audioVolume = MAX_AUDIO_VOLUME;
+  } else if(audioVolume < MIN_AUDIO_VOLUME) {
+    audioVolume = MIN_AUDIO_VOLUME;
+  }
+
+  volumeChangeFlag = true; // flag needed for display update
+}
+#endif
+
+void EncoderCenterTune() {
+}
 
 //------------
 // MenuProc.cpp
@@ -100,22 +184,68 @@ FLASHMEM void CalibrateOptions() {
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
           EEPROMWrite();
+          calibrateItem = 5;
         }
       }
+      break;
+
+    case 1:  // CW PA Cal
+      if(keyPressedOn == 1 && radioMode == CW_MODE) {
+        //================  CW Transmit Mode Straight Key ===========
+        if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && keyType == 0) {  //Straight Key
+          powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
+          CW_ExciterIQData();
+          ShowTransmitReceiveStatus();
+          SetFreq();                 //  AFP 10-02-22
+          digitalWrite(MUTE, HIGH);  //   Mute Audio  (HIGH=Mute)
+          //modeSelectInR.gain(0, 0);
+          //modeSelectInL.gain(0, 0);
+          //modeSelectInExR.gain(0, 0);
+          //modeSelectOutL.gain(0, 0);
+          //modeSelectOutR.gain(0, 0);
+          //modeSelectOutExL.gain(0, 0);
+          //modeSelectOutExR.gain(0, 0);
+        }
+      }
+      CWPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, CWPowerCalibrationFactor[currentBand], 0.001, (char *)"CW PA Cal: ");
+      powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];  // AFP 10-21-22
+      val = ReadSelectedPushButton();
+      if(val != BOGUS_PIN_READ) {        // Any button press??
+        val = ProcessButtonPress(val);    // Use ladder value to get menu choice
+        if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
+          tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
+          EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
+          EEPROMWrite();
+          calibrateItem = 5;
+        }
+      }
+      break;
+
+    case 2:  // SSB PA Cal
+      //SSBPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[currentBand], 0.001, (char *)"SSB PA Cal: ");
+      //powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // AFP 10-21-22
+      //val = ReadSelectedPushButton();
+      //if(val != BOGUS_PIN_READ) {        // Any button press??
+      //  val = ProcessButtonPress(val);    // Use ladder value to get menu choice
+      //  if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
+      //    tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
+      //    EEPROMWrite();
+      //    calibrateItem = 5;
+      //  }
+      //}
       calibrateItem = -1;
       break;
 
-    case 1:  // Pwr Cal
-      CalibratePwr();
-      calibrateItem = -1;
-      break;
-
-    case 2: // IQ Cal - Gain and Phase
+    case 3: // IQ Cal - Gain and Phase
       CalibrateIQ();
       calibrateItem = -1;
       break;
 
-    case 3: // Two Tone
+    case 4: // Two Tone
+      calibrateItem = -1;
+      break;
+
+    case 5: // cancel wrap up calibration
       calibrateItem = -1;
       break;
 
@@ -173,8 +303,14 @@ void InitHardware() {
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
+#if defined(FOURSQRP_FRONTPANEL)
   EnableButtonInterrupts();
   EncodersInit();
+#else
+  #ifdef PROJECTSYSTEM_ENCODER_1
+  EncodersInit();
+  #endif
+#endif
 }
 
 void SoftResetHardware() {

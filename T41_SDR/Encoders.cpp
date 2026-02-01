@@ -32,46 +32,14 @@ int tuneChange = 0;
 volatile int menuEncoderMove;
 volatile long fineTuneEncoderMove;
 
-#ifdef MCP23017_FRONTPANEL
-Rotary_V12 volumeEncoder( VOLUME_REVERSED );
-Rotary_V12 tuneEncoder( MAIN_TUNE_REVERSED );
-Rotary_V12 menuChangeEncoder( FILTER_REVERSED );
-Rotary_V12 fineTuneEncoder( FINE_TUNE_REVERSED );
-#endif
-
 //------------------------- Local Variables ----------
 
-#ifdef FOURSQRP_FRONTPANEL
-Rotary fineTuneEncoder = Rotary(FINETUNE_ENCODER_A, FINETUNE_ENCODER_B);  // ( 4,  5)
-Rotary menuChangeEncoder = Rotary(FILTER_ENCODER_A, FILTER_ENCODER_B);    // (15, 14)
-Rotary tuneEncoder = Rotary(TUNE_ENCODER_A, TUNE_ENCODER_B);              // (16, 17)
-Rotary volumeEncoder = Rotary(VOLUME_ENCODER_A, VOLUME_ENCODER_B);        // ( 2,  3)
-#endif
 
 extern int calNFAdjust;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-// set up encoders
-void EncodersInit() {
-#ifdef FOURSQRP_FRONTPANEL
-  pinMode(FILTER_ENCODER_A, INPUT);
-  pinMode(FILTER_ENCODER_B, INPUT);
-
-  tuneEncoder.begin(true);
-  volumeEncoder.begin(true);
-  attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_A), EncoderVolumeISR, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_B), EncoderVolumeISR, CHANGE);
-  menuChangeEncoder.begin(true);
-  attachInterrupt(digitalPinToInterrupt(FILTER_ENCODER_A), EncoderMenuChangeFilterISR, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(FILTER_ENCODER_B), EncoderMenuChangeFilterISR, CHANGE);
-  fineTuneEncoder.begin(true);
-  attachInterrupt(digitalPinToInterrupt(FINETUNE_ENCODER_A), EncoderFineTuneISR, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(FINETUNE_ENCODER_B), EncoderFineTuneISR, CHANGE);
-#endif
-}
 
 void AdjustFilterBW(int filterChange) {
   if(lowerAudioFilterActive) { // false - high, true - low filter
@@ -131,49 +99,6 @@ void SetBWFilters() {
 }
 
 /*****
-  Purpose: Set center tune frequency based on
-*****/
-void EncoderCenterTune() {
-#ifdef MCP23017_FRONTPANEL
-  int result;
-#endif
-#ifdef FOURSQRP_FRONTPANEL
-  unsigned char result;
-#endif
-  result = tuneEncoder.process();  // Read the encoder
-
-  if(result == 0)  // Nothing read
-    return;
-
-  if(radioMode == CW_MODE && decoderFlag == ON) {  // No reason to reset if we're not doing decoded CW
-    ResetHistograms();
-  }
-
-#ifdef FOURSQRP_FRONTPANEL
-  switch(result) {
-    case DIR_CW:  // Turned it clockwise, 16
-      tuneChange = 1;
-      break;
-
-    case DIR_CCW:  // Turned it counter-clockwise
-      tuneChange = -1;
-      break;
-  }
-#else
-  tuneChange = result;
-#endif
-
-  // *** TODO: from v12, validate v11 calibration routines
-  // center tune used in calibration routines, return to process
-  //   - receive calibrate adjusts noise floor
-  //   - transmit calibrate adjusts image value
-  //   - two tone adjusts tone 1
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
-
-  SetCenterTune((long)freqIncrement * tuneChange);
-}
-
-/*****
   Purpose: Use the encoder to change the value of a number in some other function
 
   Parameter list:
@@ -222,137 +147,7 @@ float GetEncoderValueLive(float minValue, float maxValue, float startValue, floa
   return currentValue;
 }
 
-/*****
-  Purpose: Encoder volume control ISR
-*****/
-// why not FASTRUN
-#ifdef MCP23017_FRONTPANEL
-// TODO: front panel placeholders for now
-void EncoderVolume() {
-  int result;
-#endif
-#ifdef FOURSQRP_FRONTPANEL
-void EncoderVolumeISR() {
-  char result;
-#endif
-
-  result = volumeEncoder.process();  // Read the encoder
-
-  if(result == 0) {  // Nothing read
-    return;
-  }
-
-#ifdef FOURSQRP_FRONTPANEL
-  switch(result) {
-    case DIR_CW:  // Turned it clockwise, 16
-      adjustVolEncoder = 1;
-      break;
-
-    case DIR_CCW:  // Turned it counter-clockwise
-      adjustVolEncoder = -1;
-      break;
-  }
-#else
-  adjustVolEncoder = result;
-#endif
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
-
-  audioVolume += adjustVolEncoder;
-  adjustVolEncoder = 0;
-
-  if(audioVolume > MAX_AUDIO_VOLUME) {
-    audioVolume = MAX_AUDIO_VOLUME;
-  } else if(audioVolume < MIN_AUDIO_VOLUME) {
-    audioVolume = MIN_AUDIO_VOLUME;
-  }
-
-  volumeChangeFlag = true; // flag needed for display update
-}
-
-/*****
-  Purpose: Fine tune control ISR
-*****/
-#ifdef MCP23017_FRONTPANEL
-// TODO: front panel placeholders for now
-void EncoderFineTune() {
-  int result;
-#endif
-#ifdef FOURSQRP_FRONTPANEL
-FASTRUN void EncoderFineTuneISR() {
-  char result;
-#endif
-  // *** TODO: we'll go through here many times if fine tune encoder bounces ***
-  // *** If fineTuneEncoderMove isn't processed in the meantime,
-  //    and result == 0, then fineTuneEncoderMove will be reset to zero ***
-
-  result = fineTuneEncoder.process();  // Read the encoder
-  if(result == 0) {                   // Nothing read
-    fineTuneEncoderMove = 0L;
-    return;
-  }
-#ifdef FOURSQRP_FRONTPANEL
-  switch(result) {
-    case DIR_CW:  // Turned it clockwise, 16
-      fineTuneEncoderMove = 1;
-      break;
-
-    case DIR_CCW:  // Turned it counter-clockwise
-      fineTuneEncoderMove = -1;
-      break;
-  }
-#else
-  fineTuneEncoderMove = result;
-#endif
-
-  // *** TODO: from v12, validate v11 calibration routines
-  // fine tune used in calibration routines, return to process
-  //   - receive calibrate adjusts In/Out attenuation
-  //   - transmit calibrate adjusts In/Out attenuation
-  //   - two tone adjusts tone 2
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) {
-    calNFAdjust -= fineTuneEncoderMove;
-    fineTuneEncoderMove = 0;
-    return;
-  }
-
-  SetFineTune(ftIncrement * fineTuneEncoderMove);
-
-  fineTuneEncoderMove = 0L;
-}
-
-/*****
-  Purpose: Menu/Change/Filter encoder movement ISR
-*****/
-#ifdef MCP23017_FRONTPANEL
-// TODO: front panel placeholders for now
-void EncoderFilter() {
-  int result;
-#endif
-#ifdef FOURSQRP_FRONTPANEL
-FASTRUN void EncoderMenuChangeFilterISR() {
-  char result;
-#endif
-
-  result = menuChangeEncoder.process();  // Read the encoder
-
-  if(result == 0) {
-    return;
-  }
-
-#ifdef FOURSQRP_FRONTPANEL
-  switch(result) {
-    case DIR_CW:  // Turned it clockwise, 16
-      menuEncoderMove = 1;
-      break;
-
-    case DIR_CCW:  // Turned it counter-clockwise
-      menuEncoderMove = -1;
-      break;
-  }
-#else
-  menuEncoderMove = result;
-#endif
-
+void ProcessMenuEncoder() {
   if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
 
   // interpret encoder according to flag settings

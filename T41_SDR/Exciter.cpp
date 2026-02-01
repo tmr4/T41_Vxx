@@ -35,7 +35,7 @@ extern AudioInputUSB usbIn;
 void PlayExciterIQData() {
   int16_t *sp_L, *sp_R;
   int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
-
+/*
   // adjust IQ signal amplitude and phase
   // *** TODO: v66-9 has currentBandA, why? ***
   if(bands[currentBand].demod == DEMOD_LSB) {
@@ -48,7 +48,7 @@ void PlayExciterIQData() {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
   }
-
+*/
   if(bands[currentBand].demod != DEMOD_FT8) {
     // return to 192kHz, interpolate by a factor of 8, once again in two steps to preserve the spectrum order
     // 24kHz effective sample rate here

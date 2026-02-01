@@ -213,9 +213,6 @@ void InitDisplay() {
 #ifdef DISPLAY_FLIPPED
   tft.setRotation(2); // connector on left
 #endif
-#ifdef PROJECTSYSTEM
-  tft.setRotation(2);
-#endif
 
   // Setup for scrolling attributes. Part of initSpectrum_RA8875() call written by Mike Lewis
   tft.useLayers(true); // mainly used to turn on layers

@@ -14,20 +14,16 @@
 // Encoders.h
 
 //---- Teensy 4.1 Pin assignments
-#ifdef FOURSQRP_FRONTPANEL
+#if defined(FOURSQRP_FRONTPANEL)
     #define VOLUME_ENCODER_A         2
     #define VOLUME_ENCODER_B         3
     #define FILTER_ENCODER_A        16
     #define FILTER_ENCODER_B        15
     #define FINETUNE_ENCODER_A       4
-    #ifdef PROJECTSYSTEM
-    #define FINETUNE_ENCODER_B      24 // pin 5 is TFT_CS on Project System (the pin assigned here is only meaningful when testing fine tune encoder on non-front panel systems)
-    #else
     #define FINETUNE_ENCODER_B       5
-    #endif
     #define TUNE_ENCODER_A          14
     #define TUNE_ENCODER_B          17
-#else
+#elif defined(MCP23017_FRONTPANEL)
     #define VOLUME_ENCODER_A         2
     #define VOLUME_ENCODER_B         3
     #define FILTER_ENCODER_A        15
@@ -62,11 +58,7 @@
 // SDT.h
 
 #define MUTE                        38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
-#ifdef PROJECTSYSTEM
-#define BUSY_ANALOG_PIN             40    // pin 39 is TFT_MISO on Project System (the pin assigned here is only meaningful when testing switch matrix on non-front panel systems)
-#else
 #define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
-#endif
 
 //------------
 // T41_SDR.ino

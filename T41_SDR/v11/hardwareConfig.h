@@ -10,13 +10,9 @@
 #define DISPLAY_LANDSCAPE
 //#define DISPLAY_FLIPPED
 
-// hardware specific pin assignmens
-//#define  PROJECTSYSTEM // uncomment if running on Project System (some pin assignments change per project system design)
-
 // pick one of the following front panel configurations
 //#define MCP23017_FRONTPANEL // MCP23017 driven front panel
 #define FOURSQRP_FRONTPANEL // resistive switch matrix front panel
-//#define PROJECTSYSTEM_EXPANDED_IO
 
 // uncomment below for USB Host support
 #define USB_HOST_SUPPORT

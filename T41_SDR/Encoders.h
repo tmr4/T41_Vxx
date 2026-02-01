@@ -3,7 +3,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-
 #define MAX_AUDIO_VOLUME        100
 #define MIN_AUDIO_VOLUME          0
 
@@ -22,25 +21,6 @@ extern long last_filter_pos_BW;
 extern volatile int menuEncoderMove;
 extern volatile long fineTuneEncoderMove;
 
-#ifdef FOURSQRP_FRONTPANEL
-#include <Rotary.h>                    // https://github.com/brianlow/Rotary
-
-extern Rotary volumeEncoder;        // (2,  3)
-extern Rotary tuneEncoder;          // (16, 17)
-extern Rotary menuChangeEncoder;    // (14, 15)
-extern Rotary fineTuneEncoder;      // (4,  5);
-#else
-#ifdef MCP23017_FRONTPANEL
-#include "src\FrontPanel.h"
-
-extern Rotary_V12 volumeEncoder;
-extern Rotary_V12 menuChangeEncoder;
-extern Rotary_V12 tuneEncoder;
-extern Rotary_V12 fineTuneEncoder;
-
-#endif
-#endif
-
 extern float adjustVolEncoder;
 extern int tuneChange;
 
@@ -51,16 +31,3 @@ extern int tuneChange;
 void SetBWFilters();
 void EncoderCenterTune();
 float GetEncoderValueLive(float minValue, float maxValue, float startValue, float increment, char prompt[]);
-
-#ifdef FOURSQRP_FRONTPANEL
-void EncodersInit();
-void EncoderVolumeISR();
-void EncoderFineTuneISR();
-void EncoderMenuChangeFilterISR();
-#else
-#ifdef MCP23017_FRONTPANEL
-void EncoderVolume();
-void EncoderFineTune();
-void EncoderFilter();
-#endif
-#endif
