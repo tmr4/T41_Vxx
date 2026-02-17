@@ -37,7 +37,7 @@ bool save_last_frequency = false;
 bool directFreqFlag = false;
 long TxRxFreqOld;
 int priorDemodMode; // preserves SSB demod mode between mode and band changes
-int currentDataMode = DEMOD_FT8; // start in FT8 data mode *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
+int currentDataMode = DEMOD_FT8; // preserves data demod mode between band changes; start in FT8 data mode *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -299,25 +299,28 @@ FLASHMEM void ChangeDemodMode(int mode) {
   Purpose: Sets operating mode, SSB, CW or Data
 *****/
 FLASHMEM void ChangeMode(int mode) {
-  if(mode > 2) {
-    mode = 0;
+  int tmpMode = mode;
+
+  // limit mode
+  if(tmpMode > 2) {
+    tmpMode = 0;
   }
-  if(mode < 0) {
-    mode = 2;
+  if(tmpMode < 0) {
+    tmpMode = 2;
   }
 
   // wrap up current mode
   switch(radioMode) {
     case SSB_MODE:
       // save demod mode if changing to Data mode
-      if(mode == DATA_MODE) {
+      if(tmpMode == DATA_MODE) {
         priorDemodMode = bands[currentBand].demod; // save demod mode for restoration later
       }
       break;
 
     case CW_MODE:
       // save demod mode if changing to Data mode
-      if(mode == DATA_MODE) {
+      if(tmpMode == DATA_MODE) {
         priorDemodMode = bands[currentBand].demod; // save demod mode for restoration later
       }
 
@@ -347,7 +350,7 @@ FLASHMEM void ChangeMode(int mode) {
   }
 
   // set new mode and update
-  radioMode = mode;
+  radioMode = tmpMode;
   switch(radioMode) {
     case SSB_MODE:
       break;

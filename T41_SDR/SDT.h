@@ -39,7 +39,7 @@ typedef __uint8_t uint8_t;
 #define DEMOD_AM                    2
 #define DEMOD_NFM                   3
 #define DEMOD_PSK31                 4
-#define DEMOD_FT8                   5
+#define DEMOD_FT8                   5 // assumes a WSJT-X hook up
 #define DEMOD_SAM                   6
 #define DEMOD_MAX                   6
 

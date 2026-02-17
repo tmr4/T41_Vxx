@@ -1,14 +1,19 @@
 // v11 specific hardware source file
 
+#include <Bounce.h>
+
 #include "..\SDT.h"
 
 #include "..\Button.h"
+#include "..\ButtonProc.h"
 #include "Calibrate.h"
 #include "..\CW_Excite.h"
 #include "..\CWProcessing.h"
 #include "..\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
+#include "..\ft8.h"
+#include "hardware.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"
@@ -25,6 +30,7 @@
 
 #ifdef PROJECTSYSTEM_ENCODER_1
 Rotary volumeEncoder = Rotary(VOLUME_ENCODER_A, VOLUME_ENCODER_B);        // ( 2,  3)
+Bounce encoderSwitch = Bounce(ENCODER_1_SWITCH, 10);  // 10 ms debounce
 #endif
 
 //------------
@@ -85,6 +91,9 @@ void EncodersInit() {
   volumeEncoder.begin(true);
   attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_A), EncoderVolumeISR, CHANGE);
   attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_B), EncoderVolumeISR, CHANGE);
+
+  // set up encoder switch debounce
+  pinMode(ENCODER_1_SWITCH, INPUT_PULLUP);
 }
 #endif
 
@@ -354,4 +363,20 @@ void ConfigRadioStateHardware() {
 }
 
 void HardwareLoopStart() {
+  // poll encoder switch
+  if(encoderSwitch.update() && encoderSwitch.fallingEdge()) {
+    if(radioMode == DATA_MODE) {
+      // load wave file and begin decoding internally if successful
+      ExecuteButtonPress(16);
+    } else {
+      // try to set up FT8 for internal decoding
+      if(SetupFT8()) {
+        // switch to data mode and FT8 mode
+        ChangeMode(DATA_MODE);
+
+        // load wave file and begin decoding internally if successful
+        ExecuteButtonPress(16);
+      }
+    }
+  }
 }

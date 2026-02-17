@@ -46,9 +46,11 @@
       FT;
       FT0; T41 always responds with VFO A
 
-    ID - VFO A Frequency (RA)
+    ID - Transceiver ID Number (RA)
       ID;
       ID024; T41 always responds with TS-890S id
+
+      Notes: On receipt of the ID; command the T41 switches to DATA_MODE and DEMOD_FT8 demodulation
 
     KS - Keying Speed (SRA)
       KSxxx; - not implimented

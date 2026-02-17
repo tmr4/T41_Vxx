@@ -1354,3 +1354,40 @@ FLASHMEM void PrintKeyboardBuffer() {
   tft.print((char *)kbBuffer);
 }
 #endif
+
+FLASHMEM void ft8lib_DisplayMsg(char *msg) {
+  char message[48];
+  static int rowCount = 5;
+  static int columnOffset = 0;
+  static int count = 0;
+
+  if(count >= 10)
+    return;
+
+  if(rowCount == 0 && columnOffset == 0) {
+    // start in column 2
+    rowCount = 5;
+    columnOffset = 256;
+  } else {
+    if(rowCount == 0 && columnOffset == 256) {
+      // ft8 msg display full, start over
+      // reset message area
+      tft.fillRect(WATERFALL_L, YPIXELS - 25 * 5, WATERFALL_W, 25 * 5 + 3, RA8875_BLACK);
+
+      // switch back to column 1
+      rowCount = 5;
+      columnOffset = 0;
+    }
+  }
+
+  tft.setFontScale(0,1);
+  tft.setTextColor(RA8875_WHITE);
+
+  //sprintf(message,"%2d: %.13s %.13s %.6s", decoded[i].count, decoded[i].field1, decoded[i].field2, decoded[i].field3);
+  sprintf(message,"%2d: %s", 1, msg);
+  tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - 25 * rowCount - 3);
+  tft.print(message);
+
+  --rowCount;
+  ++count;
+}

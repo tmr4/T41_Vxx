@@ -26,6 +26,9 @@
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+// ft8lib
+bool ft8lib_InitDecode();
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -202,9 +205,10 @@ FLASHMEM void ExecuteButtonPress(int val) {
             break;
 
           case DEMOD_FT8:
-            // *** TODO: add DEMOD_FT8_DECODE ***
+          case DEMOD_FT8_DECODE:
             // try to load wav file
-            if(SetupFT8Wav()) {
+            //if(SetupFT8Wav()) {
+            if(ft8lib_InitDecode()) {
               // switch to play a wav file
               bands[currentBand].demod = DEMOD_FT8_WAV;
               currentDataMode = DEMOD_FT8_WAV;

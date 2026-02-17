@@ -1,3 +1,7 @@
+// Internal FT8 processing
+//  - decoding over the air and wav file FT8
+//  - encoding set message (to come)
+
 // modified from: https://github.com/DD4WH/Pocket_FT8
 // this is a combination of Pocket_FT8.ino, Process_DSP.cpp and decode_ft8.cpp and their header files
 
@@ -1473,6 +1477,12 @@ FLASHMEM bool SetupFT8Wav() {
   }
 
   FT_8_counter = 0;
+
+  for(unsigned i = 0; i < 1024; i++) {
+    ft8_dsp_buffer[i] = 0;
+    ft8_dsp_buffer[1024 + i] = 0;
+  }
+
   return true;
 }
 
@@ -1511,6 +1521,11 @@ FLASHMEM void ExitFT8() {
 
 void ProcessFT8WaveData(q15_t *q15_buffer_LTemp) {
   static int dataLoop = 0;
+  //static int leftover = 0;
+  //static float increment = 0;
+  //static int index = 0;
+  //int index = 0;
+  //static int count = 0;
 
   // get samples from wave file
   // let's pull the data at the same rate as the T41 pulls from the I/Q stream
@@ -1536,20 +1551,50 @@ void ProcessFT8WaveData(q15_t *q15_buffer_LTemp) {
     // convert floats to the q15 required by FT8 routines
     arm_float_to_q15(audioBufferR, q15_buffer_LTemp, 128);
 
-    // decimate by 1.875 (12kHz / 1.875 = 6.4kHz)
+    if(dataLoop == 0) {
+      // prepare for next gulp
+      // roll ft8 dsp buffer
+      //for(unsigned i = 0; i < 1024; i++) {
+      //  ft8_dsp_buffer[i] = ft8_dsp_buffer[i + 1024];
+      //  ft8_dsp_buffer[1024 + i] = ft8_dsp_buffer[i + 2048];
+      //}
+    }
+    //if(increment > 128) {
+    //  increment -= 128;
+    // }
+    // decimate 12ksps wav data by 1.875 (12kHz / 1.875 = 6.4kHz)
     // we'll take 15 loops to get 1024 samples (128 samples per loop / 1.875 = 68.27 * 15 loops = 1024)
     for(unsigned i = 0; i < 68; i++) {
-      // roll ft8 dsp buffer each loop
+        // roll ft8 dsp buffer *** TODO: this can be improved ***
       ft8_dsp_buffer[i + dataLoop * 68] = ft8_dsp_buffer[i + 1024 + dataLoop * 68];
       ft8_dsp_buffer[1024 + i + dataLoop * 68] = ft8_dsp_buffer[i + 2048 + dataLoop * 68];
 
       // transfer audio data to ft8_dsp_buffer
-      // decimate by 1.875 which brings us to a 6.4 ksps rate
+      // decimate 12ksps wav data by 1.875 which brings us to a 6.4 ksps rate used by ft8 decoder
       ft8_dsp_buffer[2048 + i + dataLoop * 68] = q15_buffer_LTemp[(int)(((float)i) * 120.0 / 64.0)]; // i * 1.875
-    }
+      //ft8_dsp_buffer[2048 + i + dataLoop * 68 + leftover] = q15_buffer_LTemp[(int)(((float)i) * 120.0 / 64.0) + leftover]; // i * 1.875
+      //index = round((float)i * 120.0 / 64.0) + leftover; // i * 1.875
+      //index = round(increment);
+      //index = (int)increment;
+      //if(count++ < 68) {
+      //  Serial.print(increment); Serial.print(", "); Serial.println(index);
+      //}
 
-    if(++dataLoop == 15) {
+      //if(index >=0 && index < 128) {
+      //  ft8_dsp_buffer[2048 + i + dataLoop * 68 + leftover] = q15_buffer_LTemp[index];
+      //  increment += 1.875;
+      //}
+    }
+    //Serial.print(increment); Serial.print(", "); Serial.println(index);
+
+    // *** adding leftover data to decimation didn't improve decoding and in some versions reduced decoding ***
+    ++dataLoop;
+    if(dataLoop == 15) {
+      // fill last cell
+      //ft8_dsp_buffer[3071] = q15_buffer_LTemp[127];
+
       dataLoop = 0;
+      //leftover = 0;
       process_FT8_FFT();
       if(ft8_decode_flag == 1) {
         //num_decoded_msg = ft8_decode();
@@ -1560,6 +1605,21 @@ void ProcessFT8WaveData(q15_t *q15_buffer_LTemp) {
         ft8_decode_flag = 0;
         FT_8_counter = 0;
       }
+      // prepare for next gulp
+      // roll ft8 dsp buffer
+      //for(unsigned i = 0; i < 1024; i++) {
+      //  ft8_dsp_buffer[i] = ft8_dsp_buffer[i + 1024];
+      //  ft8_dsp_buffer[1024 + i] = ft8_dsp_buffer[i + 2048];
+      //}
+    //} else {
+    //  // take 3 more samples over the range (every 4th loop)
+    //  // we'll take one more after the last loop to completely fill the buffer
+    //  if(dataLoop == 4 || dataLoop == 8 || dataLoop == 12) {
+    //  //if(dataLoop == 1 || dataLoop ==5 || dataLoop == 9 || dataLoop == 13) {
+    //    ft8_dsp_buffer[2048 + dataLoop * 68 + leftover] = q15_buffer_LTemp[127];
+    //    increment += 1.875;
+    //    leftover++;
+    //  }
     }
 
     // we're using the audio input buffers to regulate the pace of the output stream
@@ -1621,13 +1681,15 @@ void BufferFT8Data(q15_t *q15_buffer_LTemp) {
       // convert floats to the q15 required by FT8 routines
       arm_float_to_q15(audioBufferL, q15_buffer_LTemp, 256);
 
+      // decimate 24ksps audio sample by 3.75 (24kHz / 3.75 = 6.4kHz)
+      // we'll take 15 loops to get 1024 samples (256 samples per loop / 3.75 = 68.27 * 15 loops = 1024)
       for(unsigned i = 0; i < 68; i++) {
-        // roll ft8 dsp buffer
+        // roll ft8 dsp buffer *** TODO: this can be improved ***
         ft8_dsp_buffer[i + dataLoop * 68] = ft8_dsp_buffer[i + 1024 + dataLoop * 68];
         ft8_dsp_buffer[1024 + i + dataLoop * 68] = ft8_dsp_buffer[i + 2048 + dataLoop * 68];
 
         // transfer audio data to ft8_dsp_buffer
-        // decimate by 3.75 which brings us to a 6.4 ksps rate
+        // decimate 24ksps sample by 3.75 which brings us to a 6.4 ksps rate used by ft8 decoder
         //ft8_dsp_buffer[2048 + i + dataLoop * 68] = audioBufferL[(int)(i * 3.75)];
         ft8_dsp_buffer[2048 + i + dataLoop * 68 + leftover] = q15_buffer_LTemp[(int)(i * 15 / 4)]; // i * 3.75
       }

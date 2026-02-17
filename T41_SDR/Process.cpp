@@ -78,6 +78,10 @@ void FreqShift2();
 void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 void Calc1xFreqSpec();
 
+// ft8lib
+bool ft8lib_GetWaveData();
+bool ft8lib_ProcessWaveData();
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -477,7 +481,24 @@ int ProcessReceiverData(bool updateSpectrumData) {
         break;
 
       case DEMOD_FT8_WAV:
-        ProcessFT8WaveData(q15_buffer_LTemp);
+        //ProcessFT8WaveData(q15_buffer_LTemp);
+        if(ft8lib_GetWaveData()) {
+          if(ft8lib_ProcessWaveData()) {
+            // return to ft8 decode mode
+            bands[currentBand].demod = DEMOD_FT8_DECODE;
+            currentDataMode = DEMOD_FT8_DECODE;
+            ShowOperatingStats();
+            ft8State = 1;
+            UpdateInfoBoxItem(IB_ITEM_FT8);
+          }
+        } else {
+          // we're using the audio input buffers to regulate the pace of the output stream
+          // without this we'll play the wave file about 3 times faster than normal
+          // *** need to check whether we're clipping any of our output with this
+          //      not a big priority unless we want this to be a standard feature ***
+          Q_in_L.clear();
+          Q_in_R.clear();
+        }
         break;
 
       default:

@@ -40,6 +40,7 @@
     #ifdef PROJECTSYSTEM_ENCODER_1
     #define VOLUME_ENCODER_A         2
     #define VOLUME_ENCODER_B         3
+    #define ENCODER_1_SWITCH         4
     #endif
 #endif
 
