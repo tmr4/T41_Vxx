@@ -539,7 +539,7 @@ FASTRUN void ShowSpectrum() {
     // update FT8 msg if appropriate
     //if(ft8MsgSelectActive) {
     if(ft8MsgSelectActive) {
-      DisplayMessages();
+      DisplayAllMessages();
     }
   }
 }
@@ -1355,6 +1355,7 @@ FLASHMEM void PrintKeyboardBuffer() {
 }
 #endif
 
+/*
 FLASHMEM void ft8lib_DisplayMsg(char *msg) {
   char message[48];
   static int rowCount = 5;
@@ -1391,3 +1392,4 @@ FLASHMEM void ft8lib_DisplayMsg(char *msg) {
   --rowCount;
   ++count;
 }
+*/

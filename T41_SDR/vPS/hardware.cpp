@@ -369,14 +369,12 @@ void HardwareLoopStart() {
       // load wave file and begin decoding internally if successful
       ExecuteButtonPress(16);
     } else {
-      // try to set up FT8 for internal decoding
-      if(SetupFT8()) {
-        // switch to data mode and FT8 mode
-        ChangeMode(DATA_MODE);
+      // switch to data mode and internal FT8 mode
+      currentDataMode = DEMOD_FT8_DECODE;
+      ChangeMode(DATA_MODE);
 
-        // load wave file and begin decoding internally if successful
-        ExecuteButtonPress(16);
-      }
+      // load wave file and begin decoding internally if successful
+      ExecuteButtonPress(16);
     }
   }
 }

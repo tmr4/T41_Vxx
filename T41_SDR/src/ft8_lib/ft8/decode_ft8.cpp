@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <time.h>
+#include <TimeLib.h>                   // Part of Teensy Time library
 
 #include "constants.h"
 #include "decode.h"
@@ -53,7 +54,7 @@ extern float32_t audioBufferL[], audioBufferR[];
 
 int load_wav(const char* inputFile, uint32_t num_samples);
 bool readWave(float32_t *buf, int sizeBuf);
-void ft8lib_DisplayMsg(char *msg);
+void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq_hz, char *msg);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -206,7 +207,9 @@ void decode(const monitor_t* mon, struct tm* tm_slot_start) {
       //printf("%02d%02d%02d %+05.1f %+4.2f %4.0f ~  %s\n",
       //    tm_slot_start->tm_hour, tm_slot_start->tm_min, tm_slot_start->tm_sec,
       //    snr, time_sec, freq_hz, text);
-      ft8lib_DisplayMsg(text);
+
+      // save message details
+      AddDecodedMessage(tm_slot_start, cand->score, time_sec, freq_hz, text);
     }
   }
 
@@ -214,7 +217,7 @@ void decode(const monitor_t* mon, struct tm* tm_slot_start) {
 }
 
 FLASHMEM bool ft8lib_InitDecode() {
-  int result;
+  int result = false;
   ftx_protocol_t protocol = FTX_PROTOCOL_FT8;
   float slot_period = ((protocol == FTX_PROTOCOL_FT8) ? FT8_SLOT_TIME : FT4_SLOT_TIME);
   int sample_rate = 12000;
@@ -231,20 +234,21 @@ FLASHMEM bool ft8lib_InitDecode() {
   num_samples = slot_period * sample_rate;
   signal = (float *)extmem_malloc(num_samples * sizeof(float));
 
-  //result = load_wav(signal, &num_samples, &sample_rate, wav_path);
-  //result = load_wav("ft8.wav", num_samples);
-  result = load_wav("ft8_0.wav", num_samples);
+  if(monitor == NULL || signal == NULL) {
+    if(monitor != NULL) {
+      extmem_free(monitor);
+    }
+    if(signal != NULL) {
+      extmem_free(signal);
+    }
+  } else {
+    hashtable_init();
 
-  if(result != 0) {
-    //Serial.println("Invalid wave file!");
-    return false;
+    monitor_init(monitor, &mon_cfg);
+    result = true;
   }
 
-  hashtable_init();
-
-  monitor_init(monitor, &mon_cfg);
-
-  return true;
+  return result;
 }
 
 bool ft8lib_GetWaveData() {
@@ -294,7 +298,8 @@ bool ft8lib_GetWaveData() {
 }
 
 bool ft8lib_ProcessWaveData() {
-  struct tm tm_slot_start = { 0 };
+  //struct tm tm_slot_start = { 0 };
+  struct tm tm_slot_start = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
 
   if(signal != NULL && monitor != NULL) {
     // Process and accumulate audio data in a monitor/waterfall instance

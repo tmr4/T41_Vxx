@@ -1,29 +1,19 @@
 
-#include <arm_math.h>
-#include <arm_const_structs.h>
-
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define input_gulp_size 1024
-
-//extern q15_t ft8_dsp_buffer[] __attribute__ ((aligned (4)));
-extern q15_t *ft8_dsp_buffer;
-
 extern int ft8_flag, ft8_decode_flag;
 extern bool syncFlag;
-extern int ft8State;
+extern int ft8State, ft8TxFreq, ft8RxFreq, ft8TxState, ft8IntState, ft8CqState;
 
 extern bool ft8Init;
 
 extern int DSP_Flag;
-extern int master_decoded;
 
-extern int num_decoded_msg;
+extern int numDecodedMsgs;
 
 extern int FT_8_counter;
-extern const int kMax_decoded_messages;
 
 extern int activeMsg;
 
@@ -31,19 +21,25 @@ extern int activeMsg;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void process_FT8_FFT();
-int ft8_decode(void);
-//void DisplayMessages(int decoded_messages, int message_limit);
-void DisplayMessages();
-void DisplayActiveMessageDetails(int row, int col);
+void DisplayAllMessages();
+void DisplayActiveMessageDetails();
 
 void update_synchronization();
 
 bool SetupFT8();
+bool SetupFT8Decode();
 bool SetupFT8Wav();
 void ExitFT8();
 
 void auto_sync_FT8();
 
-void ProcessFT8WaveData(q15_t *q15_buffer_LTemp);
-void BufferFT8Data(q15_t *q15_buffer_LTemp);
+void ProcessFT8WaveData();
+void BufferFT8Data(float *buffer_LTemp);
+void ProcessFT8Messages();
+
+void ChangeFt8TxFreq(int wheel);
+void ChangeFt8RxFreq(int wheel);
+void ChangeFt8TxInterval(int wheel);
+void ChangeFt8CqState(int wheel);
+void ChangeFt8TxState(int wheel);
+void ChangeFt8Window(int xcol, int wheel);

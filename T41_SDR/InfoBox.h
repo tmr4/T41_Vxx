@@ -19,15 +19,20 @@
 #define IB_ITEM_TEMP      7
 #define IB_ITEM_LOAD      8
 #define IB_ITEM_FT8       9
-#define IB_ITEM_KEYER     10
-#define IB_ITEM_STACK     11
-#define IB_ITEM_HEAP      12
-#define IB_ITEM_NOTCH     13
-#define IB_ITEM_FILTER    14
-#define IB_ITEM_COMPRESS  15
-#define IB_ITEM_KEY       16
-#define IB_ITEM_RFGAIN    17
-#define IB_ITEM_EQUALIZER 18
+#define IB_ITEM_FT8_TX    10
+#define IB_ITEM_FT8_TXF   11
+#define IB_ITEM_FT8_RXF   12
+#define IB_ITEM_FT8_INT   13
+#define IB_ITEM_FT8_CQ    14
+#define IB_ITEM_KEYER     15
+#define IB_ITEM_STACK     16
+#define IB_ITEM_HEAP      17
+#define IB_ITEM_NOTCH     18
+#define IB_ITEM_FILTER    19
+#define IB_ITEM_COMPRESS  20
+#define IB_ITEM_KEY       21
+#define IB_ITEM_RFGAIN    22
+#define IB_ITEM_EQUALIZER 23
 
 extern bool infoBoxItemActive[];
 

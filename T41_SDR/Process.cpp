@@ -334,6 +334,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
       https://new.reddit.com/r/T41_EP/comments/1dus4d0/clearing_up_some_artifacts_in_my_t41_audio_stream/
     **********************************************************************************/
     // this is still helpful for troubleshooting at times when the audio process isn't working correctly
+    // *** TODO: needed for current state of internal FT8 decoding, DEMOD_FT8_DECODE, hangs otherwise, though interrupts work ***
     if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
       Serial.println("clearing...");
       Q_in_L.clear();
@@ -481,7 +482,6 @@ int ProcessReceiverData(bool updateSpectrumData) {
         break;
 
       case DEMOD_FT8_WAV:
-        //ProcessFT8WaveData(q15_buffer_LTemp);
         if(ft8lib_GetWaveData()) {
           if(ft8lib_ProcessWaveData()) {
             // return to ft8 decode mode
@@ -490,6 +490,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
             ShowOperatingStats();
             ft8State = 1;
             UpdateInfoBoxItem(IB_ITEM_FT8);
+            ProcessFT8Messages();
           }
         } else {
           // we're using the audio input buffers to regulate the pace of the output stream
@@ -564,7 +565,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
 
           // save audio signal to FT8 buffer
         if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
-          BufferFT8Data(q15_buffer_LTemp);
+          BufferFT8Data(audioBufferL);
         }
         break;
 

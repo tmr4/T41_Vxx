@@ -31,6 +31,8 @@ void IBEQFollowup(int row, int col);
 void IBTempFollowup(int row, int col);
 void IBLoadFollowup(int row, int col);
 void IBFT8Followup(int row, int col);
+void IBFT8TxFollowup(int row, int col);
+void IBFT8RxFollowup(int row, int col);
 void IBKeyerFollowup(int row, int col);
 void IBStackFollowup(int row, int col);
 void IBHeapFollowup(int row, int col);
@@ -44,8 +46,8 @@ void ClearInfoBox();
 
 typedef  struct {
   const char *label;      // info box label
-  const char **Options;   // label options
-  int *option;            // pointer to option selector
+  const char **options;   // label options
+  int *option;            // pointer to option selector or pointer to the actual value if options is NULL
   int fontSize;           // 0 - small or 1 - large font (large font takes two rows, adjust item rows and/or IB_ROW_#_Y accordingly)
   int clearWidth;         // maximum number of characters to clear when updating field
   int highlightFlag;      // 0 - highlight all options in green, 1 - don't highlight first option, 2 - first option white, second option red, other options green
@@ -83,10 +85,14 @@ const char *nfOptions[3] = { "Off", "Auto", "On"};
 const char *optionsWPM[2] = { "Straight Key", "Paddles " };
 const char *zoomOptions[] = { "1x ", "2x ", "4x ", "8x ", "16x" }; // combine with MAX_ZOOM_ENTRIES somewhere
 
-const char *ft8Opts[] = { "Off", "not sync'd", "sync'd" };
+const char *ft8Opts[] = { "Off", "no sync", "sync" };
+const char *ft8TxOpts[] = { "Off", "enabled" };
+const char *ft8IntOpts[] = { "odd", "even" };
+const char *ft8CqOpts[] = { "man", "auto" };
+
 const char *keyerOpts[] = { "Off", "WPM" };
 
-#define IB_NUM_ITEMS 19
+#define IB_NUM_ITEMS 24
 
 bool infoBoxItemActive[IB_NUM_ITEMS] = {
   true,  // Vol
@@ -99,6 +105,11 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   true,  // Temp
   true,  // Load
   false, // FT8
+  false, // FT8 Auto
+  false, // FT8 Tx Freq
+  false, // FT8 Rx Freq
+  false, // FT8 Tx interval
+  false, // FT8 CQ
   false, // Keyer
   true,  // Stack
   true,  // Heap
@@ -112,8 +123,8 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
 
 /* PROGMEM */ const infoBoxItem infoBox[] =
 { //                                                     font    # chars
-  // label         Options      option                   size    to erase  flag  col            row,           follow-up function
-  { "Vol:",        NULL,        NULL,                     1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
+  // label         options      option                   size    to erase  flag  col            row,           follow-up function
+  { "Vol:",        NULL,        &audioVolume,                     1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
   { "AGC",         agcOpts,     &AGCMode,                 1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
   { "Increment:",  tuneValues,  &tuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // Tune Inc
   { "FT Inc:",     ftValues,    &ftIndex,                 0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
@@ -122,7 +133,13 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,      0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
   { "Temp:",       NULL,        NULL,                     0,        3,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBTempFollowup        }, // Teensy Temp
   { "Load:",       NULL,        NULL,                     0,        4,      1,   IB_COL_2_X,    IB_ROW_7_Y,    &IBLoadFollowup        },  // Teensy Load
-  { "FT8       ",  ft8Opts,     &ft8State,                0,       10,      2,   IB_COL_1_X,    IB_ROW_8_Y,    &IBFT8Followup         },  // FT8 sync
+  { "FT8       ",  ft8Opts,     &ft8State,                0,        8,      2,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   },  // FT8 sync
+  { "Tx:",         ft8TxOpts,   &ft8TxState,              0,        7,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx enabled
+  { "Tx Freq:",    NULL,        &ft8TxFreq,                     0,        5,      0,   IB_COL_1_X,    IB_ROW_10_Y,   &IBFT8TxFollowup       },  // FT8 Tx freq
+  { "Rx Freq:",    NULL,        &ft8RxFreq,                     0,        5,      0,   IB_COL_2_X,    IB_ROW_10_Y,   &IBFT8RxFollowup       },  // FT8 Rx freq
+  { "Tx Int:",     ft8IntOpts,  &ft8IntState,             0,        4,      0,   IB_COL_2_X,    IB_ROW_8_Y,    NULL                   },  // FT8 Tx interval
+  { "CQ resp:",    ft8CqOpts,   &ft8CqState,              0,        4,      1,   IB_COL_2_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx interval
+//  { "Auto:",       ft8TxOpts, &ft8TxState,            0,        4,      1,   IB_COL_2_X,    IB_ROW_8_Y,    &IBFT8Followup         },  // FT8 auto
   { "Keyer     ",  keyerOpts,   &keyerState,              0,       10,      1,   IB_COL_1_X,    IB_ROW_8_Y,    &IBKeyerFollowup       },  // Keyer
   { "Stack:",      NULL,        NULL,                     0,        4,      2,   IB_COL_1_X,    IB_ROW_6_Y,    &IBStackFollowup       },  // Stack
   { "Heap:",       NULL,        NULL,                     0,        4,      2,   IB_COL_2_X,    IB_ROW_6_Y,    &IBHeapFollowup        },  // Heap
@@ -179,7 +196,7 @@ void UpdateInfoBoxItem(uint8_t item) {
     tft.setCursor(label_x, yOffset);
     tft.print(infoBox[item].label);
 
-    if(infoBox[item].Options != NULL) {
+    if(infoBox[item].options != NULL) {
       if((infoBox[item].highlightFlag > 0) && (*infoBox[item].option == 0)) {
         tft.setTextColor(RA8875_WHITE);
       } else if((infoBox[item].highlightFlag == 2) && (*infoBox[item].option == 1)) {
@@ -189,7 +206,7 @@ void UpdateInfoBoxItem(uint8_t item) {
       }
 
       tft.setCursor(xOffset, yOffset);
-      tft.print(infoBox[item].Options[*infoBox[item].option]);
+      tft.print(infoBox[item].options[*infoBox[item].option]);
     }
 
     if(infoBox[item].followFnPtr != NULL) {
@@ -401,24 +418,20 @@ void ClearInfoBoxFT8() {
     int row, col  Row and column of info box item
 *****/
 void IBFT8Followup(int row, int col) {
-  tft.setTextColor(WHITE);
-  tft.setCursor(INFO_BOX_L + 5, row + 20);
+}
 
-  //                  1         2         3
-  //         1234567890123456789012345678901
-  //         10:48 1   943    0  xxxx
-  tft.print("PST   I  Freq  SNR  Dist");
+void IBFT8TxFollowup(int row, int col) {
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.setTextColor(RA8875_GREEN);
+  tft.setCursor(col, row);
+  tft.print(ft8TxFreq);
+}
 
-  if(ft8MsgSelectActive) {
-    tft.setTextColor(RA8875_GREEN);
-  } else {
-    tft.setTextColor(YELLOW);
-  }
-
-  // give details of active message if any
-  if(num_decoded_msg > 0) {
-    DisplayActiveMessageDetails(row + 40 - 2, INFO_BOX_L + 5);
-  }
+void IBFT8RxFollowup(int row, int col) {
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.setTextColor(RA8875_GREEN);
+  tft.setCursor(col, row);
+  tft.print(ft8RxFreq);
 }
 
 void ClearInfoBoxKeyer() {
@@ -694,16 +707,7 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
   // *** TODO: this is weak ***
   int item, itemX, itemY, itemSize, itemChars, itemW, itemH;
 
-  //Serial.println(x);
-  //Serial.println(y);
-  //Serial.println(itemX);
-  //Serial.println(itemY);
-  //Serial.println(itemSize);
-  //Serial.println(itemChars);
-  //Serial.println(itemW);
-  //Serial.println(itemH);
-
-  for(int i = 0; i < 4; i++) {
+  for(int i = 0; i < 9; i++) {
     switch(i) {
       case 0:
         item = IB_ITEM_VOL;
@@ -717,6 +721,21 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
       case 3:
         item = IB_ITEM_ZOOM;
         break;
+      case 4:
+        item = IB_ITEM_FT8_TX;
+        break;
+      case 5:
+        item = IB_ITEM_FT8_TXF;
+        break;
+      case 6:
+        item = IB_ITEM_FT8_RXF;
+        break;
+      case 7:
+        item = IB_ITEM_FT8_INT;
+        break;
+      case 8:
+        item = IB_ITEM_FT8_CQ;
+        break;
     }
 
     itemX = infoBox[item].col;
@@ -728,6 +747,9 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
 
     // allow action within a portion of label as well
     if(x > itemX - 50 && x < itemX + itemW && y > itemY && y < itemY + itemH) {
+      //if(infoBox[item].option != NULL)
+      //  Serial.print("before: "); Serial.println(*(infoBox[item].option));
+
       switch(item) {
         case IB_ITEM_VOL:
           audioVolume += wheel;
@@ -764,9 +786,40 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
           }
           break;
 
+      case IB_ITEM_FT8_TX:
+        ChangeFt8TxState(wheel);
+        break;
+      case IB_ITEM_FT8_TXF:
+        ChangeFt8TxFreq(wheel);
+        break;
+      case IB_ITEM_FT8_RXF:
+        ChangeFt8RxFreq(wheel);
+        break;
+      case IB_ITEM_FT8_INT:
+        ChangeFt8TxInterval(wheel);
+        break;
+      case IB_ITEM_FT8_CQ:
+        ChangeFt8CqState(wheel);
+        break;
         default:
           break;
       }
+
+      //if(infoBox[item].option != NULL)
+      //  Serial.print("after: "); Serial.println(*(infoBox[item].option));
+      //Serial.print("item: "); Serial.println(item);
+      //Serial.print("wheel: "); Serial.println(wheel);
+      //Serial.print("x: "); Serial.println(x);
+      //Serial.print("y: "); Serial.println(y);
+      //Serial.print("itemX: "); Serial.println(itemX);
+      //Serial.print("itemY: "); Serial.println(itemY);
+      //Serial.print("itemSize: "); Serial.println(itemSize);
+      //Serial.print("itemChars: "); Serial.println(itemChars);
+      //Serial.print("itemW: "); Serial.println(itemW);
+      //Serial.print("itemH: "); Serial.println(itemH);
+      //Serial.println();
+
+      break;
     }
   }
 }

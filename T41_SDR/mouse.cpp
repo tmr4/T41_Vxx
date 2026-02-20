@@ -321,7 +321,7 @@ void MouseButtonSpectrumWaterfall(int button) {
       int msg = map(y, 25 * 5, 16, 0, 4);
       if(cursorX > 256) msg += 5;
 
-      if(num_decoded_msg > 1 && msg < num_decoded_msg) {
+      if(numDecodedMsgs > 1 && msg < numDecodedMsgs) {
         activeMsg = msg;
       }
     } else {
@@ -341,19 +341,6 @@ void MouseButtonSpectrumWaterfall(int button) {
 }
 
 void MouseWheelSpectrumWaterfall(int wheel) {
-  if(bands[currentBand].demod == DEMOD_FT8_DECODE && (cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8)) {
-    if(num_decoded_msg > 0) {
-      activeMsg += wheel;
-      if(activeMsg >= num_decoded_msg) {
-        activeMsg = 0;
-      } else {
-        if(activeMsg < 0) {
-          activeMsg = num_decoded_msg - 1;
-        }
-      }
-    }
-    return;
-  }
   if(mouseCenterTuneActive) {
     SetCenterTune((long)freqIncrement * wheel);
   } else {
@@ -368,6 +355,38 @@ void MouseWheelSpectrumWaterfall(int wheel) {
   //tft.print((char)7);
   //tft.writeTo(L1); // switch to layer 1
   //MoveCursor(0, 0);
+}
+
+void MouseButtonFT8(int button) {
+  //if(cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8) {
+  //  if(numDecodedMsgs > 0) {
+  //    activeMsg += wheel;
+  //    if(activeMsg >= numDecodedMsgs) {
+  //      activeMsg = 0;
+  //    } else {
+  //      if(activeMsg < 0) {
+  //        activeMsg = numDecodedMsgs - 1;
+  //      }
+  //    }
+  //  }
+  //  return;
+  //}
+}
+
+void MouseWheelFT8(int wheel) {
+  //if(cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8) {
+  //  if(numDecodedMsgs > 0) {
+  //    activeMsg += wheel;
+  //    if(activeMsg >= numDecodedMsgs) {
+  //      activeMsg = 0;
+  //    } else {
+  //      if(activeMsg < 0) {
+  //        activeMsg = numDecodedMsgs - 1;
+  //      }
+  //    }
+  //  }
+  //}
+  ChangeFt8Window(cursorX, wheel);
 }
 
 void MouseLoop() {
@@ -398,6 +417,11 @@ void MouseLoop() {
         ButtonFilter();
       } else if(CursorInSpectrumWaterfall()) {
         MouseButtonSpectrumWaterfall(button);
+        if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
+          MouseButtonFT8(button);
+        } else {
+          MouseButtonSpectrumWaterfall(button);
+        }
       } else if(CursorInInfoBox()) {
         MouseButtonInfoBox(button, cursorX + CURSOR_W / 2, cursorY + CURSOR_H / 2);
       }
@@ -411,17 +435,21 @@ void MouseLoop() {
       } else if(CursorInFreqArea()) {
         MouseWheelFreqArea(wheel);
       } else if(CursorInSpectrumWaterfall()) {
-        MouseWheelSpectrumWaterfall(wheel);
+        if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
+          MouseWheelFT8(wheel);
+        } else {
+          MouseWheelSpectrumWaterfall(wheel);
+        }
       } else if(CursorInAudioSpectrum()) {
         // *** TODO: consider refactoring with similar code in EncoderMenuChangeFilterISR()
         if(ft8MsgSelectActive) {
-          if(num_decoded_msg > 0) {
+          if(numDecodedMsgs > 0) {
             activeMsg += wheel;
-            if(activeMsg >= num_decoded_msg) {
+            if(activeMsg >= numDecodedMsgs) {
               activeMsg = 0;
             } else {
               if(activeMsg < 0) {
-                activeMsg = num_decoded_msg - 1;
+                activeMsg = numDecodedMsgs - 1;
               }
             }
           }

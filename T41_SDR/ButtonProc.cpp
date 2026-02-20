@@ -36,8 +36,12 @@ bool ft8MsgSelectActive = false; // false - audio filters, true - msg select act
 bool save_last_frequency = false;
 bool directFreqFlag = false;
 long TxRxFreqOld;
-int priorDemodMode; // preserves SSB demod mode between mode and band changes
-int currentDataMode = DEMOD_FT8; // preserves data demod mode between band changes; start in FT8 data mode *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
+
+// preserves SSB demod mode between mode and band changes
+int priorDemodMode;
+
+// preserves data demod mode between band changes
+int currentDataMode = DEMOD_FT8; // start in external FT8 mode
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -180,7 +184,7 @@ FLASHMEM void ButtonFilter() {
     if(nfmBWFilterActive) {
       nfmBWFilterActive = !nfmBWFilterActive;
       lowerAudioFilterActive = !lowerAudioFilterActive;
-      DisplayMessages();
+      DisplayAllMessages();
     } else {
       if(lowerAudioFilterActive) {
         lowerAudioFilterActive = !lowerAudioFilterActive;
@@ -201,7 +205,7 @@ FLASHMEM void ButtonFilter() {
     if(ft8MsgSelectActive) {
       ft8MsgSelectActive = !ft8MsgSelectActive;
       lowerAudioFilterActive = !lowerAudioFilterActive;
-      DisplayMessages();
+      DisplayAllMessages();
     } else {
       if(lowerAudioFilterActive) {
         lowerAudioFilterActive = !lowerAudioFilterActive;
@@ -373,9 +377,9 @@ FLASHMEM void ChangeMode(int mode) {
     case DATA_MODE:
       switch(currentDataMode) {
         case DEMOD_FT8_DECODE:
-          // try to set up FT8
-          if(SetupFT8()) {
-            // FT8 set up successful
+          // try to set up internal FT8 ops
+          if(SetupFT8Decode()) {
+            // internal FT8 set up successful
             bands[currentBand].demod = DEMOD_FT8_DECODE;
           } else {
             // can't set up FT8 decode, fall back to normal FT8
@@ -384,6 +388,7 @@ FLASHMEM void ChangeMode(int mode) {
           break;
 
         case DEMOD_PSK31:
+          //  *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
           setupPSK31();
           bands[currentBand].demod = DEMOD_PSK31;
           break;

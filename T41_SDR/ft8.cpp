@@ -1,12 +1,12 @@
-// Internal FT8 processing
+// T41 aspects of internal FT8 processing (with my modified ft8_lib from: https://github.com/kgoba/ft8_lib)
 //  - decoding over the air and wav file FT8
 //  - encoding set message (to come)
 
-// modified from: https://github.com/DD4WH/Pocket_FT8
-// this is a combination of Pocket_FT8.ino, Process_DSP.cpp and decode_ft8.cpp and their header files
+// ft8 synch modified from: https://github.com/DD4WH/Pocket_FT8
 
 #include <math.h>
 #include <stdint.h>
+#include <time.h>
 #include <TimeLib.h>                   // Part of Teensy Time library
 
 #include "SDT.h"
@@ -15,9 +15,7 @@
 #include "ButtonProc.h"
 #include "Display.h"
 #include "ft8.h"
-#include "ft8_constants.h"
 #include "InfoBox.h"
-#include "locator.h"
 #include "Utility.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -26,94 +24,72 @@
 
 #define RA8875_GREEN 0x07E0 // 0, 255, 0
 
-#define FFT_SIZE  2048
-#define ft8_buffer 368  //arbitrary for 3 kc
-#define ft8_min_bin 48
-
-#define ft8_msg_samples 92
-
-#define FT8_ALIGNED_MEMORY true
-
 typedef struct
 {
+  // three parts of FT8 message
+  // *** put together with: sprintf(message,"%.13s %.13s %.6s",field1, field2, field3); ***
   char field1[20];
   char field2[20];
   char field3[20];
-  int  freq_hz;
+
+  char msg[35]; // FTX_MAX_MESSAGE_LENGTH = callsign[13] + space + callsign[13] + space + report[6] + terminator
+  float  freq; // hz
+  float time_sec;
+  tm slot_time;
+
   //char decode_time[10];
   uint8_t hour, min, sec;
   int  sync_score;
-  int  snr;
+  float  snr;
   int  distance;
 
   int count;
 } Decode;
 
-Decode *decoded;
+//Decode *decoded;
+//#define MAX_DECODED_MESSAGES 10 // for testing of decode list getting full
+#define MAX_DECODED_MESSAGES 500
+EXTMEM Decode decodedList[MAX_DECODED_MESSAGES];
+#define MAX_LIST_MESSAGES 50
+EXTMEM int rxList[MAX_LIST_MESSAGES], cqList[MAX_LIST_MESSAGES];
 
-uint8_t *export_fft_power;
-q15_t *ft8_dsp_buffer, *dsp_output, *window_ft8_dsp_buffer, *FFT_Scale, *FFT_Magnitude;
-float *window, *mag_db;
-int32_t *FFT_Mag_10;
+int numDecodedMsgs = 0, numRxMsgs = 0, numCqMsgs = 0;
 
 int activeMsg = 0;
+
+// message window message index
+int cqWindowTop, allWindowTop, rxWindowTop;
 
 uint32_t current_time, start_time, ft8_time;
 
 int DSP_Flag;
 int ft8_flag, FT_8_counter, ft8_decode_flag;
-int num_decoded_msg;
 int ft8State = 0; // state status for info box: 0 - off, 1 - not sync'd, 2 - sync'd
+int ft8TxState = 0; // ft8 state status for info box: 0 - off, 1 - on
+int ft8IntState = 0; //  ft8 Tx interval state status for info box: 0 - odd, 1 - even
+int ft8CqState = 0; // ft8 CQ response state: 0 - man, 1 - respond automatically to CQ
 
 int master_offset, offset_step;
 
 bool ft8Init = false;
 bool syncFlag = false;
 
-arm_rfft_instance_q15 fft_inst;
+int ft8TxFreq = 1000;
+int ft8RxFreq = 1000;
 
-int max_score;
-// from: https://github.com/kgoba/ft8_lib/issues/3
-// decode time can be adjusted by changing the number of candidates (kMax_candidates) and LDPC iterations (kLDPC_iterations).
-const int kLDPC_iterations = 10;
-const int kMax_candidates = 20;
+extern char myGrid[];
 
-const int kMax_decoded_messages = 10;
-//const int kMax_message_length = 20;
-const int kMax_message_length = 35; // from ft8_lib < max message length = callsign[13] + space + callsign[13] + space + report[6] + terminator
-                                    // difference is included detail and spacing (Pocket_FT8 excludes some spacing I included)
-
-const int kMin_score = 40;		// Minimum sync score threshold for candidates
-//const int kMin_score = 30;
-//const int kMin_score = 20;
-//const int kMin_score = 10;		// try a lower score to see if we get anything
-//const int kMin_score = 5;
-
-typedef struct Candidate {
-    int16_t      score;
-    int16_t      time_offset;
-    int16_t      freq_offset;
-    uint8_t      time_sub;
-    uint8_t      freq_sub;
-} Candidate;
+#define FT8_MSG_ROWS 6
+#define FT8_ROWS 8
+#define FT8_ROW_HEIGHT 16
+#define FT8_COL_WIDTH 8
 
 //-------------------------------------------------------------------------------------------------------------
-// forwards
+// Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-int unpack_text(const uint8_t *a71, char *text);
-int unpack_telemetry(const uint8_t *a71, char *telemetry);
-int unpack_nonstandard(const uint8_t *a77, char *field1, char *field2, char *field3);
-int unpack_type1(const uint8_t *a77, uint8_t i3, char *field1, char *field2, char *field3);
-
-// Utility functions for characters and strings
-const char * trim_front(const char *str);
-char * trim(char *str);
-
-// Convert a 2 digit integer to string
-void int_to_dd(char *str, int value, int width, bool full_sign);
-
-char charn(int c, int table_idx);
+// ft8lib
+bool ft8lib_InitDecode();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -161,822 +137,31 @@ void update_synchronization() {
   }
 }
 
-float ft_blackman_i(int i, int N) {
-  const float alpha = 0.16f; // or 2860/18608
-  const float a0 = (1 - alpha) / 2;
-  const float a1 = 1.0f / 2;
-  const float a2 = alpha / 2;
+void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq, char *msg) {
+  static int nextMsgSlot = 0;
 
-  float x1 = cosf(2 * (float)M_PI * i / (N - 1));
-  //float x2 = cosf(4 * (float)M_PI * i / (N - 1));
-  float x2 = 2*x1*x1 - 1; // Use double angle formula
-  return a0 - a1*x1 + a2*x2;
-}
+  // update decoded msg detail
+  strcpy(decodedList[nextMsgSlot].msg, msg);
+  decodedList[nextMsgSlot].freq = freq;
+  decodedList[nextMsgSlot].slot_time.tm_hour = tmSlot->tm_hour;
+  decodedList[nextMsgSlot].slot_time.tm_min = tmSlot->tm_min;
+  decodedList[nextMsgSlot].slot_time.tm_sec = tmSlot->tm_sec;
+  decodedList[nextMsgSlot].time_sec = time_sec;
+  GetTeensyTime();
+  decodedList[nextMsgSlot].hour = hour();
+  decodedList[nextMsgSlot].min = minute();
+  decodedList[nextMsgSlot].sec = second();
+  decodedList[nextMsgSlot].sync_score = score;
+  decodedList[nextMsgSlot].snr = (score - 160.0) / 6.0; // *** TODO: evaluate ft8_lib for better algorithm ***
+  //decodedList[nextMsgSlot].distance = CalcLocatorDistance(text);
+  decodedList[nextMsgSlot].count = 1;
 
-/* Quickly aligns the given pointer to a power of two boundaries.
-@return An aligned pointer of typename T.
-@desc Algorithm is a 2's compliment trick that works by masking off
-the desired number in 2's compliment and adding them to the
-pointer. Please note how I took the horizontal comment whitespace back.
-@param pointer The pointer to align.
-@param mask Mask for the lower LSb, which is one less than the power of
-2 you wish to align too. */
-template <typename T = char>
-inline T* AlignUp(void* pointer, uintptr_t mask) {
-  intptr_t value = reinterpret_cast<intptr_t>(pointer);
-  value += (-value) & mask;
-  return reinterpret_cast<T*>(value);
-}
-
-uint8_t *buf1;
-q15_t *buf2, *buf3, *buf4, *buf5, *buf6;
-float *buf7, *buf8;
-int32_t *buf9;
-Decode *buf10;
-
-#ifndef FT8_EXTERNAL_MEMORY
-// as of 7/11/2025 there is 16k remaining in DMAMEM with FT8 data in there
-// buf9 can be placed in RAM1 if needed
-//char buf9Temp[FFT_SIZE / 2 * sizeof(int32_t) + 32];
-#endif
-
-FLASHMEM bool InitFT8DSP(void) {
-#ifdef FT8_EXTERNAL_MEMORY
-  // force FT8 data into external memory if available
-  buf1 = (uint8_t *)extmem_malloc(ft8_msg_samples * ft8_buffer * 4 * sizeof(uint8_t) + 32);
-  buf2 = (q15_t *)extmem_malloc(3 * input_gulp_size * sizeof(q15_t) + 32);
-  buf3 = (q15_t *)extmem_malloc(FFT_SIZE * 2 * sizeof(q15_t) + 32);
-  buf4 = (q15_t *)extmem_malloc(FFT_SIZE * sizeof(q15_t) + 32);
-  buf5 = (q15_t *)extmem_malloc(FFT_SIZE * 2 * sizeof(q15_t) + 32);
-  buf6 = (q15_t *)extmem_malloc(FFT_SIZE * sizeof(q15_t) + 32);
-  buf7 = (float *)extmem_malloc(FFT_SIZE * sizeof(float) + 32);
-  buf8 = (float *)extmem_malloc((FFT_SIZE / 2 + 1) * sizeof(float) + 32);
-  buf9 = (int32_t *)extmem_malloc(FFT_SIZE / 2 * sizeof(int32_t) + 32);
-  buf10 = (Decode *)extmem_malloc(20 * sizeof(Decode) + 32); // using 1280
-#else
-  // FT8 decode takes 106ms with the below arrays (and candidate_list) in internal memory.
-  // FT8 decode of wave file takes 81ms.
-  buf1 = (uint8_t *)malloc(ft8_msg_samples * ft8_buffer * 4 * sizeof(uint8_t) + 32);
-  buf2 = (q15_t *)malloc(3 * input_gulp_size * sizeof(q15_t) + 32);
-  buf3 = (q15_t *)malloc(FFT_SIZE * 2 * sizeof(q15_t) + 32);
-  buf4 = (q15_t *)malloc(FFT_SIZE * sizeof(q15_t) + 32);
-  buf5 = (q15_t *)malloc(FFT_SIZE * 2 * sizeof(q15_t) + 32);
-  buf6 = (q15_t *)malloc(FFT_SIZE * sizeof(q15_t) + 32);
-  buf7 = (float *)malloc(FFT_SIZE * sizeof(float) + 32);
-  buf8 = (float *)malloc((FFT_SIZE / 2 + 1) * sizeof(float) + 32);
-  buf9 = (int32_t *)malloc(FFT_SIZE / 2 * sizeof(int32_t) + 32); // as of 7/11/2025 there is 16k remaining in DMAMEM with FT8 data in there
-  //buf9 = (int32_t *)buf9Temp;
-  buf10 = (Decode *)malloc(20 * sizeof(Decode) + 32); // using 1280
-#endif
-
-  if((buf1 == NULL) || (buf2 == NULL) || (buf3 == NULL) || (buf4 == NULL) || (buf5 == NULL) || (buf6 == NULL) || (buf7 == NULL) || (buf8 == NULL) || (buf9 == NULL) || (buf10 == NULL)) {
-    Serial.println("Insufficient memory to activate FT8");
-    Serial.println((int)buf1, HEX);
-    Serial.println((int)buf2, HEX);
-    Serial.println((int)buf3, HEX);
-    Serial.println((int)buf4, HEX);
-    Serial.println((int)buf5, HEX);
-    Serial.println((int)buf6, HEX);
-    Serial.println((int)buf7, HEX);
-    Serial.println((int)buf8, HEX);
-    Serial.println((int)buf9, HEX);
-    Serial.println((int)buf10, HEX);
-
-    extmem_free(buf1);
-    extmem_free(buf2);
-    extmem_free(buf3);
-    extmem_free(buf4);
-    extmem_free(buf5);
-    extmem_free(buf6);
-    extmem_free(buf7);
-    extmem_free(buf8);
-    extmem_free(buf9);
-    extmem_free(buf10);
-    return false;
-  }
-
-  // 32-byte alignment isn't required for the FT8 arrays below (and candidate_list) in external memory,
-  // though external memory, though some of these may have been aligned just by their placement.  There
-  // is no performance difference with or without 32-byte alignment.  The FT8 decode takes about 117ms
-  // with no FT8 traffic.
-  // FT8 decode of wave file takes 79ms with aligned memory and non-aligned memory.
-  if(FT8_ALIGNED_MEMORY) {
-    export_fft_power = (uint8_t *)AlignUp<>(buf1, 31);
-    ft8_dsp_buffer = (q15_t *)AlignUp<>(buf2, 31);
-    dsp_output = (q15_t *)AlignUp<>(buf3, 31);
-    window_ft8_dsp_buffer = (q15_t *)AlignUp<>(buf4, 31);
-    FFT_Scale = (q15_t *)AlignUp<>(buf5, 31);
-    FFT_Magnitude = (q15_t *)AlignUp<>(buf6, 31);
-    window = (float *)AlignUp<>(buf7, 31);
-    mag_db = (float *)AlignUp<>(buf8, 31);
-    FFT_Mag_10 = (int32_t *)AlignUp<>(buf9, 31);
-    decoded = (Decode *)AlignUp<>(buf10, 31);
+  ++nextMsgSlot;
+  if(nextMsgSlot >= MAX_DECODED_MESSAGES) {
+    nextMsgSlot = 0; // start overwriting older messages
   } else {
-    export_fft_power = buf1;
-    ft8_dsp_buffer = buf2;
-    dsp_output = buf3;
-    window_ft8_dsp_buffer = buf4;
-    FFT_Scale = buf5;
-    FFT_Magnitude = buf6;
-    window = buf7;
-    mag_db = buf8;
-    FFT_Mag_10 = buf9;
-    decoded = buf10;
+    ++numDecodedMsgs;
   }
-
-  arm_rfft_init_q15(&fft_inst, FFT_SIZE, 0, 1);
-  for(int i = 0; i < FFT_SIZE; ++i) {
-    window[i] = ft_blackman_i(i, FFT_SIZE);
-  }
-
-  offset_step = (int) ft8_buffer*4;
-
-  return true;
-}
-
-// Compute FFT magnitudes (log power) for each timeslot in the signal
-void extract_power(int offset) {
-  // Loop over two possible time offsets (0 and block_size/2)
-  for(int time_sub = 0; time_sub <= input_gulp_size/2; time_sub += input_gulp_size/2) {
-
-    for(int i = 0; i <  FFT_SIZE ; i++) {
-      window_ft8_dsp_buffer[i] = (q15_t) ( (float) ft8_dsp_buffer[i + time_sub] * window[i] );
-      //if(window_ft8_dsp_buffer[i] != 0) Serial.printf("%d: %d\n", i, window_ft8_dsp_buffer[i]);
-    }
-
-    arm_rfft_q15(&fft_inst, window_ft8_dsp_buffer,dsp_output );
-    arm_shift_q15(&dsp_output[0], 5, &FFT_Scale[0], FFT_SIZE * 2 );
-    //arm_shift_q15(&dsp_output[0], 6, &FFT_Scale[0], FFT_SIZE * 2 );
-    arm_cmplx_mag_squared_q15(&FFT_Scale[0], &FFT_Magnitude[0], FFT_SIZE);
-
-    for(int j = 0; j< FFT_SIZE/2; j++) {
-      FFT_Mag_10[j] = 10 * (int32_t)FFT_Magnitude[j];
-      //mag_db[j] =  5.0 * log((float)FFT_Mag_10[j] + 0.1);
-      mag_db[j] =  10.0 * log((float)FFT_Mag_10[j] + 0.1);
-    }
-
-    // Loop over two possible frequency bin offsets (for averaging)
-    for(int freq_sub = 0; freq_sub < 2; ++freq_sub) {
-      for(int j = 0; j < ft8_buffer; ++j) {
-        float db1 = mag_db[j * 2 + freq_sub];
-        float db2 = mag_db[j * 2 + freq_sub + 1];
-        float db = (db1 + db2) / 2;
-
-        int scaled = (int) (db);
-        export_fft_power[offset] = (scaled < 0) ? 0 : ((scaled > 255) ? 255 : scaled);
-        ++offset;
-      }
-    }
-  }
-}
-
-// called when ft8_flag = 1
-void process_FT8_FFT(void) {
-  master_offset = offset_step * FT_8_counter;
-  extract_power(master_offset);
-
-  FT_8_counter++;
-  if(FT_8_counter == ft8_msg_samples) {
-    ft8_flag = 0;
-    ft8_decode_flag = 1;
-  }
-}
-
-static float max2(float a, float b) {
-  return (a >= b) ? a : b;
-}
-
-static float max4(float a, float b, float c, float d) {
-  return max2(max2(a, b), max2(c, d));
-}
-
-static void heapify_down(Candidate *heap, int heap_size) {
-  // heapify from the root down
-  int current = 0;
-  while(true) {
-    int largest = current;
-    int left = 2 * current + 1;
-    int right = left + 1;
-
-    if(left < heap_size && heap[left].score < heap[largest].score) {
-      largest = left;
-    }
-    if(right < heap_size && heap[right].score < heap[largest].score) {
-      largest = right;
-    }
-    if(largest == current) {
-      break;
-    }
-
-    Candidate tmp = heap[largest];
-    heap[largest] = heap[current];
-    heap[current] = tmp;
-    current = largest;
-  }
-}
-
-static void heapify_up(Candidate *heap, int heap_size) {
-  // heapify from the last node up
-  int current = heap_size - 1;
-  while(current > 0) {
-    int parent = (current - 1) / 2;
-    if(heap[current].score >= heap[parent].score) {
-      break;
-    }
-
-    Candidate tmp = heap[parent];
-    heap[parent] = heap[current];
-    heap[current] = tmp;
-    current = parent;
-  }
-}
-
-// Compute unnormalized log likelihood log(p(1) / p(0)) of 3 message bits (1 FSK symbol)
-static void decode_symbol(const uint8_t *power, const uint8_t *code_map, int bit_idx, float *log174) {
-  // Cleaned up code for the simple case of n_syms==1
-  float s2[8];
-
-  for(int j = 0; j < 8; ++j) {
-    s2[j] = (float)power[code_map[j]];
-    //s2[j] = (float)work_fft_power[offset+code_map[j]];
-  }
-
-  log174[bit_idx + 0] = max4(s2[4], s2[5], s2[6], s2[7]) - max4(s2[0], s2[1], s2[2], s2[3]);
-  log174[bit_idx + 1] = max4(s2[2], s2[3], s2[6], s2[7]) - max4(s2[0], s2[1], s2[4], s2[5]);
-  log174[bit_idx + 2] = max4(s2[1], s2[3], s2[5], s2[7]) - max4(s2[0], s2[2], s2[4], s2[6]);
-}
-
-// find_sync(export_fft_power, ft8_msg_samples, ft8_buffer, kCostas_map, kMax_candidates, candidate_list, kMin_score);
-// Localize top N candidates in frequency and time according to their sync strength (looking at Costas symbols)
-// We treat and organize the candidate list as a min-heap (empty initially).
-int find_sync(const uint8_t *power, int num_blocks, int num_bins, const uint8_t *sync_map, int num_candidates, Candidate *heap, int min_score) {
-  int heap_size = 0;
-  max_score = 0;
-  // int x = 500;
-  // Here we allow time offsets that exceed signal boundaries, as long as we still have all data bits.
-  // I.e. we can afford to skip the first 7 or the last 7 Costas symbols, as long as we track how many
-  // sync symbols we included in the score, so the score is averaged.
-  for(int alt = 0; alt < 4; ++alt) {
-    for(int time_offset = -7; time_offset < num_blocks - NN + 7; ++time_offset) {  // NN=79
-      for(int freq_offset = ft8_min_bin; freq_offset < num_bins - 8; ++freq_offset) {
-        int score = 0;
-
-        // Compute average score over sync symbols (m+k = 0-7, 36-43, 72-79)
-        int num_symbols = 0;
-        for(int m = 0; m <= 72; m += 36) {
-          for(int k = 0; k < 7; ++k) {
-            // Check for time boundaries
-            if(time_offset + k + m < 0) continue;
-            if(time_offset + k + m >= num_blocks) break;
-
-            int offset = ((time_offset + k + m) * 4 + alt) * num_bins + freq_offset;
-
-            const uint8_t *p8 = power + offset;
-
-            // note from ft8_lib decode.c ft8_sync_score()
-            // Weighted difference between the expected and all other symbols
-            // Does not work as well as the alternative score below
-            score += 8 * p8[sync_map[k]] -
-                          p8[0] - p8[1] - p8[2] - p8[3] -
-                          p8[4] - p8[5] - p8[6] - p8[7];
-/*
-            // Check only the neighbors of the expected symbol frequency- and time-wise
-            int sm = sync_map[k];   // Index of the expected bin
-            if(sm > 0) {
-                // look at one frequency bin lower
-                score += p8[sm] - p8[sm - 1];
-            }
-            if(sm < 7) {
-                // look at one frequency bin higher
-                score += p8[sm] - p8[sm + 1];
-            }
-            if(k > 0) {
-                // look one symbol back in time
-                score += p8[sm] - p8[sm - 4 * num_bins];
-            }
-            if(k < 6) {
-                // look one symbol forward in time
-                score += p8[sm] - p8[sm + 4 * num_bins];
-            }
-*/
-            ++num_symbols;
-          }
-        }
-        score /= num_symbols;
-
-        // if(score > max_score) max_score = score;
-        if(score < min_score) continue;
-
-        // If the heap is full AND the current candidate is better than
-        // the worst in the heap, we remove the worst and make space
-        if(heap_size == num_candidates && score > heap[0].score) {
-            heap[0] = heap[heap_size - 1];
-            --heap_size;
-
-            heapify_down(heap, heap_size);
-        }
-
-        // If there's free space in the heap, we add the current candidate
-        if(heap_size < num_candidates) {
-            heap[heap_size].score = score;
-            heap[heap_size].time_offset = time_offset;
-            heap[heap_size].freq_offset = freq_offset;
-            heap[heap_size].time_sub = alt / 2;
-            heap[heap_size].freq_sub = alt % 2;
-            ++heap_size;
-
-            heapify_up(heap, heap_size);
-        }
-      }
-    }
-  } //end of alt
-
-  return heap_size;
-}
-
-// Compute log likelihood log(p(1) / p(0)) of 174 message bits
-// for later use in soft-decision LDPC decoding
-void extract_likelihood(const uint8_t *power, int num_bins, Candidate cand, const uint8_t *code_map, float *log174) {
-  int ft8_offset = (cand.time_offset * 4 + cand.time_sub * 2 + cand.freq_sub) * num_bins + cand.freq_offset;
-
-  //tft.graphicsMode();
-  //tft.drawLine(cand.freq_offset, 479,cand.freq_offset,479-100 , RA8875_YELLOW);
-  //tft.drawLine(0, 0,1,1 , RA8875_YELLOW);
-
-  //display_value(500,20,ft8_offset);
-
-  //show_variable(600,200,offset);
-  // Go over FSK tones and skip Costas sync symbols
-  const int n_syms = 1;
-
-  for(int k = 0; k < ND; k += n_syms) {
-    int sym_idx = (k < ND / 2) ? (k + 7) : (k + 14);
-    int bit_idx = 3 * k;
-
-    // Pointer to 8 bins of the current symbol
-    const uint8_t *ps = power + (ft8_offset + sym_idx * 4 * num_bins);
-
-    decode_symbol(ps, code_map, bit_idx, log174);
-  }
-
-  // Compute the variance of log174
-  float sum   = 0;
-  float sum2  = 0;
-  float inv_n = 1.0f / N;
-  for(int i = 0; i < N; ++i) {
-    sum  += log174[i];
-    sum2 += log174[i] * log174[i];
-  }
-  float variance = (sum2 - sum * sum * inv_n) * inv_n;
-  // Normalize log174 such that sigma = 2.83 (Why? It's in WSJT-X, ft8b.f90)
-  // Seems to be 2.83 = sqrt(8). Experimentally sqrt(16) works better.
-  float norm_factor = sqrtf(16.0f / variance);
-  for(int i = 0; i < N; ++i) {
-    log174[i] *= norm_factor;
-  }
-}
-
-//
-// does a 174-bit codeword pass the FT8's LDPC parity checks?
-// returns the number of parity errors.
-// 0 means total success.
-//
-static int ldpc_check(uint8_t codeword[]) {
-  int errors = 0;
-
-  for(int j = 0; j < M; ++j) {
-    uint8_t x = 0;
-    for(int i = 0; i < kNrw[j]; ++i) {
-      x ^= codeword[kNm[j][i] - 1];
-    }
-    if(x != 0) {
-      ++errors;
-    }
-  }
-  return errors;
-}
-
-// https://varietyofsound.wordpress.com/2011/02/14/efficient-tanh-computation-using-lamberts-continued-fraction/
-// http://functions.wolfram.com/ElementaryFunctions/ArcTanh/10/0001/
-// https://mathr.co.uk/blog/2017-09-06_approximating_hyperbolic_tangent.html
-
-// thank you Douglas Bagnall
-// https://math.stackexchange.com/a/446411
-static float fast_tanh(float x) {
-  if(x < -4.97f) {
-    return -1.0f;
-  }
-  if(x > 4.97f) {
-    return 1.0f;
-  }
-  float x2 = x * x;
-  //float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
-  //float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
-  //float a = x * (10395.0f + x2 * (1260.0f + x2 * 21.0f));
-  //float b = 10395.0f + x2 * (4725.0f + x2 * (210.0f + x2));
-  float a = x * (945.0f + x2 * (105.0f + x2));
-  float b = 945.0f + x2 * (420.0f + x2 * 15.0f);
-  return a / b;
-}
-
-static float fast_atanh(float x) {
-  float x2 = x * x;
-  //float a = x * (-15015.0f + x2 * (19250.0f + x2 * (-5943.0f + x2 * 256.0f)));
-  //float b = (-15015.0f + x2 * (24255.0f + x2 * (-11025.0f + x2 * 1225.0f)));
-  //float a = x * (-1155.0f + x2 * (1190.0f + x2 * -231.0f));
-  //float b = (-1155.0f + x2 * (1575.0f + x2 * (-525.0f + x2 * 25.0f)));
-  float a = x * (945.0f + x2 * (-735.0f + x2 * 64.0f));
-  float b = (945.0f + x2 * (-1050.0f + x2 * 225.0f));
-  return a / b;
-}
-
-void bp_decode(float codeword[], int max_iters, uint8_t plain[], int *ok) {
-  float tov[N][3];
-  float toc[M][7];
-
-  int min_errors = M;
-
-  // initialize messages to checks
-  for(int i = 0; i < M; ++i) {
-    for(int j = 0; j < kNrw[i]; ++j) {
-      toc[i][j] = codeword[kNm[i][j] - 1];
-    }
-  }
-
-  for(int i = 0; i < N; ++i) {
-    for(int j = 0; j < 3; ++j) {
-      tov[i][j] = 0;
-    }
-  }
-
-  for(int iter = 0; iter < max_iters; ++iter) {
-    float   zn[N];
-
-    // Update bit log likelihood ratios (tov=0 in iter 0)
-    for(int i = 0; i < N; ++i) {
-      zn[i] = codeword[i] + tov[i][0] + tov[i][1] + tov[i][2];
-      plain[i] = (zn[i] > 0) ? 1 : 0;
-    }
-
-    // Check to see if we have a codeword (check before we do any iter)
-    int errors = ldpc_check(plain);
-
-    if(errors < min_errors) {
-      // we have a better guess - update the result
-      min_errors = errors;
-
-      if(errors == 0) {
-        break;  // Found a perfect answer
-      }
-    }
-
-    // Send messages from bits to check nodes
-    for(int i = 0; i < M; ++i) {
-      for(int j = 0; j < kNrw[i]; ++j) {
-        int ibj = kNm[i][j] - 1;
-        toc[i][j] = zn[ibj];
-        for(int kk = 0; kk < 3; ++kk) {
-          // subtract off what the bit had received from the check
-          if(kMn[ibj][kk] - 1 == i) {
-            toc[i][j] -= tov[ibj][kk];
-          }
-        }
-      }
-    }
-
-    // send messages from check nodes to variable nodes
-    for(int i = 0; i < M; ++i) {
-      for(int j = 0; j < kNrw[i]; ++j) {
-        toc[i][j] = fast_tanh(-toc[i][j] / 2);
-      }
-    }
-
-    for(int i = 0; i < N; ++i) {
-      for(int j = 0; j < 3; ++j) {
-        int ichk = kMn[i][j] - 1; // kMn(:,j) are the checks that include bit j
-        float Tmn = 1.0f;
-        for(int k = 0; k < kNrw[ichk]; ++k) {
-          if(kNm[ichk][k] - 1 != i) {
-            Tmn *= toc[ichk][k];
-          }
-        }
-        tov[i][j] = 2 * fast_atanh(-Tmn);
-      }
-    }
-  }
-
-  *ok = min_errors;
-}
-
-// Packs a string of bits each represented as a zero/non-zero byte in plain[],
-// as a string of packed bits starting from the MSB of the first byte of packed[]
-void pack_bits(const uint8_t plain[], int num_bits, uint8_t packed[]) {
-  int num_bytes = (num_bits + 7) / 8;
-  for(int i = 0; i < num_bytes; ++i) {
-    packed[i] = 0;
-  }
-
-  uint8_t mask = 0x80;
-  int     byte_idx = 0;
-  for(int i = 0; i < num_bits; ++i) {
-    if(plain[i]) {
-      packed[byte_idx] |= mask;
-    }
-    mask >>= 1;
-    if(!mask) {
-      mask = 0x80;
-      ++byte_idx;
-    }
-  }
-}
-
-// field1 - at least 14 bytes
-// field2 - at least 14 bytes
-// field3 - at least 7 bytes
-int unpack77_fields(const uint8_t *a77, char *field1, char *field2, char *field3) {
-  uint8_t  n3, i3;
-
-  // Extract n3 (bits 71..73) and i3 (bits 74..76)
-  n3 = ((a77[8] << 2) & 0x04) | ((a77[9] >> 6) & 0x03);
-  i3 = (a77[9] >> 3) & 0x07;
-
-  field1[0] = field2[0] = field3[0] = '\0';
-
-  if(i3 == 0 && n3 == 0) {
-    // 0.0  Free text
-    return unpack_text(a77, field1);
-  }
-  // else if(i3 == 0 && n3 == 1) {
-  //     // 0.1  K1ABC RR73; W9XYZ <KH1/KH7Z> -11   28 28 10 5       71   DXpedition Mode
-  // }
-  // else if(i3 == 0 && n3 == 2) {
-  //     // 0.2  PA3XYZ/P R 590003 IO91NP           28 1 1 3 12 25   70   EU VHF contest
-  // }
-  // else if(i3 == 0 && (n3 == 3 || n3 == 4)) {
-  //     // 0.3   WA9XYZ KA1ABC R 16A EMA            28 28 1 4 3 7    71   ARRL Field Day
-  //     // 0.4   WA9XYZ KA1ABC R 32A EMA            28 28 1 4 3 7    71   ARRL Field Day
-  // }
-  else if(i3 == 0 && n3 == 5) {
-    // 0.5   0123456789abcdef01                 71               71   Telemetry (18 hex)
-    return unpack_telemetry(a77, field1);
-  }
-  else if(i3 == 1 || i3 == 2) {
-    // Type 1 (standard message) or Type 2 ("/P" form for EU VHF contest)
-    return unpack_type1(a77, i3, field1, field2, field3);
-  }
-  // else if(i3 == 3) {
-  //     // Type 3: ARRL RTTY Contest
-  // }
-  else if(i3 == 4) {
-  //     // Type 4: Nonstandard calls, e.g. <WA9XYZ> PJ4/KA1ABC RR73
-  //     // One hashed call or "CQ"; one compound or nonstandard call with up
-  //     // to 11 characters; and (if not "CQ") an optional RRR, RR73, or 73.
-    return unpack_nonstandard(a77, field1, field2, field3);
-  }
-  // else if(i3 == 5) {
-  //     // Type 5: TU; W9XYZ K1ABC R-09 FN             1 28 28 1 7 9       74   WWROF contest
-  // }
-
-  // unknown type, should never get here
-  return -1;
-}
-
-// Compute 14-bit CRC for a sequence of given number of bits
-// [IN] message  - byte sequence (MSB first)
-// [IN] num_bits - number of bits in the sequence
-uint16_t crc(uint8_t *message, int num_bits) {
-  // Adapted from https://barrgroup.com/Embedded-Systems/How-To/CRC-Calculation-C-Code
-  //constexpr uint16_t  TOPBIT = (1 << (CRC_WIDTH - 1));
-  uint16_t  TOPBIT = (1 << (CRC_WIDTH - 1));
-  // printf("CRC, %d bits: ", num_bits);
-  // for(int i = 0; i < (num_bits + 7) / 8; ++i) {
-  //     printf("%02x ", message[i]);
-  // }
-  // printf("\n");
-
-  uint16_t remainder = 0;
-  int idx_byte = 0;
-
-  // Perform modulo-2 division, a bit at a time.
-  for(int idx_bit = 0; idx_bit < num_bits; ++idx_bit) {
-    if(idx_bit % 8 == 0) {
-      // Bring the next byte into the remainder.
-      remainder ^= (message[idx_byte] << (CRC_WIDTH - 8));
-      ++idx_byte;
-    }
-
-    // Try to divide the current data bit.
-    if(remainder & TOPBIT) {
-      remainder = (remainder << 1) ^ CRC_POLYNOMIAL;
-    }
-    else {
-      remainder = (remainder << 1);
-    }
-  }
-  // printf("CRC = %04xh\n", remainder & ((1 << CRC_WIDTH) - 1));
-  return remainder & ((1 << CRC_WIDTH) - 1);
-}
-
-int validate_locator(char locator[]) {
-  uint8_t A1, A2, N1, N2;
-  uint8_t test = 0;
-
-  A1 = locator[0] - 65;
-  A2 = locator[1] - 65;
-  N1 = locator[2] - 48;
-  N2= locator [3] - 48;
-
-  if(A1 >= 0 && A1 <= 17) test++;
-  if(A2 > 0 && A2 < 17) test++; //block RR73 Artic and Anartica
-  if(N1 >= 0 && N1 <= 9) test++;
-  if(N2 >= 0 && N2 <= 9) test++;
-
-  if(test == 4) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
-}
-
-int ft8_decode(void) {
-  //char rtc_string[10];   // print format stuff
-#ifdef FT8_EXTERNAL_MEMORY
-  // force FT8 data into external memory if available
-  Candidate *buf11 = (Candidate *)extmem_malloc(kMax_candidates * sizeof(Candidate) + 32);
-  Candidate *candidate_list;
-
-  if(FT8_ALIGNED_MEMORY) {
-    candidate_list = (Candidate *)AlignUp<>(buf11, 31);
-  } else {
-    candidate_list = buf11;
-  }
-#else
-  Candidate candidate_list[kMax_candidates];
-#endif
-
-  Candidate cand;
-  char newlyDecoded[kMax_decoded_messages][kMax_message_length];
-  float freq_hz;
-  int num_candidates;
-  //char message[kMax_message_length];
-  char message[48];
-  uint16_t chksum, chksum2;
-  int raw_RSL;
-  int display_RSL;
-  float distance;
-  float   log174[N];
-  uint8_t plain[N];
-  int n_errors;
-  uint8_t a91[K_BYTES];
-  char field1[20];
-  char field2[20];
-  char field3[20];
-  int rc;
-  const float fsk_dev = 6.25f;    // tone deviation in Hz and symbol rate
-  bool found;
-  int numNewlyDecoded = 0;
-  int nDecoded = num_decoded_msg;
-
-  // Find top candidates by Costas sync score and localize them in time and frequency
-  num_candidates = find_sync(export_fft_power, ft8_msg_samples, ft8_buffer, kCostas_map, kMax_candidates, candidate_list, kMin_score);
-
-  //Serial.print("Call from ft8_decode(): "); UpdateInfoBoxItem(IB_ITEM_STACK);
-
-  // Go over candidates and attempt to decode messages
-  for(int idx = 0; idx < num_candidates; ++idx) {
-    cand = candidate_list[idx];
-    freq_hz  = (cand.freq_offset + cand.freq_sub / 2.0f) * fsk_dev;
-
-    extract_likelihood(export_fft_power, ft8_buffer, cand, kGray_map, log174);
-
-    // bp_decode() produces better decodes, uses way less memory
-    n_errors = 0;
-    bp_decode(log174, kLDPC_iterations, plain, &n_errors);
-
-    if(n_errors > 0)    continue;
-    //if(n_errors > 0)    {
-    //  Serial.print("errors = "); Serial.println(n_errors);
-    //}
-
-    // Extract payload + CRC (first K bits)
-    pack_bits(plain, K, a91);
-
-    // Extract CRC and check it
-    chksum = ((a91[9] & 0x07) << 11) | (a91[10] << 3) | (a91[11] >> 5);
-    a91[9] &= 0xF8;
-    a91[10] = 0;
-    a91[11] = 0;
-    chksum2 = crc(a91, 96 - 14);
-    if(chksum != chksum2)   continue;
-    //if(chksum != chksum2) {
-    //  Serial.print("chksum = "); Serial.print(chksum); Serial.print(" chksum2 = "); Serial.println(chksum2);
-    //}
-
-    rc = unpack77_fields(a91, field1, field2, field3);
-    if(rc < 0) continue;
-    //if(rc < 0) {
-    //  Serial.print("rc = "); Serial.println(rc);
-    //  }
-
-    sprintf(message,"%.13s %.13s %.6s",field1, field2, field3);
-    //if(strlen(message) > 10) Serial.println(message);
-
-    // Check for duplicate messages (TODO: use hashing)
-    found = false;
-    for(int i = 0; i < numNewlyDecoded; ++i) {
-      if(0 == strcmp(newlyDecoded[i], message)) {
-        found = true;
-        break;
-      }
-    }
-
-    GetTeensyTime();
-    //sprintf(rtc_string,"%02i:%02i:%02i",hour(),minute(),second());
-
-    // check in decoded as well
-    if(!found) {
-      char msg[48];
-
-      for(int i = 0; i < nDecoded; ++i) {
-        sprintf(msg,"%.13s %.13s %.6s",decoded[i].field1, decoded[i].field2, decoded[i].field3);
-
-        if(0 == strcmp(msg, message)) {
-          found = true;
-
-          // indicate we've seen the msg before
-          decoded[i].count++;
-
-          // update its details
-          //strcpy(decoded[i].decode_time, rtc_string);
-          GetTeensyTime();
-          decoded[i].hour = hour();
-          decoded[i].min = minute();
-          decoded[i].sec = second();
-          decoded[i].sync_score = cand.score;
-          decoded[i].freq_hz = (int)freq_hz;
-
-          // *** TODO: revisit this ***
-          //decoded[i].snr = (cand.score > 160 ? 0 : (cand.score - 160)) / 6;
-          decoded[i].snr = (cand.score - 160) / 6;
-          break;
-        }
-      }
-    }
-
-    if(!found && numNewlyDecoded < kMax_decoded_messages) {
-      if(strlen(message) < kMax_message_length) {
-        strcpy(newlyDecoded[numNewlyDecoded++], message);
-
-        decoded[nDecoded].sync_score = cand.score;
-        decoded[nDecoded].freq_hz = (int)freq_hz;
-        strcpy(decoded[nDecoded].field1, field1);
-        strcpy(decoded[nDecoded].field2, field2);
-        strcpy(decoded[nDecoded].field3, field3);
-        //strcpy(decoded[nDecoded].decode_time, rtc_string);
-        decoded[nDecoded].hour = hour();
-        decoded[nDecoded].min = minute();
-        decoded[nDecoded].sec = second();
-
-        decoded[nDecoded].count = 1;
-
-        // *** TODO: revisit this ***
-        raw_RSL = decoded[nDecoded].sync_score;
-        if(raw_RSL > 160) {
-          raw_RSL = 160;
-        }
-        display_RSL = (raw_RSL - 160 ) / 6;
-        decoded[nDecoded].snr = display_RSL;
-
-        char Target_Locator[] = "    ";
-
-        strcpy(Target_Locator, decoded[nDecoded].field3);
-
-        if(validate_locator(Target_Locator)  == 1) {
-  				distance = Target_Distance(Target_Locator);
-          //println(distance);
-          decoded[nDecoded].distance = (int)distance;
-        }
-        else {
-          decoded[nDecoded].distance = 0;
-        }
-        if(++nDecoded > kMax_decoded_messages) {
-          // reset message area
-          // *** impliment a bubble sort of some kind ***
-          nDecoded = 0;
-          activeMsg = 0;
-        };
-      }
-    }
-  }  //End of big decode loop
-
-#ifdef FT8_EXTERNAL_MEMORY
-  //extmem_free(candidate_list);
-  extmem_free(buf11);
-#endif
-
-  num_decoded_msg = nDecoded;
-  return numNewlyDecoded;
 }
 
 void DisplayDetails(int msg, int row, int col) {
@@ -986,37 +171,69 @@ void DisplayDetails(int msg, int row, int col) {
   //tft.fillRect(col, row + 20, INFO_BOX_W - 20, 20, RA8875_BLACK);
   tft.fillRect(col, row, 200, 20 - 1, RA8875_BLACK);
 
-  sprintf(message,"%02i:%02i ", decoded[msg].hour, decoded[msg].min);
+  sprintf(message,"%02i:%02i ", decodedList[msg].hour, decodedList[msg].min);
 
   tft.setCursor(col, row-1);
-  //sprintf(&message[6],"%1d  %4d  %3d    %3d  %4d", (uint8_t)(decoded[msg].sec / 15 + 1), decoded[msg].freq_hz, decoded[msg].snr, decoded[msg].sync_score, decoded[msg].distance);
-  sprintf(&message[6],"%1d  %4d  %3d  %4d", (uint8_t)(decoded[msg].sec / 15 + 1), decoded[msg].freq_hz, decoded[msg].snr, decoded[msg].distance);
-  tft.print(message);
+  //sprintf(&message[6],"%1d  %4.0f  %3d    %3d  %4d", (uint8_t)(decodedList[msg].sec / 15 + 1), decodedList[msg].freq, decodedList[msg].snr, decodedList[msg].sync_score, decodedList[msg].distance);
+  sprintf(&message[6],"%1d  %4.0f  %3.0f  %4d", (uint8_t)(decodedList[msg].sec / 15 + 1), decodedList[msg].freq, decodedList[msg].snr, decodedList[msg].distance);
+  //tft.print(message);
   //Serial.println(message);
 }
 
-void DisplayActiveMessageDetails(int row, int col) {
-  DisplayDetails(activeMsg, row, col);
+void DisplayActiveMessageDetails() {
+  char message[100];
+
+  Decode *msg = &decodedList[activeMsg];
+  tft.setFontScale((enum RA8875tsize)0);
+  int rowHeight = tft.getFontHeight();
+
+  // display active message detail
+      //printf("%02d%02d%02d %+05.1f %+4.2f %4.0f ~  %s\n",
+      //    tm_slot_start->tm_hour, tm_slot_start->tm_min, tm_slot_start->tm_sec,
+      //    snr, time_sec, freq, text);
+  tft.setTextColor(YELLOW);
+  tft.setCursor(WATERFALL_L, YPIXELS - rowHeight * 2 - 3);
+  sprintf(message, "%02d%02d%02d %+4d %+4d.%1d %4d ~  %s", msg->slot_time.tm_hour, msg->slot_time.tm_min, msg->slot_time.tm_sec,
+    (int)msg->snr, (int)msg->time_sec, (int)(msg->time_sec * 10.0 - ((int)msg->time_sec) * 10.0), (int)msg->freq, msg->msg);
+  tft.print(message);
 }
 
-//void DisplayMessages(int decoded_messages, int message_limit) {
-void DisplayMessages() {
-  char message[48];
-  int rowCount = 5;
-  int columnOffset = 0;
+void GetRxMessages() {
+  numRxMsgs = 0;
 
-  //tft.setFontScale((enum RA8875tsize)0);
-  //tft.setFontScale(3,2);
-  //tft.setFontScale(1,2);
-  tft.setFontScale(0,1);
+  for(int i = 0; i < numDecodedMsgs; i++){
+    if(numRxMsgs >= MAX_LIST_MESSAGES)
+      break;
 
-  // reset message area
-  tft.fillRect(WATERFALL_L, YPIXELS - 25 * 5, WATERFALL_W, 25 * 5 + 3, RA8875_BLACK);
+    if((decodedList[i].freq >= ft8RxFreq - 10.0) && (decodedList[i].freq <= ft8RxFreq + 10.0)) {
+      rxList[numRxMsgs++] = i;
+    }
+  }
+}
 
-  // print messages in 2 columns
-  //for(int i = 0; i < decoded_messages && i < message_limit; i++){
-  for(int i = 0; i < num_decoded_msg; i++){
-    if(i == activeMsg) {
+void DisplayRxMessages() {
+  char message[100];
+  int rowCount = FT8_MSG_ROWS;
+  int columnOffset;
+  int count = 0;
+
+  if(numRxMsgs == 0) return;
+
+  tft.setFontScale((enum RA8875tsize)0);
+  int rowHeight = tft.getFontHeight();
+  int colWidth = tft.getFontWidth();
+
+  columnOffset = colWidth * 21 * 2;
+
+  // reset RX message area
+  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
+
+  // print recent messages at RX frequency
+  for(int i = rxWindowTop; i < numRxMsgs; i++){
+    if(count >= FT8_MSG_ROWS)
+      break;
+
+      if(rxList[i] == activeMsg) {
       if(ft8MsgSelectActive) {
         tft.setTextColor(RA8875_GREEN);
       } else {
@@ -1026,441 +243,199 @@ void DisplayMessages() {
       tft.setTextColor(RA8875_WHITE);
     }
 
-    sprintf(message,"%2d: %.13s %.13s %.6s", decoded[i].count, decoded[i].field1, decoded[i].field2, decoded[i].field3);
-    tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - 25 * rowCount - 3);
+    sprintf(message,"%.20s", decodedList[rxList[i]].msg);
+    tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (rowCount + 2) - 3);
     tft.print(message);
 
-    //Serial.print(i); Serial.print(" : ");
-    //Serial.println(message);
+    ++count;
+    --rowCount;
+  }
+}
+
+void GetCqMessages() {
+  numCqMsgs = 0;
+
+  for(int i = 0; i < numDecodedMsgs; i++){
+    if(numCqMsgs >= MAX_LIST_MESSAGES)
+      break;
+
+    if((decodedList[i].msg[0] == 'C') && (decodedList[i].msg[1] == 'Q') && (decodedList[i].msg[2] == ' ')) {
+      cqList[numCqMsgs++] = i;
+    }
+  }
+}
+
+void DisplayCqMessages() {
+  char message[100];
+  int rowCount = FT8_MSG_ROWS;
+  int columnOffset;
+  int count = 0;
+
+  if(numCqMsgs == 0) return;
+
+  tft.setFontScale((enum RA8875tsize)0);
+  int rowHeight = tft.getFontHeight();
+  int colWidth = tft.getFontWidth();
+
+  columnOffset = 0;
+
+  // reset CQ message area
+  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
+
+  // print recent CQ messages
+  for(int i = cqWindowTop; i < numCqMsgs; i++){
+    if(count >= FT8_MSG_ROWS)
+      break;
+
+    if(cqList[i] == activeMsg) {
+      if(ft8MsgSelectActive) {
+        tft.setTextColor(RA8875_GREEN);
+      } else {
+        tft.setTextColor(YELLOW);
+      }
+    } else {
+      tft.setTextColor(RA8875_WHITE);
+    }
+
+    sprintf(message,"%.20s", decodedList[cqList[i]].msg);
+    tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (rowCount + 2) - 3);
+    tft.print(message);
+
+    ++count;
+    --rowCount;
+  }
+}
+
+void DisplayMessages() {
+  char message[48];
+  int rowCount = FT8_MSG_ROWS;
+  int columnOffset;
+  int count = 0;
+
+  tft.setFontScale((enum RA8875tsize)0);
+  int rowHeight = tft.getFontHeight();
+  int colWidth = tft.getFontWidth();
+
+  columnOffset = colWidth * 21;
+
+  // reset RX message area
+  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * (FT8_ROWS + 2), columnOffset, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+
+  // print most recent messages middle column
+  for(int i = 0; i < FT8_MSG_ROWS; i++){
+    int x = allWindowTop + i; // message to display
+
+    if((x >= numDecodedMsgs) || (x >= MAX_DECODED_MESSAGES))
+      break;
+
+    if(x == activeMsg) {
+      if(ft8MsgSelectActive) {
+        tft.setTextColor(RA8875_GREEN);
+      } else {
+        tft.setTextColor(YELLOW);
+      }
+    } else {
+      tft.setTextColor(RA8875_WHITE);
+    }
+
+    sprintf(message,"%.20s", decodedList[x].msg);
+    tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (rowCount + 2) - 3);
+    tft.print(message);
+
+    //allWindowMsgs[count] = i;
+
+    ++count;
+    if(count >= numDecodedMsgs)
+      break;
 
     --rowCount;
-    if(i == 4) {
-      // start in column 2
-      rowCount = 5;
-      columnOffset = 256;
-    }
+    //if(rowCount == 0) {
+    //  // move to next column
+    //  rowCount = FT8_MSG_ROWS;
+    //  columnOffset += colWidth * 21;
+    //  if(columnOffset > 500) {
+    //    columnOffset = 0;
+    //  }
+    //}
   }
-  //Serial.println("");
-  UpdateInfoBoxItem(IB_ITEM_FT8);
+
+  DisplayActiveMessageDetails();
+
+  tft.setTextColor(RA8875_GREEN);
+  tft.setCursor(WATERFALL_L, YPIXELS - rowHeight - 3);
+  tft.print("CQ KN6ZDE CM87");
 }
 
-//-------------------------------------------------------------------------------------------------------------
-// unpack.cpp
-//-------------------------------------------------------------------------------------------------------------
-
-const uint32_t MAX22    = 4194304L;
-const uint32_t NTOKENS  = 2063592L;
-const uint16_t MAXGRID4 = 32400L;
-
-
-// n28 is a 28-bit integer, e.g. n28a or n28b, containing all the
-// call sign bits from a packed message.
-// result[10]
-int unpack28(uint32_t n28, uint8_t ip, uint8_t i3, char *result) {
-  // Check for special tokens DE, QRZ, CQ, CQ_nnn, CQ_aaaa
-  if(n28 < NTOKENS) {
-    if(n28 <= 2) {
-      if(n28 == 0) strcpy(result, "DE");
-      if(n28 == 1) strcpy(result, "QRZ");
-      if(n28 == 2) strcpy(result, "CQ");
-      return 0;   // Success
-    }
-    if(n28 <= 1002) {
-      // CQ_nnn with 3 digits
-      strcpy(result, "CQ ");
-      int_to_dd(result + 3, n28 - 3, 3, true);
-      return 0;   // Success
-    }
-    if(n28 <= 532443L) {
-      // CQ_aaaa with 4 alphanumeric symbols
-      uint32_t n = n28 - 1003;
-      char aaaa[5];
-
-      aaaa[4] = '\0';
-      for(int i = 3; /* */; --i) {
-        aaaa[i] = charn(n % 27, 4);
-        if(i == 0) break;
-        n /= 27;
-      }
-
-      strcpy(result, "CQ ");
-      strcat(result, trim_front(aaaa));
-      return 0;   // Success
-    }
-    // ? TODO: unspecified in the WSJT-X code
-    return -1;
-  }
-
-  n28 = n28 - NTOKENS;
-  if(n28 < MAX22) {
-    // This is a 22-bit hash of a result
-    //call hash22(n22,c13)     !Retrieve result from hash table
-    // TODO: implement
-    // strcpy(result, "<...>");
-    result[0] = '<';
-    int_to_dd(result + 1, n28, 7, true);
-    result[8] = '>';
-    result[9] = '\0';
-    return 0;
-  }
-
-  // Standard callsign
-  uint32_t n = n28 - MAX22;
-
-  char callsign[7];
-  callsign[6] = '\0';
-  callsign[5] = charn(n % 27, 4);
-  n /= 27;
-  callsign[4] = charn(n % 27, 4);
-  n /= 27;
-  callsign[3] = charn(n % 27, 4);
-  n /= 27;
-  callsign[2] = charn(n % 10, 3);
-  n /= 10;
-  callsign[1] = charn(n % 36, 2);
-  n /= 36;
-  callsign[0] = charn(n % 37, 1);
-
-  // Skip trailing and leading whitespace in case of a short callsign
-  strcpy(result, trim(callsign));
-  if(strlen(result) == 0) return -1;
-
-  // Check if we should append /R or /P suffix
-  if(ip) {
-    if(i3 == 1) {
-      strcat(result, "/R");
-    }
-    else if(i3 == 2) {
-      strcat(result, "/P");
-    }
-  }
-
-  return 0;   // Success
-}
-
-// field1[10]
-// field2[10]
-// field3[5+]
-int unpack_type1(const uint8_t *a77, uint8_t i3, char *field1, char *field2, char *field3) {
-  uint32_t n28a, n28b;
-  uint16_t igrid4;
-  uint8_t  ir;
-
-  // Extract packed fields
-  // read(c77,1000) n28a,ipa,n28b,ipb,ir,igrid4,i3
-  // 1000 format(2(b28,b1),b1,b15,b3)
-  n28a  = (a77[0] << 21);
-  n28a |= (a77[1] << 13);
-  n28a |= (a77[2] << 5);
-  n28a |= (a77[3] >> 3);
-  n28b  = ((a77[3] & 0x07) << 26);
-  n28b |= (a77[4] << 18);
-  n28b |= (a77[5] << 10);
-  n28b |= (a77[6] << 2);
-  n28b |= (a77[7] >> 6);
-  ir      = ((a77[7] & 0x20) >> 5);
-  igrid4  = ((a77[7] & 0x1F) << 10);
-  igrid4 |= (a77[8] << 2);
-  igrid4 |= (a77[9] >> 6);
-
-  // Unpack both callsigns
-  if(unpack28(n28a >> 1, n28a & 0x01, i3, field1) < 0) {
-    return -1;
-  }
-  if(unpack28(n28b >> 1, n28b & 0x01, i3, field2) < 0) {
-    return -2;
-  }
-  // Fix "CQ_" to "CQ " -> already done in unpack28()
-
-  // TODO: add to recent calls
-  // if(field1[0] != '<' && strlen(field1) >= 4) {
-  //     save_hash_call(field1)
-  // }
-  // if(field2[0] != '<' && strlen(field2) >= 4) {
-  //     save_hash_call(field2)
-  // }
-
-  if(igrid4 <= MAXGRID4) {
-    // Extract 4 symbol grid locator
-    char *dst = field3;
-    uint16_t n = igrid4;
-    if(ir > 0) {
-      // In case of ir=1 add an "R" before grid
-      dst = stpcpy(dst, "R ");
-    }
-
-    dst[4] = '\0';
-    dst[3] = '0' + (n % 10);
-    n /= 10;
-    dst[2] = '0' + (n % 10);
-    n /= 10;
-    dst[1] = 'A' + (n % 18);
-    n /= 18;
-    dst[0] = 'A' + (n % 18);
-    // if(msg(1:3).eq.'CQ ' .and. ir.eq.1) unpk77_success=.false.
-    // if(ir > 0 && strncmp(field1, "CQ", 2) == 0) return -1;
-  }
-  else {
-    // Extract report
-    int irpt = igrid4 - MAXGRID4;
-
-    // Check special cases first
-    if(irpt == 1) field3[0] = '\0';
-    else if(irpt == 2) strcpy(field3, "RRR");
-    else if(irpt == 3) strcpy(field3, "RR73");
-    else if(irpt == 4) strcpy(field3, "73");
-    else if(irpt >= 5) {
-      char *dst = field3;
-      // Extract signal report as a two digit number with a + or - sign
-      if(ir > 0) {
-        *dst++ = 'R'; // Add "R" before report
-      }
-      int_to_dd(dst, irpt - 35, 2, true);
-    }
-    // if(msg(1:3).eq.'CQ ' .and. irpt.ge.2) unpk77_success=.false.
-    // if(irpt >= 2 && strncmp(field1, "CQ", 2) == 0) return -1;
-  }
-
-  return 0;       // Success
-}
-
-// text[14]
-int unpack_text(const uint8_t *a71, char *text) {
-  // TODO: test
-  uint8_t b71[9];
-
-  uint8_t carry = 0;
-  for(int i = 0; i < 9; ++i) {
-    b71[i] = carry | (a71[i] >> 1);
-    carry = (a71[i] & 1) ? 0x80 : 0;
-  }
-
-	char c14[14];
-	c14[13] = 0;
-  for(int idx = 12; idx >= 0; --idx) {
-    // Divide the long integer in b71 by 42
-    uint16_t rem = 0;
-    for(int i = 0; i < 9; ++i) {
-      rem = (rem << 8) | b71[i];
-      b71[i] = rem / 42;
-      rem    = rem % 42;
-    }
-    c14[idx] = charn(rem, 0);
-  }
-
-	strcpy(text, trim(c14));
-  return 0;       // Success
-}
-
-// telemetry[19]
-int unpack_telemetry(const uint8_t *a71, char *telemetry) {
-  uint8_t b71[9];
-
-  // Shift bits in a71 right by 1
-  uint8_t carry = 0;
-  for(int i = 0; i < 9; ++i) {
-    b71[i] = (carry << 7) | (a71[i] >> 1);
-    carry = (a71[i] & 0x01);
-  }
-
-  // Convert b71 to hexadecimal string
-  for(int i = 0; i < 9; ++i) {
-    uint8_t nibble1 = (b71[i] >> 4);
-    uint8_t nibble2 = (b71[i] & 0x0F);
-    char c1 = (nibble1 > 9) ? (nibble1 - 10 + 'A') : nibble1 + '0';
-    char c2 = (nibble2 > 9) ? (nibble2 - 10 + 'A') : nibble2 + '0';
-    telemetry[i * 2] = c1;
-    telemetry[i * 2 + 1] = c2;
-  }
-
-  telemetry[18] = '\0';
-  return 0;
-}
-
-//none standard for wsjt-x 2.0
-//by KD8CEC
-// field1[15]
-// field2[15]
-// field3[15]
-int unpack_nonstandard(const uint8_t *a77, char *field1, char *field2, char *field3) {
-/*
-	wsjt-x 2.1.0 rc5
-     	read(c77,1050) n12,n58,iflip,nrpt,icq
-	1050 format(b12,b58,b1,b2,b1)
-*/
-	uint32_t n12, iflip, nrpt, icq;
-	uint64_t n58;
-	n12 = (a77[0] << 4);   //11 ~4  : 8
-	n12 |= (a77[1] >> 4);  //3~0 : 12
-
-	n58 = ((uint64_t)(a77[1] & 0x0F) << 54); //57 ~ 54 : 4
-	n58 |= ((uint64_t)a77[2] << 46); //53 ~ 46 : 12
-	n58 |= ((uint64_t)a77[3] << 38); //45 ~ 38 : 12
-	n58 |= ((uint64_t)a77[4] << 30); //37 ~ 30 : 12
-	n58 |= ((uint64_t)a77[5] << 22); //29 ~ 22 : 12
-	n58 |= ((uint64_t)a77[6] << 14); //21 ~ 14 : 12
-	n58 |= ((uint64_t)a77[7] << 6);  //13 ~ 6 : 12
-	n58 |= ((uint64_t)a77[8] >> 2);  //5 ~ 0 : 765432 10
-
-	iflip = (a77[8] >> 1) & 0x01;	//76543210
-	nrpt  = ((a77[8] & 0x01) << 1);
-	nrpt  |= (a77[9] >> 7);	//76543210
-	icq   = ((a77[9] >> 6) & 0x01);
-
-	char c11[12];
-	c11[11] = '\0';
-
-  for(int i = 10; /* no condition */ ; --i) {
-    c11[i] = charn(n58 % 38, 5);
-      if(i == 0) break;
-    n58 /= 38;
-  }
-
-	char call_3[15];
-  // should replace with hash12(n12, call_3);
-  // strcpy(call_3, "<...>");
-  call_3[0] = '<';
-  int_to_dd(call_3 + 1, n12, 4, true);
-  call_3[5] = '>';
-  call_3[6] = '\0';
-
-	char * call_1 = (iflip) ? c11 : call_3;
-  char * call_2 = (iflip) ? call_3 : c11;
-	//save_hash_call(c11_trimmed);
-
-	if(icq == 0) {
-		strcpy(field1, trim(call_1));
-		if(nrpt == 1)
-			strcpy(field3, "RRR");
-		else if(nrpt == 2)
-			strcpy(field3, "RR73");
-		else if(nrpt == 3)
-			strcpy(field3, "73");
-        else {
-            field3[0] = '\0';
-        }
-	} else {
-		strcpy(field1, "CQ");
-        field3[0] = '\0';
-	}
-  strcpy(field2, trim(call_2));
-
-  return 0;
-}
-
-const char * trim_front(const char *str) {
-  // Skip leading whitespace
-  while(*str == ' ') {
-    str++;
-  }
-  return str;
-}
-
-void trim_back(char *str) {
-  // Skip trailing whitespace by replacing it with '\0' characters
-  int idx = strlen(str) - 1;
-  while(idx >= 0 && str[idx] == ' ') {
-    str[idx--] = '\0';
-  }
-}
-
-// 1) trims a string from the back by changing whitespaces to '\0'
-// 2) trims a string from the front by skipping whitespaces
-char * trim(char *str) {
-  str = (char *)trim_front(str);
-  trim_back(str);
-  // return a pointer to the first non-whitespace character
-  return str;
-}
-
-// Convert a 2 digit integer to string
-void int_to_dd(char *str, int value, int width, bool full_sign) {
-  if(value < 0) {
-    *str = '-';
-    ++str;
-    value = -value;
-  }
-  else if(full_sign) {
-    *str = '+';
-    ++str;
-  }
-
-  int divisor = 1;
-  for(int i = 0; i < width - 1; ++i) {
-    divisor *= 10;
-  }
-
-  while(divisor >= 1) {
-    int digit = value / divisor;
-
-    *str = '0' + digit;
-    ++str;
-
-    value -= digit * divisor;
-    divisor /= 10;
-  }
-  *str = 0;   // Add zero terminator
-}
-
-// convert integer index to ASCII character according to one of 6 tables:
-// table 0: " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?"
-// table 1: " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-// table 2: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-// table 3: "0123456789"
-// table 4: " ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-// table 5: " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ/"
-char charn(int c, int table_idx) {
-  if(table_idx != 2 && table_idx != 3) {
-    if(c == 0) return ' ';
-    c -= 1;
-  }
-  if(table_idx != 4) {
-    if(c < 10) return '0' + c;
-    c -= 10;
-  }
-  if(table_idx != 3) {
-    if(c < 26) return 'A' + c;
-    c -= 26;
-  }
-
-  if(table_idx == 0) {
-    if(c < 5) return "+-./?" [c];
-  }
-  else if(table_idx == 5) {
-    if(c == 0) return '/';
-  }
-
-  return '_'; // unknown character, should never get here
+void DisplayAllMessages() {
+  DisplayCqMessages();
+  DisplayMessages();
+  DisplayRxMessages();
 }
 
 //-------------------------------------------------------------------------------------------------------------
 // other
 //-------------------------------------------------------------------------------------------------------------
-
-FLASHMEM bool SetupFT8() {
-  if(!ft8Init) {
-    initalize_constants();
-    if(InitFT8DSP()) {
-      ft8Init = true;
-
-      syncFlag = false;
-      ft8State = 1; // not sync'd
-      UpdateInfoBoxItem(IB_ITEM_FT8);
-      infoBoxItemActive[IB_ITEM_FT8] = true;
-
-      // set up message area
-      // Erase waterfall in decode area
-      tft.fillRect(WATERFALL_L, YPIXELS - 25 * 5, WATERFALL_W, 25 * 5 + 3, RA8875_BLACK);
-      tft.writeTo(L2); // it's on layer 2 as well
-      tft.fillRect(WATERFALL_L, YPIXELS - 25 * 5, WATERFALL_W, 25 * 5 + 3, RA8875_BLACK);
-      tft.writeTo(L1);
-      wfRows = WATERFALL_H - 25 * 5 - 3;
-
-      return true;
-    }
-  }
+bool InitFT8() {
+  //
 
   return false;
+}
+bool InitFT8DSP() {
+  return false;
+}
+
+FLASHMEM bool SetupFT8() {
+  return false;
+}
+
+FLASHMEM bool SetupFT8Decode() {
+  bool result = false;
+
+  if(ft8lib_InitDecode()) {
+    //SetStationCoordinates(myGrid);
+
+    // initialize message windows
+    cqWindowTop = 0;
+    allWindowTop = 0;
+    rxWindowTop = 0;
+    numDecodedMsgs = 0;
+    numRxMsgs = 0;
+    numCqMsgs = 0;
+
+    //for(int i = 0; i < MAX_LIST_MESSAGES; i++) {
+    //  rxList[i] = 0;
+    //  cqList[i] = 0;
+    //}
+
+    ft8Init = true;
+
+    syncFlag = false;
+
+    // update FT8 info box items
+    ft8State = 1; // not sync'd
+    infoBoxItemActive[IB_ITEM_FT8] = true;
+    UpdateInfoBoxItem(IB_ITEM_FT8);
+    infoBoxItemActive[IB_ITEM_FT8_TX] = true;
+    UpdateInfoBoxItem(IB_ITEM_FT8_TX);
+    infoBoxItemActive[IB_ITEM_FT8_TXF] = true;
+    UpdateInfoBoxItem(IB_ITEM_FT8_TXF);
+    infoBoxItemActive[IB_ITEM_FT8_RXF] = true;
+    UpdateInfoBoxItem(IB_ITEM_FT8_RXF);
+    infoBoxItemActive[IB_ITEM_FT8_INT] = true;
+    UpdateInfoBoxItem(IB_ITEM_FT8_INT);
+    infoBoxItemActive[IB_ITEM_FT8_CQ] = true;
+    UpdateInfoBoxItem(IB_ITEM_FT8_CQ);
+
+    // set up message area
+    // Erase waterfall in decode area
+    tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+    tft.writeTo(L2); // it's on layer 2 as well
+    tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+    tft.writeTo(L1);
+    wfRows = WATERFALL_H - FT8_ROW_HEIGHT * FT8_ROWS - 3;
+  }
+
+  return result;
 }
 
 FLASHMEM bool SetupFT8Wav() {
@@ -1469,7 +444,8 @@ FLASHMEM bool SetupFT8Wav() {
   uint32_t sample_rate = 12000;
   uint32_t num_samples = slot_period * sample_rate;
 
-  result = load_wav("ft8.wav", num_samples); // 191111_110645.wav from ft8_lib
+  //result = load_wav("ft8.wav", num_samples); // 191111_110645.wav from ft8_lib
+  result = load_wav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
 
   if(result != 0) {
     Serial.println("Invalid wave file!");
@@ -1478,30 +454,12 @@ FLASHMEM bool SetupFT8Wav() {
 
   FT_8_counter = 0;
 
-  for(unsigned i = 0; i < 1024; i++) {
-    ft8_dsp_buffer[i] = 0;
-    ft8_dsp_buffer[1024 + i] = 0;
-  }
-
   return true;
 }
 
 FLASHMEM void ExitFT8() {
-  extmem_free(buf1);
-  extmem_free(buf2);
-  extmem_free(buf3);
-  extmem_free(buf4);
-  extmem_free(buf5);
-  extmem_free(buf6);
-  extmem_free(buf7);
-  extmem_free(buf8);
-  extmem_free(buf9);
-  extmem_free(buf10);
-
-  //extmem_free();
-
   // restore message area
-  tft.fillRect(WATERFALL_L, YPIXELS - 20 * 6, WATERFALL_W, 25 * 5 + 3, RA8875_BLACK);
+  tft.fillRect(WATERFALL_L, YPIXELS - 20 * 6, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
   wfRows = WATERFALL_H;
 
   // reset FT8 flags and counters
@@ -1511,7 +469,7 @@ FLASHMEM void ExitFT8() {
   FT_8_counter = 0;
   ft8_flag = 0;
   ft8State = 0;
-  num_decoded_msg = 0;
+  numDecodedMsgs = 0;
 
   // update info box
   //UpdateInfoBoxItem(IB_ITEM_FT8);
@@ -1519,197 +477,41 @@ FLASHMEM void ExitFT8() {
   ClearInfoBoxFT8();
 }
 
-void ProcessFT8WaveData(q15_t *q15_buffer_LTemp) {
-  static int dataLoop = 0;
-  //static int leftover = 0;
-  //static float increment = 0;
-  //static int index = 0;
-  //int index = 0;
-  //static int count = 0;
+void ProcessFT8WaveData() {
+  // we're not sync'd anymore
+  // reset FT8 flags and counters
+  syncFlag = false;
+  ft8_decode_flag = 0;
+  FT_8_counter = 0;
+  ft8_flag = 0;
 
-  // get samples from wave file
-  // let's pull the data at the same rate as the T41 pulls from the I/Q stream
-  // 2048 samples / 8 = 256
-  // Or we can look to fill the audio out buffer at the same rate, which is 2048 samples per loop
-
-  // process wave file data
-  // get next chunk of wave file
-  //readWave(audioBufferL, 1920);
-  // wav file sample rate is 12 kHz, T41 audio is 24 kHz
-  // get a half sample size that we'll interpolate to the proper rate
-  if(readWave(audioBufferR, 128)) {
-    // prepare audio stream (mostly just allow user to verify proper wav file transfer)
-
-    // interpolate by 2 to 24 kHz to get audio signal for T41
-    audioBufferL[0] = audioBufferR[0];
-    for(unsigned i = 1; i < 256; i++) {
-      audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
-      audioBufferL[2*i] = audioBufferR[i];
-    }
-
-    // prepare FT8 data
-    // convert floats to the q15 required by FT8 routines
-    arm_float_to_q15(audioBufferR, q15_buffer_LTemp, 128);
-
-    if(dataLoop == 0) {
-      // prepare for next gulp
-      // roll ft8 dsp buffer
-      //for(unsigned i = 0; i < 1024; i++) {
-      //  ft8_dsp_buffer[i] = ft8_dsp_buffer[i + 1024];
-      //  ft8_dsp_buffer[1024 + i] = ft8_dsp_buffer[i + 2048];
-      //}
-    }
-    //if(increment > 128) {
-    //  increment -= 128;
-    // }
-    // decimate 12ksps wav data by 1.875 (12kHz / 1.875 = 6.4kHz)
-    // we'll take 15 loops to get 1024 samples (128 samples per loop / 1.875 = 68.27 * 15 loops = 1024)
-    for(unsigned i = 0; i < 68; i++) {
-        // roll ft8 dsp buffer *** TODO: this can be improved ***
-      ft8_dsp_buffer[i + dataLoop * 68] = ft8_dsp_buffer[i + 1024 + dataLoop * 68];
-      ft8_dsp_buffer[1024 + i + dataLoop * 68] = ft8_dsp_buffer[i + 2048 + dataLoop * 68];
-
-      // transfer audio data to ft8_dsp_buffer
-      // decimate 12ksps wav data by 1.875 which brings us to a 6.4 ksps rate used by ft8 decoder
-      ft8_dsp_buffer[2048 + i + dataLoop * 68] = q15_buffer_LTemp[(int)(((float)i) * 120.0 / 64.0)]; // i * 1.875
-      //ft8_dsp_buffer[2048 + i + dataLoop * 68 + leftover] = q15_buffer_LTemp[(int)(((float)i) * 120.0 / 64.0) + leftover]; // i * 1.875
-      //index = round((float)i * 120.0 / 64.0) + leftover; // i * 1.875
-      //index = round(increment);
-      //index = (int)increment;
-      //if(count++ < 68) {
-      //  Serial.print(increment); Serial.print(", "); Serial.println(index);
-      //}
-
-      //if(index >=0 && index < 128) {
-      //  ft8_dsp_buffer[2048 + i + dataLoop * 68 + leftover] = q15_buffer_LTemp[index];
-      //  increment += 1.875;
-      //}
-    }
-    //Serial.print(increment); Serial.print(", "); Serial.println(index);
-
-    // *** adding leftover data to decimation didn't improve decoding and in some versions reduced decoding ***
-    ++dataLoop;
-    if(dataLoop == 15) {
-      // fill last cell
-      //ft8_dsp_buffer[3071] = q15_buffer_LTemp[127];
-
-      dataLoop = 0;
-      //leftover = 0;
-      process_FT8_FFT();
-      if(ft8_decode_flag == 1) {
-        //num_decoded_msg = ft8_decode();
-        ft8_decode();
-        if(num_decoded_msg > 0) {
-          DisplayMessages();
-        }
-        ft8_decode_flag = 0;
-        FT_8_counter = 0;
-      }
-      // prepare for next gulp
-      // roll ft8 dsp buffer
-      //for(unsigned i = 0; i < 1024; i++) {
-      //  ft8_dsp_buffer[i] = ft8_dsp_buffer[i + 1024];
-      //  ft8_dsp_buffer[1024 + i] = ft8_dsp_buffer[i + 2048];
-      //}
-    //} else {
-    //  // take 3 more samples over the range (every 4th loop)
-    //  // we'll take one more after the last loop to completely fill the buffer
-    //  if(dataLoop == 4 || dataLoop == 8 || dataLoop == 12) {
-    //  //if(dataLoop == 1 || dataLoop ==5 || dataLoop == 9 || dataLoop == 13) {
-    //    ft8_dsp_buffer[2048 + dataLoop * 68 + leftover] = q15_buffer_LTemp[127];
-    //    increment += 1.875;
-    //    leftover++;
-    //  }
-    }
-
-    // we're using the audio input buffers to regulate the pace of the output stream
-    // without this we'll play the wave file about 3 times faster than normal
-    // *** need to check whether we're clipping any of our output with this
-    //      not a big priority unless we want this to be a standard feature ***
-    Q_in_L.clear();
-    Q_in_R.clear();
-  }
-  else {
-    // we're not sync'd anymore
-    // reset FT8 flags and counters
-    syncFlag = false;
-    ft8_decode_flag = 0;
-    FT_8_counter = 0;
-    ft8_flag = 0;
-
-    // *** TODO: consider having FT8 decode mode running on 44.1kHz sample rate
-    bands[currentBand].demod = DEMOD_FT8_DECODE;
-    currentDataMode = DEMOD_FT8_DECODE;
-    ShowOperatingStats();
-    ft8State = 1;
-    UpdateInfoBoxItem(IB_ITEM_FT8);
-    /*
-    // keep decoding w/o new audio
-    for(unsigned i = 0; i < 68; i++) {
-      // roll ft8 dsp buffer
-      ft8_dsp_buffer[i + dataLoop * 68] = ft8_dsp_buffer[i + 1024 + dataLoop * 68];
-      ft8_dsp_buffer[1024 + i + dataLoop * 68] = ft8_dsp_buffer[i + 2048 + dataLoop * 68];
-
-      ft8_dsp_buffer[2048 + i + dataLoop * 68] = 0;
-    }
-
-    if(++dataLoop == 15) {
-      //Serial.println(dataLoop);
-      dataLoop = 0;
-      process_FT8_FFT();
-      if(ft8_decode_flag == 1) {
-        num_decoded_msg = ft8_decode();
-        if(num_decoded_msg > 0) {
-          DisplayMessages();
-        }
-        ft8_decode_flag = 0;
-        FT_8_counter = 0;
-      }
-    }
-    */
-  }
+  // *** TODO: consider having FT8 decode mode running on 44.1kHz sample rate
+  bands[currentBand].demod = DEMOD_FT8_DECODE;
+  currentDataMode = DEMOD_FT8_DECODE;
+  ShowOperatingStats();
+  ft8State = 1;
+  UpdateInfoBoxItem(IB_ITEM_FT8);
 }
 
-void BufferFT8Data(q15_t *q15_buffer_LTemp) {
+void BufferFT8Data(float *buffer_LTemp) {
   static int dataLoop = 0;
-  static int leftover = 0;
 
   // don't process data until we're in sync
   if(syncFlag) {
     if(ft8_decode_flag == 0) {
-      // Pocket_FT8 process_data()
-      // convert floats to the q15 required by FT8 routines
-      arm_float_to_q15(audioBufferL, q15_buffer_LTemp, 256);
-
-      // decimate 24ksps audio sample by 3.75 (24kHz / 3.75 = 6.4kHz)
+      // decimate 24ksps audio sample by 2 to 12ksps needed by ft8_lib
       // we'll take 15 loops to get 1024 samples (256 samples per loop / 3.75 = 68.27 * 15 loops = 1024)
       for(unsigned i = 0; i < 68; i++) {
-        // roll ft8 dsp buffer *** TODO: this can be improved ***
-        ft8_dsp_buffer[i + dataLoop * 68] = ft8_dsp_buffer[i + 1024 + dataLoop * 68];
-        ft8_dsp_buffer[1024 + i + dataLoop * 68] = ft8_dsp_buffer[i + 2048 + dataLoop * 68];
-
-        // transfer audio data to ft8_dsp_buffer
-        // decimate 24ksps sample by 3.75 which brings us to a 6.4 ksps rate used by ft8 decoder
-        //ft8_dsp_buffer[2048 + i + dataLoop * 68] = audioBufferL[(int)(i * 3.75)];
-        ft8_dsp_buffer[2048 + i + dataLoop * 68 + leftover] = q15_buffer_LTemp[(int)(i * 15 / 4)]; // i * 3.75
       }
 
       ++dataLoop;
       if(dataLoop == 15) {
         // fill last cell
-        ft8_dsp_buffer[3071] = q15_buffer_LTemp[255];
+        //ft8_dsp_buffer[3071] = q15_buffer_LTemp[255];
 
         dataLoop = 0;
-        leftover = 0;
 
         DSP_Flag = 1;
-
-      } else {
-        // take 3 more samples over the range (every 4th loop) to completely fill the buffer
-        if(dataLoop == 4 || dataLoop == 8 || dataLoop == 12) {
-          ft8_dsp_buffer[2048 + dataLoop * 68 + leftover] = q15_buffer_LTemp[255];
-          leftover++;
-        }
       }
     }
   } else {
@@ -1718,19 +520,102 @@ void BufferFT8Data(q15_t *q15_buffer_LTemp) {
 
   if(DSP_Flag == 1 && ft8_flag == 1) {
     // *** investigate threads to handle FT8 processing while we continue to collect audio
-    process_FT8_FFT();
+    //process_FT8_FFT();
     DSP_Flag = 0;
   }
 
   if(ft8_decode_flag == 1) {
-    //num_decoded_msg = ft8_decode();
-    ft8_decode();
-    if(num_decoded_msg > 0) {
-      DisplayMessages();
+    //numDecodedMsgs = ft8_decode();
+    //ft8_decode();
+    if(numDecodedMsgs > 0) {
+      //DisplayMessages();
     }
 
     ft8_decode_flag = 0;
   }
 
   if(ft8_flag == 0 && syncFlag) update_synchronization();
+}
+
+void ChangeFt8TxFreq(int wheel) {
+  ft8TxFreq += wheel * ftIncrement;
+
+  UpdateInfoBoxItem(IB_ITEM_FT8_TXF);
+}
+
+void ChangeFt8RxFreq(int wheel) {
+  ft8RxFreq += wheel * ftIncrement;
+
+  UpdateInfoBoxItem(IB_ITEM_FT8_RXF);
+
+  GetRxMessages();
+  DisplayRxMessages();
+}
+
+void ChangeFt8TxInterval(int wheel) {
+  ft8IntState += wheel;
+
+  if(ft8IntState < 0) ft8IntState = 1;
+  if(ft8IntState > 1) ft8IntState = 0;
+
+  UpdateInfoBoxItem(IB_ITEM_FT8_INT);
+}
+
+void ChangeFt8CqState(int wheel) {
+  ft8CqState += wheel;
+
+  if(ft8CqState < 0) ft8CqState = 1;
+  if(ft8CqState > 1) ft8CqState = 0;
+
+  UpdateInfoBoxItem(IB_ITEM_FT8_CQ);
+}
+
+void ChangeFt8TxState(int wheel) {
+  ft8TxState += wheel;
+
+  if(ft8TxState < 0) ft8TxState = 1;
+  if(ft8TxState > 1) ft8TxState = 0;
+
+  UpdateInfoBoxItem(IB_ITEM_FT8_TX);
+}
+
+void ChangeFt8Window(int xcol, int wheel) {
+  if(xcol < 512 / 3) {
+    // mouse in CQ messages
+    cqWindowTop -= wheel;
+    if(cqWindowTop < 0) {
+      cqWindowTop = 0;
+    }
+    if(cqWindowTop >= numCqMsgs) {
+      cqWindowTop = numCqMsgs - 1;
+    }
+    DisplayCqMessages();
+  } else if(xcol > 512 * 2 / 3) {
+    // mouse in RX messages
+    rxWindowTop -= wheel;
+    if(rxWindowTop < 0) {
+      rxWindowTop = 0;
+    }
+    if(rxWindowTop >= numRxMsgs) {
+      rxWindowTop = numRxMsgs - 1;
+    }
+    DisplayRxMessages();
+  //} else if(xcol < 512 / 3) {
+  } else {
+    // mouse in all messages
+    allWindowTop -= wheel;
+    if(allWindowTop < 0) {
+      allWindowTop = 0;
+    }
+    if(allWindowTop >= numDecodedMsgs) {
+      allWindowTop = numDecodedMsgs - 1;
+    }
+    DisplayMessages();
+  }
+}
+
+void ProcessFT8Messages() {
+  GetRxMessages();
+  GetCqMessages();
+  DisplayAllMessages();
 }

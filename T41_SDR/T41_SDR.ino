@@ -42,7 +42,6 @@
 #include "debug.h"
 #include "keyboard.h"
 #include "keyer.h"
-#include "locator.h"
 #include "mouse.h"
 #include "remote.h"
 #include "t41Beacon.h"
@@ -53,8 +52,6 @@
 // *** need to pull what we want from these ***
 //#include "fir_cmsis_5k.h"
 //#include "fir_alt.h"
-
-extern char myGrid[];
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -348,8 +345,6 @@ FLASHMEM void setup() {
 
   //memCheck = true;
   PrimeMallInfo();
-
-  set_Station_Coordinates(myGrid);
 
 #ifdef NO_DISPLAY
   T41ControlSetup();

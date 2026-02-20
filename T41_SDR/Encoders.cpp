@@ -160,13 +160,13 @@ void ProcessMenuEncoder() {
     currentNoiseFloor[currentBand] += menuEncoderMove;
   } else {
     if(ft8MsgSelectActive) {
-      if(num_decoded_msg > 0) {
+      if(numDecodedMsgs > 0) {
         activeMsg += menuEncoderMove;
-        if(activeMsg >= num_decoded_msg) {
+        if(activeMsg >= numDecodedMsgs) {
           activeMsg = 0;
         } else {
           if(activeMsg < 0) {
-            activeMsg = num_decoded_msg - 1;
+            activeMsg = numDecodedMsgs - 1;
           }
         }
       }

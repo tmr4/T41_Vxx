@@ -26,9 +26,6 @@
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-// ft8lib
-bool ft8lib_InitDecode();
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -192,6 +189,22 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case UNUSED_1:  // 16
+      // try to load wav file
+      if(SetupFT8Wav()) {
+        // switch to play a wav file
+        bands[currentBand].demod = DEMOD_FT8_WAV;
+        currentDataMode = DEMOD_FT8_WAV;
+        ShowOperatingStats();
+        syncFlag = true;
+        ft8State = 2;
+        UpdateInfoBoxItem(IB_ITEM_FT8);
+      } else {
+        // couldn't load wav file
+        syncFlag = false;
+        ft8State = 1;
+        UpdateInfoBoxItem(IB_ITEM_FT8);
+      }
+/*
       if(radioMode == DATA_MODE) {
         switch(bands[currentBand].demod) {
           case DEMOD_PSK31:
@@ -207,20 +220,21 @@ FLASHMEM void ExecuteButtonPress(int val) {
           case DEMOD_FT8:
           case DEMOD_FT8_DECODE:
             // try to load wav file
-            //if(SetupFT8Wav()) {
-            if(ft8lib_InitDecode()) {
+            if(SetupFT8Decode()) {
               // switch to play a wav file
-              bands[currentBand].demod = DEMOD_FT8_WAV;
-              currentDataMode = DEMOD_FT8_WAV;
-              ShowOperatingStats();
-              syncFlag = true;
-              ft8State = 2;
-              UpdateInfoBoxItem(IB_ITEM_FT8);
-            } else {
-              // couldn't load wav file
-              syncFlag = false;
-              ft8State = 1;
-              UpdateInfoBoxItem(IB_ITEM_FT8);
+              if(SetupFT8Wav()) {
+                bands[currentBand].demod = DEMOD_FT8_WAV;
+                currentDataMode = DEMOD_FT8_WAV;
+                ShowOperatingStats();
+                syncFlag = true;
+                ft8State = 2;
+                UpdateInfoBoxItem(IB_ITEM_FT8);
+              } else {
+                // couldn't load wav file
+                syncFlag = false;
+                ft8State = 1;
+                UpdateInfoBoxItem(IB_ITEM_FT8);
+              }
             }
             break;
         }
@@ -231,6 +245,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
           ButtonFrequencyEntry();
         }
       }
+*/
       break;
 
     //case BEARING:  // 17
