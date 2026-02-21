@@ -187,6 +187,9 @@ void DisplayActiveMessageDetails() {
   tft.setFontScale((enum RA8875tsize)0);
   int rowHeight = tft.getFontHeight();
 
+  // erase old info
+  tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * 2, WATERFALL_W, FT8_ROW_HEIGHT, RA8875_BLACK);
+
   // display active message detail
       //printf("%02d%02d%02d %+05.1f %+4.2f %4.0f ~  %s\n",
       //    tm_slot_start->tm_hour, tm_slot_start->tm_min, tm_slot_start->tm_sec,
@@ -277,7 +280,7 @@ void DisplayCqMessages() {
   int rowHeight = tft.getFontHeight();
   int colWidth = tft.getFontWidth();
 
-  columnOffset = 0;
+  columnOffset = colWidth * 21;
 
   // reset CQ message area
   tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
@@ -316,10 +319,10 @@ void DisplayMessages() {
   int rowHeight = tft.getFontHeight();
   int colWidth = tft.getFontWidth();
 
-  columnOffset = colWidth * 21;
+  columnOffset = 0;
 
   // reset RX message area
-  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * (FT8_ROWS + 2), columnOffset, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * (FT8_ROWS + 2), colWidth * 21, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
 
   // print most recent messages middle column
   for(int i = 0; i < FT8_MSG_ROWS; i++){
@@ -581,15 +584,15 @@ void ChangeFt8TxState(int wheel) {
 
 void ChangeFt8Window(int xcol, int wheel) {
   if(xcol < 512 / 3) {
-    // mouse in CQ messages
-    cqWindowTop -= wheel;
-    if(cqWindowTop < 0) {
-      cqWindowTop = 0;
+    // mouse in all messages
+    allWindowTop -= wheel;
+    if(allWindowTop < 0) {
+      allWindowTop = 0;
     }
-    if(cqWindowTop >= numCqMsgs) {
-      cqWindowTop = numCqMsgs - 1;
+    if(allWindowTop >= numDecodedMsgs) {
+      allWindowTop = numDecodedMsgs - 1;
     }
-    DisplayCqMessages();
+    DisplayMessages();
   } else if(xcol > 512 * 2 / 3) {
     // mouse in RX messages
     rxWindowTop -= wheel;
@@ -602,16 +605,46 @@ void ChangeFt8Window(int xcol, int wheel) {
     DisplayRxMessages();
   //} else if(xcol < 512 / 3) {
   } else {
-    // mouse in all messages
-    allWindowTop -= wheel;
-    if(allWindowTop < 0) {
-      allWindowTop = 0;
+    // mouse in CQ messages
+    cqWindowTop -= wheel;
+    if(cqWindowTop < 0) {
+      cqWindowTop = 0;
     }
-    if(allWindowTop >= numDecodedMsgs) {
-      allWindowTop = numDecodedMsgs - 1;
+    if(cqWindowTop >= numCqMsgs) {
+      cqWindowTop = numCqMsgs - 1;
     }
-    DisplayMessages();
+    DisplayCqMessages();
   }
+}
+
+void ChangeFt8ActiveMsg(int x, int y) {
+  int row = (y - (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS)) / FT8_ROW_HEIGHT + 1;
+
+  //Serial.println(row);
+
+  if(row < 0) row = 0;
+
+  if(x < 512 / 3) {
+    // mouse in all messages
+    if(allWindowTop + row < numDecodedMsgs) {
+      //activeMsg = numDecodedMsgs - 1;
+    //} else {
+      activeMsg = allWindowTop + row;
+    }
+  } else if(x > 512 * 2 / 3) {
+    // mouse in RX messages
+    if(rxWindowTop + row < numRxMsgs) {
+      activeMsg = rxList[rxWindowTop + row];
+    }
+  //} else if(x < 512 / 3) {
+  } else {
+    // mouse in CQ messages
+    if(cqWindowTop + row < numCqMsgs) {
+      activeMsg = cqList[cqWindowTop + row];
+    }
+  }
+
+  DisplayAllMessages();
 }
 
 void ProcessFT8Messages() {

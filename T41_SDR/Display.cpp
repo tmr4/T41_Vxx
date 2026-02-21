@@ -539,7 +539,7 @@ FASTRUN void ShowSpectrum() {
     // update FT8 msg if appropriate
     //if(ft8MsgSelectActive) {
     if(ft8MsgSelectActive) {
-      DisplayAllMessages();
+      //DisplayAllMessages();
     }
   }
 }

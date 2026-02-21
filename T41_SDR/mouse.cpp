@@ -371,6 +371,8 @@ void MouseButtonFT8(int button) {
   //  }
   //  return;
   //}
+  if(button == 1)
+    ChangeFt8ActiveMsg(cursorX, cursorY);
 }
 
 void MouseWheelFT8(int wheel) {
@@ -386,7 +388,8 @@ void MouseWheelFT8(int wheel) {
   //    }
   //  }
   //}
-  ChangeFt8Window(cursorX, wheel);
+  if(wheel != 0)
+    ChangeFt8Window(cursorX, wheel);
 }
 
 void MouseLoop() {

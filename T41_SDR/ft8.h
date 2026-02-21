@@ -43,3 +43,4 @@ void ChangeFt8TxInterval(int wheel);
 void ChangeFt8CqState(int wheel);
 void ChangeFt8TxState(int wheel);
 void ChangeFt8Window(int xcol, int wheel);
+void ChangeFt8ActiveMsg(int x, int y);
