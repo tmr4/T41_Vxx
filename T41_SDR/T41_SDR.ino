@@ -591,7 +591,6 @@ FASTRUN void loop() {
   switch(radioState) {
     case SSB_RECEIVE_STATE:
     case CW_RECEIVE_STATE:
-    case DATA_RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
           ShowSpectrum();
@@ -606,6 +605,10 @@ FASTRUN void loop() {
         break;
       }
       //if(radioState == DATA_RECEIVE_STATE) Serial.println("at 4");
+      break;
+
+    case DATA_RECEIVE_STATE:
+      YieldToProcess();
       break;
 
     case SSB_TRANSMIT_STATE:

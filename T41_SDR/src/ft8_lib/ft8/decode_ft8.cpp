@@ -32,6 +32,8 @@ static const int kMax_decoded_messages = 50;
 
 const int kFreq_osr = 2; // Frequency oversampling rate (bin subdivision)
 const int kTime_osr = 2; // Time oversampling rate (symbol subdivision)
+//const int kFreq_osr = 1; // Frequency oversampling rate (bin subdivision)
+//const int kTime_osr = 1; // Time oversampling rate (symbol subdivision)
 
 #define CALLSIGN_HASHTABLE_SIZE 256
 
@@ -55,6 +57,8 @@ extern float32_t audioBufferL[], audioBufferR[];
 int load_wav(const char* inputFile, uint32_t num_samples);
 bool readWave(float32_t *buf, int sizeBuf);
 void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq_hz, char *msg);
+
+void ft8_DrawSpectrum(uint8_t *spec, int numSamples);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -251,8 +255,10 @@ FLASHMEM bool ft8lib_InitDecode() {
   return result;
 }
 
-bool ft8lib_GetWaveData() {
+// return value: -1=128 samples processed, 0=1920 samples processed, 1=done reading wav file
+int ft8lib_GetWaveData() {
   static int count = 0;
+  static int processCount = 0;
 
   // get samples from wave file
   // let's pull the data at the same rate as the T41 pulls from the I/Q stream
@@ -283,43 +289,73 @@ bool ft8lib_GetWaveData() {
         count = 0;
 
         // signal we're done reading the wav file
-        return true;
+        return 1;
       }
     }
-
-    return false;
+    if(++processCount == 15) {
+      processCount = 0;
+      return 0;
+    } else {
+      return -1;
+    }
   } else {
     // prepare for next wav file
     count = 0;
 
     // signal we're done reading the wav file
-    return true;
+    return 1;
   }
 }
 
 bool ft8lib_ProcessWaveData() {
+  bool result = false;
   //struct tm tm_slot_start = { 0 };
   struct tm tm_slot_start = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
+  static int count = 0;
+  static int frame_pos = 0;
 
   if(signal != NULL && monitor != NULL) {
     // Process and accumulate audio data in a monitor/waterfall instance
-    for (int frame_pos = 0; frame_pos + monitor->block_size <= num_samples; frame_pos += monitor->block_size) {
+    //for (int frame_pos = 0; frame_pos + monitor->block_size <= num_samples; frame_pos += monitor->block_size)
+    {
       // Process the waveform data frame by frame - you could have a live loop here with data from an audio device
       monitor_process(monitor, signal + frame_pos);
+      if(count < 79)
+        //ft8_DrawSpectrum(&(monitor->wf.mag[count++ * 449]), 449);
+        ft8_DrawSpectrum(&(monitor->wf.mag[count++ * 449 * kFreq_osr * kTime_osr]), 512);
+        //delay(160);
+    }
+    frame_pos += monitor->block_size;
+
+    if(frame_pos + monitor->block_size > num_samples) {
+      // Decode accumulated data (containing slightly less than a full time slot)
+      decode(monitor, &tm_slot_start);
+      ftx_waterfall_t* me = &monitor->wf;
+      int mag_size = me->num_blocks * me->time_osr * me->freq_osr * me->num_bins * sizeof(me->mag[0]);
+      //Serial.print("max_blocks: "); Serial.println(me->max_blocks);
+      //Serial.print("num_blocks: "); Serial.println(me->num_blocks);
+      //Serial.print("time_osr: "); Serial.println(me->time_osr);
+      //Serial.print("freq_osr: "); Serial.println(me->freq_osr);
+      //Serial.print("num_bins: "); Serial.println(me->num_bins);
+      //Serial.print("mag_size: "); Serial.println(mag_size);
+      for(int i = 0; i < mag_size; i++) {
+        //if(me->mag[i] > 0)
+        //  Serial.println(me->mag[i]);
+      }
+
+      // Reset internal variables for the next time slot
+      count = 0;
+      frame_pos = 0;
+      monitor_reset(monitor);
+
+      monitor_free(monitor);
+      extmem_free(monitor);
+      extmem_free(signal);
+
+      result = true;
     }
 
-    // Decode accumulated data (containing slightly less than a full time slot)
-    decode(monitor, &tm_slot_start);
-
-    // Reset internal variables for the next time slot
-    monitor_reset(monitor);
-
-    monitor_free(monitor);
-    extmem_free(monitor);
-    extmem_free(signal);
-
-    return true;
   }
 
-  return false;
+  return result;
 }

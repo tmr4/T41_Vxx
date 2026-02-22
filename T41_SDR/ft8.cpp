@@ -79,8 +79,8 @@ int ft8RxFreq = 1000;
 
 extern char myGrid[];
 
-#define FT8_MSG_ROWS 6
-#define FT8_ROWS 8
+#define FT8_MSG_ROWS 11
+#define FT8_ROWS 13
 #define FT8_ROW_HEIGHT 16
 #define FT8_COL_WIDTH 8
 
@@ -90,6 +90,7 @@ extern char myGrid[];
 
 // ft8lib
 bool ft8lib_InitDecode();
+void ShowFT8SpectrumFreqValues();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -322,7 +323,7 @@ void DisplayMessages() {
   columnOffset = 0;
 
   // reset RX message area
-  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * (FT8_ROWS + 2), colWidth * 21, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
 
   // print most recent messages middle column
   for(int i = 0; i < FT8_MSG_ROWS; i++){
@@ -395,6 +396,15 @@ FLASHMEM bool SetupFT8Decode() {
   bool result = false;
 
   if(ft8lib_InitDecode()) {
+    EraseSpectrumDisplayContainer();
+    DrawSpectrumFrame();
+    tft.writeTo(L2);
+    tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
+    tft.writeTo(L1);
+    tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
+    displayState = DISPLAY_T41_FT8_DECODE;
+    ShowFT8SpectrumFreqValues();
+
     //SetStationCoordinates(myGrid);
 
     // initialize message windows
@@ -447,8 +457,11 @@ FLASHMEM bool SetupFT8Wav() {
   uint32_t sample_rate = 12000;
   uint32_t num_samples = slot_period * sample_rate;
 
-  //result = load_wav("ft8.wav", num_samples); // 191111_110645.wav from ft8_lib
+  //result = load_wav("ft8.wav", num_samples); //
   result = load_wav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
+  //result = load_wav("ft8_1.wav", num_samples); // CQ KN6ZDE CM87 at 1000
+  //result = load_wav("ft8_10.wav", num_samples); // CQ KN6ZDE CM8x x=0-9 at 1000 + x*100
+  //result = load_wav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
 
   if(result != 0) {
     Serial.println("Invalid wave file!");

@@ -287,6 +287,11 @@ FLASHMEM void ChangeDemodMode(int mode) {
       DrawAudioFilterLines();
       break;
 
+    case DISPLAY_T41_FT8_DECODE:
+      ShowOperatingStats();
+      DrawAudioFilterLines();
+      break;
+
     case DISPLAY_BEACON_MONITOR:
       break;
 
@@ -408,6 +413,10 @@ FLASHMEM void ChangeMode(int mode) {
       ShowOperatingStats();
       ShowBandwidthBarValues();
       DrawBandwidthBar();
+      break;
+
+    case DISPLAY_T41_FT8_DECODE:
+      ShowOperatingStats();
       break;
 
     case DISPLAY_BEACON_MONITOR:

@@ -79,7 +79,7 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 void Calc1xFreqSpec();
 
 // ft8lib
-bool ft8lib_GetWaveData();
+int ft8lib_GetWaveData();
 bool ft8lib_ProcessWaveData();
 
 //-------------------------------------------------------------------------------------------------------------
@@ -482,7 +482,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
         break;
 
       case DEMOD_FT8_WAV:
-        if(ft8lib_GetWaveData()) {
+        if(ft8lib_GetWaveData() >= 0) {
           if(ft8lib_ProcessWaveData()) {
             // return to ft8 decode mode
             bands[currentBand].demod = DEMOD_FT8_DECODE;
@@ -497,8 +497,9 @@ int ProcessReceiverData(bool updateSpectrumData) {
           // without this we'll play the wave file about 3 times faster than normal
           // *** need to check whether we're clipping any of our output with this
           //      not a big priority unless we want this to be a standard feature ***
-          Q_in_L.clear();
-          Q_in_R.clear();
+          // *** this slows things down with live FT8 processing of the wav file ***
+          //Q_in_L.clear();
+          //Q_in_R.clear();
         }
         break;
 
@@ -905,9 +906,24 @@ FASTRUN void ProcessControls() {
     SetBWFilters();
 
     if(updateDisplay) {
-      ShowBandwidthBarValues();
-      DrawBandwidthBar();
-      DrawAudioFilterLines();
+      switch(displayState) {
+        case DISPLAY_T41:
+          ShowBandwidthBarValues();
+          DrawBandwidthBar();
+          DrawAudioFilterLines();
+          break;
+
+        case DISPLAY_T41_FT8_DECODE:
+          DrawAudioFilterLines();
+          break;
+
+        case DISPLAY_BEACON_MONITOR:
+          break;
+
+        default:
+        // no screen updates at all
+        break;
+      }
     }
   }
 

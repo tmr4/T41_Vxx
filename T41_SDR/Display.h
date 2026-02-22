@@ -137,9 +137,10 @@
 #define TFT_RST                     255
 
 #define DISPLAY_T41                 0
-#define DISPLAY_BEACON_MONITOR      1
-#define DISPLAY_FULL_MENU           2
-#define DISPLAY_CALIBRATION         3
+#define DISPLAY_T41_FT8_DECODE      1
+#define DISPLAY_BEACON_MONITOR      2
+#define DISPLAY_FULL_MENU           3
+#define DISPLAY_CALIBRATION         4
 
 extern int displayState;
 

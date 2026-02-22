@@ -470,7 +470,7 @@ FASTRUN void ShowSpectrum() {
     // create data for waterfall
     wfGradIndex = -yPlot + 230;  // Nudged waterfall towards blue
     if(wfGradIndex < 0) wfGradIndex = 0;
-    if(wfGradIndex > 116) wfGradIndex = 116; // *** above is out of range of gradient
+    if(wfGradIndex > 116) wfGradIndex = 116; // *** above is out of range of gradient ***
     waterfall[x1] = gradient[wfGradIndex];  // Try to put pixel values in middle of gradient array
 
     #ifdef NO_DISPLAY
@@ -1393,3 +1393,83 @@ FLASHMEM void ft8lib_DisplayMsg(char *msg) {
   ++count;
 }
 */
+
+// gets called about 15 times for each message period
+// waterfall updates
+FLASHMEM void ft8_DrawSpectrum(uint8_t *spec, int numSamples) {
+  int yPlot, y1Plot = 0;
+  int samples = numSamples > 512 ? 512 : numSamples;
+  static uint8_t oldSpec[513];
+  static bool initialized = false;
+  int wfGradIndex;
+  static uint16_t waterfall[WATERFALL_W] = {0};
+  static int count = 0;
+
+  for(int i = 0; i < samples; i++) {
+    yPlot = SPECTRUM_TOP_Y + 85 - spec[i] / 3;
+    y1Plot = SPECTRUM_TOP_Y + 85 - spec[i + 1] / 3;
+
+    // erase old spectrum if initialized
+    if(initialized) {
+      tft.drawLine(SPECTRUM_LEFT_X + i, oldSpec[i+1], SPECTRUM_LEFT_X + i, oldSpec[i], RA8875_BLACK);
+    }
+
+    oldSpec[i] = yPlot;
+    tft.drawLine(SPECTRUM_LEFT_X + i, y1Plot, SPECTRUM_LEFT_X + i, yPlot, RA8875_YELLOW);
+
+    // create data for waterfall
+    //wfGradIndex = -yPlot + 230;  // Nudged waterfall towards blue
+    //wfGradIndex = -yPlot + 155;  // Nudged waterfall towards blue
+    wfGradIndex = -yPlot + 200;  // Nudged waterfall towards blue
+    if(wfGradIndex < 0) wfGradIndex = 0;
+    if(wfGradIndex > 116) wfGradIndex = 116; // *** above is out of range of gradient ***
+    waterfall[i] = (waterfall[i] * count + gradient[wfGradIndex]) / (count + 1);  // Try to put pixel values in middle of gradient array
+  }
+  oldSpec[numSamples] = y1Plot;
+  ++count;
+  if(count >= 15) {
+    count = 0;
+    for(int i = 0; i < WATERFALL_W; i++) {
+      waterfall[i] = 0;
+    }
+  }
+  // write new row of data into the top row to finish the scrolling effect
+  tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 1, waterfall);
+
+  initialized = true;
+}
+
+FLASHMEM void ShowFT8SpectrumFreqValues() {
+  char txt[16];
+  int tickX;
+  //float cFreq = 1600.0; // 6.25*512/2
+  //float freqOffset = 200.0;
+  float posOffset = -32.0;
+  float lFreq;
+  float fInc =  500.0;
+  float32_t pixel_per_hz = 6.25;
+
+  tft.setFontScale((enum RA8875tsize)0);
+
+  // erase frequency bar values and tick marks
+  tft.fillRect(SPECTRUM_LEFT_X, SPEC_BOX_LABELS - 4, SPECTRUM_RES + 5, tft.getFontHeight() + 4, RA8875_BLACK);
+
+  // print label and tick mark
+  tft.setTextColor(RA8875_WHITE);
+
+  for(int idx = 0; idx < 8; idx++) {
+    // calculate label freq (always a whole number) and the exact position of its tick mark
+    lFreq = (float)idx * fInc;
+    ultoa(lFreq, txt, DEC);
+    tickX = (int)(lFreq / pixel_per_hz + posOffset);
+
+    // print freq label and tick mark
+    if(tickX > 0 && tickX < SPECTRUM_RES) {
+      tft.setCursor(SPECTRUM_LEFT_X + tickX, SPEC_BOX_LABELS);
+      tft.print(txt);
+
+      // print label tick mark for the freq label
+      tft.drawFastVLine(tickX, SPEC_BOX_LABELS - 4, 6, RA8875_YELLOW);
+    }
+  }
+}
