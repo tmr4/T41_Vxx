@@ -593,7 +593,8 @@ FASTRUN void loop() {
     case CW_RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
-          ShowSpectrum();
+          ShowFreqSpectrum();
+          ShowAudioSpectrum();
           break;
 
         case DISPLAY_BEACON_MONITOR:
@@ -608,7 +609,8 @@ FASTRUN void loop() {
       break;
 
     case DATA_RECEIVE_STATE:
-      YieldToProcess();
+      YieldToProcess(true);
+      ShowAudioSpectrum();
       break;
 
     case SSB_TRANSMIT_STATE:
@@ -728,7 +730,7 @@ FASTRUN void loop() {
 #endif
 
 #ifdef NO_DISPLAY
-  // along with the delay in ShowSpectrum this duplicates overall loop timing
+  // along with the delay in ShowFreqSpectrum this duplicates overall loop timing
   // with a display.  These are needed to regulate the flow of messages to the
   // PC control app.  These may not be needed if that app isn't used.
   delay(12);

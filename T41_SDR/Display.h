@@ -180,7 +180,7 @@ void DrawStaticDisplayItems();
 
 void DrawAudioSpectContainer();
 
-// mainly updated each loop during call to ShowSpectrum
+// mainly updated each loop during call to ShowFreqSpectrum
 void ShowFrequency();
 void ShowOperatingStats();
 void ShowSpectrumFreqValues();
@@ -195,7 +195,8 @@ void ShowTransmitReceiveStatus();
 void SetZoom(int zoom);
 void ShowCurrentPowerSetting();
 
-void ShowSpectrum();
+void ShowFreqSpectrum();
+void ShowAudioSpectrum();
 
 void UpdateCWFilter();
 

@@ -463,7 +463,8 @@ FLASHMEM void SetPrimaryMenuIndex() {
 
   while(true) {
     UpdateClock();
-    ShowSpectrum();
+    ShowFreqSpectrum();
+    ShowAudioSpectrum();
 
     // update menu on menu encoder move
     if(menuEncoderMove != 0) {

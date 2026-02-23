@@ -265,7 +265,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
   //
   // The T41 takes ~1.5-5.0 ms (depending on display update, mode and options) to process 16 audio packets
   // afterwards it may take up to 10 ms to refill the buffers until 16 packets are available (thus this if block is
-  // skipped and we return immediately to ShowSpectrum to continue updating the display)
+  // skipped and we return immediately to ShowFreqSpectrum to continue updating the display)
   // This entire process serves to regulate the audio output stream and changes may affect that stream.
   // For example, playing a wav file without some display updates (audio spectrum
   // for example), will cause a faster (unnatural) playback speed.
@@ -498,8 +498,11 @@ int ProcessReceiverData(bool updateSpectrumData) {
           // *** need to check whether we're clipping any of our output with this
           //      not a big priority unless we want this to be a standard feature ***
           // *** this slows things down with live FT8 processing of the wav file ***
-          //Q_in_L.clear();
-          //Q_in_R.clear();
+          if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
+            Serial.println("clearing...");
+            Q_in_L.clear();
+            Q_in_R.clear();
+          }
         }
         break;
 

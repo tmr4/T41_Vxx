@@ -35,7 +35,7 @@
 
   Dynamic Areas:
     Several areas, the frequency and audio spectrums, waterfall, and filter markers in the audio spectrum box
-    are updated dynamically through a loop call to ShowSpectrum.  These areas can't be updated individually.
+    are updated dynamically through a loop call to ShowFreqSpectrum.  These areas can't be updated individually.
     The the S-meter bar is also updated each loop but has its own update function, DrawSmeterBar.  The
     transmit/receive status indicator (ShowTransmitReceiveStatus) is also updated each loop with a state change.
 
@@ -49,7 +49,7 @@
 
   Other Areas:
     All other areas are updated in response to user interaction with the radio, whether by encoder, button or
-    menu.  Some encoder actions are accumulated and/or processed each loop during the call to ShowSpectrum.
+    menu.  Some encoder actions are accumulated and/or processed each loop during the call to ShowFreqSpectrum.
     These include changes to the tuned frequency (center or fine tuned), filter bandwidth (position or width).
     The functions that update the display for these are:
       ShowFrequency           - writes VFO A and VFO B frequencies at the top of the display
@@ -58,7 +58,7 @@
       ShowBandwidthBarValues  - writes bandwidth values above the bandwidth bar
       ShowSpectrumFreqValues  - writes fequency markers below sprectrum box
 
-    Some frequency changes resulting from button interaction are updated during the call to ShowSpectrum as well.
+    Some frequency changes resulting from button interaction are updated during the call to ShowFreqSpectrum as well.
     These include:
       ButtonFrequencyEntry - does this now, but this should be changed.
 
@@ -71,10 +71,10 @@
     VFO frequencies, op stats, freq spectrum, bandwidth bar and values, spectrum values, waterfall,
     clock, xmit indicator, s-meter, audio spectrum, filter lines, infobox items
   The wrinkle is that T41 radio operation is driven by a key element of the display update process,
-  ShowSpectrum() and the timing of the operating loop is determined in part based on updates to
-  the display happening in ShowSpectrum().  This function is only called in two places in the main
+  ShowFreqSpectrum() and the timing of the operating loop is determined in part based on updates to
+  the display happening in ShowFreqSpectrum().  This function is only called in two places in the main
   operating loop so one method to operate without the normal display is to create a separete ShowXXX() function
-  to drive radio operations for each display, keeping the needed elements of ShowSpectrum() and discarding those
+  to drive radio operations for each display, keeping the needed elements of ShowFreqSpectrum() and discarding those
   not needed.  Doing this we find that the display is updated for other actions, changing bands for example.
   Here's a list of additional functions for the beacon monitor (ignoring for now changes caused by user interaction
   with the T41 buttons or encoders): SetBand, SetTxRxFreq, ChangeDemodMode, ChangeMode, DrawSmeterBar (tricky as we
@@ -135,7 +135,7 @@ dispSc displayScale[] =
   { " 1 dB/",  200.0,    40,           200,                   0.05 }
 };
 
-int newSpectrumFlag = 0; // 0 - oldNF needs initialized in ShowSpectrum(), 1 - it doesn't need initialized
+int newSpectrumFlag = 0; // 0 - oldNF needs initialized in ShowFreqSpectrum(), 1 - it doesn't need initialized
 
 //------------------------- Local Variables ----------
 //uint8_t twinpeaks_tested = 2;  // this is never changed
@@ -157,6 +157,39 @@ int16_t spectrum_x = 10;
   0xF85E, 0xF87E, 0xF87E, 0xF83E, 0xF83E, 0xF83E, 0xF83E, 0xF85E, 0xF85E, 0xF85E,
   0xF85E, 0xF87E, 0xF87E, 0xF87E, 0xF87E, 0xF87E, 0xF87E, 0xF87E, 0xF87E, 0xF87E,
   0xF87E, 0xF87E, 0xF87E, 0xF87E, 0xF88F, 0xF88F, 0xF88F
+};
+
+// FT8 waterfall gradient
+// Simple color spectrum shifted toward red to highlight active channel
+// FT8 spectrum value is 0-255, index to this is value/10
+// *** 26 values here so 255/10 is a valid index ***
+/* PROGMEM */ const uint16_t ft8Gradient[] = {  // Color array for FT8 waterfall background
+  RA8875_BLACK, // 0 - 49
+  RA8875_BLACK,
+  RA8875_BLACK,
+  RA8875_BLACK,
+  RA8875_BLACK,
+  RA8875_BLUE,  // 50 - 59
+  RA8875_BLUE,  // 60 - 69
+  RA8875_CYAN,  // 70 - 79
+  RA8875_GREEN, // 80 - 89
+  RA8875_YELLOW,// 90 - 99
+  RA8875_LIGHT_ORANGE, // 100 - 109
+  RA8875_DARK_ORANGE,  // 110 - 119
+  RA8875_DARK_ORANGE,  // 120 - 129
+  RA8875_RED, // 130 - 255
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED
 };
 
 int maxYPlot;
@@ -258,7 +291,7 @@ void CalcAudioFilterLinePositions() {
   filterHiPosition = map(currentFilterHiCut, 0, span, 0, AUDIO_SPEC_RES);
 }
 
-// *** pulling this out of ShowSpectrum allows the screen to update about 35% faster
+// *** pulling this out of ShowFreqSpectrum allows the screen to update about 35% faster
 //     Waterfall Time before update 54s, after 35s ***
 void DrawAudioFilterLines() {
   int filterLoColor, filterHiColor;
@@ -339,12 +372,11 @@ void DrawAudioFilterLines() {
             This is is a long running process.  It yields periodically to allow normal
             radio operations to continue.
 *****/
-FASTRUN void ShowSpectrum() {
+FASTRUN void ShowFreqSpectrum() {
   int yPlot, y1Plot;
   int hLo = 0, hHi = 0;
   int wfGradIndex;
   static int yOldPlot[SPECTRUM_RES];
-  static int yOldAudioPlot[AUDIO_SPEC_RES];
   static int currentNF = 0;
   uint16_t waterfall[WATERFALL_W];
 
@@ -444,29 +476,6 @@ FASTRUN void ShowSpectrum() {
     }
     #endif
 
-    // update audio spectrum if within range
-    // don't overwrite audio filter lines
-    if(x1 < AUDIO_SPEC_RES && (x1 != filterLoPosition) && (x1 != filterHiPosition)) {
-      // *** TODO: consider adding audio spectrum for transmission ***
-      // erase old audio spectrum line at this position if present
-      if(yOldAudioPlot[x1] != 0) {
-        tft.drawFastVLine(AUDIO_SPEC_L + x1, AUDIO_SPEC_BOTTOM - yOldAudioPlot[x1], yOldAudioPlot[x1], RA8875_BLACK);
-      }
-
-      // draw current audio spectrum line at this position
-      if(audioYPixel[x1] != 0) {
-        // maintain spectrum within box
-        if(audioYPixel[x1] > CLIP_AUDIO_PEAK)
-        {
-          audioYPixel[x1] = CLIP_AUDIO_PEAK;
-        }
-        tft.drawFastVLine(AUDIO_SPEC_L + x1, AUDIO_SPEC_BOTTOM - audioYPixel[x1], audioYPixel[x1], RA8875_MAGENTA);  // draw new AUDIO spectrum line
-      }
-
-      // save data to erase next loop
-      yOldAudioPlot[x1] = audioYPixel[x1];
-    }
-
     // create data for waterfall
     wfGradIndex = -yPlot + 230;  // Nudged waterfall towards blue
     if(wfGradIndex < 0) wfGradIndex = 0;
@@ -540,6 +549,41 @@ FASTRUN void ShowSpectrum() {
     //if(ft8MsgSelectActive) {
     if(ft8MsgSelectActive) {
       //DisplayAllMessages();
+    }
+  }
+}
+
+
+/*****
+  Purpose: Update audio spectrum
+            This is is a long running process.  It yields periodically to allow normal
+            radio operations to continue.
+*****/
+FASTRUN void ShowAudioSpectrum() {
+  static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
+
+  // update audio spectrum
+  for(int i = 0; i < AUDIO_SPEC_RES; i++) {
+    // don't overwrite audio filter lines
+    if((i != filterLoPosition) && (i != filterHiPosition)) {
+      // *** TODO: consider adding audio spectrum for transmission ***
+      // erase old audio spectrum line at this position if present
+      if(yOldAudioPlot[i] != 0) {
+        tft.drawFastVLine(AUDIO_SPEC_L + i, AUDIO_SPEC_BOTTOM - yOldAudioPlot[i], yOldAudioPlot[i], RA8875_BLACK);
+      }
+
+      // draw current audio spectrum line at this position
+      if(audioYPixel[i] != 0) {
+        // maintain spectrum within box
+        if(audioYPixel[i] > CLIP_AUDIO_PEAK)
+        {
+          audioYPixel[i] = CLIP_AUDIO_PEAK;
+        }
+        tft.drawFastVLine(AUDIO_SPEC_L + i, AUDIO_SPEC_BOTTOM - audioYPixel[i], audioYPixel[i], RA8875_MAGENTA);  // draw new AUDIO spectrum line
+      }
+
+      // save data to erase next loop
+      yOldAudioPlot[i] = audioYPixel[i];
     }
   }
 }
@@ -1400,8 +1444,9 @@ FLASHMEM void ft8_DrawSpectrum(uint8_t *spec, int numSamples) {
   int yPlot, y1Plot = 0;
   int samples = numSamples > 512 ? 512 : numSamples;
   static uint8_t oldSpec[513];
+  static uint8_t accSpec[513] = {0};
   static bool initialized = false;
-  int wfGradIndex;
+  uint8_t wfGradIndex;
   static uint16_t waterfall[WATERFALL_W] = {0};
   static int count = 0;
 
@@ -1417,15 +1462,16 @@ FLASHMEM void ft8_DrawSpectrum(uint8_t *spec, int numSamples) {
     oldSpec[i] = yPlot;
     tft.drawLine(SPECTRUM_LEFT_X + i, y1Plot, SPECTRUM_LEFT_X + i, yPlot, RA8875_YELLOW);
 
-    // create data for waterfall
-    //wfGradIndex = -yPlot + 230;  // Nudged waterfall towards blue
-    //wfGradIndex = -yPlot + 155;  // Nudged waterfall towards blue
-    wfGradIndex = -yPlot + 200;  // Nudged waterfall towards blue
-    if(wfGradIndex < 0) wfGradIndex = 0;
-    if(wfGradIndex > 116) wfGradIndex = 116; // *** above is out of range of gradient ***
-    waterfall[i] = (waterfall[i] * count + gradient[wfGradIndex]) / (count + 1);  // Try to put pixel values in middle of gradient array
+    // accumulate spectrum data for average waterfall over FT8 interval
+    // exclude low data points that tends to dilute signals
+    if(!((accSpec[i] > 130) && (spec[i] < 60))) {
+      accSpec[i] = (accSpec[i] * count + spec[i]) / (count + 1);  // Try to put pixel values in middle of gradient array
+    }
+    //accSpec[i] = i / 2;
   }
+
   oldSpec[numSamples] = y1Plot;
+
   ++count;
   if(count >= 15) {
     count = 0;
@@ -1433,8 +1479,20 @@ FLASHMEM void ft8_DrawSpectrum(uint8_t *spec, int numSamples) {
       waterfall[i] = 0;
     }
   }
+
+  for(int i = 0; i < samples; i++) {
+    wfGradIndex = accSpec[i]/10;
+    if(wfGradIndex < 0) wfGradIndex = 0;
+    //if(wfGradIndex > 25) Serial.println("wfGradIndex > 25");
+    waterfall[i] = ft8Gradient[wfGradIndex];
+  }
+
   // write new row of data into the top row to finish the scrolling effect
+  // *** TODO: still need to roll waterfall for live audio ***
   tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 1, waterfall);
+  tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 101, WATERFALL_W, 1, waterfall);
+  //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100 + count * 2, WATERFALL_W, 1, waterfall);
+  //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100 + count * 2 + 1, WATERFALL_W, 1, waterfall);
 
   initialized = true;
 }
