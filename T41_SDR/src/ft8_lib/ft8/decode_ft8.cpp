@@ -21,7 +21,7 @@
 //-------------------------------------------------------------------------------------------------------------
 
 static float *signal;
-static int num_samples;
+static int numSamples;
 static monitor_t *monitor;
 
 const int kMin_score = 10; // Minimum sync score threshold for candidates
@@ -48,14 +48,10 @@ static int callsign_hashtable_size;
 typedef float float32_t;
 #endif
 
-extern float32_t audioBufferL[], audioBufferR[];
-
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-int load_wav(const char* inputFile, uint32_t num_samples);
-bool readWave(float32_t *buf, int sizeBuf);
 void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq_hz, char *msg);
 
 void ft8_DrawSpectrum(uint8_t *spec, int numSamples);
@@ -220,7 +216,7 @@ void decode(const monitor_t* mon, struct tm* tm_slot_start) {
   hashtable_cleanup(10);
 }
 
-FLASHMEM bool ft8lib_InitDecode() {
+FLASHMEM bool ft8lib_InitDecoder() {
   int result = false;
   ftx_protocol_t protocol = FTX_PROTOCOL_FT8;
   float slot_period = ((protocol == FTX_PROTOCOL_FT8) ? FT8_SLOT_TIME : FT4_SLOT_TIME);
@@ -235,8 +231,8 @@ FLASHMEM bool ft8lib_InitDecode() {
   };
 
   monitor = (monitor_t *)extmem_malloc(sizeof(monitor_t));
-  num_samples = slot_period * sample_rate;
-  signal = (float *)extmem_malloc(num_samples * sizeof(float));
+  numSamples = slot_period * sample_rate;
+  signal = (float *)extmem_malloc(numSamples * sizeof(float));
 
   if(monitor == NULL || signal == NULL) {
     if(monitor != NULL) {
@@ -255,59 +251,13 @@ FLASHMEM bool ft8lib_InitDecode() {
   return result;
 }
 
-// return value: -1=128 samples processed, 0=1920 samples processed, 1=done reading wav file
-int ft8lib_GetWaveData() {
-  static int count = 0;
-  static int processCount = 0;
-
-  // get samples from wave file
-  // let's pull the data at the same rate as the T41 pulls from the I/Q stream
-  // 2048 samples / 8 = 256
-
-  // Or we can look to fill the audio out buffer at the same rate, which is 2048 samples per loop
-  // process wave file data
-  // get next chunk of wave file
-  //readWave(audioBufferL, 1920);
-
-  // wav file sample rate is 12 kHz, T41 audio is 24 kHz
-  // get a half sample size that we'll interpolate to the proper rate
-  if(readWave(audioBufferR, 128)) {
-    // prepare audio stream (mostly just allow user to verify proper wav file transfer)
-
-    // interpolate by 2 to 24 kHz to get audio signal for T41
-    audioBufferL[0] = audioBufferR[0];
-    for(unsigned i = 1; i < 256; i++) {
-      audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
-      audioBufferL[2*i] = audioBufferR[i];
-    }
-
-    // prepare ft8lib signal data
-    for(unsigned i = 0; i < 128; i++) {
-      signal[count++] = audioBufferR[i];
-      if(count >= num_samples) {
-        // prepare for next wav file
-        count = 0;
-
-        // signal we're done reading the wav file
-        return 1;
-      }
-    }
-    if(++processCount == 15) {
-      processCount = 0;
-      return 0;
-    } else {
-      return -1;
-    }
-  } else {
-    // prepare for next wav file
-    count = 0;
-
-    // signal we're done reading the wav file
-    return 1;
-  }
+FLASHMEM void ft8lib_ExitDecoder() {
+  monitor_free(monitor);
+  extmem_free(monitor);
+  extmem_free(signal);
 }
 
-bool ft8lib_ProcessWaveData() {
+bool ft8lib_ProcessSignalData() {
   bool result = false;
   //struct tm tm_slot_start = { 0 };
   struct tm tm_slot_start = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
@@ -316,7 +266,7 @@ bool ft8lib_ProcessWaveData() {
 
   if(signal != NULL && monitor != NULL) {
     // Process and accumulate audio data in a monitor/waterfall instance
-    //for (int frame_pos = 0; frame_pos + monitor->block_size <= num_samples; frame_pos += monitor->block_size)
+    //for (int frame_pos = 0; frame_pos + monitor->block_size <= numSamples; frame_pos += monitor->block_size)
     {
       // Process the waveform data frame by frame - you could have a live loop here with data from an audio device
       monitor_process(monitor, signal + frame_pos);
@@ -327,7 +277,7 @@ bool ft8lib_ProcessWaveData() {
     }
     frame_pos += monitor->block_size;
 
-    if(frame_pos + monitor->block_size > num_samples) {
+    if(frame_pos + monitor->block_size > numSamples) {
       // Decode accumulated data (containing slightly less than a full time slot)
       decode(monitor, &tm_slot_start);
       ftx_waterfall_t* me = &monitor->wf;
@@ -348,14 +298,36 @@ bool ft8lib_ProcessWaveData() {
       frame_pos = 0;
       monitor_reset(monitor);
 
-      monitor_free(monitor);
-      extmem_free(monitor);
-      extmem_free(signal);
-
       result = true;
     }
 
   }
 
   return result;
+}
+
+void ft8lib_SetSignal(float *data, int num) {
+  static int count = 0;
+  static int processCount = 0;
+
+  if(signal != NULL && monitor != NULL) {
+    // transfer data to ft8_lib signal
+    for(int i = 0; i < num; i++) {
+      signal[count++] = data[i];
+      if(count >= numSamples) {
+        // done with this interval
+        break;
+      }
+    }
+    processCount += num;
+    if(processCount >= monitor->block_size) {
+      ft8lib_ProcessSignalData();
+      processCount = 0;
+    }
+    if(count >= numSamples) {
+      // prepare for next data set
+      count = 0;
+      processCount = 0;
+    }
+  }
 }

@@ -189,6 +189,9 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case UNUSED_1:  // 16
+      // assumes data mode already set to DEMOD_FT8_DECODE via ChangeMode
+      // this initializes the ft8_lib
+
       // try to load wav file
       if(SetupFT8Wav()) {
         // switch to play a wav file
@@ -220,7 +223,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
           case DEMOD_FT8:
           case DEMOD_FT8_DECODE:
             // try to load wav file
-            if(SetupFT8Decode()) {
+            if(SetupFT8Decoder()) {
               // switch to play a wav file
               if(SetupFT8Wav()) {
                 bands[currentBand].demod = DEMOD_FT8_WAV;

@@ -79,8 +79,7 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 void Calc1xFreqSpec();
 
 // ft8lib
-int ft8lib_GetWaveData();
-bool ft8lib_ProcessWaveData();
+void ft8lib_SetSignal(float *data, int num);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -286,7 +285,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
     elapsedMicros usec = 0;
 
     // get audio samples from the audio buffers and convert them to float
-    // read in 32 blocks á 128 samples in I and Q
+    // read I and Q blocks into buffers (128 samples each)
     for(int i = 0; i < blocks; i++) {
       /**********************************************************************************
           Using arm_Math library, convert to float one buffer_size.
@@ -481,18 +480,36 @@ int ProcessReceiverData(bool updateSpectrumData) {
         ProcessPSK31WaveData();
         break;
 
+      //case DEMOD_FT8_DECODE:
+      //  // decimate by 16x for FT8 decode
+      //
+      //  // decimation-by-4 in-place
+      //  arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
+      //  arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
+      //
+      //  // decimation-by-4 in-place
+      //  arm_fir_decimate_f32(&FIR_dec3_I, audioBufferL, audioBufferL, 512);
+      //  arm_fir_decimate_f32(&FIR_dec3_Q, audioBufferR, audioBufferR, 512);
+      //  break;
+
       case DEMOD_FT8_WAV:
-        if(ft8lib_GetWaveData() >= 0) {
-          if(ft8lib_ProcessWaveData()) {
-            // return to ft8 decode mode
-            bands[currentBand].demod = DEMOD_FT8_DECODE;
-            currentDataMode = DEMOD_FT8_DECODE;
-            ShowOperatingStats();
-            ft8State = 1;
-            UpdateInfoBoxItem(IB_ITEM_FT8);
-            ProcessFT8Messages();
+        // get samples from wav file (assumed open)
+        // pull data at the same rate as the T41
+        // audio is 256 bytes, 24 kHz at this point
+        // wav file sample rate is 12 kHz
+        // get a half sized sample and interpolate to the proper size/rate
+        // wav FT8 signal data to audioBufferR, audio to audioBufferL
+        if(ReadWav(audioBufferR, 128)) {
+          // interpolate to 24 kHz to get audio signal for T41
+          audioBufferL[0] = audioBufferR[0];
+          for(unsigned i = 1; i < 128; i++) {
+            audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
+            audioBufferL[2*i] = audioBufferR[i];
           }
-        } else {
+
+          // transfer wav data to ft8_lib
+          ft8lib_SetSignal(audioBufferR, 128);
+
           // we're using the audio input buffers to regulate the pace of the output stream
           // without this we'll play the wave file about 3 times faster than normal
           // *** need to check whether we're clipping any of our output with this
@@ -503,6 +520,15 @@ int ProcessReceiverData(bool updateSpectrumData) {
             Q_in_L.clear();
             Q_in_R.clear();
           }
+        } else {
+          // done reading wav file
+          // return to ft8 decode mode
+          bands[currentBand].demod = DEMOD_FT8_DECODE;
+          currentDataMode = DEMOD_FT8_DECODE;
+          ShowOperatingStats();
+          ft8State = 1;
+          UpdateInfoBoxItem(IB_ITEM_FT8);
+          ProcessFT8Messages();
         }
         break;
 

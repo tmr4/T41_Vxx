@@ -580,7 +580,7 @@ uint32_t readUint32() {
 
 // modified from: ft8_lib wave.c
 // Load signal in floating point format (-1 .. +1) as a WAVE file using 16-bit signed integers.
-int load_wav(const char* inputFile, uint32_t num_samples) {
+int LoadWav(const char* inputFile, uint32_t num_samples) {
   char tmp[15];
 
   // wav file format https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
@@ -675,7 +675,7 @@ int load_wav(const char* inputFile, uint32_t num_samples) {
 
 // read wave file scaling data into 16 bit floats between -1 to 1
 // accomodates 8 or 16 bit sample size
-bool readWave(float32_t *buf, int sizeBuf) {
+bool ReadWav(float32_t *buf, int sizeBuf) {
   unsigned long currentPos = f.position();
   int16_t raw_data[sizeBuf];
 

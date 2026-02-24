@@ -895,7 +895,7 @@ FLASHMEM bool setupPSK31Wav() {
   uint32_t num_samples = slot_period * sample_rate;
   //float32_t buf[256];
 
-  result = load_wav("psk31.wav", num_samples); // abc_psk31.wav
+  result = LoadWav("psk31.wav", num_samples); // abc_psk31.wav
 
   if(result != 0) {
     Serial.println("Invalid wave file!");
@@ -903,7 +903,7 @@ FLASHMEM bool setupPSK31Wav() {
   }
 
   // read 1/2 a buffer in to avoid end of buffer problems
-  //readWave(buf, 128);
+  //ReadWav(buf, 128);
 
   return true;
 }
@@ -922,7 +922,7 @@ void ProcessPSK31WaveData() {
 
   // test file has a sample rate of 8000 sps
   // T41 works with audio samples at 24 kHz and 256 byte blocks (256)
-  if(readWave(audioBufferR, 85 + 1)) { // 256 / 3 + 1
+  if(ReadWav(audioBufferR, 85 + 1)) { // 256 / 3 + 1
     // prepare audio stream (mostly just allow user to verify proper wav file transfer)
 
     // interpolate by 3 to 24 kHz to get audio signal for T41

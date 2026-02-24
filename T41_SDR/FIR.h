@@ -10,6 +10,9 @@ extern arm_fir_decimate_instance_f32 FIR_dec1_I;
 extern arm_fir_decimate_instance_f32 FIR_dec1_Q;
 extern arm_fir_decimate_instance_f32 FIR_dec2_I;
 extern arm_fir_decimate_instance_f32 FIR_dec2_Q;
+extern arm_fir_decimate_instance_f32 FIR_dec3_I; // internal FT8 decode
+extern arm_fir_decimate_instance_f32 FIR_dec3_Q; // internal FT8 decode
+
 extern arm_fir_interpolate_instance_f32 FIR_int1_I;
 extern arm_fir_interpolate_instance_f32 FIR_int1_Q;
 extern arm_fir_interpolate_instance_f32 FIR_int2_I;
@@ -49,6 +52,7 @@ extern float32_t FIR_Coef_Q[256 + 1];
 
 extern float32_t /* DMAMEM */ FIR_dec1_coeffs[27];
 extern float32_t /* DMAMEM */ FIR_dec2_coeffs[33];
+extern float32_t /* DMAMEM */ FIR_dec3_coeffs[33];
 extern float32_t /* DMAMEM */ FIR_int1_coeffs[48];
 extern float32_t /* DMAMEM */ FIR_int2_coeffs[32];
 

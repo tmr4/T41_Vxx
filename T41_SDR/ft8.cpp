@@ -89,7 +89,7 @@ extern char myGrid[];
 //-------------------------------------------------------------------------------------------------------------
 
 // ft8lib
-bool ft8lib_InitDecode();
+bool ft8lib_InitDecoder();
 void ShowFT8SpectrumFreqValues();
 
 //-------------------------------------------------------------------------------------------------------------
@@ -392,10 +392,13 @@ FLASHMEM bool SetupFT8() {
   return false;
 }
 
-FLASHMEM bool SetupFT8Decode() {
+FLASHMEM bool SetupFT8Decoder() {
   bool result = false;
 
-  if(ft8lib_InitDecode()) {
+  // return true if the FT8 decoder has already been initialized
+  if(ft8Init) return true;
+
+  if(ft8lib_InitDecoder()) {
     EraseSpectrumDisplayContainer();
     DrawSpectrumFrame();
     tft.writeTo(L2);
@@ -457,11 +460,11 @@ FLASHMEM bool SetupFT8Wav() {
   uint32_t sample_rate = 12000;
   uint32_t num_samples = slot_period * sample_rate;
 
-  //result = load_wav("ft8.wav", num_samples); //
-  result = load_wav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
-  //result = load_wav("ft8_1.wav", num_samples); // CQ KN6ZDE CM87 at 1000
-  //result = load_wav("ft8_10.wav", num_samples); // CQ KN6ZDE CM8x x=0-9 at 1000 + x*100
-  //result = load_wav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
+  //result = LoadWav("ft8.wav", num_samples); //
+  result = LoadWav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
+  //result = LoadWav("ft8_1.wav", num_samples); // CQ KN6ZDE CM87 at 1000
+  //result = LoadWav("ft8_10.wav", num_samples); // CQ KN6ZDE CM8x x=0-9 at 1000 + x*100
+  //result = LoadWav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
 
   if(result != 0) {
     Serial.println("Invalid wave file!");

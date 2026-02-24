@@ -369,7 +369,8 @@ void HardwareLoopStart() {
       // load wave file and begin decoding internally if successful
       ExecuteButtonPress(16);
     } else {
-      // switch to data mode and internal FT8 mode
+      // switch to data mode and internal FT8 decoder
+      // this initializes the ft8_lib
       currentDataMode = DEMOD_FT8_DECODE;
       ChangeMode(DATA_MODE);
 

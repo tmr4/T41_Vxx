@@ -383,7 +383,7 @@ FLASHMEM void ChangeMode(int mode) {
       switch(currentDataMode) {
         case DEMOD_FT8_DECODE:
           // try to set up internal FT8 ops
-          if(SetupFT8Decode()) {
+          if(SetupFT8Decoder()) {
             // internal FT8 set up successful
             bands[currentBand].demod = DEMOD_FT8_DECODE;
           } else {

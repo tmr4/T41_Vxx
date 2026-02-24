@@ -27,7 +27,7 @@ void DisplayActiveMessageDetails();
 void update_synchronization();
 
 bool SetupFT8();
-bool SetupFT8Decode();
+bool SetupFT8Decoder();
 bool SetupFT8Wav();
 void ExitFT8();
 
