@@ -26,7 +26,6 @@ void InitAMDemodBiquadFilter();
 
 int ProcessReceiverData(bool updateSpectrumData = false);
 void ProcessControls();
-float32_t CalcSignalStrength();
 
 void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 

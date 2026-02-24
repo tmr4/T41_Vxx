@@ -25,6 +25,9 @@
 //#include "t41USBHost.h"
 #include "Utility.h"
 
+#include "src\hardwareConfig.h"
+#include "debug.h"
+
 #include "keyboard.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -396,15 +399,11 @@ FASTRUN void ShowFreqSpectrum() {
     newSpectrumFlag = 1;
   }
 
-  // Draw the frequency and audio spectrums, gather data for waterfall
+  // Draw the frequency spectrums, gather data for waterfall
   for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
     bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
 
-    #ifdef PROFILER_ACTIVE
-    static int showSpectrumStart = 0;
-    showSpectrumStart = !showSpectrumStart;
-    digitalWrite(30, showSpectrumStart);
-    #endif
+    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
 
     // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
     yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF;
@@ -564,6 +563,8 @@ FASTRUN void ShowAudioSpectrum() {
 
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
+    TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
+
     // don't overwrite audio filter lines
     if((i != filterLoPosition) && (i != filterHiPosition)) {
       // *** TODO: consider adding audio spectrum for transmission ***
@@ -1451,6 +1452,8 @@ FLASHMEM void ft8_DrawSpectrum(uint8_t *spec, int numSamples) {
   static int count = 0;
 
   for(int i = 0; i < samples; i++) {
+    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
+
     yPlot = SPECTRUM_TOP_Y + 85 - spec[i] / 3;
     y1Plot = SPECTRUM_TOP_Y + 85 - spec[i + 1] / 3;
 

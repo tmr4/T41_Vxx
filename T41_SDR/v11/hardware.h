@@ -36,6 +36,15 @@
 
 #define PTT          37    // Transmit/Receive
 
+// *** TODO: set proper profiler pins ***
+#define PROFILER_MAINLOOP_PIN         1
+#define PROFILER_PROCESS_PIN          1
+#define PROFILER_DRAWFREQSPEC_PIN     1
+#define PROFILER_DRAWAUDIOSPEC_PIN    1
+#define PROFILER_FT8PROCESSBLOCK_PIN  1
+#define PROFILER_FT8GETDATA_PIN       1
+#define PROFILER_FT8DECODE_PIN        1
+
 //------------
 // Menu.cpp
 
@@ -82,7 +91,7 @@
 // Process.h
 
 void RemoveDCBias();
-float32_t CalcSignalStrength();
+float CalcSignalStrength();
 
 //------------
 // T41_SDR.ino

@@ -461,10 +461,10 @@ FLASHMEM bool SetupFT8Wav() {
   uint32_t num_samples = slot_period * sample_rate;
 
   //result = LoadWav("ft8.wav", num_samples); //
-  result = LoadWav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
+  //result = LoadWav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
   //result = LoadWav("ft8_1.wav", num_samples); // CQ KN6ZDE CM87 at 1000
   //result = LoadWav("ft8_10.wav", num_samples); // CQ KN6ZDE CM8x x=0-9 at 1000 + x*100
-  //result = LoadWav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
+  result = LoadWav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
 
   if(result != 0) {
     Serial.println("Invalid wave file!");

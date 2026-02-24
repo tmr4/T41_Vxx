@@ -50,6 +50,15 @@
 #define INT_PIN_1 14
 #define INT_PIN_2 15
 
+// *** TODO: set proper profiler pins ***
+#define PROFILER_MAINLOOP_PIN         1
+#define PROFILER_PROCESS_PIN          1
+#define PROFILER_DRAWFREQSPEC_PIN     1
+#define PROFILER_DRAWAUDIOSPEC_PIN    1
+#define PROFILER_FT8PROCESSBLOCK_PIN  1
+#define PROFILER_FT8GETDATA_PIN       1
+#define PROFILER_FT8DECODE_PIN        1
+
 //------------
 // T41_SDR.ino
 
@@ -104,7 +113,7 @@ void ShowAnalogGain();
 // Process.h
 
 void RemoveDCBias();
-float32_t CalcSignalStrength();
+float CalcSignalStrength();
 
 //------------
 // T41_SDR.ino

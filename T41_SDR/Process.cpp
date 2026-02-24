@@ -26,6 +26,9 @@
 #include "t41USBHost.h"
 #include "Utility.h"
 
+#include "src\hardwareConfig.h"
+#include "debug.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -278,9 +281,8 @@ int ProcessReceiverData(bool updateSpectrumData) {
   // we allow input buffer availability to regulate FT8 wav file decoding otherwise we'll process the wav file too fast
   if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) {
     success = true;
-    #ifdef PROFILER_ACTIVE
-    digitalWrite(4, HIGH);
-    #endif
+
+    TOGGLEPROFILEPIN(PROFILER_PROCESS_PIN);
 
     elapsedMicros usec = 0;
 
@@ -499,6 +501,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
         // wav file sample rate is 12 kHz
         // get a half sized sample and interpolate to the proper size/rate
         // wav FT8 signal data to audioBufferR, audio to audioBufferL
+        TOGGLEPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         if(ReadWav(audioBufferR, 128)) {
           // interpolate to 24 kHz to get audio signal for T41
           audioBufferL[0] = audioBufferR[0];
@@ -530,6 +533,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
           UpdateInfoBoxItem(IB_ITEM_FT8);
           ProcessFT8Messages();
         }
+        TOGGLEPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         break;
 
       default:
@@ -863,9 +867,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
     elapsed_micros_sum = elapsed_micros_sum + usec;
     elapsed_micros_idx_t++;
 
-#ifdef PROFILER_ACTIVE
-    digitalWrite(4, LOW);
-#endif
+    TOGGLEPROFILEPIN(PROFILER_PROCESS_PIN);
   }
 
   return !success ? 0 : (updateFreqSpec ? 2 : 1);

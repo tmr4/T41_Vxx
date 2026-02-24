@@ -37,6 +37,8 @@
 #include "Tune.h"
 #include "Utility.h"
 
+#include "src\hardwareConfig.h"
+
 // special features
 #include "Beacon.h"
 #include "debug.h"
@@ -364,15 +366,22 @@ FLASHMEM void setup() {
   TEMPMON_TEMPSENSE0 |= 0x2U;
 
 #ifdef PROFILER_ACTIVE
-  pinMode(2, OUTPUT);
-  digitalWrite(2, LOW);
-  pinMode(30, OUTPUT);
-  digitalWrite(30, LOW);
-  pinMode(4, OUTPUT);
-  digitalWrite(4, LOW);
-  //pinMode(5, OUTPUT);
-  //digitalWrite(5, LOW);
+  pinMode(PROFILER_PROCESS_PIN, OUTPUT);
+  digitalWrite(PROFILER_PROCESS_PIN, LOW);
+  pinMode(PROFILER_MAINLOOP_PIN, OUTPUT);
+  digitalWrite(PROFILER_MAINLOOP_PIN, LOW);
+  pinMode(PROFILER_DRAWFREQSPEC_PIN, OUTPUT);
+  digitalWrite(PROFILER_DRAWFREQSPEC_PIN, LOW);
+  pinMode(PROFILER_DRAWAUDIOSPEC_PIN, OUTPUT);
+  digitalWrite(PROFILER_DRAWAUDIOSPEC_PIN, LOW);
+  pinMode(PROFILER_FT8PROCESSBLOCK_PIN, OUTPUT);
+  digitalWrite(PROFILER_FT8PROCESSBLOCK_PIN, LOW);
+  pinMode(PROFILER_FT8GETDATA_PIN, OUTPUT);
+  digitalWrite(PROFILER_FT8GETDATA_PIN, LOW);
+  pinMode(PROFILER_FT8DECODE_PIN, OUTPUT);
+  digitalWrite(PROFILER_FT8DECODE_PIN, LOW);
 #endif
+
 }
 
 #ifdef DEBUG
@@ -426,11 +435,7 @@ FASTRUN void loop() {
   int valPin;
   unsigned long cwTransmitTimer;
 
-#ifdef PROFILER_ACTIVE
-  static int loopStart = 0;
-  loopStart = !loopStart;
-  digitalWrite(2, loopStart);
-#endif
+  TOGGLEPROFILEPIN(PROFILER_MAINLOOP_PIN);
 
   HardwareLoopStart();
 

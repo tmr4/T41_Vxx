@@ -1,3 +1,5 @@
+#pragma once
+
 // vPS project system specific hardware header file
 
 //-------------------------------------------------------------------------------------------------------------
@@ -42,6 +44,14 @@
     #define VOLUME_ENCODER_B         3
     #define ENCODER_1_SWITCH         4
     #endif
+
+    #define PROFILER_MAINLOOP_PIN         33
+    #define PROFILER_PROCESS_PIN          34
+    #define PROFILER_DRAWFREQSPEC_PIN     40
+    #define PROFILER_DRAWAUDIOSPEC_PIN    41
+    #define PROFILER_FT8PROCESSBLOCK_PIN  35
+    #define PROFILER_FT8GETDATA_PIN       36
+    #define PROFILER_FT8DECODE_PIN        38
 #endif
 
 #define PTT          37    // Transmit/Receive
@@ -103,7 +113,7 @@ extern Rotary volumeEncoder;        // (2,  3)
 // Process.h
 
 void RemoveDCBias();
-float32_t CalcSignalStrength();
+float CalcSignalStrength();
 
 //------------
 // T41_SDR.ino

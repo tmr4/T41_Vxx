@@ -2,7 +2,7 @@
 
 #define VERSION "vPS_dev.1" // Change this for updates. If you make this longer than 9 characters, brace yourself for surprises
 
-//#define PROFILER_ACTIVE
+#define PROFILER_ACTIVE
 
 #define MASTER_CLK_MULT 4ULL // FOURSQRP QSD frontend requires 4x clock
 

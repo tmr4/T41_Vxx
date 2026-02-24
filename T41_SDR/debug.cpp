@@ -2,6 +2,7 @@
 #include "SDT.h"
 #include "Button.h"
 #include "EEPROM.h"
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -15,6 +16,7 @@ bool memCheck = false;
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+#ifdef DEBUG_LOOP
 
 // set working variables to oldEEPROMData
 void EnterLoop() {
@@ -229,6 +231,7 @@ void ExitLoop() {
   Serial.print("Exiting loop #");
   Serial.println(loopCounter++);
 }
+#endif
 
 /*
 void EnterLoop() {

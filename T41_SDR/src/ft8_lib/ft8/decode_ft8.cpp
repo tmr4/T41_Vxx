@@ -16,6 +16,9 @@
 #include "..\common\common.h"
 #include "..\common\monitor.h"
 
+#include "..\..\hardware.h"
+#include "..\..\..\debug.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -265,33 +268,27 @@ bool ft8lib_ProcessSignalData() {
   static int frame_pos = 0;
 
   if(signal != NULL && monitor != NULL) {
+
     // Process and accumulate audio data in a monitor/waterfall instance
-    //for (int frame_pos = 0; frame_pos + monitor->block_size <= numSamples; frame_pos += monitor->block_size)
-    {
-      // Process the waveform data frame by frame - you could have a live loop here with data from an audio device
-      monitor_process(monitor, signal + frame_pos);
-      if(count < 79)
-        //ft8_DrawSpectrum(&(monitor->wf.mag[count++ * 449]), 449);
-        ft8_DrawSpectrum(&(monitor->wf.mag[count++ * 449 * kFreq_osr * kTime_osr]), 512);
-        //delay(160);
+    // Process the waveform data frame by frame - you could have a live loop here with data from an audio device
+    TOGGLEPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
+    // monitor_process takes about 16ms
+    monitor_process(monitor, signal + frame_pos);
+    TOGGLEPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
+
+    // *** TODO: figure out which symbols to skip ***
+    if(count < 79) {
+      ft8_DrawSpectrum(&(monitor->wf.mag[count++ * 449 * kFreq_osr * kTime_osr]), 512);
     }
     frame_pos += monitor->block_size;
 
     if(frame_pos + monitor->block_size > numSamples) {
+      TOGGLEPROFILEPIN(PROFILER_FT8DECODE_PIN);
+      // decode takes about:
+      //   688ms with ft8_0.wav (~20 messages)
+      //   530ms with ft8_7.wav (5 messages in FT8 range, 7 total)
       // Decode accumulated data (containing slightly less than a full time slot)
       decode(monitor, &tm_slot_start);
-      ftx_waterfall_t* me = &monitor->wf;
-      int mag_size = me->num_blocks * me->time_osr * me->freq_osr * me->num_bins * sizeof(me->mag[0]);
-      //Serial.print("max_blocks: "); Serial.println(me->max_blocks);
-      //Serial.print("num_blocks: "); Serial.println(me->num_blocks);
-      //Serial.print("time_osr: "); Serial.println(me->time_osr);
-      //Serial.print("freq_osr: "); Serial.println(me->freq_osr);
-      //Serial.print("num_bins: "); Serial.println(me->num_bins);
-      //Serial.print("mag_size: "); Serial.println(mag_size);
-      for(int i = 0; i < mag_size; i++) {
-        //if(me->mag[i] > 0)
-        //  Serial.println(me->mag[i]);
-      }
 
       // Reset internal variables for the next time slot
       count = 0;
@@ -299,8 +296,8 @@ bool ft8lib_ProcessSignalData() {
       monitor_reset(monitor);
 
       result = true;
+      TOGGLEPROFILEPIN(PROFILER_FT8DECODE_PIN);
     }
-
   }
 
   return result;

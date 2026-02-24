@@ -180,7 +180,7 @@ void RemoveDCBias() {
   arm_biquad_cascade_df2T_f32(&s1_Receive2, audioBufferR, audioBufferR, 2048);
 }
 
-float32_t CalcSignalStrength() {
+float CalcSignalStrength() {
   float32_t dbm = -131.0;
   //float32_t dbm_calibration = 22.0;
   //float32_t dbm_calibration = 25.0; // calibrated with AD3 (1mW -73dB external attenuation, 223.6mVrms @7.047MHz; see "Wavegen for RF in - S9 - 1mW with 73dB external atten.dwf3work")
