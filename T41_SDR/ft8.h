@@ -3,17 +3,15 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern int ft8_flag, ft8_decode_flag;
+extern int ft8_flag;
 extern bool syncFlag;
 extern int ft8State, ft8TxFreq, ft8RxFreq, ft8TxState, ft8IntState, ft8CqState;
 
 extern bool ft8Init;
 
-extern int DSP_Flag;
+extern bool ft8ProcessFlag, ft8DecodeFlag, ft8SpectrumFlag;
 
 extern int numDecodedMsgs;
-
-extern int FT_8_counter;
 
 extern int activeMsg;
 
@@ -24,18 +22,18 @@ extern int activeMsg;
 void DisplayAllMessages();
 void DisplayActiveMessageDetails();
 
-void update_synchronization();
+void UpdateFT8Synchronization();
 
 bool SetupFT8();
 bool SetupFT8Decoder();
 bool SetupFT8Wav();
 void ExitFT8();
 
-void auto_sync_FT8();
+void AutoSyncFT8();
 
-void ProcessFT8WaveData();
-void BufferFT8Data(float *buffer_LTemp);
-void ProcessFT8Messages();
+bool ReadFT8Wav(float32_t *buf, int sizeBuf);
+void BufferFT8Data(float *buf, int sizeBuf);
+void FT8DecoderLoop();
 
 void ChangeFt8TxFreq(int wheel);
 void ChangeFt8RxFreq(int wheel);

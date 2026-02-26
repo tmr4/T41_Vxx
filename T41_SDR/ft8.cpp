@@ -18,6 +18,8 @@
 #include "InfoBox.h"
 #include "Utility.h"
 
+#include "debug.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -62,8 +64,12 @@ int cqWindowTop, allWindowTop, rxWindowTop;
 
 uint32_t current_time, start_time, ft8_time;
 
-int DSP_Flag;
-int ft8_flag, FT_8_counter, ft8_decode_flag;
+bool ft8ProcessFlag;  // true when a frame of data has been buffered and is ready to process
+bool ft8SpectrumFlag; // true when ft8 frequency spectrum data is ready to be drawn
+bool ft8WavFlag;      // true when ft8 wav file has closed (signals need to shift to DEMOD_FT8_DECODE mode)
+
+int ft8_flag;
+
 int ft8State = 0; // state status for info box: 0 - off, 1 - not sync'd, 2 - sync'd
 int ft8TxState = 0; // ft8 state status for info box: 0 - off, 1 - on
 int ft8IntState = 0; //  ft8 Tx interval state status for info box: 0 - odd, 1 - even
@@ -90,13 +96,17 @@ extern char myGrid[];
 
 // ft8lib
 bool ft8lib_InitDecoder();
-void ShowFT8SpectrumFreqValues();
+bool ft8lib_BufferSignal(float *buf, int sizeBuf);
+bool ft8lib_ProcessSignalData();
+void ft8lib_Decode();
+
+void ft8lib_DrawFT8Spectrum(bool reset = false);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void auto_sync_FT8() {
+void AutoSyncFT8() {
   // allow process to loop until we're within 1 second of the next T/R sequence
   if((second())%15 == 14) {
     // now we can sync up without causing a long delay
@@ -105,7 +115,6 @@ void auto_sync_FT8() {
 
     start_time =millis();
     ft8_flag = 1;
-    FT_8_counter = 0;
     syncFlag = true;
     ft8State = 2;
     //displaySync("sync'd", RA8875_GREEN);
@@ -120,11 +129,10 @@ void auto_sync_FT8() {
 //void sync_FT8() {
 //  start_time =millis();
 //  ft8_flag = 1;
-//  FT_8_counter = 0;
 //}
 
 // called when ft8_flag = 0
-void update_synchronization() {
+void UpdateFT8Synchronization() {
   current_time = millis();
   ft8_time = current_time  - start_time;
 
@@ -134,7 +142,6 @@ void update_synchronization() {
   //if(ft8_flag == 0 && ft8_time % 15000 <= 266) { // within 4 sec of 15 sec interval
   {
     ft8_flag = 1;
-    FT_8_counter = 0;
   }
 }
 
@@ -376,6 +383,12 @@ void DisplayAllMessages() {
   DisplayRxMessages();
 }
 
+void ProcessFT8Messages() {
+  GetRxMessages();
+  GetCqMessages();
+  DisplayAllMessages();
+}
+
 //-------------------------------------------------------------------------------------------------------------
 // other
 //-------------------------------------------------------------------------------------------------------------
@@ -424,8 +437,10 @@ FLASHMEM bool SetupFT8Decoder() {
     //}
 
     ft8Init = true;
-
     syncFlag = false;
+    ft8ProcessFlag = false;
+    ft8SpectrumFlag = false;
+    ft8WavFlag = false;
 
     // update FT8 info box items
     ft8State = 1; // not sync'd
@@ -471,8 +486,6 @@ FLASHMEM bool SetupFT8Wav() {
     return false;
   }
 
-  FT_8_counter = 0;
-
   return true;
 }
 
@@ -484,8 +497,8 @@ FLASHMEM void ExitFT8() {
   // reset FT8 flags and counters
   ft8Init = false;
   syncFlag = false;
-  ft8_decode_flag = 0;
-  FT_8_counter = 0;
+  ft8ProcessFlag = false;
+
   ft8_flag = 0;
   ft8State = 0;
   numDecodedMsgs = 0;
@@ -496,64 +509,85 @@ FLASHMEM void ExitFT8() {
   ClearInfoBoxFT8();
 }
 
-void ProcessFT8WaveData() {
-  // we're not sync'd anymore
-  // reset FT8 flags and counters
-  syncFlag = false;
-  ft8_decode_flag = 0;
-  FT_8_counter = 0;
-  ft8_flag = 0;
+bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
+  bool result = ReadWav(buf, sizeBuf);
 
-  // *** TODO: consider having FT8 decode mode running on 44.1kHz sample rate
-  bands[currentBand].demod = DEMOD_FT8_DECODE;
-  currentDataMode = DEMOD_FT8_DECODE;
-  ShowOperatingStats();
-  ft8State = 1;
-  UpdateInfoBoxItem(IB_ITEM_FT8);
+  if(!result) {
+    // done reading the wav file
+    ft8WavFlag = true;
+  }
+
+  return result;
 }
 
-void BufferFT8Data(float *buffer_LTemp) {
-  static int dataLoop = 0;
-
+void BufferFT8Data(float *buf, int sizeBuf) {
   // don't process data until we're in sync
   if(syncFlag) {
-    if(ft8_decode_flag == 0) {
-      // decimate 24ksps audio sample by 2 to 12ksps needed by ft8_lib
-      // we'll take 15 loops to get 1024 samples (256 samples per loop / 3.75 = 68.27 * 15 loops = 1024)
-      for(unsigned i = 0; i < 68; i++) {
-      }
-
-      ++dataLoop;
-      if(dataLoop == 15) {
-        // fill last cell
-        //ft8_dsp_buffer[3071] = q15_buffer_LTemp[255];
-
-        dataLoop = 0;
-
-        DSP_Flag = 1;
-      }
+    if(ft8lib_BufferSignal(buf, sizeBuf)) {
+      // ready to process a frame of data
+      ft8ProcessFlag = true;
     }
   } else {
-    auto_sync_FT8();
+    AutoSyncFT8();
   }
+/*
+  // old ft8 decode stuff
+  if(ft8_flag == 0 && syncFlag) UpdateFT8Synchronization();
+*/
+}
 
-  if(DSP_Flag == 1 && ft8_flag == 1) {
-    // *** investigate threads to handle FT8 processing while we continue to collect audio
-    //process_FT8_FFT();
-    DSP_Flag = 0;
+bool ProcessFT8Data() {
+  bool result = false;
+  // process a frame of data
+  // there are 79 frames in a FT8 message
+  // but can be more within an interval depending on timing errors
+  SETPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
+  // processing takes about 16ms
+  if(ft8lib_ProcessSignalData()) {
+    result = true;
   }
+  RESETPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
 
-  if(ft8_decode_flag == 1) {
-    //numDecodedMsgs = ft8_decode();
-    //ft8_decode();
-    if(numDecodedMsgs > 0) {
-      //DisplayMessages();
+  return result;
+}
+
+void DecodeFT8Data() {
+  // decode accumulated data (containing slightly less than a full time slot)
+  // decode takes about:
+  //   688ms with ft8_0.wav (~20 messages)
+  //   530ms with ft8_7.wav (5 messages in FT8 range, 7 total)
+  SETPROFILEPIN(PROFILER_FT8DECODE_PIN);
+  ft8lib_Decode();
+  RESETPROFILEPIN(PROFILER_FT8DECODE_PIN);
+}
+
+// FT8 decoder state machine
+void FT8DecoderLoop() {
+  // *** TODO: consider changes to allow continued signal processing while
+  // we're within an interval, but after the normal 12.64 message window,
+  // allowing for decoding of messages that start late ***
+  if(ft8ProcessFlag) {
+    if(ProcessFT8Data()) {
+      DecodeFT8Data();
+      ProcessFT8Messages();
+
+      // reset ft8 draw spectrum routine
+      ft8lib_DrawFT8Spectrum(true);
+    } else {
+      // draw spectrum if not decoding
+      ft8lib_DrawFT8Spectrum();
     }
 
-    ft8_decode_flag = 0;
+    ft8ProcessFlag = false;
   }
 
-  if(ft8_flag == 0 && syncFlag) update_synchronization();
+  if(ft8WavFlag) {
+    bands[currentBand].demod = DEMOD_FT8_DECODE;
+    currentDataMode = DEMOD_FT8_DECODE;
+    ShowOperatingStats();
+    UpdateInfoBoxItem(IB_ITEM_FT8);
+    ft8WavFlag = false;
+  }
 }
 
 void ChangeFt8TxFreq(int wheel) {
@@ -660,11 +694,5 @@ void ChangeFt8ActiveMsg(int x, int y) {
     }
   }
 
-  DisplayAllMessages();
-}
-
-void ProcessFT8Messages() {
-  GetRxMessages();
-  GetCqMessages();
   DisplayAllMessages();
 }

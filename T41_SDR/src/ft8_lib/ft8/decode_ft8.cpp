@@ -16,9 +16,6 @@
 #include "..\common\common.h"
 #include "..\common\monitor.h"
 
-#include "..\..\hardware.h"
-#include "..\..\..\debug.h"
-
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -57,7 +54,7 @@ typedef float float32_t;
 
 void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq_hz, char *msg);
 
-void ft8_DrawSpectrum(uint8_t *spec, int numSamples);
+void DrawFT8Spectrum(uint8_t *spec, int numSamples);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -219,6 +216,10 @@ void decode(const monitor_t* mon, struct tm* tm_slot_start) {
   hashtable_cleanup(10);
 }
 
+//-------------------------------------------------------------------------------------------------------------
+// Public FT8 Library Functions
+//-------------------------------------------------------------------------------------------------------------
+
 FLASHMEM bool ft8lib_InitDecoder() {
   int result = false;
   ftx_protocol_t protocol = FTX_PROTOCOL_FT8;
@@ -260,65 +261,74 @@ FLASHMEM void ft8lib_ExitDecoder() {
   extmem_free(signal);
 }
 
+void ft8lib_Decode() {
+  // *** TODO: this should be set per actual FT8 interval ***
+  struct tm tm_slot_start = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
+
+  if(signal != NULL && monitor != NULL) {
+    decode(monitor, &tm_slot_start);
+
+    // Reset internal variables for the next time slot
+    monitor_reset(monitor);
+  }
+}
+
+// *** TODO: rework reset here ***
+void ft8lib_DrawFT8Spectrum(bool reset /* = false */) {
+  static int count = 0;
+
+  if(reset) {
+    count = 0;
+    return;
+  }
+
+  if(signal != NULL && monitor != NULL) {
+    // *** TODO: figure out which symbols to skip ***
+    if(count < 79) {
+      DrawFT8Spectrum(&(monitor->wf.mag[count++ * 449 * kFreq_osr * kTime_osr]), 512);
+    }
+  }
+}
+
 bool ft8lib_ProcessSignalData() {
   bool result = false;
-  //struct tm tm_slot_start = { 0 };
-  struct tm tm_slot_start = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
-  static int count = 0;
   static int frame_pos = 0;
 
   if(signal != NULL && monitor != NULL) {
-
     // Process and accumulate audio data in a monitor/waterfall instance
-    // Process the waveform data frame by frame - you could have a live loop here with data from an audio device
-    TOGGLEPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
-    // monitor_process takes about 16ms
+    // Process the waveform data frame by frame
     monitor_process(monitor, signal + frame_pos);
-    TOGGLEPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
 
-    // *** TODO: figure out which symbols to skip ***
-    if(count < 79) {
-      ft8_DrawSpectrum(&(monitor->wf.mag[count++ * 449 * kFreq_osr * kTime_osr]), 512);
-    }
     frame_pos += monitor->block_size;
 
     if(frame_pos + monitor->block_size > numSamples) {
-      TOGGLEPROFILEPIN(PROFILER_FT8DECODE_PIN);
-      // decode takes about:
-      //   688ms with ft8_0.wav (~20 messages)
-      //   530ms with ft8_7.wav (5 messages in FT8 range, 7 total)
-      // Decode accumulated data (containing slightly less than a full time slot)
-      decode(monitor, &tm_slot_start);
-
-      // Reset internal variables for the next time slot
-      count = 0;
+      result = true; // signal that decoding can start
       frame_pos = 0;
-      monitor_reset(monitor);
-
-      result = true;
-      TOGGLEPROFILEPIN(PROFILER_FT8DECODE_PIN);
     }
   }
 
   return result;
 }
 
-void ft8lib_SetSignal(float *data, int num) {
+bool ft8lib_BufferSignal(float *buf, int sizeBuf) {
+  bool result = false;
   static int count = 0;
   static int processCount = 0;
 
   if(signal != NULL && monitor != NULL) {
-    // transfer data to ft8_lib signal
-    for(int i = 0; i < num; i++) {
-      signal[count++] = data[i];
+    // transfer buffer to ft8_lib signal
+    for(int i = 0; i < sizeBuf; i++) {
+      signal[count++] = buf[i];
       if(count >= numSamples) {
         // done with this interval
         break;
       }
     }
-    processCount += num;
+    processCount += sizeBuf;
     if(processCount >= monitor->block_size) {
-      ft8lib_ProcessSignalData();
+      // enough data has been gathered to process a frame
+      // flag it for processing
+      result = true;
       processCount = 0;
     }
     if(count >= numSamples) {
@@ -327,4 +337,6 @@ void ft8lib_SetSignal(float *data, int num) {
       processCount = 0;
     }
   }
+
+  return result;
 }

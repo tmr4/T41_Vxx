@@ -550,6 +550,8 @@ FASTRUN void ShowFreqSpectrum() {
       //DisplayAllMessages();
     }
   }
+
+  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
 }
 
 
@@ -586,7 +588,12 @@ FASTRUN void ShowAudioSpectrum() {
       // save data to erase next loop
       yOldAudioPlot[i] = audioYPixel[i];
     }
+
+    // *** TODO: verify need for this ***
+    YieldToProcess();
   }
+
+  RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
 }
 
 /*****
@@ -1441,7 +1448,7 @@ FLASHMEM void ft8lib_DisplayMsg(char *msg) {
 
 // gets called about 15 times for each message period
 // waterfall updates
-FLASHMEM void ft8_DrawSpectrum(uint8_t *spec, int numSamples) {
+FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples) {
   int yPlot, y1Plot = 0;
   int samples = numSamples > 512 ? 512 : numSamples;
   static uint8_t oldSpec[513];
@@ -1471,6 +1478,7 @@ FLASHMEM void ft8_DrawSpectrum(uint8_t *spec, int numSamples) {
       accSpec[i] = (accSpec[i] * count + spec[i]) / (count + 1);  // Try to put pixel values in middle of gradient array
     }
     //accSpec[i] = i / 2;
+    YieldToProcess();
   }
 
   oldSpec[numSamples] = y1Plot;
@@ -1497,7 +1505,16 @@ FLASHMEM void ft8_DrawSpectrum(uint8_t *spec, int numSamples) {
   //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100 + count * 2, WATERFALL_W, 1, waterfall);
   //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100 + count * 2 + 1, WATERFALL_W, 1, waterfall);
 
+  // *** TODO: add when waterfall is moved ***
+  //YieldToProcess();
+  // *** or this: prepares the audio spectrum data
+  YieldToProcess(true);
+
   initialized = true;
+
+  ft8SpectrumFlag = true;
+
+  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
 }
 
 FLASHMEM void ShowFT8SpectrumFreqValues() {

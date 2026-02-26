@@ -45,6 +45,7 @@ typedef __uint8_t uint8_t;
 
 // special demodulation modes not accessible by demod button
 #define DEMOD_PSK31_WAV             (DEMOD_MAX + 1)
+// *** TODO: consider having FT8 decode mode running on 44.1kHz sample rate
 #define DEMOD_FT8_DECODE            (DEMOD_MAX + 2)
 #define DEMOD_FT8_WAV               (DEMOD_MAX + 3)
 

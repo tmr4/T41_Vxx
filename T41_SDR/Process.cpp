@@ -81,9 +81,6 @@ void FreqShift2();
 void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 void Calc1xFreqSpec();
 
-// ft8lib
-void ft8lib_SetSignal(float *data, int num);
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -242,7 +239,7 @@ void AudioDSP(bool updateSpectrumData, int offset, bool imComp = true) {
       1: input stream was processed
       2: spectrums updates
  *****/
-int ProcessReceiverData(bool updateSpectrumData) {
+int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static float32_t audiotmp = 0.0f;
   float32_t w;
   static float32_t wold = 0.0f;
@@ -282,7 +279,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
   if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) {
     success = true;
 
-    TOGGLEPROFILEPIN(PROFILER_PROCESS_PIN);
+    SETPROFILEPIN(PROFILER_PROCESS_PIN);
 
     elapsedMicros usec = 0;
 
@@ -494,6 +491,14 @@ int ProcessReceiverData(bool updateSpectrumData) {
       //  arm_fir_decimate_f32(&FIR_dec3_Q, audioBufferR, audioBufferR, 512);
       //  break;
 
+      case DEMOD_FT8_DECODE:
+        // decimate by 16 to get to 12ksps used by ft8_lib
+        // TODO: consider whether to do this here or after applying audio filters
+
+        // decimation-by-4 in-place
+        // decimation-by-4 in-place
+        break;
+
       case DEMOD_FT8_WAV:
         // get samples from wav file (assumed open)
         // pull data at the same rate as the T41
@@ -501,39 +506,28 @@ int ProcessReceiverData(bool updateSpectrumData) {
         // wav file sample rate is 12 kHz
         // get a half sized sample and interpolate to the proper size/rate
         // wav FT8 signal data to audioBufferR, audio to audioBufferL
-        TOGGLEPROFILEPIN(PROFILER_FT8GETDATA_PIN);
-        if(ReadWav(audioBufferR, 128)) {
+        SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+        if(ReadFT8Wav(audioBufferR, 128)) {
           // interpolate to 24 kHz to get audio signal for T41
+          // *** TODO: evaluate if use of CMISS_DSP library is better ***
           audioBufferL[0] = audioBufferR[0];
           for(unsigned i = 1; i < 128; i++) {
             audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
             audioBufferL[2*i] = audioBufferR[i];
           }
 
-          // transfer wav data to ft8_lib
-          ft8lib_SetSignal(audioBufferR, 128);
-
           // we're using the audio input buffers to regulate the pace of the output stream
           // without this we'll play the wave file about 3 times faster than normal
           // *** need to check whether we're clipping any of our output with this
           //      not a big priority unless we want this to be a standard feature ***
           // *** this slows things down with live FT8 processing of the wav file ***
-          if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
-            Serial.println("clearing...");
-            Q_in_L.clear();
-            Q_in_R.clear();
-          }
-        } else {
-          // done reading wav file
-          // return to ft8 decode mode
-          bands[currentBand].demod = DEMOD_FT8_DECODE;
-          currentDataMode = DEMOD_FT8_DECODE;
-          ShowOperatingStats();
-          ft8State = 1;
-          UpdateInfoBoxItem(IB_ITEM_FT8);
-          ProcessFT8Messages();
+          //if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
+          //  Serial.println("clearing...");
+          //  Q_in_L.clear();
+          //  Q_in_R.clear();
+          //}
         }
-        TOGGLEPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+        RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         break;
 
       default:
@@ -592,14 +586,8 @@ int ProcessReceiverData(bool updateSpectrumData) {
     **********************************************************************************/
     switch(bands[currentBand].demod) {
       case DEMOD_USB:
-      case DEMOD_FT8_DECODE: // demodulate FT8 signals via antenna input as USB for audio
         for(int i = 0; i < 256; i++) {
           audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        }
-
-          // save audio signal to FT8 buffer
-        if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
-          BufferFT8Data(audioBufferL);
         }
         break;
 
@@ -694,11 +682,26 @@ int ProcessReceiverData(bool updateSpectrumData) {
         Psk31PhaseShiftDetector(&audioFFT[512], audioBufferL_EX, 256);
         break;
 
-      case DEMOD_FT8_WAV:
-        // transfer audio signal back to buffer
+      case DEMOD_FT8_DECODE: // demodulate FT8 signals via antenna input as USB for audio
+        // *** TODO: work out audio dsp for ft8 decode signals ***
         for(int i = 0; i < 256; i++) {
           audioBufferL[i] = audioIFFT[512 + (i * 2)];
         }
+
+        // save audio signal to FT8 buffer
+        //BufferFT8Data(audioBufferL, 128);
+        break;
+
+        case DEMOD_FT8_WAV:
+        // transfer audio signal back to buffer
+        // *** TODO: should wav data be passed through audio filters ***
+        for(int i = 0; i < 256; i++) {
+          audioBufferL[i] = audioIFFT[512 + (i * 2)];
+        }
+        // transfer wav data to ft8_lib
+        // *** TODO: pass raw or filtered data to FT8? ***
+        //BufferFT8Data(audioBufferL, 128);
+        BufferFT8Data(audioBufferR, 128);
         break;
 
       default:
@@ -867,7 +870,7 @@ int ProcessReceiverData(bool updateSpectrumData) {
     elapsed_micros_sum = elapsed_micros_sum + usec;
     elapsed_micros_idx_t++;
 
-    TOGGLEPROFILEPIN(PROFILER_PROCESS_PIN);
+    RESETPROFILEPIN(PROFILER_PROCESS_PIN);
   }
 
   return !success ? 0 : (updateFreqSpec ? 2 : 1);

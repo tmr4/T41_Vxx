@@ -197,6 +197,7 @@ void ShowCurrentPowerSetting();
 
 void ShowFreqSpectrum();
 void ShowAudioSpectrum();
+void ShowFT8SpectrumFreqValues();
 
 void UpdateCWFilter();
 

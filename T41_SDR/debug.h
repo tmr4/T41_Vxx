@@ -9,8 +9,8 @@
 //#define ALT_ISR
 
 #ifdef PROFILER_ACTIVE
-//#define SETPROFILEPIN(pin) digitalWriteFast(pin, HIGH)
-//#define RESETPROFILEPIN(pin) digitalWriteFast(pin, LOW)
+#define SETPROFILEPIN(pin) digitalWriteFast(pin, HIGH)
+#define RESETPROFILEPIN(pin) digitalWriteFast(pin, LOW)
 #define TOGGLEPROFILEPIN(pin) digitalToggleFast(pin)
 //#define TOGGLEPROFILEPIN(pin) digitalWrite(pin, !digitalRead(pin))
 #else

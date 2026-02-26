@@ -44,6 +44,7 @@
 #include "debug.h"
 #include "keyboard.h"
 #include "keyer.h"
+#include "ft8.h"
 #include "mouse.h"
 #include "remote.h"
 #include "t41Beacon.h"
@@ -435,6 +436,8 @@ FASTRUN void loop() {
   int valPin;
   unsigned long cwTransmitTimer;
 
+  // *** can't use set/reset here as it can be hard to catch with a quick loop ***
+  //SETPROFILEPIN(PROFILER_MAINLOOP_PIN);
   TOGGLEPROFILEPIN(PROFILER_MAINLOOP_PIN);
 
   HardwareLoopStart();
@@ -614,8 +617,23 @@ FASTRUN void loop() {
       break;
 
     case DATA_RECEIVE_STATE:
+      // *** TODO: currently only for FT8 decoder ***
+      // *** TODO: consider moving YieldToProcess call here to ShowAudioSpectrum as an option ***
+      // *** normally the audio spectrum is updated once per frequency spectrum update
+      //     but we have more time with wav file decoding ***
+      // *** TODO: evaluate a single or multiple audio spectrum update(s) ***
+      // about 130ms between frequency spectrum updates with either a single or multiple
+      // audio spectrum update(s), therefore might as well do multiple updates
       YieldToProcess(true);
       ShowAudioSpectrum();
+      FT8DecoderLoop();
+      //if(ft8SpectrumFlag) {
+      //  //YieldToProcess();
+      //  ShowAudioSpectrum();
+      //  ft8SpectrumFlag = false;
+      //}
+      //YieldToProcess();
+      //FT8DecoderLoop();
       break;
 
     case SSB_TRANSMIT_STATE:
@@ -740,4 +758,6 @@ FASTRUN void loop() {
   // PC control app.  These may not be needed if that app isn't used.
   delay(12);
 #endif
+
+  //RESETPROFILEPIN(PROFILER_MAINLOOP_PIN);
 }

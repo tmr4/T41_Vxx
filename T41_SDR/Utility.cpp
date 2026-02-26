@@ -558,23 +558,23 @@ FLASHMEM void PrimeMallInfo() {
   }
 }
 
-File f;
+File fWav;
 unsigned long position, sizeWav;
 uint16_t bitsPerSample;
 
 uint8_t readUint8() {
   uint8_t tmp;
-  f.read((char *)&tmp, sizeof(uint8_t));
+  fWav.read((char *)&tmp, sizeof(uint8_t));
   return tmp;
 }
 uint16_t readUint16() {
   uint16_t tmp;
-  f.read((char *)&tmp, sizeof(uint16_t));
+  fWav.read((char *)&tmp, sizeof(uint16_t));
   return tmp;
 }
 uint32_t readUint32() {
   uint32_t tmp;
-  f.read((char *)&tmp, sizeof(uint32_t));
+  fWav.read((char *)&tmp, sizeof(uint32_t));
   return tmp;
 }
 
@@ -605,21 +605,21 @@ int LoadWav(const char* inputFile, uint32_t num_samples) {
   char subChunk2ID[4];    // = {'d', 'a', 't', 'a'};
   uint32_t subChunk2Size; // = num_samples * blockAlign;
 
-  f = SD.open(inputFile, FILE_READ);
+  fWav = SD.open(inputFile, FILE_READ);
 
-  if(!f)
+  if(!fWav)
     return -1;
 
-  f.seek(0);
-  sizeWav = f.size();
+  fWav.seek(0);
+  sizeWav = fWav.size();
 
   // master RIFF chunk
-  f.read(tmp, sizeof(chunkID));
+  fWav.read(tmp, sizeof(chunkID));
   chunkSize = readUint32();
-  f.read(tmp, sizeof(format));
+  fWav.read(tmp, sizeof(format));
 
   // format chunk
-  f.read(tmp, sizeof(subChunk1ID));
+  fWav.read(tmp, sizeof(subChunk1ID));
   subChunk1Size = readUint32();
 
   if(!((subChunk1Size == 16) || (subChunk1Size == 18) || (subChunk1Size == 40))) {
@@ -649,14 +649,14 @@ int LoadWav(const char* inputFile, uint32_t num_samples) {
 
   // skip over extension stuff if needed
   if(subChunk1Size == 18) {
-    f.seek(38);
+    fWav.seek(38);
   } else {
     if(subChunk1Size == 40) {
-      f.seek(60);
+      fWav.seek(60);
     }
   }
 
-  f.read(tmp, sizeof(subChunk2ID));
+  fWav.read(tmp, sizeof(subChunk2ID));
 
   subChunk2Size = readUint32();
 
@@ -668,7 +668,7 @@ int LoadWav(const char* inputFile, uint32_t num_samples) {
     return -4;
   }
 
-  position = f.position();
+  position = fWav.position();
 
   return 0;
 }
@@ -676,20 +676,22 @@ int LoadWav(const char* inputFile, uint32_t num_samples) {
 // read wave file scaling data into 16 bit floats between -1 to 1
 // accomodates 8 or 16 bit sample size
 bool ReadWav(float32_t *buf, int sizeBuf) {
-  unsigned long currentPos = f.position();
+  unsigned long currentPos = fWav.position();
   int16_t raw_data[sizeBuf];
+
+  if(!fWav) return false;
 
   //Serial.print("sizeBuf = "); Serial.println(sizeBuf);
 
   // close file if we're done
   // *** likely missing the end of file here ***
   if(currentPos + sizeBuf >= sizeWav) {
-    //f.seek(position); // reset wave file to beginning of data if needed
-    f.close();
+    //fWav.seek(position); // reset wave file to beginning of data if needed
+    fWav.close();
     return false;
   }
 
-  f.read((void*)raw_data, sizeBuf * bitsPerSample / 8);
+  fWav.read((void*)raw_data, sizeBuf * bitsPerSample / 8);
   for(int i = 0; i < sizeBuf; i++) {
     buf[i] = raw_data[i] / 32768.0f;
     //Serial.println(buf[i]);
