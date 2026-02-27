@@ -1,4 +1,10 @@
-// T41 aspects of internal FT8 processing (with my modified ft8_lib from: https://github.com/kgoba/ft8_lib)
+
+// T41 FT8 specifics:
+// External FT8
+//  - switches to 44.1k sample rate
+//  - returns to 192k sample rate
+//
+// Internal FT8 processing (with modified ft8_lib from: https://github.com/kgoba/ft8_lib)
 //  - decoding over the air and wav file FT8
 //  - encoding set message (to come)
 
@@ -94,8 +100,15 @@ extern char myGrid[];
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+int SetI2SFreq(int freq);
+void InitFFTArrays();
+void InitHilbertFilters();
+void SetupDemodFilterBW();
+void ResetTuning();
+
 // ft8lib
 bool ft8lib_InitDecoder();
+void ft8lib_ExitDecoder();
 bool ft8lib_BufferSignal(float *buf, int sizeBuf);
 bool ft8lib_ProcessSignalData();
 void ft8lib_Decode();
@@ -392,20 +405,47 @@ void ProcessFT8Messages() {
 //-------------------------------------------------------------------------------------------------------------
 // other
 //-------------------------------------------------------------------------------------------------------------
-bool InitFT8() {
-  //
 
-  return false;
+FLASHMEM bool InitFT8() {
+  bool result = true;
+
+  if(sampleRate > 50000) {
+    sampleRate = 44100.0;
+    intermediateFreq = 11025.0;
+    // using 48k sample rate doesn't change FT8 transmision
+    //sampleRate = 48000.0;
+    //intermediateFreq = 12000.0;
+    SetI2SFreq(sampleRate);
+    InitFFTArrays();
+    SetZoom(1);
+    //InitZoomFFTFilter(); // *** TODO: can save some memory by specifying block size if will operate in FT8 a lot ***
+    InitHilbertFilters();
+    SetupDemodFilterBW();
+    //ShowSpectrumFreqValues();
+    DrawAudioSpectContainer();
+    DrawAudioFilterLines();
+    ResetTuning();
+  }
+
+  return result;
 }
-bool InitFT8DSP() {
-  return false;
+FLASHMEM void ExitFT8() {
+  if(sampleRate < 50000) {
+    sampleRate = 192000.0;
+    intermediateFreq = 48000.0;
+    SetI2SFreq(sampleRate);
+    InitFFTArrays();
+    SetZoom(1);
+    InitHilbertFilters();
+    SetupDemodFilterBW();
+    DrawAudioSpectContainer();
+    DrawAudioFilterLines();
+    //ShowSpectrumFreqValues();
+    //ShowOperatingStats();
+  }
 }
 
-FLASHMEM bool SetupFT8() {
-  return false;
-}
-
-FLASHMEM bool SetupFT8Decoder() {
+FLASHMEM bool InitFT8Decoder() {
   bool result = false;
 
   // return true if the FT8 decoder has already been initialized
@@ -464,6 +504,8 @@ FLASHMEM bool SetupFT8Decoder() {
     tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
     tft.writeTo(L1);
     wfRows = WATERFALL_H - FT8_ROW_HEIGHT * FT8_ROWS - 3;
+
+    result = true;
   }
 
   return result;
@@ -489,8 +531,23 @@ FLASHMEM bool SetupFT8Wav() {
   return true;
 }
 
-FLASHMEM void ExitFT8() {
-  // restore message area
+FLASHMEM void ExitFT8Decoder() {
+  // ensure wav file is closed if we played one
+  // *** TODO: consider separate wav exit ***
+  CloseWav();
+
+  // clean up ft8_lib
+  ft8lib_ExitDecoder();
+
+  displayState = DISPLAY_T41_FT8_DECODE;
+
+  // redraw frequency spectrum area
+  ShowSpectrumdBScale();
+  ShowBandwidthBarValues();
+  DrawBandwidthBar();
+  ShowSpectrumFreqValues();
+
+  // restore waterfall area
   tft.fillRect(WATERFALL_L, YPIXELS - 20 * 6, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
   wfRows = WATERFALL_H;
 
@@ -503,10 +560,14 @@ FLASHMEM void ExitFT8() {
   ft8State = 0;
   numDecodedMsgs = 0;
 
-  // update info box
-  //UpdateInfoBoxItem(IB_ITEM_FT8);
+  // update FT8 info box items
   infoBoxItemActive[IB_ITEM_FT8] = false;
-  ClearInfoBoxFT8();
+  infoBoxItemActive[IB_ITEM_FT8_TX] = false;
+  infoBoxItemActive[IB_ITEM_FT8_TXF] = false;
+  infoBoxItemActive[IB_ITEM_FT8_RXF] = false;
+  infoBoxItemActive[IB_ITEM_FT8_INT] = false;
+  infoBoxItemActive[IB_ITEM_FT8_CQ] = false;
+  UpdateInfoBox();
 }
 
 bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
@@ -582,10 +643,9 @@ void FT8DecoderLoop() {
   }
 
   if(ft8WavFlag) {
-    bands[currentBand].demod = DEMOD_FT8_DECODE;
-    currentDataMode = DEMOD_FT8_DECODE;
-    ShowOperatingStats();
-    UpdateInfoBoxItem(IB_ITEM_FT8);
+    // done with wav file, switch to FT8 decode mode
+    ChangeDemodMode(DEMOD_FT8_DECODE);
+    //ChangeDemodMode(DEMOD_USB);
     ft8WavFlag = false;
   }
 }

@@ -24,10 +24,12 @@ void DisplayActiveMessageDetails();
 
 void UpdateFT8Synchronization();
 
-bool SetupFT8();
-bool SetupFT8Decoder();
-bool SetupFT8Wav();
+bool InitFT8();
 void ExitFT8();
+
+bool InitFT8Decoder();
+bool SetupFT8Wav();
+void ExitFT8Decoder();
 
 void AutoSyncFT8();
 

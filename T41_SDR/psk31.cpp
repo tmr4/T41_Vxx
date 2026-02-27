@@ -994,9 +994,7 @@ void ProcessPSK31WaveData() {
     if(Q_in_R.available() > 25) Q_in_R.clear();
   }
   else {
-    bands[currentBand].demod = DEMOD_PSK31;
-    currentDataMode = DEMOD_PSK31;
-    ShowOperatingStats();
+    ChangeDemodMode(DEMOD_PSK31);
   }
   */
 }

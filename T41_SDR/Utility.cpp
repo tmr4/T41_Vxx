@@ -714,6 +714,11 @@ int GetXRState() {
   }
 }
 
+// wav file should be closed above, but this prevents memory link in case of error
+void CloseWav() {
+  fWav.close();
+}
+
 /*****
   Purpose: get/set time from Teensy rtc
 

@@ -12,7 +12,6 @@ extern bool nfmBWFilterActive;
 extern bool ft8MsgSelectActive;
 
 extern int priorDemodMode;
-extern int currentDataMode;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -21,6 +20,8 @@ extern int currentDataMode;
 void ChangeBand(int change);
 void ChangeBand(long newFreq);
 void ButtonFilter();
+void ButtonMode();
+void ButtonDemodMode();
 void ChangeDemodMode(int mode);
 void ChangeMode(int mode);
 void ButtonNR();

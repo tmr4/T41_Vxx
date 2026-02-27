@@ -144,10 +144,12 @@ FLASHMEM void VFOSelect(int32_t index) {
       break;
   }
 
+  // *** TODO: this needs reworked ***
+  /*
   if(radioMode == DATA_MODE) {
     priorDemodMode = bands[currentBand].demod; // save demod mode for restoration later
 
-    switch(currentDataMode) {
+    switch(bands[currentBand].demod) {
       case DEMOD_PSK31_WAV:
       case DEMOD_PSK31:
         bands[currentBand].demod = DEMOD_PSK31;
@@ -162,6 +164,7 @@ FLASHMEM void VFOSelect(int32_t index) {
         break;
     }
   }
+  */
 
   bands[currentBand].freq = TxRxFreq;
   SetBand();                            // SetBand updates the display

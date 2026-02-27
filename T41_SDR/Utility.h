@@ -47,6 +47,8 @@ void PrimeMallInfo();
 
 int LoadWav(const char* inputFile, uint32_t num_samples);
 bool ReadWav(float32_t *buf, int sizeBuf);
+void CloseWav();
+
 int GetXRState();
 
 time_t GetTeensyTime();

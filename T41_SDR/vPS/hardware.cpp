@@ -365,17 +365,7 @@ void ConfigRadioStateHardware() {
 void HardwareLoopStart() {
   // poll encoder switch
   if(encoderSwitch.update() && encoderSwitch.fallingEdge()) {
-    if(radioMode == DATA_MODE) {
-      // load wave file and begin decoding internally if successful
-      ExecuteButtonPress(16);
-    } else {
-      // switch to data mode and internal FT8 decoder
-      // this initializes the ft8_lib
-      currentDataMode = DEMOD_FT8_DECODE;
-      ChangeMode(DATA_MODE);
-
-      // load wave file and begin decoding internally if successful
-      ExecuteButtonPress(16);
-    }
+    // load wave file and begin decoding internally if successful
+    ExecuteButtonPress(16);
   }
 }

@@ -299,6 +299,8 @@ void DoExciterEQ() {
 void UpdateAudioFilterMask(float *coeffs_I, float *coeffs_Q, int numCoeffs, float32_t fLoCut, float32_t fHiCut, float sampleRate) {
   const arm_cfft_instance_f32* maskS = &arm_cfft_sR_f32_len512;
 
+  //Serial.print(fLoCut); Serial.print(", "); Serial.println(fHiCut);
+
   // calculate audio FFT filter coefficients
   CalcCplxFIRCoeffs(coeffs_I, coeffs_Q, numCoeffs, fLoCut, fHiCut, sampleRate);
 

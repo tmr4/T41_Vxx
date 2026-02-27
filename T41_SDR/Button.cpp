@@ -134,8 +134,8 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case DEMODULATION:  // 7
-      // change to the next demod mode
-      ChangeDemodMode(bands[currentBand].demod + 1);
+      // change to the next standard demod mode
+      ButtonDemodMode();
       break;
 
     case SET_MODE:  // 8
@@ -189,66 +189,14 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case UNUSED_1:  // 16
-      // assumes data mode already set to DEMOD_FT8_DECODE via ChangeMode
-      // this initializes the ft8_lib
+      ChangeDemodMode(DEMOD_FT8_WAV);
 
-      // try to load wav file
-      if(SetupFT8Wav()) {
-        // switch to play a wav file
-        bands[currentBand].demod = DEMOD_FT8_WAV;
-        currentDataMode = DEMOD_FT8_WAV;
-        ShowOperatingStats();
-        syncFlag = true;
-        ft8State = 2;
-        UpdateInfoBoxItem(IB_ITEM_FT8);
-      } else {
-        // couldn't load wav file
-        syncFlag = false;
-        ft8State = 1;
-        UpdateInfoBoxItem(IB_ITEM_FT8);
-      }
-/*
-      if(radioMode == DATA_MODE) {
-        switch(bands[currentBand].demod) {
-          case DEMOD_PSK31:
-            // try to load wav file
-            if(setupPSK31Wav()) {
-              // switch to play a wav file
-              bands[currentBand].demod = DEMOD_PSK31_WAV;
-              currentDataMode = DEMOD_PSK31_WAV;
-              ShowOperatingStats();
-            }
-            break;
-
-          case DEMOD_FT8:
-          case DEMOD_FT8_DECODE:
-            // try to load wav file
-            if(SetupFT8Decoder()) {
-              // switch to play a wav file
-              if(SetupFT8Wav()) {
-                bands[currentBand].demod = DEMOD_FT8_WAV;
-                currentDataMode = DEMOD_FT8_WAV;
-                ShowOperatingStats();
-                syncFlag = true;
-                ft8State = 2;
-                UpdateInfoBoxItem(IB_ITEM_FT8);
-              } else {
-                // couldn't load wav file
-                syncFlag = false;
-                ft8State = 1;
-                UpdateInfoBoxItem(IB_ITEM_FT8);
-              }
-            }
-            break;
-        }
-      } else {
-        // *** TODO: from v12, validate v11 calibration routines
-        // changed from v11: if(calOnFlag == 0) {
-        if(calibrateItem < 0) {
-          ButtonFrequencyEntry();
-        }
-      }
-*/
+      // *** TODO: examine restoring this ***
+      // *** TODO: from v12, validate v11 calibration routines
+      // changed from v11: if(calOnFlag == 0) {
+      //if(calibrateItem < 0) {
+      //  ButtonFrequencyEntry();
+      //}
       break;
 
     //case BEARING:  // 17

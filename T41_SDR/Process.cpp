@@ -491,13 +491,13 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       //  arm_fir_decimate_f32(&FIR_dec3_Q, audioBufferR, audioBufferR, 512);
       //  break;
 
-      case DEMOD_FT8_DECODE:
+      //case DEMOD_FT8_DECODE:
         // decimate by 16 to get to 12ksps used by ft8_lib
         // TODO: consider whether to do this here or after applying audio filters
 
         // decimation-by-4 in-place
         // decimation-by-4 in-place
-        break;
+      //  break;
 
       case DEMOD_FT8_WAV:
         // get samples from wav file (assumed open)

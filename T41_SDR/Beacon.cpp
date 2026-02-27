@@ -32,7 +32,7 @@ bool beaconFlag = false;
 long priorFreq;
 long priorBeaconBandFreq[5];
 int priorBand;
-int priorMode;
+static int priorMode;
 int priorDemod;
 int priorFilterHi[5];
 int priorFilterLo[5];

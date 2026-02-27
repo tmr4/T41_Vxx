@@ -402,15 +402,6 @@ void IBLoadFollowup(int row, int col) {
   elapsed_micros_sum = 0;
 }
 
-void ClearInfoBoxFT8() {
-  int row = infoBox[IB_ITEM_FT8].row;
-
-  ClearInfoBoxRow(row);
-  ClearInfoBoxRow(row + 20);
-  ClearInfoBoxRow(row + 40);
-  DrawInfoBoxFrame();
-}
-
 /*****
   Purpose: Information box follow up function for the FT8 item
 

@@ -421,12 +421,7 @@ void WSJTLoop()
       case 'I':
         if(cmd[1] == 'D' && cmd[2] == ';') { // ID;
           // receipt of ID command will switch to FT8 Data mode if not already there
-          if(radioMode != DATA_MODE) {
-            currentDataMode = DEMOD_FT8;
-            ChangeMode(DATA_MODE);
-          } else if(bands[currentBand].demod != DEMOD_FT8) {
-            ChangeDemodMode(DEMOD_FT8);
-          }
+          ChangeDemodMode(DEMOD_FT8);
 
           // reply with the TS-890S id
           sprintf(cmd,"ID024;");

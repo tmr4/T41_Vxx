@@ -505,60 +505,6 @@ FASTRUN void loop() {
     } else {
       radioState = DATA_RECEIVE_STATE;
     }
-
-    // *** TODO: consider best place to do this ***
-    // *** TODO: this needs work ***
-    switch(bands[currentBand].demod) {
-      case DEMOD_FT8:
-        if(sampleRate > 50000) {
-          sampleRate = 44100.0;
-          intermediateFreq = 11025.0;
-          // using 48k sample rate doesn't change FT8 transmision
-          //sampleRate = 48000.0;
-          //intermediateFreq = 12000.0;
-          SetI2SFreq(sampleRate);
-          InitFFTArrays();
-          SetZoom(1);
-          //InitZoomFFTFilter(); // *** TODO: can save some memory by specifying block size if will operate in FT8 a lot ***
-          InitHilbertFilters();
-          SetupDemodFilterBW();
-          //ShowSpectrumFreqValues();
-          DrawAudioSpectContainer();
-          DrawAudioFilterLines();
-          ResetTuning();
-        }
-        break;
-
-      default:
-        if(sampleRate < 50000) {
-          sampleRate = 192000.0;
-          intermediateFreq = 48000.0;
-          SetI2SFreq(sampleRate);
-          InitFFTArrays();
-          SetZoom(1);
-          InitHilbertFilters();
-          SetupDemodFilterBW();
-          DrawAudioSpectContainer();
-          DrawAudioFilterLines();
-          //ShowSpectrumFreqValues();
-          //ShowOperatingStats();
-        }
-        break;
-    }
-  } else {
-    if(sampleRate < 50000) {
-      sampleRate = 192000.0;
-      intermediateFreq = 48000.0;
-      SetI2SFreq(sampleRate);
-      InitFFTArrays();
-      SetZoom(1);
-      InitHilbertFilters();
-      SetupDemodFilterBW();
-      DrawAudioSpectContainer();
-      DrawAudioFilterLines();
-      //ShowSpectrumFreqValues();
-      //ShowOperatingStats();
-    }
   }
 
   if(radioState != lastState) {

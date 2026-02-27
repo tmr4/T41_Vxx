@@ -55,4 +55,3 @@ void HighlightIBItem(uint8_t item, int color);
 void SetFtActive(int flag);
 
 void ClearInfoBoxKeyer();
-void ClearInfoBoxFT8();
