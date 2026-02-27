@@ -25,6 +25,9 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+EXTMEM float32_t ft8WavBuf[15 * 12000]; // buffer a FT8 wav file for use with decoder
+int numWavBuf;
+
 //------------
 // Encoders.cpp
 

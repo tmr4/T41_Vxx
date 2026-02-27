@@ -26,6 +26,10 @@
 
 #include "debug.h"
 
+//#include "..\src\hardware.h"
+#include "src\hardware.h"
+#include "src\hardwareConfig.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -572,6 +576,14 @@ FLASHMEM void ExitFT8Decoder() {
 
 bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
   bool result = ReadWav(buf, sizeBuf);
+
+#ifdef PROJECTSYSTEM
+  // transfer to wav buffer
+  if(numWavBuf >= 15*12000) numWavBuf = 0;
+  for(int i = 0; i < sizeBuf && numWavBuf < 15*12000; i++, numWavBuf++) {
+    ft8WavBuf[numWavBuf] = buf[i];
+  }
+#endif
 
   if(!result) {
     // done reading the wav file
