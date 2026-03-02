@@ -1,6 +1,13 @@
+
+#include "hardwareConfig.h"
+
+#ifdef PROJECTSYSTEM_ENCODER_MCP
+
 #include "..\SDT.h"
 
 #include "..\Button.h"
+
+#include "FrontPanel.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -55,3 +62,5 @@ int ReadSelectedPushButton() {
 
   return pressed;
 }
+
+#endif

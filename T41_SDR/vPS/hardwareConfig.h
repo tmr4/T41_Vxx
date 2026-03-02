@@ -16,10 +16,22 @@
 // pick one of the following front panel configurations
 //#define MCP23017_FRONTPANEL // MCP23017 driven front panel
 //#define FOURSQRP_FRONTPANEL // resistive switch matrix front panel
-//#define PROJECTSYSTEM_EXPANDED_IO
+#define PROJECTSYSTEM_EXPANDED_IO_40
+//#define PROJECTSYSTEM_EXPANDED_IO_41
 //#define PROJECTSYSTEM_FINETUNE_ENCODER // for testing w/ project system
 //#define PROJECTSYSTEM_VOLUME_ENCODER // for testing w/ project system
-#define PROJECTSYSTEM_ENCODER_1 // for testing w/ project system
+
+// *** currently Rotary and Rotary_V12 can't coexist so only ENCODER_1 or ENCODER_MCP be enabled ***
+// *** currently these are both controlling the volume encoder so only one should be enabled at a time ***
+#define PROJECTSYSTEM_ENCODER_1   // for testing v11 type encoder w/ project system
+//#define PROJECTSYSTEM_ENCODER_MCP // for testing MCP23017 type encoder w/ project system
+
+#define VOLUME_REVERSED false
+#define FILTER_REVERSED false
+#define MAIN_TUNE_REVERSED false
+#define FINE_TUNE_REVERSED false
+
+#define PROJECTSYSTEM_MCP23017_ADDR 0x24
 
 // uncomment below for USB Host support
 #define USB_HOST_SUPPORT
@@ -47,7 +59,7 @@
 #define wsjtSerial Serial // Serial or SerialUSB1 or SerialUSB2
 
 // can also use Project System I/O Expanders
-#ifdef PROJECTSYSTEM_EXPANDED_IO
+#ifdef PROJECTSYSTEM_EXPANDED_IO_40
 // the Project System only has one MCP23017
 // can test other half of front panel by selecting address 0x24 (or 0x20) below
 // (consider coding for the sn74cbtlv3251 if fully functional front panel on Project System is needed)

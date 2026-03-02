@@ -29,6 +29,10 @@
 #include "src\hardwareConfig.h"
 #include "debug.h"
 
+#ifdef PROJECTSYSTEM_ENCODER_MCP
+#include "src\FrontPanel.h"
+#endif
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -495,13 +499,17 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // transfer to wav buffer to audio buffers
         // and interpolate to 24 kHz to get audio signal for T41
         // *** TODO: evaluate if use of CMISS_DSP library is better ***
-        if(numWavBuf >= 15*12000) numWavBuf = 0;
-        audioBufferR[0] = ft8WavBuf[numWavBuf++];
-        audioBufferL[0] = audioBufferR[0];
-        for(int i = 0; i < 128 && numWavBuf < 15*12000; i++, numWavBuf++) {
-          audioBufferR[i] = ft8WavBuf[numWavBuf++];
-          audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
-          audioBufferL[2*i] = audioBufferR[i];
+        if(syncFlag) {
+          //if(numWavBuf >= 15*12000) numWavBuf = 0;
+          audioBufferR[0] = ft8WavBuf[numWavBuf++];
+          audioBufferL[0] = audioBufferR[0];
+          for(int i = 0; i < 128 && numWavBuf < 15*12000; i++, numWavBuf++) {
+            audioBufferR[i] = ft8WavBuf[numWavBuf++];
+            audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
+            audioBufferL[2*i] = audioBufferR[i];
+            Serial.print(numWavBuf); Serial.print(", "); Serial.println(ft8WavBuf[numWavBuf]);
+          }
+          if(numWavBuf >= 15*12000-1) numWavBuf = 0;
         }
       #endif
         RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
@@ -934,17 +942,8 @@ FASTRUN void ProcessControls() {
   }
 
 #ifdef FRONT_PANEL_POLLING_OPS
-  if(digitalRead(INT_PIN_1) == LOW) {
-    //Serial.println("polling mcp1");
-    Mcp1Isr();
-  }
-  if(digitalRead(INT_PIN_2) == LOW) {
-    // *** TODO: a call comes through here on power up (but not on reprogramming).
-    //      It's not really an issue, but it would be nice to know why.  It
-    //      doesn't happen above so it's likely encoder related. ***
-    //Serial.println("polling mcp2");
-    Mcp2Isr();
-  }
+  // *** TODO: this looks like it is never active, no header to include ***
+  PollFrontPanel();
 #endif
 
   // update volume if changed

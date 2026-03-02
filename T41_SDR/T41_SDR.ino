@@ -38,6 +38,7 @@
 #include "Utility.h"
 
 #include "src\hardwareConfig.h"
+#include "src\hardware.h"
 
 // special features
 #include "Beacon.h"
@@ -568,18 +569,31 @@ FASTRUN void loop() {
       // *** normally the audio spectrum is updated once per frequency spectrum update
       //     but we have more time with wav file decoding ***
       // *** TODO: evaluate a single or multiple audio spectrum update(s) ***
+
       // about 130ms between frequency spectrum updates with either a single or multiple
       // audio spectrum update(s), therefore might as well do multiple updates
+      // this analysis was made with an incomplete audio spectrum
+
+      // with complete audio spectrum:
+      // about 160ms between frequency spectrum updates with either a single or multiple
+      // audio spectrum update(s), therefore might as well do multiple updates
+      // with single update, spectrums are drawn in about 60ms
+      // the loop just churns the rest of the time, 100ms, to capture remainder of frame, wasting processor
+
+      // multiple audio spectrums per ft8 interval
+      // with this, audio spectrum is drawn before freq spectrum
       YieldToProcess(true);
       ShowAudioSpectrum();
       FT8DecoderLoop();
+
+      // single audio spectrum per ft8 interval
+      //YieldToProcess();
+      //FT8DecoderLoop();
       //if(ft8SpectrumFlag) {
-      //  //YieldToProcess();
+      //  YieldToProcess(true);
       //  ShowAudioSpectrum();
       //  ft8SpectrumFlag = false;
       //}
-      //YieldToProcess();
-      //FT8DecoderLoop();
       break;
 
     case SSB_TRANSMIT_STATE:

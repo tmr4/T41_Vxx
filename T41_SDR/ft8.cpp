@@ -578,16 +578,27 @@ bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
   bool result = ReadWav(buf, sizeBuf);
 
 #ifdef PROJECTSYSTEM
+  static bool bufInit = false;
+
   // transfer to wav buffer
-  if(numWavBuf >= 15*12000) numWavBuf = 0;
-  for(int i = 0; i < sizeBuf && numWavBuf < 15*12000; i++, numWavBuf++) {
-    ft8WavBuf[numWavBuf] = buf[i];
+  if(!bufInit) {
+    for(int i = 0; i < sizeBuf && numWavBuf < 15*12000; i++, numWavBuf++) {
+      ft8WavBuf[numWavBuf] = buf[i];
+      Serial.print(numWavBuf); Serial.print(", "); Serial.println(ft8WavBuf[numWavBuf]);
+    }
+    //if(numWavBuf >= 15*12000) {
+    if(numWavBuf >= 15*12000-1) {
+      numWavBuf = 0;
+      bufInit = true;
+    }
   }
 #endif
 
   if(!result) {
     // done reading the wav file
     ft8WavFlag = true;
+    syncFlag = false;
+    numWavBuf = 0;
   }
 
   return result;
@@ -644,7 +655,7 @@ void FT8DecoderLoop() {
       DecodeFT8Data();
       ProcessFT8Messages();
 
-      // reset ft8 draw spectrum routine
+      // reset ft8 draw spectrum routine, doesn't draw spectrum
       ft8lib_DrawFT8Spectrum(true);
     } else {
       // draw spectrum if not decoding

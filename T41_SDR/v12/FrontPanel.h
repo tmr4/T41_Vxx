@@ -25,9 +25,9 @@ extern int volumeFunction;
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+
 void InitFrontPanel();
 //void FrontPanelSetLed(int led, uint8_t state);
 //void PTT_Interrupt();
 
-void Mcp1Isr();
-void Mcp2Isr();
+void PollFrontPanel();

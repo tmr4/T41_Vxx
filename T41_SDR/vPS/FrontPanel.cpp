@@ -1,6 +1,7 @@
-// v12 specific hardware file
+// vPS specific hardware file
 
 /*********************************************************************************************
+ * modified from:
  *
  * G0ORX Front Panel
  *
@@ -11,46 +12,56 @@
  */
 
 /*
- * The front panel consists of 2 MCP23017 16 bit I/O port expanders.
- * Each device is controlled through the I2C bus and the devices use the I2C address 0x20 and 0x21.
+ * The Project System has a single MCP23017 16 bit I/O port expander.
+ * It is controlled through the I2C bus with I2C address 0x24.
  *
- * The device at 0x20 has switches 1..16 connected to it.
+ * Project System info: https://protosupplies.com/product/project-system-for-teensy-4-1/
+ * Project System MCP23017 schematic: https://protosupplies.com/wp-content/uploads/2023/12/Project-System-IO-Expansion-Schematic.png
  *
- * The device at 0x21 has the switches 17 and 18, encoder 1..4 switches, encoder 1..4 A and B and 2 output LEDS.
+ * Currently a single encoder is connected.
  *
- * An interrupt is generated when an I/O port input changes state.
- *
- * The device at 0x20 generates an interrupt on pin 14 (pulls it low) - Pin 6 of the IDC connector.
- * The device at 0x21 generates an interrupt on pin 15 (pulls it low) - Pin 8 of the IDC connector.
- *
- * The IDC connector is connected to Tune/Filter IDC connector of the Main Board.
+ * An interrupt on pin 40 is generated when an I/O port input changes state.
  *
  */
+
+#include "hardwareConfig.h"
+
+#ifdef PROJECTSYSTEM_ENCODER_MCP
 
 #include "..\SDT.h"
 
 #include <Adafruit_MCP23X17.h>
 
-#include "FrontPanel.h"
-
 #include "..\Encoders.h"
 #include "..\Utility.h"
+
+#include "FrontPanel.h"
+
+#include "..\debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+I2C bit_results;
 
 int ButtonPressed = -1;
 int my_ptt=HIGH;  // active LOW
 
 #define DEBOUNCE_DELAY 250
 
+#ifdef PROJECTSYSTEM_ENCODER_MCP
 extern Rotary_V12 volumeEncoder;
+#define e1 volumeEncoder
+#else
+extern Rotary_V12 volumeEncoder2;
+#define e1 volumeEncoder2
+#endif
+
 extern Rotary_V12 menuChangeEncoder;
 extern Rotary_V12 tuneEncoder;
 extern Rotary_V12 fineTuneEncoder;
 
-#define e1 volumeEncoder
 #define e2 menuChangeEncoder
 #define e3 tuneEncoder
 #define e4 fineTuneEncoder
@@ -62,14 +73,8 @@ enum {
   RELEASED
 };
 
-static Adafruit_MCP23X17 mcp1;
+//static Adafruit_MCP23X17 mcp1;
 static Adafruit_MCP23X17 mcp2;
-
-#define LED1 0
-#define LED2 1
-
-#define LED_1_PORT 6
-#define LED_2_PORT 7
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -86,7 +91,7 @@ void EncoderFilter();
 //FASTRUN void PTT_Interrupt() {
 //  my_ptt = digitalRead(PTT);
 //}
-
+/*
 FASTRUN void Mcp1Isr() {
   uint8_t pin;
   uint8_t state;
@@ -105,6 +110,7 @@ FASTRUN void Mcp1Isr() {
   }
   //__enable_irq();
 }
+*/
 
 FASTRUN void Mcp2Isr() {
   uint8_t pin;
@@ -116,6 +122,10 @@ FASTRUN void Mcp2Isr() {
   pin = mcp2.getLastInterruptPin();
   a_state = mcp2.readGPIOA();
   b_state = mcp2.readGPIOB();
+
+  //Serial.print(pin); Serial.print(", "); Serial.print(a_state); Serial.print(", "); Serial.println(b_state);
+
+  // Adafruit_MCP23X17: port A: pins 0-7, port B: pins 8-15
   switch(pin) {
     case 8:
     case 9:
@@ -136,6 +146,11 @@ FASTRUN void Mcp2Isr() {
   }
 
   // process the state
+  // Port A pin 0-7: CNT1 pins 29-36, Port B pin 8-15: CNT1 pins 21-28
+  // volume encoder: A-port B pin 0, CNT1 pin 21, B-port B pin 1, CNT1 pin 22, switch-port A pin 0, CNT1 pin 29
+  // filter encoder: A-port B pin , CNT1 pin 23, B-port B pin , CNT1 pin 24, switch-port A pin , CNT1 pin
+  // tune encoder:   A-port B pin , CNT1 pin 25, B-port B pin , CNT1 pin 26, switch-port A pin , CNT1 pin
+  // fine t encoder: A-port B pin , CNT1 pin 27, B-port B pin , CNT1 pin 28, switch-port A pin , CNT1 pin
   switch(pin) {
     case 8:
       e1.updateA(state);
@@ -193,37 +208,16 @@ FASTRUN void Mcp2Isr() {
 }
 
 void InitFrontPanel() {
-  Debug("Initializing G0ORX front panel");
-
   // Set Wire1 I2C bus to 1MHz and start
+  // *** I did not see an increased responsiveness to interrupt driven input
+  //     with increased clock speed ***
   //Wire1.setClock(1000000UL);
+  //Wire1.setClock(400000UL);
   Wire1.begin();
 
-  if(mcp1.begin_I2C(V12_PANEL_MCP23017_ADDR_1,&Wire1)) {
-    bit_results.FRONT_PANEL_I2C_1_present = true;
+  bit_results.FRONT_PANEL_I2C_1_present = false;
 
-    // setup the device
-    mcp1.setupInterrupts(true, true, LOW);
-
-    // setup switches 1..16
-    for(int i = 0; i < 16; i++) {
-      mcp1.pinMode(i, INPUT_PULLUP);
-      mcp1.setupInterruptPin(i, CHANGE);
-    }
-
-    // clear interrupts
-    mcp1.readGPIOAB(); // ignore any return value
-
-    pinMode(INT_PIN_1, INPUT_PULLUP);
-#ifndef FRONT_PANEL_POLLING_OPS
-    attachInterrupt(digitalPinToInterrupt(INT_PIN_1), Mcp1Isr, LOW);
-#endif
-  } else {
-    //ShowMessageOnWaterfall("MCP23017 not found at 0x"+String(G0ORX_PANEL_MCP23017_ADDR_1,HEX));
-    bit_results.FRONT_PANEL_I2C_1_present = false;
-  }
-
-  if(mcp2.begin_I2C(V12_PANEL_MCP23017_ADDR_2,&Wire1)) {
+  if(mcp2.begin_I2C(PROJECTSYSTEM_MCP23017_ADDR,&Wire1)) {
     bit_results.FRONT_PANEL_I2C_2_present = true;
 
     // setup the device
@@ -256,24 +250,22 @@ void InitFrontPanel() {
     //ShowMessageOnWaterfall("MCP23017 not found at 0x"+String(G0ORX_PANEL_MCP23017_ADDR_2,HEX));
     bit_results.FRONT_PANEL_I2C_2_present = false;
   }
+  //Serial.println(bit_results.FRONT_PANEL_I2C_2_present);
 }
 
-//FASTRUN void FrontPanelSetLed(int led, uint8_t state) {
-//  switch(led) {
-//    case LED1:
-//      mcp2.digitalWrite(LED_1_PORT, state);
-//      break;
-//    case LED2:
-//      mcp2.digitalWrite(LED_2_PORT, state);
-//      break;
-//  }
-//}
-
 void PollFrontPanel() {
+/*
   if(digitalRead(INT_PIN_1) == LOW) {
+    //Serial.println("polling mcp1");
     Mcp1Isr();
   }
+*/
+  TOGGLEPROFILEPIN(PROFILER_FT8DECODE_PIN);
+
   if(digitalRead(INT_PIN_2) == LOW) {
+    //Serial.println("polling mcp2");
     Mcp2Isr();
   }
 }
+
+#endif

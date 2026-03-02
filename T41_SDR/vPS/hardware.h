@@ -2,6 +2,8 @@
 
 // vPS project system specific hardware header file
 
+#include "hardwareConfig.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -43,15 +45,15 @@ extern int numWavBuf;
     #define FINETUNE_ENCODER_B      24 // pin 5 is TFT_CS on Project System (the pin assigned here is only meaningful when testing fine tune encoder on non-front panel systems)
     #endif
     #ifdef PROJECTSYSTEM_ENCODER_1
-    #define VOLUME_ENCODER_A         2
+    #define VOLUME_ENCODER_A         4
     #define VOLUME_ENCODER_B         3
-    #define ENCODER_1_SWITCH         4
+    #define ENCODER_1_SWITCH         2
     #endif
 
     #define PROFILER_MAINLOOP_PIN         33
     #define PROFILER_PROCESS_PIN          34
-    #define PROFILER_DRAWFREQSPEC_PIN     40
-    #define PROFILER_DRAWAUDIOSPEC_PIN    41
+    #define PROFILER_DRAWFREQSPEC_PIN     41
+    #define PROFILER_DRAWAUDIOSPEC_PIN    14
     #define PROFILER_FT8PROCESSBLOCK_PIN  35
     #define PROFILER_FT8GETDATA_PIN       36
     #define PROFILER_FT8DECODE_PIN        38
@@ -89,9 +91,11 @@ extern Rotary volumeEncoder;        // (2,  3)
 #define MUTE                        38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
 #define BUSY_ANALOG_PIN             40    // pin 39 is TFT_MISO on Project System (the pin assigned here is only meaningful when testing switch matrix on non-front panel systems)
 
-#ifdef PROJECTSYSTEM_EXPANDED_IO
-#define INT_PIN_1 41
+#ifdef PROJECTSYSTEM_EXPANDED_IO_40
 #define INT_PIN_2 40
+#endif
+#ifdef PROJECTSYSTEM_EXPANDED_IO_41
+#define INT_PIN_1 41
 #endif
 
 //------------
@@ -132,4 +136,7 @@ void HardwareLoopStart();
 #ifdef PROJECTSYSTEM_ENCODER_1
 void EncodersInit();
 void EncoderVolumeISR();
+#endif
+
+#ifdef PROJECTSYSTEM_ENCODER_MCP
 #endif

@@ -21,6 +21,9 @@
 #include "..\Tune.h"
 #include "..\Utility.h"
 
+#include "hardwareConfig.h"
+#include "FrontPanel.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -28,12 +31,8 @@
 EXTMEM float32_t ft8WavBuf[15 * 12000]; // buffer a FT8 wav file for use with decoder
 int numWavBuf;
 
-//------------
-// Encoders.cpp
-
 #ifdef PROJECTSYSTEM_ENCODER_1
-Rotary volumeEncoder = Rotary(VOLUME_ENCODER_A, VOLUME_ENCODER_B);        // ( 2,  3)
-Bounce encoderSwitch = Bounce(ENCODER_1_SWITCH, 10);  // 10 ms debounce
+extern Bounce encoderSwitch;
 #endif
 
 //------------
@@ -55,15 +54,17 @@ extern long long oldCenterFreq;
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-void EncoderVolumeISR();
-
 void RFPowerFollowup();
 void RFGainFollowup();
 void FT8DoXmitCalibrate();
 
+void InitFrontPanel();
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+
+#ifdef PROJECTSYSTEM_ENCODER_1
 
 //------------
 // Button.cpp
@@ -84,64 +85,10 @@ int ReadSelectedPushButton() {
 int ProcessButtonPress(int valPin) {
   return 0;
 }
+#endif
 
 //------------
 // Encoders.cpp
-
-// set up encoders
-#ifdef PROJECTSYSTEM_ENCODER_1
-void EncodersInit() {
-  volumeEncoder.begin(true);
-  attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_A), EncoderVolumeISR, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(VOLUME_ENCODER_B), EncoderVolumeISR, CHANGE);
-
-  // set up encoder switch debounce
-  pinMode(ENCODER_1_SWITCH, INPUT_PULLUP);
-}
-#endif
-
-/*****
-  Purpose: Encoder volume control ISR
-*****/
-// why not FASTRUN
-#ifdef PROJECTSYSTEM_ENCODER_1
-void EncoderVolumeISR() {
-  char result = 0;
-
-  result = volumeEncoder.process();  // Read the encoder
-
-  if(result == 0) {  // Nothing read
-    return;
-  }
-
-  // TODO: check encoder setup as this is opposite T41
-  switch(result) {
-    case DIR_CW:  // Turned it clockwise, 16
-      adjustVolEncoder = -1;
-      break;
-
-    case DIR_CCW:  // Turned it counter-clockwise
-      adjustVolEncoder = 1;
-      break;
-  }
-
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
-
-  audioVolume += adjustVolEncoder;
-  adjustVolEncoder = 0;
-
-  if(audioVolume > MAX_AUDIO_VOLUME) {
-    audioVolume = MAX_AUDIO_VOLUME;
-  } else if(audioVolume < MIN_AUDIO_VOLUME) {
-    audioVolume = MIN_AUDIO_VOLUME;
-  }
-
-  volumeChangeFlag = true; // flag needed for display update
-}
-#endif
-
-void EncoderCenterTune() {
-}
 
 //------------
 // MenuProc.cpp
@@ -322,6 +269,9 @@ void InitHardware() {
   #ifdef PROJECTSYSTEM_ENCODER_1
   EncodersInit();
   #endif
+  #ifdef PROJECTSYSTEM_ENCODER_MCP
+  InitFrontPanel();
+  #endif
 #endif
 }
 
@@ -366,9 +316,11 @@ void ConfigRadioStateHardware() {
 }
 
 void HardwareLoopStart() {
+#ifdef PROJECTSYSTEM_ENCODER_1
   // poll encoder switch
   if(encoderSwitch.update() && encoderSwitch.fallingEdge()) {
     // load wave file and begin decoding internally if successful
     ExecuteButtonPress(16);
   }
+#endif
 }
