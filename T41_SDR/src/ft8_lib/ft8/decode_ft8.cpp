@@ -54,8 +54,6 @@ typedef float float32_t;
 
 void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq_hz, char *msg);
 
-void DrawFT8Spectrum(uint8_t *spec, int numSamples);
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -261,82 +259,53 @@ FLASHMEM void ft8lib_ExitDecoder() {
   extmem_free(signal);
 }
 
-void ft8lib_Decode() {
-  // *** TODO: this should be set per actual FT8 interval ***
-  struct tm tm_slot_start = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
+bool ft8lib_BufferSignal(float *buf, int sizeBuf, int offset) {
+  bool result = false;
+
+  if(signal != NULL && monitor != NULL && (offset + sizeBuf <= numSamples)) {
+    // transfer buffer to ft8_lib signal
+    for(int i = 0; i < sizeBuf; i++) {
+      signal[offset + i] = buf[i];
+      //Serial.println(offset + i);
+    }
+
+    result = true;
+  }
+
+  return result;
+}
+
+// Process and accumulate audio data in a monitor/waterfall instance
+// Process the waveform data frame by frame
+bool ft8lib_ProcessFrame(int frame) {
+  bool result = false;
+  int framePos = frame * monitor->block_size;
+
+  if(signal != NULL && monitor != NULL && (framePos + monitor->block_size <= numSamples)) {
+    monitor_process(monitor, signal + framePos);
+
+    result = true; // signal success
+  }
+
+  return result;
+}
+
+uint8_t *ft8lib_GetFT8SpectrumData(int symbol) {
+  uint8_t *result = NULL;
+
+  if(signal != NULL && monitor != NULL && (symbol < 79)) {
+    result = &(monitor->wf.mag[symbol * monitor->wf.num_bins * kFreq_osr * kTime_osr]);
+  }
+
+  return result;
+}
+
+void ft8lib_Decode(struct tm *start) {
 
   if(signal != NULL && monitor != NULL) {
-    decode(monitor, &tm_slot_start);
+    decode(monitor, start);
 
     // Reset internal variables for the next time slot
     monitor_reset(monitor);
   }
-}
-
-// *** TODO: rework reset here ***
-void ft8lib_DrawFT8Spectrum(bool reset /* = false */) {
-  static int count = 0;
-
-  if(reset) {
-    count = 0;
-    return;
-  }
-
-  if(signal != NULL && monitor != NULL) {
-    // *** TODO: figure out which symbols to skip ***
-    if(count < 79) {
-      DrawFT8Spectrum(&(monitor->wf.mag[count++ * 449 * kFreq_osr * kTime_osr]), 512);
-    }
-  }
-}
-
-bool ft8lib_ProcessSignalData() {
-  bool result = false;
-  static int frame_pos = 0;
-
-  if(signal != NULL && monitor != NULL) {
-    // Process and accumulate audio data in a monitor/waterfall instance
-    // Process the waveform data frame by frame
-    monitor_process(monitor, signal + frame_pos);
-
-    frame_pos += monitor->block_size;
-
-    if(frame_pos + monitor->block_size > numSamples) {
-      result = true; // signal that decoding can start
-      frame_pos = 0;
-    }
-  }
-
-  return result;
-}
-
-bool ft8lib_BufferSignal(float *buf, int sizeBuf) {
-  bool result = false;
-  static int count = 0;
-  static int processCount = 0;
-
-  if(signal != NULL && monitor != NULL) {
-    // transfer buffer to ft8_lib signal
-    for(int i = 0; i < sizeBuf; i++) {
-      signal[count++] = buf[i];
-      if(count >= numSamples) {
-        // done with this interval
-        break;
-      }
-    }
-    processCount += sizeBuf;
-    if(processCount >= monitor->block_size) {
-      // enough data has been gathered to process a frame
-      // flag it for processing
-      result = true;
-      processCount = 0;
-    }
-    if(count >= numSamples) {
-      // prepare for next data set
-      count = 0;
-      processCount = 0;
-    }
-  }
-
-  return result;
 }

@@ -133,7 +133,7 @@ FLASHMEM void ChangeBand(int change) {
       case DEMOD_FT8_DECODE:
       case DEMOD_FT8_WAV:
         // turn on FT8
-        syncFlag = false;
+        ft8SyncFlag = false;
         ft8State = 1; // not sync'd
         UpdateInfoBoxItem(IB_ITEM_FT8);
         infoBoxItemActive[IB_ITEM_FT8] = true;
@@ -270,15 +270,11 @@ void SwitchDataMode(int mode) {
       break;
 
     case DEMOD_FT8_WAV:
-      if(!InitFT8Decoder()) {
-        // can't set up FT8 decode, fall back to normal FT8
-        currentDataMode = DEMOD_FT8;
-        InitFT8();
-      } else {
+      if(InitFT8Decoder()) {
         // try to load wav file
         if(SetupFT8Wav()) {
           // switch to play a wav file
-          syncFlag = true;
+          ft8SyncFlag = true;
           ft8State = 2;
           UpdateInfoBoxItem(IB_ITEM_FT8);
         } else {
@@ -288,6 +284,10 @@ void SwitchDataMode(int mode) {
           currentDataMode = DEMOD_FT8;
           InitFT8();
         }
+      } else {
+        // can't set up FT8 decode, fall back to normal FT8
+        currentDataMode = DEMOD_FT8;
+        InitFT8();
       }
       break;
 

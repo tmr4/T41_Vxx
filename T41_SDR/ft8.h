@@ -4,12 +4,10 @@
 //-------------------------------------------------------------------------------------------------------------
 
 extern int ft8_flag;
-extern bool syncFlag;
+extern bool ft8SyncFlag;
 extern int ft8State, ft8TxFreq, ft8RxFreq, ft8TxState, ft8IntState, ft8CqState;
 
 extern bool ft8Init;
-
-extern bool ft8ProcessFlag, ft8DecodeFlag, ft8SpectrumFlag;
 
 extern int numDecodedMsgs;
 
@@ -34,6 +32,8 @@ void ExitFT8Decoder();
 void AutoSyncFT8();
 
 bool ReadFT8Wav(float32_t *buf, int sizeBuf);
+bool ReadBufferedFT8Wav(float32_t *buf, int sizeBuf);
+
 void BufferFT8Data(float *buf, int sizeBuf);
 void FT8DecoderLoop();
 

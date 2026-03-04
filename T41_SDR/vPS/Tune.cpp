@@ -122,6 +122,25 @@ void ResetTuning() {
 
   SetTxRxFreq(centerFreq);
 
+  switch(displayState) {
+    case DISPLAY_T41:
+      ShowFrequency();          // update frequency display
+      ShowOperatingStats();     // update center frequency in band info
+      ShowSpectrumFreqValues(); // update spectrum frequency values
+      break;
+
+    case DISPLAY_BEACON_MONITOR:
+      break;
+
+    case DISPLAY_FULL_MENU:
+      ShowFrequency();
+      ShowOperatingStats();
+      break;
+
+    default:
+    // no screen updates at all
+    break;
+  }
   DrawBandwidthBar();
 }
 

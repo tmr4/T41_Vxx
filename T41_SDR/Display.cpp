@@ -1446,8 +1446,7 @@ FLASHMEM void ft8lib_DisplayMsg(char *msg) {
 }
 */
 
-// gets called about 15 times for each message period
-// waterfall updates
+// gets called about 15*79 times for each message period
 FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples) {
   int yPlot, y1Plot = 0;
   int samples = numSamples > 512 ? 512 : numSamples;
@@ -1456,7 +1455,8 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples) {
   static bool initialized = false;
   uint8_t wfGradIndex;
   static uint16_t waterfall[WATERFALL_W] = {0};
-  static int count = 0;
+  //static int count = 0;
+  static int frameCount = 0;
 
   for(int i = 0; i < samples; i++) {
     TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
@@ -1475,7 +1475,8 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples) {
     // accumulate spectrum data for average waterfall over FT8 interval
     // exclude low data points that tends to dilute signals
     if(!((accSpec[i] > 130) && (spec[i] < 60))) {
-      accSpec[i] = (accSpec[i] * count + spec[i]) / (count + 1);  // Try to put pixel values in middle of gradient array
+      //accSpec[i] = (accSpec[i] * count + spec[i]) / (count + 1);  // Try to put pixel values in middle of gradient array
+      accSpec[i] = (accSpec[i] * frameCount + spec[i]) / (frameCount + 1);  // Try to put pixel values in middle of gradient array
     }
     //accSpec[i] = i / 2;
     YieldToProcess();
@@ -1483,36 +1484,64 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples) {
 
   oldSpec[numSamples] = y1Plot;
 
-  ++count;
-  if(count >= 15) {
-    count = 0;
-    for(int i = 0; i < WATERFALL_W; i++) {
-      waterfall[i] = 0;
+  //if(count++ < 15 && frameCount < 79) {
+  //if(count++ < 15) {
+  //if(frameCount++ < 15) {
+  if(frameCount++ < 77) {
+    // accumulate waterfall data over a frame
+    for(int i = 0; i < samples; i++) {
+      wfGradIndex = accSpec[i]/10;
+      if(wfGradIndex < 0) wfGradIndex = 0;
+      //if(wfGradIndex > 25) Serial.println("wfGradIndex > 25");
+      waterfall[i] = ft8Gradient[wfGradIndex];
+    }
+  } else {
+    //count = 0;
+    if(frameCount == 79) {
+      frameCount = 0;
+    //}
+
+    //Serial.println(frameCount);
+    //if(++frameCount >= 79) {
+    //if(++frameCount == 78)
+    //{
+      //Serial.println("moving waterfall");
+      //frameCount = -1;
+
+      // scroll the waterfall display
+      // Use the Block Transfer Engine (BTE) to move waterfall down a line
+      // copy the waterfall to layer 2, moving it down to row 2
+      //
+      // *** The waterfall update takes ~20ms or more in total.
+      //     The process depends on this in part to ensure that the IQ input
+      //     buffers have sufficient data to process at the start of the next
+      //     loop.  Spectrum updates are skipped if this isn't the case.
+      tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 102, 1, 2);
+      tft.readStatus(); // Make sure it is done.  Memory moves can take time. This is blocking. *** might need to be changed back to original if blocking nature is modified ***
+
+      YieldToProcess();
+
+      // copy the waterfall back to layer 1, row 2
+      tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 102, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 102, 2);
+      tft.readStatus(); // Make sure it's done.
+
+      // *** TODO: add when waterfall is moved ***
+      //YieldToProcess();
+      // *** or this: prepares the audio spectrum data
+      //YieldToProcess(true);
+
+      // reset waterfall for next frame
+      for(int i = 0; i < WATERFALL_W; i++) {
+        waterfall[i] = 0;
+      }
     }
   }
 
-  for(int i = 0; i < samples; i++) {
-    wfGradIndex = accSpec[i]/10;
-    if(wfGradIndex < 0) wfGradIndex = 0;
-    //if(wfGradIndex > 25) Serial.println("wfGradIndex > 25");
-    waterfall[i] = ft8Gradient[wfGradIndex];
-  }
-
   // write new row of data into the top row to finish the scrolling effect
-  // *** TODO: still need to roll waterfall for live audio ***
   tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 1, waterfall);
   tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 101, WATERFALL_W, 1, waterfall);
-  //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100 + count * 2, WATERFALL_W, 1, waterfall);
-  //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100 + count * 2 + 1, WATERFALL_W, 1, waterfall);
-
-  // *** TODO: add when waterfall is moved ***
-  //YieldToProcess();
-  // *** or this: prepares the audio spectrum data
-  YieldToProcess(true);
 
   initialized = true;
-
-  ft8SpectrumFlag = true;
 
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
 }

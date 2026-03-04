@@ -332,7 +332,21 @@ void MouseButtonSpectrumWaterfall(int button) {
 
       SetNCOFreq((cursorX + CURSOR_W / 2 - centerLine) * sampleRate / (1 << spectrumZoom) / SPECTRUM_RES);
 
-      DrawBandwidthBar();
+      switch(displayState) {
+        case DISPLAY_T41:
+          DrawBandwidthBar();
+          break;
+
+        case DISPLAY_BEACON_MONITOR:
+          break;
+
+        case DISPLAY_FULL_MENU:
+          break;
+
+        default:
+        // no screen updates at all
+        break;
+      }
 
       // background under the cursor may have changed, copy it for replacement next time
       tft.BTE_move(cursorX, cursorY, 16, 32, 0, 0, 2, 2);

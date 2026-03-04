@@ -34,6 +34,11 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+#ifdef PROJECTSYSTEM
+EXTMEM float32_t ft8WavBuf[15 * 12000]; // buffer a FT8 wav file for use with decoder
+int numWavBuf = 0, countWavBuf = 1920 * 14, countWavBufStart = 1920 * 14; // first 14 frames are zero
+#endif
+
 #define RA8875_GREEN 0x07E0 // 0, 255, 0
 
 typedef struct
@@ -74,11 +79,21 @@ int cqWindowTop, allWindowTop, rxWindowTop;
 
 uint32_t current_time, start_time, ft8_time;
 
-bool ft8ProcessFlag;  // true when a frame of data has been buffered and is ready to process
-bool ft8SpectrumFlag; // true when ft8 frequency spectrum data is ready to be drawn
+int bufCount = 0;
+int frameCount = 0;
+
+//bool ft8SpectrumFlag; // true when ft8 frequency spectrum data is ready to be drawn
 bool ft8WavFlag;      // true when ft8 wav file has closed (signals need to shift to DEMOD_FT8_DECODE mode)
 
 int ft8_flag;
+
+#define FT8_DECODER_STATE_BUFFERING   0
+#define FT8_DECODER_STATE_PROCESSING  1
+#define FT8_DECODER_STATE_DECODING    2
+#define FT8_DECODER_STATE_UPDATING    3
+#define FT8_DECODER_STATE_TX          4
+
+int ft8DecoderState = 0;
 
 int ft8State = 0; // state status for info box: 0 - off, 1 - not sync'd, 2 - sync'd
 int ft8TxState = 0; // ft8 state status for info box: 0 - off, 1 - on
@@ -88,7 +103,7 @@ int ft8CqState = 0; // ft8 CQ response state: 0 - man, 1 - respond automatically
 int master_offset, offset_step;
 
 bool ft8Init = false;
-bool syncFlag = false;
+bool ft8SyncFlag = false;
 
 int ft8TxFreq = 1000;
 int ft8RxFreq = 1000;
@@ -110,14 +125,17 @@ void InitHilbertFilters();
 void SetupDemodFilterBW();
 void ResetTuning();
 
+void YieldToProcess(bool updateSpectrum = false);
+void DrawFT8Spectrum(uint8_t *spec, int numSamples);
+
 // ft8lib
 bool ft8lib_InitDecoder();
 void ft8lib_ExitDecoder();
-bool ft8lib_BufferSignal(float *buf, int sizeBuf);
-bool ft8lib_ProcessSignalData();
-void ft8lib_Decode();
+bool ft8lib_BufferSignal(float *buf, int sizeBuf, int offset);
+bool ft8lib_ProcessFrame(int frame);
+void ft8lib_Decode(struct tm *start);
+uint8_t *ft8lib_GetFT8SpectrumData(int symbol);
 
-void ft8lib_DrawFT8Spectrum(bool reset = false);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -132,15 +150,15 @@ void AutoSyncFT8() {
 
     start_time =millis();
     ft8_flag = 1;
-    syncFlag = true;
+    ft8SyncFlag = true;
     ft8State = 2;
     //displaySync("sync'd", RA8875_GREEN);
-    UpdateInfoBoxItem(IB_ITEM_FT8);
   }
   else {
     ft8State = 1;
-    UpdateInfoBoxItem(IB_ITEM_FT8);
   }
+
+  UpdateInfoBoxItem(IB_ITEM_FT8);
 }
 
 //void sync_FT8() {
@@ -207,23 +225,29 @@ void DisplayDetails(int msg, int row, int col) {
 
 void DisplayActiveMessageDetails() {
   char message[100];
-
   Decode *msg = &decodedList[activeMsg];
   tft.setFontScale((enum RA8875tsize)0);
   int rowHeight = tft.getFontHeight();
 
-  // erase old info
-  tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * 2, WATERFALL_W, FT8_ROW_HEIGHT, RA8875_BLACK);
+  if(numDecodedMsgs > 0) {
+    // erase old info
+    tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * 2, WATERFALL_W, FT8_ROW_HEIGHT, RA8875_BLACK);
 
-  // display active message detail
-      //printf("%02d%02d%02d %+05.1f %+4.2f %4.0f ~  %s\n",
-      //    tm_slot_start->tm_hour, tm_slot_start->tm_min, tm_slot_start->tm_sec,
-      //    snr, time_sec, freq, text);
-  tft.setTextColor(YELLOW);
-  tft.setCursor(WATERFALL_L, YPIXELS - rowHeight * 2 - 3);
-  sprintf(message, "%02d%02d%02d %+4d %+4d.%1d %4d ~  %s", msg->slot_time.tm_hour, msg->slot_time.tm_min, msg->slot_time.tm_sec,
-    (int)msg->snr, (int)msg->time_sec, (int)(msg->time_sec * 10.0 - ((int)msg->time_sec) * 10.0), (int)msg->freq, msg->msg);
-  tft.print(message);
+    // display active message detail
+        //printf("%02d%02d%02d %+05.1f %+4.2f %4.0f ~  %s\n",
+        //    tm_slot_start->tm_hour, tm_slot_start->tm_min, tm_slot_start->tm_sec,
+        //    snr, time_sec, freq, text);
+    tft.setTextColor(YELLOW);
+    tft.setCursor(WATERFALL_L, YPIXELS - rowHeight * 2 - 3);
+    if(msg->time_sec >0) {
+      sprintf(message, "%02d%02d%02d %+4d +%d.%1d %4d ~  %s", msg->slot_time.tm_hour, msg->slot_time.tm_min, msg->slot_time.tm_sec,
+        (int)msg->snr, (int)msg->time_sec, (int)(msg->time_sec * 10.0 - ((int)msg->time_sec) * 10.0), (int)msg->freq, msg->msg);
+    } else {
+      sprintf(message, "%02d%02d%02d %+4d -%d.%1d %4d ~  %s", msg->slot_time.tm_hour, msg->slot_time.tm_min, msg->slot_time.tm_sec,
+        (int)msg->snr, (int)abs(msg->time_sec), (int)abs((msg->time_sec * 10.0 - ((int)msg->time_sec) * 10.0)), (int)msg->freq, msg->msg);
+    }
+    tft.print(message);
+  }
 }
 
 void GetRxMessages() {
@@ -255,6 +279,10 @@ void DisplayRxMessages() {
 
   // reset RX message area
   tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
+
+  if(numRxMsgs > 11) {
+    rxWindowTop = numRxMsgs - 11;
+  }
 
   // print recent messages at RX frequency
   for(int i = rxWindowTop; i < numRxMsgs; i++){
@@ -310,6 +338,10 @@ void DisplayCqMessages() {
   // reset CQ message area
   tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
 
+  if(numCqMsgs > 11) {
+    cqWindowTop = numCqMsgs - 11;
+  }
+
   // print recent CQ messages
   for(int i = cqWindowTop; i < numCqMsgs; i++){
     if(count >= FT8_MSG_ROWS)
@@ -349,7 +381,11 @@ void DisplayMessages() {
   // reset RX message area
   tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
 
-  // print most recent messages middle column
+  if(numDecodedMsgs > 11) {
+    allWindowTop = numDecodedMsgs - 11;
+  }
+
+  // print most recent messages left column
   for(int i = 0; i < FT8_MSG_ROWS; i++){
     int x = allWindowTop + i; // message to display
 
@@ -481,9 +517,8 @@ FLASHMEM bool InitFT8Decoder() {
     //}
 
     ft8Init = true;
-    syncFlag = false;
-    ft8ProcessFlag = false;
-    ft8SpectrumFlag = false;
+    ft8SyncFlag = false;
+    //ft8SpectrumFlag = false;
     ft8WavFlag = false;
 
     // update FT8 info box items
@@ -543,7 +578,7 @@ FLASHMEM void ExitFT8Decoder() {
   // clean up ft8_lib
   ft8lib_ExitDecoder();
 
-  displayState = DISPLAY_T41_FT8_DECODE;
+  displayState = DISPLAY_T41;
 
   // redraw frequency spectrum area
   ShowSpectrumdBScale();
@@ -557,8 +592,7 @@ FLASHMEM void ExitFT8Decoder() {
 
   // reset FT8 flags and counters
   ft8Init = false;
-  syncFlag = false;
-  ft8ProcessFlag = false;
+  ft8SyncFlag = false;
 
   ft8_flag = 0;
   ft8State = 0;
@@ -584,12 +618,11 @@ bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
   if(!bufInit) {
     for(int i = 0; i < sizeBuf && numWavBuf < 15*12000; i++, numWavBuf++) {
       ft8WavBuf[numWavBuf] = buf[i];
-      Serial.print(numWavBuf); Serial.print(", "); Serial.println(ft8WavBuf[numWavBuf]);
+      //Serial.print(numWavBuf); Serial.print(", "); Serial.println(ft8WavBuf[numWavBuf]);
     }
-    //if(numWavBuf >= 15*12000) {
     if(numWavBuf >= 15*12000-1) {
-      numWavBuf = 0;
       bufInit = true;
+      //Serial.print(numWavBuf);
     }
   }
 #endif
@@ -597,37 +630,58 @@ bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
   if(!result) {
     // done reading the wav file
     ft8WavFlag = true;
-    syncFlag = false;
-    numWavBuf = 0;
+  }
+
+  return result;
+}
+
+bool ReadBufferedFT8Wav(float32_t *buf, int sizeBuf) {
+  bool result = false;
+
+  if((countWavBuf + sizeBuf) <= numWavBuf) {
+    // transfer wav data to buffer
+    for(int i = 0; i < sizeBuf; i++) {
+      buf[i] = ft8WavBuf[countWavBuf + i];
+    }
+    result = true;
+  } else {
+    countWavBuf = countWavBufStart;
+  }
+
+  if(ft8SyncFlag) {
+    countWavBuf += sizeBuf;
   }
 
   return result;
 }
 
 void BufferFT8Data(float *buf, int sizeBuf) {
-  // don't process data until we're in sync
-  if(syncFlag) {
-    if(ft8lib_BufferSignal(buf, sizeBuf)) {
-      // ready to process a frame of data
-      ft8ProcessFlag = true;
-    }
-  } else {
-    AutoSyncFT8();
+  if(frameCount * 1920 + bufCount * sizeBuf >= 180000) {
+    Serial.println("overflow");
+    return;
   }
-/*
-  // old ft8 decode stuff
-  if(ft8_flag == 0 && syncFlag) UpdateFT8Synchronization();
-*/
+  // don't buffer data until we're in sync
+  if(ft8SyncFlag) {
+    //Serial.print(bufCount); Serial.print(", "); Serial.println(frameCount);
+    if(ft8lib_BufferSignal(buf, sizeBuf, frameCount * 1920 + bufCount * sizeBuf)) {
+      ++bufCount;
+      if(bufCount >= 15) {
+        ft8DecoderState = FT8_DECODER_STATE_PROCESSING;
+        //bufCount = 0;
+        //++frameCount;
+      }
+    }
+  }
 }
 
-bool ProcessFT8Data() {
+bool ProcessFT8Frame() {
   bool result = false;
   // process a frame of data
   // there are 79 frames in a FT8 message
   // but can be more within an interval depending on timing errors
   SETPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
   // processing takes about 16ms
-  if(ft8lib_ProcessSignalData()) {
+  if(ft8lib_ProcessFrame(frameCount)) {
     result = true;
   }
   RESETPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
@@ -635,34 +689,128 @@ bool ProcessFT8Data() {
   return result;
 }
 
-void DecodeFT8Data() {
+void DecodeFT8Data(struct tm *start) {
   // decode accumulated data (containing slightly less than a full time slot)
   // decode takes about:
   //   688ms with ft8_0.wav (~20 messages)
   //   530ms with ft8_7.wav (5 messages in FT8 range, 7 total)
   SETPROFILEPIN(PROFILER_FT8DECODE_PIN);
-  ft8lib_Decode();
+  ft8lib_Decode(start);
   RESETPROFILEPIN(PROFILER_FT8DECODE_PIN);
 }
 
 // FT8 decoder state machine
 void FT8DecoderLoop() {
-  // *** TODO: consider changes to allow continued signal processing while
-  // we're within an interval, but after the normal 12.64 message window,
-  // allowing for decoding of messages that start late ***
-  if(ft8ProcessFlag) {
-    if(ProcessFT8Data()) {
-      DecodeFT8Data();
+  // *** TODO: this should be set per actual FT8 interval ***
+  struct tm tmSlotStart; // = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
+
+  if(ft8SyncFlag) {
+    //UpdateFT8Synchronization();
+    UpdateInfoBoxItem(IB_ITEM_FT8);
+  } else {
+    AutoSyncFT8();
+  }
+
+  switch(ft8DecoderState) {
+    case FT8_DECODER_STATE_BUFFERING:
+      // *** TODO: consider moving YieldToProcess call here to ShowAudioSpectrum as an option ***
+      // *** normally the audio spectrum is updated once per frequency spectrum update
+      //     but we have more time with wav file decoding ***
+      // *** TODO: evaluate a single or multiple audio spectrum update(s) ***
+
+      // about 130ms between frequency spectrum updates with either a single or multiple
+      // audio spectrum update(s), therefore might as well do multiple updates
+      // this analysis was made with an incomplete audio spectrum
+
+      // with complete audio spectrum:
+      // about 160ms between frequency spectrum updates with either a single or multiple
+      // audio spectrum update(s), therefore might as well do multiple updates
+      // with single update, spectrums are drawn in about 60ms
+      // the loop just churns the rest of the time, 100ms, to capture remainder of frame, wasting processor
+
+      if(bufCount < 15) {
+        // gather multiple audio spectrums per ft8 interval
+        // with this, audio spectrum is drawn before freq spectrum
+        YieldToProcess(true);
+        ShowAudioSpectrum();
+
+        // single audio spectrum per ft8 interval
+        //YieldToProcess();
+        //if(ft8SpectrumFlag) {
+        //  YieldToProcess(true);
+        //  ShowAudioSpectrum();
+        //  ft8SpectrumFlag = false;
+        //}
+      } else {
+        // we have a frame of data, process it
+        ft8DecoderState = FT8_DECODER_STATE_PROCESSING;
+
+        //bufCount = 0;
+      }
+      break;
+
+    case FT8_DECODER_STATE_PROCESSING:
+      // a frame of data is available, process it
+      // a frame of data is a single FT8 symbol (0.16 seconds of data)
+      // 79 symbols per FT8 interval = 12.64 seconds
+      // it is equivalent to:
+      //  1920 bytes at 12k sample rate
+      // it takes 15 buffer calls to fill a frame (128 * 15 = 1920)
+      if(ProcessFT8Frame()) {
+        ++frameCount;
+        bufCount -= 15;
+        if(frameCount < 79) {
+          uint8_t *spec = ft8lib_GetFT8SpectrumData(frameCount);
+
+          if(spec != NULL) {
+            DrawFT8Spectrum(spec, 512);
+          }
+
+          ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+        } else {
+          ft8DecoderState = FT8_DECODER_STATE_DECODING;
+        }
+
+        #ifdef BUFFER_FT8_WAV
+        // delay a bit since wav buffer playback is a bit fast
+        if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
+          delay(25);
+        }
+        #endif
+      }
+      break;
+
+    case FT8_DECODER_STATE_DECODING:
+      // FT8 interval completed, decode data
+      // *** TODO: consider changes to allow continued signal processing while
+      // we're within an interval, but after the normal 12.64 message window,
+      // allowing for decoding of messages that start late ***
+      tmSlotStart = { .tm_sec = (second() / 15) * 15, .tm_min = minute(), .tm_hour = hour() };
+      //tmSlotStart = now();
+
+      DecodeFT8Data(&tmSlotStart);
+
+      frameCount = 0;
+      bufCount = 0;
+
+      ft8DecoderState = FT8_DECODER_STATE_UPDATING;
+      break;
+
+    case FT8_DECODER_STATE_UPDATING:
       ProcessFT8Messages();
 
-      // reset ft8 draw spectrum routine, doesn't draw spectrum
-      ft8lib_DrawFT8Spectrum(true);
-    } else {
-      // draw spectrum if not decoding
-      ft8lib_DrawFT8Spectrum();
-    }
+      #ifdef PROJECTSYSTEM
+      // reset read wav buffer
+      countWavBuf = countWavBufStart;
+      ft8SyncFlag = false;
+      UpdateInfoBoxItem(IB_ITEM_FT8);
+      #endif
 
-    ft8ProcessFlag = false;
+      ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+      break;
+
+    case FT8_DECODER_STATE_TX:
+      break;
   }
 
   if(ft8WavFlag) {

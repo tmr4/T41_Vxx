@@ -484,9 +484,20 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         break;
 
       case DEMOD_FT8_DECODE:
+        SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+        #ifdef BUFFER_FT8_WAV
+        // *** TODO: this assumes DEMOD_FT8_DECODE mode is always preceeded by DEMOD_FT8_WAV
+        //    to populate ft8WavBuf ***
+        if(ReadBufferedFT8Wav(audioBufferR, 128)) {
+          audioBufferL[0] = audioBufferR[0];
+          for(unsigned i = 1; i < 128; i++) {
+            audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
+            audioBufferL[2*i] = audioBufferR[i];
+          }
+        }
+        #else
         // decimate by 16 to get to 12ksps used by ft8_lib
         // TODO: consider whether to do this here or after applying audio filters
-        SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         //// decimation-by-4 in-place
         //arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
         //arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
@@ -495,23 +506,12 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         //arm_fir_decimate_f32(&FIR_dec3_I, audioBufferL, audioBufferL, 512);
         //arm_fir_decimate_f32(&FIR_dec3_Q, audioBufferR, audioBufferR, 512);
 
-      #ifdef PROJECTSYSTEM
         // transfer to wav buffer to audio buffers
         // and interpolate to 24 kHz to get audio signal for T41
         // *** TODO: evaluate if use of CMISS_DSP library is better ***
-        if(syncFlag) {
-          //if(numWavBuf >= 15*12000) numWavBuf = 0;
-          audioBufferR[0] = ft8WavBuf[numWavBuf++];
-          audioBufferL[0] = audioBufferR[0];
-          for(int i = 0; i < 128 && numWavBuf < 15*12000; i++, numWavBuf++) {
-            audioBufferR[i] = ft8WavBuf[numWavBuf++];
-            audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
-            audioBufferL[2*i] = audioBufferR[i];
-            Serial.print(numWavBuf); Serial.print(", "); Serial.println(ft8WavBuf[numWavBuf]);
-          }
-          if(numWavBuf >= 15*12000-1) numWavBuf = 0;
-        }
-      #endif
+          // interpolate to 24 kHz to get audio signal for T41
+          // *** TODO: evaluate if use of CMISS_DSP library is better ***
+        #endif
         RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         break;
 
@@ -720,7 +720,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       #endif
         break;
 
-        case DEMOD_FT8_WAV:
+      case DEMOD_FT8_WAV:
         // transfer audio signal back to buffer
         // *** TODO: should wav data be passed through audio filters ***
         for(int i = 0; i < 256; i++) {
@@ -998,8 +998,23 @@ FASTRUN void ProcessControls() {
   EncoderCenterTune();
   if(fineTuneFlag) {
     if(updateDisplay) {
-      ShowFrequency();
-      DrawBandwidthBar();
+      switch(displayState) {
+        case DISPLAY_T41:
+          ShowFrequency();
+          DrawBandwidthBar();
+          break;
+
+        case DISPLAY_T41_FT8_DECODE:
+          ShowFrequency();
+          break;
+
+        case DISPLAY_BEACON_MONITOR:
+          break;
+
+        default:
+        // no screen updates at all
+        break;
+      }
     }
     if(displayState == DISPLAY_FULL_MENU) {
       ShowFrequency();
