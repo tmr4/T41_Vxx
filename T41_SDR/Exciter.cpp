@@ -247,3 +247,27 @@ void SetBandRelay(int state) {
   // Set current band relay "on".  Ignore 12M and 10M.  15M and 17M use the same relay.
   if(currentBand < BAND_12M) digitalWrite(bandswitchPins[currentBand], state);
 }
+
+// *** TODO: see if this can be refactored from above ***
+void PrepareFT8ExciterIQData(float *sig) {
+  // *** we're at 12kHz sample rate here ***
+
+  // copy signal to left and right channels
+  arm_copy_f32(sig, audioBufferL_EX, 128);
+  arm_copy_f32(sig, audioBufferR_EX, 128);
+
+  // create I and Q signals with Hilbert transform
+  arm_fir_f32(&FIR_Hilbert_L, audioBufferL_EX, audioBufferL_EX, 128);
+  arm_fir_f32(&FIR_Hilbert_R, audioBufferR_EX, audioBufferR_EX, 128);
+
+  // Interpolate  to 24kHz and scale to equalize levels
+  // left channel first
+  arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
+  arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
+
+  // now right channel
+  arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
+  arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
+
+  PlayExciterIQData();
+}

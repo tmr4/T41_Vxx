@@ -931,6 +931,7 @@ FASTRUN void ProcessControls() {
 
   switch(displayState) {
     case DISPLAY_T41:
+    case DISPLAY_T41_FT8_DECODE:
       updateDisplay = true;
       break;
 

@@ -87,7 +87,7 @@ const char *zoomOptions[] = { "1x ", "2x ", "4x ", "8x ", "16x" }; // combine wi
 
 const char *ft8Opts[] = { "Off", "no sync", "sync" };
 const char *ft8TxOpts[] = { "Off", "enabled" };
-const char *ft8IntOpts[] = { "odd", "even" };
+const char *ft8IntOpts[] = { "even", "odd" };
 const char *ft8CqOpts[] = { "man", "auto" };
 
 const char *keyerOpts[] = { "Off", "WPM" };

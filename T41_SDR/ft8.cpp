@@ -39,6 +39,8 @@ EXTMEM float32_t ft8WavBuf[15 * 12000]; // buffer a FT8 wav file for use with de
 int numWavBuf = 0, countWavBuf = 1920 * 14, countWavBufStart = 1920 * 14; // first 14 frames are zero
 #endif
 
+float *ft8SignalBuf = NULL;
+
 #define RA8875_GREEN 0x07E0 // 0, 255, 0
 
 typedef struct
@@ -97,7 +99,7 @@ int ft8DecoderState = 0;
 
 int ft8State = 0; // state status for info box: 0 - off, 1 - not sync'd, 2 - sync'd
 int ft8TxState = 0; // ft8 state status for info box: 0 - off, 1 - on
-int ft8IntState = 0; //  ft8 Tx interval state status for info box: 0 - odd, 1 - even
+int ft8IntState = 0; //  ft8 Tx interval state status for info box: 0 - even, 1 - odd
 int ft8CqState = 0; // ft8 CQ response state: 0 - man, 1 - respond automatically to CQ
 
 int master_offset, offset_step;
@@ -109,6 +111,8 @@ int ft8TxFreq = 1000;
 int ft8RxFreq = 1000;
 
 extern char myGrid[];
+
+extern bool ft8PTT;
 
 #define FT8_MSG_ROWS 11
 #define FT8_ROWS 13
@@ -128,14 +132,19 @@ void ResetTuning();
 void YieldToProcess(bool updateSpectrum = false);
 void DrawFT8Spectrum(uint8_t *spec, int numSamples);
 
+void PrepareFT8ExciterIQData(float *sig);
+
 // ft8lib
 bool ft8lib_InitDecoder();
 void ft8lib_ExitDecoder();
+
 bool ft8lib_BufferSignal(float *buf, int sizeBuf, int offset);
 bool ft8lib_ProcessFrame(int frame);
 void ft8lib_Decode(struct tm *start);
 uint8_t *ft8lib_GetFT8SpectrumData(int symbol);
 
+bool ft8lib_GenFT8(char *message, float frequency);
+float *ft8lib_GetSignal();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -703,6 +712,7 @@ void DecodeFT8Data(struct tm *start) {
 void FT8DecoderLoop() {
   // *** TODO: this should be set per actual FT8 interval ***
   struct tm tmSlotStart; // = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
+  char msg[] = "CQ KN6ZDE CM87";
 
   if(ft8SyncFlag) {
     //UpdateFT8Synchronization();
@@ -806,10 +816,37 @@ void FT8DecoderLoop() {
       UpdateInfoBoxItem(IB_ITEM_FT8);
       #endif
 
-      ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+      //ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+      if(ft8TxState) {
+        bool evenInterval = ((second() / 15) * 15) % 2 == 0;
+
+        if(ft8IntState == 0 && evenInterval) {
+          ft8DecoderState = FT8_DECODER_STATE_TX;
+          ft8SyncFlag = false;
+        } else {
+          ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+        }
+      } else {
+        ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+      }
       break;
 
     case FT8_DECODER_STATE_TX:
+      if(!ft8PTT) {
+        AutoSyncFT8();
+
+        if(ft8SyncFlag) {
+          if(ft8lib_GenFT8(msg, 1000.0)) {
+            ft8SignalBuf = ft8lib_GetSignal();
+            ft8PTT = true;
+          } else {
+            Serial.println("ft8lib_GenFT8 failed");
+          }
+          ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+        }
+      } else {
+        ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+      }
       break;
   }
 

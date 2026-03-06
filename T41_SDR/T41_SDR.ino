@@ -620,9 +620,25 @@ FASTRUN void loop() {
       ShowTransmitReceiveStatus();
 
       while(ft8PTT) {
-        PrepareMicExciterData();
+        switch(bands[currentBand].demod) {
+          case DEMOD_FT8:
+              PrepareMicExciterData();
+              WSJTLoop(); // update ft8PTT
+            break;
+
+          case DEMOD_FT8_DECODE:
+            if(ft8SignalBuf != NULL) {
+              for(int i = 0; i < 180000; i += 128) {
+                PrepareFT8ExciterIQData(ft8SignalBuf + i);
+              }
+
+              ft8PTT = false;
+              ft8SignalBuf = NULL;
+          }
+            break;
+        }
+
         UpdateClock();
-        WSJTLoop(); // update ft8PTT
       }
 
       centerFreq = oldCenterFreq;

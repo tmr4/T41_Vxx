@@ -8,6 +8,7 @@
 //-------------------------------------------------------------------------------------------------------------
 
 void PrepareMicExciterData();
+void PrepareFT8ExciterIQData(float *sig);
 void PrepareExciterIQData();
 void PlayExciterIQData();
 void SetBandRelay(int state);
