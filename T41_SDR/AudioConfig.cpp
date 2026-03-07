@@ -209,8 +209,10 @@ void AudioSetup() {
   // configure an SGTL5000 control object for input from the audio adapter microphone
   sgtl5000_1.setAddress(LOW); // Teensy pin 8
   sgtl5000_1.enable();
+
+  // about 26k increase in DMAMEM for each 100 block increase in audio memory
   AudioMemory(500);
-  //AudioMemory(1000); // about 26k increase in DMAMEM for each 100 block increase in audio memory so this is about 130k increase in DMAMEM
+  //AudioMemory(1000);  // about 130k increase in DMAMEM over 500
   //AudioMemory_F32(10);
   sgtl5000_1.inputSelect(AUDIO_INPUT_MIC);
   //sgtl5000_1.micGain(20);
@@ -345,14 +347,15 @@ void ConfigAudioState(int audioState) {
       Q_out_Start(); // sidetone
       break;
 
+    // *** TODO: need to configure data states for both internal and external FT8
     case DATA_RECEIVE_STATE:
       pc_Q_out_L_Ex.disconnect();
       pc_Q_out_R_Ex.disconnect();
       #ifdef T41_USB_AUDIO
         pc_usb2.disconnect(); // USB
+        Q_in_L_Ex.end();
+        Q_in_L_Ex.clear();
       #endif
-      Q_in_L_Ex.end();
-      Q_in_L_Ex.clear();
 
       // start receive audio chain
       Q_in_Start();
@@ -366,15 +369,15 @@ void ConfigAudioState(int audioState) {
       // start USB audio transmit chain
       #ifdef T41_USB_AUDIO
         pc_usb2.connect(); // USB
+        Q_in_L_Ex.begin();
       #endif
-      Q_in_L_Ex.begin();
 
       Q_out_Ex_Start();
 
       #ifdef T41_USB_AUDIO
         pc_amp1.disconnect();
+        Q_out_Start();
       #endif
-      Q_out_Start();
       break;
 
     case CALIBRATE_RECEIVE_STATE:

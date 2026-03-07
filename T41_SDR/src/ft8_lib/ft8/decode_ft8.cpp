@@ -26,6 +26,7 @@ const int kLDPC_iterations = 25;
 
 #define KMAX_DECODED_MSGS 50
 
+// decode time isn't substantially different with these in EXTMEM
 EXTMEM ftx_candidate_t candidateList[KMAX_CANDIDATES];
 EXTMEM ftx_message_t decoded[KMAX_DECODED_MSGS];
 EXTMEM ftx_message_t* decodedHashtable[KMAX_DECODED_MSGS];
@@ -34,10 +35,13 @@ static float *rxSignal = NULL, *txSignal = NULL;
 static int numSamples;
 static monitor_t *monitor;
 
+// oversampling increases decoder accuracy and time
+// at 1, decoder can find msg in initial wav file read, but not on buffered file if start is offset to avoid initial frame of silence
+// at 2, decoder is about 55% slower but can find samples in buffered file with start offset by a frame
 const int kFreq_osr = 2; // Frequency oversampling rate (bin subdivision)
 const int kTime_osr = 2; // Time oversampling rate (symbol subdivision)
-//const int kFreq_osr = 1; // Frequency oversampling rate (bin subdivision)
-//const int kTime_osr = 1; // Time oversampling rate (symbol subdivision)
+//const int kFreq_osr = 1;
+//const int kTime_osr = 1;
 
 #define CALLSIGN_HASHTABLE_SIZE 256
 
@@ -350,6 +354,7 @@ void synth_gfsk(const uint8_t* symbols, int n_sym, float f0, float symbol_bt, fl
   // Compute the smoothed frequency waveform.
   // Length = (nsym+2)*n_spsym samples, first and last symbols extended
   float dphi_peak = 2 * M_PI * hmod / n_spsym;
+  //
   float *dphi = (float *)extmem_malloc((n_wave + 2 * n_spsym) * sizeof(float));
   float *pulse = (float *)extmem_malloc((3 * n_spsym) * sizeof(float));
   float phi = 0;

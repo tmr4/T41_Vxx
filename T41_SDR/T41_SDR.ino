@@ -382,6 +382,8 @@ FLASHMEM void setup() {
   digitalWrite(PROFILER_FT8GETDATA_PIN, LOW);
   pinMode(PROFILER_FT8DECODE_PIN, OUTPUT);
   digitalWrite(PROFILER_FT8DECODE_PIN, LOW);
+  pinMode(PROFILER_FT8_TX_PIN, OUTPUT);
+  digitalWrite(PROFILER_FT8_TX_PIN, LOW);
 #endif
 
 }
@@ -620,6 +622,8 @@ FASTRUN void loop() {
       ShowTransmitReceiveStatus();
 
       while(ft8PTT) {
+        static int i = 0;
+
         switch(bands[currentBand].demod) {
           case DEMOD_FT8:
               PrepareMicExciterData();
@@ -627,14 +631,22 @@ FASTRUN void loop() {
             break;
 
           case DEMOD_FT8_DECODE:
-            if(ft8SignalBuf != NULL) {
-              for(int i = 0; i < 180000; i += 128) {
-                PrepareFT8ExciterIQData(ft8SignalBuf + i);
-              }
-
+            TOGGLEPROFILEPIN(PROFILER_MAINLOOP_PIN);
+            // transmit FT8 signal about ~10ms at a time
+            // total transmit time = 12.64 sec or (79 symbols * 0.16 sec/symbol)
+            // this is 151680 samples (12.64 sec * 12000 samples/sec)
+            // play one buffer past msg to flush output buffer
+            // without this about 5ms of decay pulse will remain
+            // to play at next interval (even with pause below)
+            if(ft8TxSignalBuf != NULL && i < 151680 + 128) {
+              TOGGLEPROFILEPIN(PROFILER_FT8_TX_PIN);
+              PrepareFT8ExciterIQData(ft8TxSignalBuf + i);
+              i += 128;
+            } else {
+              i = 0;
               ft8PTT = false;
-              ft8SignalBuf = NULL;
-          }
+              ft8TxSignalBuf = NULL;
+            }
             break;
         }
 
@@ -643,6 +655,11 @@ FASTRUN void loop() {
 
       centerFreq = oldCenterFreq;
       digitalWrite(RXTX, LOW);
+
+      // delay a bit to allow play buffer to empty, otherwise
+      // the remaining buffer will be played next time it's connected
+      //CWPause(25); // 28ms plays on restart
+      CWPause(50); // 5ms plays on restart, but it's the same w/ higher delay, first transmit doesn't have this
       break;
 
     default:

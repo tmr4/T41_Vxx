@@ -36,10 +36,12 @@
 
 #ifdef PROJECTSYSTEM
 EXTMEM float32_t ft8WavBuf[15 * 12000]; // buffer a FT8 wav file for use with decoder
-int numWavBuf = 0, countWavBuf = 1920 * 14, countWavBufStart = 1920 * 14; // first 14 frames are zero
+//int numWavBuf = 0, countWavBuf = 1920 * 14, countWavBufStart = 1920 * 14; // first 14 frames are zero, gives -0.8 sec offset vs +1.3 sec for original wave file
+int numWavBuf = 0, countWavBuf = 1920 * 7, countWavBufStart = 1920 * 7; // first 14 frames are zero, gives +0.2 sec offset
+//int numWavBuf = 0, countWavBuf = 0, countWavBufStart = 0;
 #endif
 
-float *ft8SignalBuf = NULL;
+float *ft8TxSignalBuf = NULL;
 
 #define RA8875_GREEN 0x07E0 // 0, 255, 0
 
@@ -92,8 +94,9 @@ int ft8_flag;
 #define FT8_DECODER_STATE_BUFFERING   0
 #define FT8_DECODER_STATE_PROCESSING  1
 #define FT8_DECODER_STATE_DECODING    2
-#define FT8_DECODER_STATE_UPDATING    3
+#define FT8_DECODER_STATE_RX_UPDATE   3
 #define FT8_DECODER_STATE_TX          4
+#define FT8_DECODER_STATE_TX_UPDATE   5
 
 int ft8DecoderState = 0;
 
@@ -130,7 +133,7 @@ void SetupDemodFilterBW();
 void ResetTuning();
 
 void YieldToProcess(bool updateSpectrum = false);
-void DrawFT8Spectrum(uint8_t *spec, int numSamples);
+void YieldForProcess(int ms);
 
 void PrepareFT8ExciterIQData(float *sig);
 
@@ -155,6 +158,8 @@ void AutoSyncFT8() {
   if((second())%15 == 14) {
     // now we can sync up without causing a long delay
     while((second())%15 != 0){
+      Q_in_L.clear();
+      Q_in_R.clear();
     }
 
     start_time =millis();
@@ -162,6 +167,12 @@ void AutoSyncFT8() {
     ft8SyncFlag = true;
     ft8State = 2;
     //displaySync("sync'd", RA8875_GREEN);
+
+    if((Q_in_L.available() > 100) && (Q_in_R.available() > 100)) {
+      Serial.println("clearing...");
+      Q_in_L.clear();
+      Q_in_R.clear();
+    }
   }
   else {
     ft8State = 1;
@@ -529,6 +540,8 @@ FLASHMEM bool InitFT8Decoder() {
     ft8SyncFlag = false;
     //ft8SpectrumFlag = false;
     ft8WavFlag = false;
+    frameCount = 0;
+    bufCount = 0;
 
     // update FT8 info box items
     ft8State = 1; // not sync'd
@@ -606,6 +619,8 @@ FLASHMEM void ExitFT8Decoder() {
   ft8_flag = 0;
   ft8State = 0;
   numDecodedMsgs = 0;
+  frameCount = 0;
+  bufCount = 0;
 
   // update FT8 info box items
   infoBoxItemActive[IB_ITEM_FT8] = false;
@@ -665,10 +680,6 @@ bool ReadBufferedFT8Wav(float32_t *buf, int sizeBuf) {
 }
 
 void BufferFT8Data(float *buf, int sizeBuf) {
-  if(frameCount * 1920 + bufCount * sizeBuf >= 180000) {
-    Serial.println("overflow");
-    return;
-  }
   // don't buffer data until we're in sync
   if(ft8SyncFlag) {
     //Serial.print(bufCount); Serial.print(", "); Serial.println(frameCount);
@@ -699,13 +710,27 @@ bool ProcessFT8Frame() {
 }
 
 void DecodeFT8Data(struct tm *start) {
+  Q_in_L.clear();
+  Q_in_R.clear();
+
   // decode accumulated data (containing slightly less than a full time slot)
   // decode takes about:
   //   688ms with ft8_0.wav (~20 messages)
   //   530ms with ft8_7.wav (5 messages in FT8 range, 7 total)
+  //   650ms with ft8_7.wav (5 messages in FT8 range, 7 total)
+  //   650ms with ft8_7.wav buffered w/o offset
+  //   575ms with ft8_7.wav buffered w/ 1 frame offset to (eliminate silence)
+  // *** older measurements above are faster, why longer now? Mix of buffering and perhaps use of EXTMEM.
+  // *** kFreq_osr and kTime_osr are 1 above vs 2 below
+  //   850ms with ft8_7.wav (5 messages in FT8 range, 7 total)
+  //   850ms with ft8_7.wav buffered w/ 1/2 frame offset to (eliminate some silence at beginning of signal)
+  //   890ms with ft8_7.wav buffered w/ 1 frame offset to (eliminate silence)
   SETPROFILEPIN(PROFILER_FT8DECODE_PIN);
   ft8lib_Decode(start);
   RESETPROFILEPIN(PROFILER_FT8DECODE_PIN);
+
+  Q_in_L.clear();
+  Q_in_R.clear();
 }
 
 // FT8 decoder state machine
@@ -719,6 +744,13 @@ void FT8DecoderLoop() {
     UpdateInfoBoxItem(IB_ITEM_FT8);
   } else {
     AutoSyncFT8();
+  }
+
+  // *** TODO: examine various places that need input buffers cleared
+  if((Q_in_L.available() > 100) && (Q_in_R.available() > 100)) {
+    Serial.println("clearing...");
+    Q_in_L.clear();
+    Q_in_R.clear();
   }
 
   switch(ft8DecoderState) {
@@ -767,13 +799,19 @@ void FT8DecoderLoop() {
       //  1920 bytes at 12k sample rate
       // it takes 15 buffer calls to fill a frame (128 * 15 = 1920)
       if(ProcessFT8Frame()) {
+        // next frame
         ++frameCount;
+        // *** some portion of the next frame may already have been buffered
+        //     just decrease buffer count by one frame size ***
         bufCount -= 15;
+
         if(frameCount < 79) {
-          uint8_t *spec = ft8lib_GetFT8SpectrumData(frameCount);
+          // draw spectrum for previous frame
+          // *** incrementing frame above moves to decoding one loop faster ***
+          uint8_t *spec = ft8lib_GetFT8SpectrumData(frameCount - 1);
 
           if(spec != NULL) {
-            DrawFT8Spectrum(spec, 512);
+            DrawFT8Spectrum(spec, 512, frameCount == 77);
           }
 
           ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
@@ -781,10 +819,10 @@ void FT8DecoderLoop() {
           ft8DecoderState = FT8_DECODER_STATE_DECODING;
         }
 
-        #ifdef BUFFER_FT8_WAV
+        #ifdef USE_BUFFERED_FT8_WAV
         // delay a bit since wav buffer playback is a bit fast
         if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
-          delay(25);
+          //YieldForProcess(25);
         }
         #endif
       }
@@ -803,10 +841,10 @@ void FT8DecoderLoop() {
       frameCount = 0;
       bufCount = 0;
 
-      ft8DecoderState = FT8_DECODER_STATE_UPDATING;
+      ft8DecoderState = FT8_DECODER_STATE_RX_UPDATE;
       break;
 
-    case FT8_DECODER_STATE_UPDATING:
+    case FT8_DECODER_STATE_RX_UPDATE:
       ProcessFT8Messages();
 
       #ifdef PROJECTSYSTEM
@@ -818,35 +856,47 @@ void FT8DecoderLoop() {
 
       //ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
       if(ft8TxState) {
-        bool evenInterval = ((second() / 15) * 15) % 2 == 0;
+        // is next interval even?
+        bool evenInterval = (((second() + 15) / 15) * 15) % 2 == 0;
 
-        if(ft8IntState == 0 && evenInterval) {
+        if((ft8IntState == 0 && evenInterval) || (ft8IntState == 1 && !evenInterval)) {
           ft8DecoderState = FT8_DECODER_STATE_TX;
           ft8SyncFlag = false;
+          SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         } else {
           ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
         }
       } else {
         ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
       }
+
+      // prepare next TX message
+
       break;
 
     case FT8_DECODER_STATE_TX:
+      TOGGLEPROFILEPIN(PROFILER_FT8GETDATA_PIN);
       if(!ft8PTT) {
         AutoSyncFT8();
 
         if(ft8SyncFlag) {
           if(ft8lib_GenFT8(msg, 1000.0)) {
-            ft8SignalBuf = ft8lib_GetSignal();
+            ft8TxSignalBuf = ft8lib_GetSignal();
             ft8PTT = true;
           } else {
             Serial.println("ft8lib_GenFT8 failed");
           }
-          ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+          ft8DecoderState = FT8_DECODER_STATE_TX_UPDATE;
         }
       } else {
-        ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+        ft8DecoderState = FT8_DECODER_STATE_TX_UPDATE;
       }
+      break;
+
+    case FT8_DECODER_STATE_TX_UPDATE:
+      // prepare expected RX messages
+      ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+      RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
       break;
   }
 

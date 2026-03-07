@@ -93,6 +93,7 @@ void PlayExciterIQData() {
   //CWPause(10); // audio memory usage increases with this
   if(bands[currentBand].demod != DEMOD_FT8) {
     CWPause(5); // audio memory usage doesn't increase with this
+    //CWPause(10);
   }
 }
 
@@ -263,11 +264,13 @@ void PrepareFT8ExciterIQData(float *sig) {
   // Interpolate  to 24kHz and scale to equalize levels
   // left channel first
   arm_fir_interpolate_f32(&FIR_int3_EX_I, audioBufferL_EX, audioBufferTemp, 128);
-  arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
+  //arm_scale_f32(audioBufferTemp, 3.5, audioBufferL_EX, 256);
+  arm_scale_f32(audioBufferTemp, 2.0, audioBufferL_EX, 256);
 
   // now right channel
   arm_fir_interpolate_f32(&FIR_int3_EX_Q, audioBufferR_EX, audioBufferTemp, 128);
-  arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
+  //arm_scale_f32(audioBufferTemp, 3.5, audioBufferR_EX, 256);
+  arm_scale_f32(audioBufferTemp, 2.0, audioBufferR_EX, 256);
 
   PlayExciterIQData();
 }

@@ -485,7 +485,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
       case DEMOD_FT8_DECODE:
         SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
-        #ifdef BUFFER_FT8_WAV
+        #ifdef USE_BUFFERED_FT8_WAV
         // *** TODO: this assumes DEMOD_FT8_DECODE mode is always preceeded by DEMOD_FT8_WAV
         //    to populate ft8WavBuf ***
         if(ReadBufferedFT8Wav(audioBufferR, 128)) {

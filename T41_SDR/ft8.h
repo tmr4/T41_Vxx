@@ -13,7 +13,7 @@ extern int numDecodedMsgs;
 
 extern int activeMsg;
 
-extern float *ft8SignalBuf;
+extern float *ft8TxSignalBuf;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

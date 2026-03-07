@@ -197,6 +197,8 @@ void ShowCurrentPowerSetting();
 
 void ShowFreqSpectrum();
 void ShowAudioSpectrum();
+
+void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall = false);
 void ShowFT8SpectrumFreqValues();
 
 void UpdateCWFilter();

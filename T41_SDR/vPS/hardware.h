@@ -54,6 +54,7 @@
     #define PROFILER_FT8PROCESSBLOCK_PIN  35
     #define PROFILER_FT8GETDATA_PIN       36
     #define PROFILER_FT8DECODE_PIN        38
+    #define PROFILER_FT8_TX_PIN           28
 #endif
 
 #define PTT          37    // Transmit/Receive
