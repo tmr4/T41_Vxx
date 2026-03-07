@@ -3,9 +3,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern int ft8_flag;
-extern bool ft8SyncFlag;
-extern int ft8State, ft8TxFreq, ft8RxFreq, ft8TxState, ft8IntState, ft8CqState;
+extern int ft8SyncState;
+extern int ft8TxFreq, ft8RxFreq, ft8TxState, ft8IntState, ft8CqState;
 
 extern bool ft8Init;
 

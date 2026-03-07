@@ -85,7 +85,7 @@ const char *nfOptions[3] = { "Off", "Auto", "On"};
 const char *optionsWPM[2] = { "Straight Key", "Paddles " };
 const char *zoomOptions[] = { "1x ", "2x ", "4x ", "8x ", "16x" }; // combine with MAX_ZOOM_ENTRIES somewhere
 
-const char *ft8Opts[] = { "Off", "no sync", "sync" };
+const char *ft8Opts[] = { "no sync", "sync" };
 const char *ft8TxOpts[] = { "Off", "enabled" };
 const char *ft8IntOpts[] = { "even", "odd" };
 const char *ft8CqOpts[] = { "man", "auto" };
@@ -133,7 +133,7 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,      0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
   { "Temp:",       NULL,        NULL,                     0,        3,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBTempFollowup        }, // Teensy Temp
   { "Load:",       NULL,        NULL,                     0,        4,      1,   IB_COL_2_X,    IB_ROW_7_Y,    &IBLoadFollowup        },  // Teensy Load
-  { "FT8       ",  ft8Opts,     &ft8State,                0,        8,      2,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   },  // FT8 sync
+  { "FT8       ",  ft8Opts,     &ft8SyncState,            0,        8,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   },  // FT8 sync
   { "Tx:",         ft8TxOpts,   &ft8TxState,              0,        7,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx enabled
   { "Tx Freq:",    NULL,        &ft8TxFreq,                     0,        5,      0,   IB_COL_1_X,    IB_ROW_10_Y,   &IBFT8TxFollowup       },  // FT8 Tx freq
   { "Rx Freq:",    NULL,        &ft8RxFreq,                     0,        5,      0,   IB_COL_2_X,    IB_ROW_10_Y,   &IBFT8RxFollowup       },  // FT8 Rx freq

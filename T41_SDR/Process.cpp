@@ -338,7 +338,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     // this is still helpful for troubleshooting at times when the audio process isn't working correctly
     // *** TODO: needed for current state of internal FT8 decoding, DEMOD_FT8_DECODE, hangs otherwise, though interrupts work ***
     if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
-      Serial.println("clearing...");
+      Serial.println("clearing @ ProcessReceiverData ...");
       Q_in_L.clear();
       Q_in_R.clear();
     }
@@ -538,7 +538,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
           //      not a big priority unless we want this to be a standard feature ***
           // *** this slows things down with live FT8 processing of the wav file ***
           //if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
-          //  Serial.println("clearing...");
+          //  Serial.println("clearing @ ProcessReceiverData DEMOD_FT8_WAV ...");
           //  Q_in_L.clear();
           //  Q_in_R.clear();
           //}
