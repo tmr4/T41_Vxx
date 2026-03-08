@@ -10,6 +10,8 @@
 #define DISPLAY_LANDSCAPE
 //#define DISPLAY_FLIPPED
 
+//#define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
+
 // pick one of the following front panel configurations
 //#define MCP23017_FRONTPANEL // MCP23017 driven front panel
 #define FOURSQRP_FRONTPANEL // resistive switch matrix front panel

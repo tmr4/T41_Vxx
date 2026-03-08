@@ -483,9 +483,14 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         ProcessPSK31WaveData();
         break;
 
+      #ifdef USE_BUFFERED_FT8_WAV
       case DEMOD_FT8_DECODE:
         SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
-        #ifdef USE_BUFFERED_FT8_WAV
+        // transfer to wav buffer to audio buffers
+        // and interpolate to 24 kHz to get audio signal for T41
+        // *** TODO: evaluate if use of CMISS_DSP library is better ***
+          // interpolate to 24 kHz to get audio signal for T41
+          // *** TODO: evaluate if use of CMISS_DSP library is better ***
         // *** TODO: this assumes DEMOD_FT8_DECODE mode is always preceeded by DEMOD_FT8_WAV
         //    to populate ft8WavBuf ***
         if(ReadBufferedFT8Wav(audioBufferR, 128)) {
@@ -495,25 +500,19 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
             audioBufferL[2*i] = audioBufferR[i];
           }
         }
-        #else
+        //#else
         // decimate by 16 to get to 12ksps used by ft8_lib
         // TODO: consider whether to do this here or after applying audio filters
-        //// decimation-by-4 in-place
-        //arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
-        //arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
-        //
-        //// decimation-by-4 in-place
-        //arm_fir_decimate_f32(&FIR_dec3_I, audioBufferL, audioBufferL, 512);
-        //arm_fir_decimate_f32(&FIR_dec3_Q, audioBufferR, audioBufferR, 512);
+        // decimation-by-4 in-place
+        arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
+        arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
 
-        // transfer to wav buffer to audio buffers
-        // and interpolate to 24 kHz to get audio signal for T41
-        // *** TODO: evaluate if use of CMISS_DSP library is better ***
-          // interpolate to 24 kHz to get audio signal for T41
-          // *** TODO: evaluate if use of CMISS_DSP library is better ***
-        #endif
+        // decimation-by-4 in-place
+        arm_fir_decimate_f32(&FIR_dec3_1, audioBufferL, audioBufferL, 512);
+        arm_fir_decimate_f32(&FIR_dec3_2, audioBufferR, audioBufferR, 512);
         RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         break;
+      #endif
 
       case DEMOD_FT8_WAV:
         // get samples from wav file (assumed open)
@@ -580,7 +579,9 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // *** TODO: consider if AGC is needed for FT8 or even possible at 44.1kHz sample rate ***
         break;
 
-      case DEMOD_FT8_DECODE: // *** TODO: this is PROJECTSYSTEM only ***
+      #ifdef USE_BUFFERED_FT8_WAV
+      case DEMOD_FT8_DECODE: // *** TODO: this is USE_BUFFERED_FT8_WAV only ***
+      #endif
       case DEMOD_FT8_WAV:
         AudioDSP(updateFreqSpec, 20, false); // no imaginary component for these
         break;
@@ -700,14 +701,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         break;
 
       case DEMOD_FT8_DECODE: // demodulate FT8 signals via antenna input as USB for audio
-        // *** TODO: work out audio dsp for ft8 decode signals ***
-        //for(int i = 0; i < 256; i++) {
-        //  audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        //}
-        // save audio signal to FT8 buffer
-        //BufferFT8Data(audioBufferL, 128);
-
-      #ifdef PROJECTSYSTEM
+      #ifdef USE_BUFFERED_FT8_WAV
         // transfer audio signal back to buffer
         // *** TODO: should wav data be passed through audio filters ***
         for(int i = 0; i < 256; i++) {
@@ -716,6 +710,20 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // transfer wav data to ft8_lib
         // *** TODO: pass raw or filtered data to FT8? ***
         //BufferFT8Data(audioBufferL, 128);
+        BufferFT8Data(audioBufferR, 128);
+      #else
+        // *** TODO: work out audio dsp for ft8 decode signals ***
+        for(int i = 0; i < 256; i++) {
+          audioBufferL[i] = audioIFFT[512 + (i * 2)];
+        }
+
+        // decimation 1
+        arm_fir_decimate_f32(&FIR_dec3_1, audioBufferL, audioBufferR, 256);
+
+        // decimation-by-2
+        arm_fir_decimate_f32(&FIR_dec3_2, audioBufferR, audioBufferR, 256);
+
+        // save audio signal to FT8 buffer
         BufferFT8Data(audioBufferR, 128);
       #endif
         break;

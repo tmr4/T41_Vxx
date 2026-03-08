@@ -47,7 +47,7 @@
   AudioMemoryUsageMaxReset();
 
 
-#ifdef PROJECTSYSTEM
+#ifdef USE_BUFFERED_FT8_WAV
 EXTMEM float32_t ft8WavBuf[15 * 12000]; // buffer a FT8 wav file for use with decoder
 //int numWavBuf = 0, countWavBuf = 1920 * 14, countWavBufStart = 1920 * 14; // first 14 frames are zero, gives -0.8 sec offset vs +1.3 sec for original wave file
 int numWavBuf = 0, countWavBuf = 1920 * 7, countWavBufStart = 1920 * 7; // first 14 frames are zero, gives +0.2 sec offset
@@ -571,8 +571,8 @@ FLASHMEM bool SetupFT8Wav() {
   uint32_t sample_rate = 12000;
   uint32_t num_samples = slot_period * sample_rate;
 
-  //result = LoadWav("ft8.wav", num_samples); //
-  result = LoadWav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
+  result = LoadWav("ft8.wav", num_samples); //
+  //result = LoadWav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
   //result = LoadWav("ft8_1.wav", num_samples); // CQ KN6ZDE CM87 at 1000
   //result = LoadWav("ft8_10.wav", num_samples); // CQ KN6ZDE CM8x x=0-9 at 1000 + x*100
   //result = LoadWav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
@@ -626,7 +626,7 @@ FLASHMEM void ExitFT8Decoder() {
 bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
   bool result = ReadWav(buf, sizeBuf);
 
-#ifdef PROJECTSYSTEM
+#ifdef USE_BUFFERED_FT8_WAV
   static bool bufInit = false;
 
   // transfer to wav buffer
@@ -650,6 +650,7 @@ bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
   return result;
 }
 
+#ifdef USE_BUFFERED_FT8_WAV
 bool ReadBufferedFT8Wav(float32_t *buf, int sizeBuf) {
   bool result = false;
 
@@ -669,6 +670,7 @@ bool ReadBufferedFT8Wav(float32_t *buf, int sizeBuf) {
 
   return result;
 }
+#endif
 
 void BufferFT8Data(float *buf, int sizeBuf) {
   // don't buffer data until we're in sync
