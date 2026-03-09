@@ -1871,8 +1871,8 @@ FLASHMEM void ProcessTransmitCalIQData() {
     //arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, 2048);
     //arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 2048);
 
-    //arm_scale_f32(audioBufferL, bands[currentBand].RFgain, audioBufferL, 2048);
-    //arm_scale_f32(audioBufferR, bands[currentBand].RFgain, audioBufferR, 2048);
+    //arm_scale_f32(audioBufferL, bands[currentBand].rfGain, audioBufferL, 2048);
+    //arm_scale_f32(audioBufferR, bands[currentBand].rfGain, audioBufferR, 2048);
 
     // Manual IQ amplitude correction
     if(bands[currentBand].demod == DEMOD_LSB || bands[currentBand].demod == DEMOD_AM || bands[currentBand].demod == DEMOD_SAM) {

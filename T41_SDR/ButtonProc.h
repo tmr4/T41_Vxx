@@ -11,8 +11,6 @@ extern int liveNoiseFloorFlag;
 extern bool nfmBWFilterActive;
 extern bool ft8MsgSelectActive;
 
-extern int priorDemodMode;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------

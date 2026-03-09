@@ -425,14 +425,14 @@ FLASHMEM void SetupDemodFilterBW() {
     case DEMOD_PSK31_WAV:
     case DEMOD_FT8_DECODE:
     case DEMOD_FT8_WAV:
-      currentFilterLoCut = bands[currentBand].FLoCut;
-      currentFilterHiCut = bands[currentBand].FHiCut;
+      currentFilterLoCut = bands[currentBand].fLoCut;
+      currentFilterHiCut = bands[currentBand].fHiCut;
       break;
 
     case DEMOD_AM:
     case DEMOD_SAM:
-      currentFilterLoCut = -bands[currentBand].FHiCut;
-      currentFilterHiCut = bands[currentBand].FHiCut;
+      currentFilterLoCut = -bands[currentBand].fHiCut;
+      currentFilterHiCut = bands[currentBand].fHiCut;
       break;
 
     default:

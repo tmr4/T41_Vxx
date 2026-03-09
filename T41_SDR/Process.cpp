@@ -102,10 +102,10 @@ void InitFFTArrays() {
 FLASHMEM void InitAMDemodBiquadFilter() {
   // *** TODO: seems this should be calc on filter BW change, but isn't ***
 /*
-  int LP_F_help = bands[currentBand].FHiCut;
+  int LP_F_help = bands[currentBand].fHiCut;
 
-  if(LP_F_help < -bands[currentBand].FLoCut) {
-    LP_F_help = -bands[currentBand].FLoCut;
+  if(LP_F_help < -bands[currentBand].fLoCut) {
+    LP_F_help = -bands[currentBand].fLoCut;
   }
 
   SetIIRCoeffs(biquad_lowpass1_coeffs, (float32_t)LP_F_help, 1.3, sampleRate / 8.0, 0);  // 1st stage
@@ -323,10 +323,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     }
 
     /**********************************************************************************
-        Scale the data buffers by the RFgain value defined in bands[currentBand] structure
+        Scale the data buffers by the rfGain value defined in bands[currentBand] structure
     **********************************************************************************/
-    arm_scale_f32(audioBufferL, bands[currentBand].RFgain, audioBufferL, blocks * 128);
-    arm_scale_f32(audioBufferR, bands[currentBand].RFgain, audioBufferR, blocks * 128);
+    arm_scale_f32(audioBufferL, bands[currentBand].rfGain, audioBufferL, blocks * 128);
+    arm_scale_f32(audioBufferR, bands[currentBand].rfGain, audioBufferR, blocks * 128);
 
     /**********************************************************************************
       Clear Buffers
@@ -1296,11 +1296,11 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
       freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
       prevFreqSpecBuf[i] = freqSpecBuf[i];
 
-      pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
+      pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
 
       // *** TODO: evaluate noise floor default setting for new v12 hardware ***
       // *** TODO: some calibration routines need this adjustment because there is no noise floor adjustment ***
-      //pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i])) + 50;
+      //pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i])) + 50;
 
       if(controlDataFlag) {
         // T41 spectrum equation: spectrumNoiseFloor - pixelnew[i] - currentNF;
@@ -1396,9 +1396,9 @@ void Calc1xFreqSpec() {
     prevFreqSpecBuf[x] = spec_help;
 
 #ifdef USE_LOG10FAST
-    pixelnew[x] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x]));
+    pixelnew[x] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x]));
 #else
-    pixelnew[x] = displayScale[currentScale].baseOffset + bands[currentBand].pixel_offset + (int16_t) (displayScale[currentScale].dBScale * log10f(spec_help));
+    pixelnew[x] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f(spec_help));
 #endif
   }
 }

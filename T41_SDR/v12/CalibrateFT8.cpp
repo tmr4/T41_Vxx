@@ -407,7 +407,7 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
     arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 256);
 
     /**********************************************************************************
-      Scale the data buffers by the RFgain value defined in bands[currentBand] structure
+      Scale the data buffers by the rfGain value defined in bands[currentBand] structure
     **********************************************************************************/
     arm_scale_f32(audioBufferL, recBandFactor[currentBand], audioBufferL, 256);
     arm_scale_f32(audioBufferR, recBandFactor[currentBand], audioBufferR, 256);

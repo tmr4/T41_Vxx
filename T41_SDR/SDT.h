@@ -109,13 +109,13 @@ typedef struct {
   long fBandHigh; // Upper band edge
   const char* name; // name of band
   int demod;
-  int FHiCut;
-  int FLoCut;
-  int RFgain;
+  int fLoCut;
+  int fHiCut;
+  int rfGain;
   long calFreq; // receive IQ calibration frequency
   float32_t gainCorrection; // is hardware dependent and has to be calibrated ONCE and hardcoded in the band table
-  int AGC_thresh;
-  int16_t pixel_offset;
+  int agcThresh;
+  int16_t pixelOffset;
 } band;
 
 extern band bands[];

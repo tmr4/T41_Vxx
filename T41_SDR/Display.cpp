@@ -995,7 +995,7 @@ FASTRUN void DrawSmeterBar() {
     Serial.print("dbm_calibration: "); Serial.println(dbm_calibration);
     Serial.print("gainCorrection: "); Serial.println(bands[currentBand].gainCorrection);
     Serial.print("audioMaxSquaredAve: "); Serial.println(audioMaxSquaredAve);
-    Serial.print("RFgain: "); Serial.println(bands[currentBand].RFgain);
+    Serial.print("rfGain: "); Serial.println(bands[currentBand].rfGain);
     Serial.print("rfGainAllBands: "); Serial.println(rfGainAllBands);
     Serial.print("currentRF_InAtten: "); Serial.println(currentRF_InAtten);
   }

@@ -75,35 +75,36 @@ float32_t DMAMEM audioBufferTemp[2048];
 
 /*
 typedef struct {
-  long freq;      // Current frequency in Hz
-  long fBandLow;  // Lower band edge
-  long fBandHigh; // Upper band edge
+  long freq;        // Current frequency in Hz
+  long fBandLow;    // Lower band edge
+  long fBandHigh;   // Upper band edge
   const char* name; // name of band
-  int demod;
-  int FHiCut;
-  int FLoCut;
-  int RFgain;
+  int demod;        // current demodulation mode, also initial demod mode for band on power up
+  int dataDemod;    // current data demodulation mode, also initial data demod mode for band on power up
+  int normalDemod;  // this preserves the non-data demod mode so it's properly restored when switching modes and bands
+  int fHiCut;
+  int fLoCut;
+  int rfGain;
   long calFreq; // receive IQ calibration frequency, set to 0 to skip calibration of a specific band
   float32_t gainCorrection; // is hardware dependent and has to be calibrated ONCE and hardcoded in the band table
-  int AGC_thresh;
-  int16_t pixel_offset;
+  int agcThresh;
+  int16_t pixelOffset;
 } band;
 */
 
 // gainCorrection used in signal strength calculation
 // set with signal from AD3 (1mW -73dB external attenuation, 223.6mVrms @ 1kHz w/ default freq for band; see "Wavegen for RF in - S9 - 1mW with 73dB external atten.dwf3work")
 band bands[NUMBER_OF_BANDS] = {
-//  freq      band low   band hi   name    demod        Hi   Low     Gain  calFreq      gain                    AGC   pixel
-//                                                       filter                         correct                       offset
-//  freq      fBandLow   fBandHigh name    demod       FHiCut FLoCut RFgain             gainCorrection
-    3700000,  3500000,   4000000,  "80M",  DEMOD_LSB,  3000, 200,    1,    3750000,     GAIN_CORRECTION_80M,    20,    20,
-    7150000,  7000000,   7300000,  "40M",  DEMOD_LSB,  3000, 200,    1,    7150000,     GAIN_CORRECTION_40M,    20,    20,
-    14200000, 14000000, 14350000,  "20M",  DEMOD_USB,  3000, 200,    1,    14175000,    GAIN_CORRECTION_20M,    20,    20,
-    18100000, 18068000, 18168000,  "17M",  DEMOD_USB,  3000, 200,    1,    18118000,    GAIN_CORRECTION_17M,    20,    20,
-    21200000, 21000000, 21450000,  "15M",  DEMOD_USB,  3000, 200,    1,    21225000,    GAIN_CORRECTION_15M,    20,    20,
-    24920000, 24890000, 24990000,  "12M",  DEMOD_USB,  3000, 200,    1,    24940000,    GAIN_CORRECTION_12M,    20,    20,
-//    28350000, 28000000, 29700000,  "10M",  DEMOD_USB,  3000, 200,    1,    28850000,    GAIN_CORRECTION_10M,    20,    20 // gainCorrection set to 12m band value as AD3 can't generate this signal
-    28350000, 28000000, 29700000,  "10M",  DEMOD_USB,  3000, 200,    1,           0,    GAIN_CORRECTION_10M,    20,    20 // gainCorrection set to 12m band value as AD3 can't generate this signal
+//  freq      band low   band hi   name        demodulation settings         low  high   Gain  calFreq      gain                    AGC   pixel
+//                                         current    data       normal         filter                       correct                       offset
+//  freq      fBandLow   fBandHigh name    demod      demod      demod      fLoCut fHiCut rfGain             gainCorrection
+    3700000,  3500000,   4000000,  "80M",  DEMOD_LSB, DEMOD_FT8, DEMOD_LSB,   200, 3000,  1,    3750000,     GAIN_CORRECTION_80M,    20,    20,
+    7150000,  7000000,   7300000,  "40M",  DEMOD_LSB, DEMOD_FT8, DEMOD_LSB,   200, 3000,  1,    7150000,     GAIN_CORRECTION_40M,    20,    20,
+    14200000, 14000000, 14350000,  "20M",  DEMOD_USB, DEMOD_FT8, DEMOD_USB,   200, 3000,  1,    14175000,    GAIN_CORRECTION_20M,    20,    20,
+    18100000, 18068000, 18168000,  "17M",  DEMOD_USB, DEMOD_FT8, DEMOD_USB,   200, 3000,  1,    18118000,    GAIN_CORRECTION_17M,    20,    20,
+    21200000, 21000000, 21450000,  "15M",  DEMOD_USB, DEMOD_FT8, DEMOD_USB,   200, 3000,  1,    21225000,    GAIN_CORRECTION_15M,    20,    20,
+    24920000, 24890000, 24990000,  "12M",  DEMOD_USB, DEMOD_FT8, DEMOD_USB,   200, 3000,  1,    24940000,    GAIN_CORRECTION_12M,    20,    20,
+    28350000, 28000000, 29700000,  "10M",  DEMOD_USB, DEMOD_FT8, DEMOD_USB,   200, 3000,  1,           0,    GAIN_CORRECTION_10M,    20,    20 // auto calibration not performed on this band
 };
 
 int bandswitchPins[] = {

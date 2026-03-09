@@ -84,7 +84,7 @@ void ShowAnalogGain() {
 
   attenuator = currentRF_InAtten;
 
-  if((((bands[currentBand].RFgain != RF_gain_old) || (attenuator != RF_att_old)) && twinpeaks_tested == 1) || write_analog_gain) {
+  if((((bands[currentBand].rfGain != RF_gain_old) || (attenuator != RF_att_old)) && twinpeaks_tested == 1) || write_analog_gain) {
     tft.setFontScale((enum RA8875tsize)0);
     tft.setCursor(TIME_X - 40, TIME_Y + 26); // *** TODO: evaluate position ***
     tft.print((float)(RF_gain_old * 1.5));
@@ -104,7 +104,7 @@ void ShowAnalogGain() {
     tft.print("dB");
     tft.setTextColor(RA8875_WHITE);
     tft.print("dB");
-    RF_gain_old = bands[currentBand].RFgain;
+    RF_gain_old = bands[currentBand].rfGain;
     RF_att_old = attenuator;
     //write_analog_gain = 0;
   }
@@ -294,18 +294,18 @@ float CalcSignalStrength() {
   // prevent NAN dBm
   if(audioMaxSquaredAve > 0.0) {
     // dbm_calibration set to -22 above; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
-    // attenuator is 0 and could be set in a future HW revision; RFgain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10
+    // attenuator is 0 and could be set in a future HW revision; rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10
 
     // *** TODO: rework S-meter calibration, it's not very linear here:
     //  dbm_calibration = 24 good for S1
     //  dbm_calibration = 32 good for S9
     //  dbm_calibration = 24 good for S1
     // dbm_calibration set to 31; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
-    // RFgain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10; rfGainAllBands is initialized to 0
-    //dbm = dbm_calibration + bands[currentBand].gainCorrection + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[currentBand].RFgain * 1.5 - rfGainAllBands;
-    //dbm = 24.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].RFgain * 1.5 - rfGainAllBands;
-    //dbm = 32.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].RFgain * 1.5 - rfGainAllBands;
-    dbm = 38.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].RFgain * 1.5 - rfGainAllBands;
+    // rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10; rfGainAllBands is initialized to 0
+    //dbm = dbm_calibration + bands[currentBand].gainCorrection + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[currentBand].rfGain * 1.5 - rfGainAllBands;
+    //dbm = 24.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].rfGain * 1.5 - rfGainAllBands;
+    //dbm = 32.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].rfGain * 1.5 - rfGainAllBands;
+    dbm = 38.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].rfGain * 1.5 - rfGainAllBands;
 
     //if(std::isnan(dbm)) {
     //  dbm = -133.0;

@@ -168,8 +168,8 @@ void BeaconExit() {
       SetTxRxFreq(TxRxFreq);
 
       // save and set filters for the beacon bands as well
-      bands[currentBand].FHiCut = priorFilterHi[i];
-      bands[currentBand].FLoCut = priorFilterLo[i];
+      bands[currentBand].fHiCut = priorFilterHi[i];
+      bands[currentBand].fLoCut = priorFilterLo[i];
     }
   }
   ChangeBand(1);
@@ -569,10 +569,10 @@ void BeaconLoop() {
         SetTxRxFreq(beaconFreq[i]);
 
         // save and set filters for the beacon bands as well
-        priorFilterHi[i] = bands[currentBand].FHiCut;
-        priorFilterLo[i] = bands[currentBand].FLoCut;
-        bands[currentBand].FHiCut = 1500;
-        bands[currentBand].FLoCut = 500;
+        priorFilterHi[i] = bands[currentBand].fHiCut;
+        priorFilterLo[i] = bands[currentBand].fLoCut;
+        bands[currentBand].fHiCut = 1500;
+        bands[currentBand].fLoCut = 500;
 
         beaconBand = i; // remember the last band
       }

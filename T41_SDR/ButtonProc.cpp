@@ -38,7 +38,7 @@ bool directFreqFlag = false;
 long TxRxFreqOld;
 
 // preserves mode and demod mode between mode and band changes
-int priorMode, priorDemodMode;
+int priorMode;
 
 // preserves data demod mode between band and mode changes
 int currentDataMode = DEMOD_FT8; // data mode starts in external FT8 mode
@@ -53,6 +53,8 @@ int currentDataMode = DEMOD_FT8; // data mode starts in external FT8 mode
 
 /*****
   Purpose: To process a band increase/decrease
+
+  *** radio mode and demolation mode are unchanged across band changes ***
 *****/
 FLASHMEM void ChangeBand(int change) {
   // Added if so unused GPOs will not be touched
@@ -422,7 +424,7 @@ FLASHMEM void ChangeMode(int mode) {
     case SSB_MODE:
       // save demod mode if changing to Data mode
       if(mode == DATA_MODE) {
-        priorDemodMode = bands[currentBand].demod; // save demod mode for restoration later
+        bands[currentBand].normalDemod = bands[currentBand].demod; // save demod mode for restoration later
         priorMode = SSB_MODE;
       }
       break;
@@ -430,7 +432,7 @@ FLASHMEM void ChangeMode(int mode) {
     case CW_MODE:
       // save demod mode if changing to Data mode
       if(mode == DATA_MODE) {
-        priorDemodMode = bands[currentBand].demod; // save demod mode for restoration later
+        bands[currentBand].normalDemod = bands[currentBand].demod; // save demod mode for restoration later
         priorMode = CW_MODE;
       }
 
@@ -460,7 +462,7 @@ FLASHMEM void ChangeMode(int mode) {
       }
 
       // return demod mode to previous mode
-      bands[currentBand].demod = priorDemodMode;
+      bands[currentBand].demod = bands[currentBand].normalDemod;
       break;
 
     default:
