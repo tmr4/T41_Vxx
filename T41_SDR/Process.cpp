@@ -249,7 +249,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static float32_t wold = 0.0f;
   q15_t q15_buffer_LTemp[2048];
   float rfGainValue, intScaler;
-  // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8
+  // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8 or 24Hz
   int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
   // the required data required by the frequency spectrum calc depends on the zoom factor
   static int reqPasses = 20;
@@ -314,8 +314,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         to manipulate the arrays.  Arrays are all 2048 long
     **********************************************************************************/
     switch(bands[currentBand].demod) {
-      case DEMOD_FT8:
-        break;
+      //case DEMOD_FT8:
+      //  break;
 
       default:
         RemoveDCBias();
@@ -476,6 +476,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         break;
 
       case DEMOD_FT8:
+        // at 44.1kHz
         break;
 
       case DEMOD_PSK31_WAV:
@@ -500,16 +501,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
             audioBufferL[2*i] = audioBufferR[i];
           }
         }
-        //#else
-        // decimate by 16 to get to 12ksps used by ft8_lib
-        // TODO: consider whether to do this here or after applying audio filters
-        // decimation-by-4 in-place
-        arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
-        arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
-
-        // decimation-by-4 in-place
-        arm_fir_decimate_f32(&FIR_dec3_1, audioBufferL, audioBufferL, 512);
-        arm_fir_decimate_f32(&FIR_dec3_2, audioBufferR, audioBufferR, 512);
         RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         break;
       #endif
@@ -555,6 +546,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // decimation-by-2 in-place
         arm_fir_decimate_f32(&FIR_dec2_I, audioBufferL, audioBufferL, 512);
         arm_fir_decimate_f32(&FIR_dec2_Q, audioBufferR, audioBufferR, 512);
+
+        // now at 24kps
         break;
     }
 
@@ -573,11 +566,11 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         }
         break;
 
-      case DEMOD_FT8:
-        AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
-
-        // *** TODO: consider if AGC is needed for FT8 or even possible at 44.1kHz sample rate ***
-        break;
+      //case DEMOD_FT8:
+      //  // *** TODO: consider if AGC (in default below) for FT8 is desirable with WSJT-X ***
+      //  // *** without AGC the T41 volume is less in this mode than equivalent SSB ***
+      //  AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
+      //  break;
 
       #ifdef USE_BUFFERED_FT8_WAV
       case DEMOD_FT8_DECODE: // *** TODO: this is USE_BUFFERED_FT8_WAV only ***
@@ -603,18 +596,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         The demod mode is accomplished by selecting/combining the real and imaginary parts of the output of the IFFT process.
     **********************************************************************************/
     switch(bands[currentBand].demod) {
-      case DEMOD_USB:
-        for(int i = 0; i < 256; i++) {
-          audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        }
-        break;
-
-      case DEMOD_LSB:
-        for(int i = 0; i < 256; i++) {
-          audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        }
-        break;
-
       case DEMOD_AM:
         for(int i = 0; i < 256; i++) {     // Magnitude estimation Lyons (2011): page 652 / libcsdr
           audiotmp = AlphaBetaMag(audioIFFT[512 + (i * 2)], audioIFFT[512 + (i * 2) + 1]);
@@ -673,21 +654,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // AGC acts upon on the audio data in audioIFFT
         // *** TODO: evaluate effectiveness and proper placement of this AGC function ***
         AGC();
-
-        // transfer audio signal back to buffer
-        for(int i = 0; i < 256; i++) {
-          audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        }
-        break;
-
-      case DEMOD_PSK31:
-        //break;
-
-      case DEMOD_FT8:
-        // transfer audio signal back to buffer
-        for(int i = 0; i < 256; i++) {
-          audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        }
         break;
 
       case DEMOD_SAM:
@@ -700,43 +666,44 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         Psk31PhaseShiftDetector(&audioFFT[512], audioBufferL_EX, 256);
         break;
 
-      case DEMOD_FT8_DECODE: // demodulate FT8 signals via antenna input as USB for audio
-      #ifdef USE_BUFFERED_FT8_WAV
-        // transfer audio signal back to buffer
-        // *** TODO: should wav data be passed through audio filters ***
-        for(int i = 0; i < 256; i++) {
-          audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        }
-        // transfer wav data to ft8_lib
-        // *** TODO: pass raw or filtered data to FT8? ***
-        //BufferFT8Data(audioBufferL, 128);
-        BufferFT8Data(audioBufferR, 128);
-      #else
-        // *** TODO: work out audio dsp for ft8 decode signals ***
-        for(int i = 0; i < 256; i++) {
-          audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        }
+      default:
+        break;
+    }
 
-        // decimation 1
-        arm_fir_decimate_f32(&FIR_dec3_1, audioBufferL, audioBufferR, 256);
-
-        // decimation-by-2
-        arm_fir_decimate_f32(&FIR_dec3_2, audioBufferR, audioBufferR, 256);
-
-        // save audio signal to FT8 buffer
-        BufferFT8Data(audioBufferR, 128);
-      #endif
+    // additional DSP work #1
+    switch(bands[currentBand].demod) {
+      // no additional work
+      case DEMOD_AM:
+      case DEMOD_SAM:
+      case DEMOD_PSK31:
+      case DEMOD_PSK31_WAV:
         break;
 
-      case DEMOD_FT8_WAV:
+      //case DEMOD_FT8_WAV: // *** TODO: should wav data be passed through audio filters ***
+      default:
         // transfer audio signal back to buffer
-        // *** TODO: should wav data be passed through audio filters ***
         for(int i = 0; i < 256; i++) {
           audioBufferL[i] = audioIFFT[512 + (i * 2)];
         }
-        // transfer wav data to ft8_lib
-        // *** TODO: pass raw or filtered data to FT8? ***
-        //BufferFT8Data(audioBufferL, 128);
+        break;
+    }
+
+    // additional DSP work #2
+    switch(bands[currentBand].demod) {
+      case DEMOD_FT8_DECODE:
+        #ifndef USE_BUFFERED_FT8_WAV
+        // prepare FT8 library signal
+        // interpolation by 2 (24kps to 48kps)
+        arm_fir_interpolate_f32(&FIR_int1_I, audioBufferL, audioBufferR, 256);
+
+        // decimation by 4 to (48kps to 12kps)
+        arm_fir_decimate_f32(&FIR_dec3, audioBufferR, audioBufferR, 512);
+        #endif
+
+        // fall through
+
+      case DEMOD_FT8_WAV:
+        // transfer 12kHz data to ft8_lib
         BufferFT8Data(audioBufferR, 128);
         break;
 

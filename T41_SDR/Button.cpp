@@ -140,7 +140,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
 
     case SET_MODE:  // 8
       // change to the next mode: SSB -> CW -> DATA -> SSB
-      ChangeMode(radioMode + 1);
+      ButtonMode();
       break;
 
     case NOISE_REDUCTION:  // 9

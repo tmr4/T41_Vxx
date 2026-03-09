@@ -32,24 +32,23 @@ typedef __uint8_t uint8_t;
 #define CALIBRATE_TWOTONE_STATE 9
 #define CALIBRATE_DONE_STATE 10
 
-// demodulation modes
+// SSB/CW demodulation modes
 #define DEMOD_MIN                   0
 #define DEMOD_USB                   0
 #define DEMOD_LSB                   1
 #define DEMOD_AM                    2
 #define DEMOD_SAM                   3
 #define DEMOD_NFM                   4
-#define DEMOD_PSK31                 5
-#define DEMOD_FT8                   6 // assumes a WSJT-X hook up
-#define DEMOD_MAX                   6
-#define DEMOD_DATA                  5 // demod mode >= this are data modes
+#define DEMOD_MAX                   4
 
-// special demodulation modes not accessible by demod button
-#define DEMOD_PSK31_WAV             (DEMOD_MAX + 1)
-// *** TODO: consider having FT8 decode mode running on 44.1kHz sample rate
-#define DEMOD_FT8_DECODE            (DEMOD_MAX + 2)
-#define DEMOD_FT8_WAV               (DEMOD_MAX + 3)
-#define DEMOD_SPECIAL_MAX           (DEMOD_MAX + 3)
+// Data demodulation modes
+#define DEMOD_DATA_MIN              (DEMOD_MAX + 1)
+#define DEMOD_FT8                   (DEMOD_DATA_MIN + 0) // assumes a WSJT-X hook up
+#define DEMOD_FT8_DECODE            (DEMOD_DATA_MIN + 1) // demodulate FT8 signals via antenna input as USB for audio
+#define DEMOD_FT8_WAV               (DEMOD_DATA_MIN + 2)
+#define DEMOD_PSK31                 (DEMOD_DATA_MIN + 3)
+#define DEMOD_PSK31_WAV             (DEMOD_DATA_MIN + 4)
+#define DEMOD_DATA_MAX              (DEMOD_DATA_MIN + 2) // skip psk31 for now
 
 #define NUMBER_OF_BANDS           7
 #define BAND_80M                  0

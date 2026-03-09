@@ -175,12 +175,15 @@ int16_t spectrum_x = 10;
   RA8875_BLUE,  // 50 - 59
   RA8875_BLUE,  // 60 - 69
   RA8875_CYAN,  // 70 - 79
-  RA8875_GREEN, // 80 - 89
-  RA8875_YELLOW,// 90 - 99
-  RA8875_LIGHT_ORANGE, // 100 - 109
+  //RA8875_GREEN, // 80 - 89
+  //RA8875_YELLOW,// 90 - 99
+  //RA8875_LIGHT_ORANGE, // 100 - 109
   RA8875_DARK_ORANGE,  // 110 - 119
   RA8875_DARK_ORANGE,  // 120 - 129
   RA8875_RED, // 130 - 255
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
   RA8875_RED,
   RA8875_RED,
   RA8875_RED,
@@ -207,13 +210,13 @@ const DEMOD_Descriptor DEMOD[10] = {
   { DEMOD_USB, "USB" },
   { DEMOD_LSB, "LSB" },
   { DEMOD_AM, "AM" },
-  { DEMOD_NFM, "NFM" },
-  { DEMOD_PSK31, "PSK31" },
-  { DEMOD_FT8, "FT8" },
   { DEMOD_SAM, "SAM" }, // placeholder, not used
-  { DEMOD_PSK31_WAV, "PSK31.wav" },
+  { DEMOD_NFM, "NFM" },
+  { DEMOD_FT8, "FT8" },
   { DEMOD_FT8_DECODE, "FT8.dec" },
   { DEMOD_FT8_WAV, "FT8.wav" },
+  { DEMOD_PSK31, "PSK31" },
+  { DEMOD_PSK31_WAV, "PSK31.wav" },
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -1475,7 +1478,9 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
 
     // accumulate spectrum data for average waterfall over FT8 interval
     // exclude low data points that tends to dilute waterfall of strong signals
-    if(!((accSpec[i] > 130) && (spec[i] < 60))) {
+    //if(!((accSpec[i] > 100) && (spec[i] < 90)))
+    {
+    //if(!(spec[i] < 60)) {
       accSpec[i] = (accSpec[i] * frameCount + spec[i]) / (frameCount + 1);
     }
 

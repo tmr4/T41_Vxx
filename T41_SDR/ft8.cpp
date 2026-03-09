@@ -171,9 +171,10 @@ void AutoSyncFT8() {
     SETPROFILEPIN(PROFILER_FT8DECODE_PIN);
 
     // now we can sync up without causing a long delay
-    while((second())%15 != 0){
-      Q_in_L.clear();
-      Q_in_R.clear();
+    while((second())%15 != 0) {
+      YieldToProcess();
+      //Q_in_L.clear();
+      //Q_in_R.clear();
     }
 
     start_time =millis();
@@ -474,14 +475,12 @@ FLASHMEM bool InitFT8() {
     //InitZoomFFTFilter(); // *** TODO: can save some memory by specifying block size if will operate in FT8 a lot ***
     InitHilbertFilters();
     SetupDemodFilterBW();
-    //ShowSpectrumFreqValues();
-    DrawAudioSpectContainer();
-    DrawAudioFilterLines();
     ResetTuning();
   }
 
   return result;
 }
+
 FLASHMEM void ExitFT8() {
   if(sampleRate < 50000) {
     sampleRate = 192000.0;
@@ -491,10 +490,6 @@ FLASHMEM void ExitFT8() {
     SetZoom(1);
     InitHilbertFilters();
     SetupDemodFilterBW();
-    DrawAudioSpectContainer();
-    DrawAudioFilterLines();
-    //ShowSpectrumFreqValues();
-    //ShowOperatingStats();
   }
 }
 
@@ -586,6 +581,9 @@ FLASHMEM bool SetupFT8Wav() {
 }
 
 FLASHMEM void ExitFT8Decoder() {
+  // return if the FT8 decoder hasn't been initialized
+  if(!ft8Init) return;
+
   // ensure wav file is closed if we played one
   // *** TODO: consider separate wav exit ***
   CloseWav();
@@ -595,15 +593,22 @@ FLASHMEM void ExitFT8Decoder() {
 
   displayState = DISPLAY_T41;
 
+  // restore waterfall area
+  tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, 512, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+  wfRows = WATERFALL_H;
+
   // redraw frequency spectrum area
+  EraseSpectrumDisplayContainer();
+  tft.writeTo(L2);
+  EraseSpectrumDisplayContainer();
+  tft.writeTo(L1);
+  DrawSpectrumFrame();
   ShowSpectrumdBScale();
   ShowBandwidthBarValues();
   DrawBandwidthBar();
   ShowSpectrumFreqValues();
 
   // restore waterfall area
-  tft.fillRect(WATERFALL_L, YPIXELS - 20 * 6, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
-  wfRows = WATERFALL_H;
 
   // reset FT8 flags and counters
   ft8Init = false;

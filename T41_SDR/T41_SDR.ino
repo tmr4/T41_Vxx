@@ -562,12 +562,23 @@ FASTRUN void loop() {
         YieldToProcess();
         break;
       }
-      //if(radioState == DATA_RECEIVE_STATE) Serial.println("at 4");
       break;
 
     case DATA_RECEIVE_STATE:
-      // *** TODO: currently only for FT8 decoder ***
-      FT8DecoderLoop();
+      switch(displayState) {
+        case DISPLAY_T41:
+          ShowFreqSpectrum();
+          ShowAudioSpectrum();
+          break;
+
+        case DISPLAY_T41_FT8_DECODE:
+          FT8DecoderLoop();
+          break;
+
+        default:
+        YieldToProcess();
+        break;
+      }
       break;
 
     case SSB_TRANSMIT_STATE:

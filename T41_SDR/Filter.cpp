@@ -351,11 +351,11 @@ void SetDecIntFIRFilters(int decFilterBW = 0) {
   if(decFilterBW > 0) {
     CalcFIRCoeffs(FIR_dec1_coeffs, 27, decFilterBW, 90.0, 0, 0.0, sampleRate);
     CalcFIRCoeffs(FIR_dec2_coeffs, 33, decFilterBW, 90.0, 0, 0.0, sampleRate / 4.0);
-    CalcFIRCoeffs(FIR_dec3_coeffs, 33, decFilterBW, 90.0, 0, 0.0, sampleRate / 8.0);
+    CalcFIRCoeffs(FIR_dec3_coeffs, 50, decFilterBW, 90.0, 0, 0.0, sampleRate / 4.0);
   } else {
     CalcFIRCoeffs(FIR_dec1_coeffs, 27, limit, 90.0, 0, 0.0, sampleRate);
     CalcFIRCoeffs(FIR_dec2_coeffs, 33, limit, 90.0, 0, 0.0, sampleRate / 4.0);
-    CalcFIRCoeffs(FIR_dec3_coeffs, 33, limit, 90.0, 0, 0.0, sampleRate / 8.0);
+    CalcFIRCoeffs(FIR_dec3_coeffs, 50, limit, 90.0, 0, 0.0, sampleRate / 4.0);
   }
 
   CalcFIRCoeffs(FIR_int1_coeffs, 48, limit, 90.0, 0, 0.0, sampleRate / 4.0);

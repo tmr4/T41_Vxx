@@ -313,7 +313,7 @@ FLASHMEM void FT8DoXmitCalibrate() {
       void
  *****/
 FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
-  float bandCouplingFactor[7] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };
+  //float bandCouplingFactor[7] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };
   float bandOutputFactor;
   float rfGainValue;
   float recBandFactor[7] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };

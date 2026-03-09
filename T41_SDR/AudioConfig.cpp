@@ -348,36 +348,58 @@ void ConfigAudioState(int audioState) {
       break;
 
     // *** TODO: need to configure data states for both internal and external FT8
+    // *** WSJT-X can still decode with audio sent over USB at 192kHz ***
+    // *** TODO: consider passing audio to WSJT-X in internal FT8 mode ***
     case DATA_RECEIVE_STATE:
-      pc_Q_out_L_Ex.disconnect();
-      pc_Q_out_R_Ex.disconnect();
-      #ifdef T41_USB_AUDIO
-        pc_usb2.disconnect(); // USB
-        Q_in_L_Ex.end();
-        Q_in_L_Ex.clear();
-      #endif
+      switch(bands[currentBand].demod) {
+        case DEMOD_FT8:
+          //Q_out_Ex_Stop();
+
+          #ifdef T41_USB_AUDIO
+            pc_usb2.disconnect(); // USB
+            //Q_in_L_Ex.end();
+            //Q_in_L_Ex.clear();
+
+            pc_amp1.connect();
+          #endif
+          break;
+
+        case DEMOD_FT8_DECODE:
+          //Q_out_Ex_Stop();
+          break;
+
+        case DEMOD_FT8_WAV:
+        default:
+          break;
+      }
 
       // start receive audio chain
       Q_in_Start();
       Q_out_Start();
-      #ifdef T41_USB_AUDIO
-        pc_amp1.connect();
-      #endif
       break;
 
     case DATA_TRANSMIT_STATE:
-      // start USB audio transmit chain
-      #ifdef T41_USB_AUDIO
-        pc_usb2.connect(); // USB
-        Q_in_L_Ex.begin();
-      #endif
+      switch(bands[currentBand].demod) {
+        case DEMOD_FT8:
+          // start USB audio transmit chain
+          #ifdef T41_USB_AUDIO
+            pc_usb2.connect(); // USB
+            Q_in_L_Ex.begin();
+
+            pc_amp1.disconnect();
+            Q_out_Start();
+          #endif
+          break;
+
+        case DEMOD_FT8_DECODE:
+          break;
+
+        case DEMOD_FT8_WAV:
+        default:
+          break;
+      }
 
       Q_out_Ex_Start();
-
-      #ifdef T41_USB_AUDIO
-        pc_amp1.disconnect();
-        Q_out_Start();
-      #endif
       break;
 
     case CALIBRATE_RECEIVE_STATE:

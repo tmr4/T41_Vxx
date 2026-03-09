@@ -10,8 +10,7 @@ extern arm_fir_decimate_instance_f32 FIR_dec1_I;
 extern arm_fir_decimate_instance_f32 FIR_dec1_Q;
 extern arm_fir_decimate_instance_f32 FIR_dec2_I;
 extern arm_fir_decimate_instance_f32 FIR_dec2_Q;
-extern arm_fir_decimate_instance_f32 FIR_dec3_1; // internal FT8 decode
-extern arm_fir_decimate_instance_f32 FIR_dec3_2; // internal FT8 decode
+extern arm_fir_decimate_instance_f32 FIR_dec3; // internal FT8 decode
 
 extern arm_fir_interpolate_instance_f32 FIR_int1_I;
 extern arm_fir_interpolate_instance_f32 FIR_int1_Q;

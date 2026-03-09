@@ -75,6 +75,6 @@
 
 #define BEACON_FILE_NAME          "beacon.bmp"
 
-//#define T41_USB_AUDIO // *** for passing audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
+#define T41_USB_AUDIO // *** for passing audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
 
 #define FT8_EXTERNAL_MEMORY

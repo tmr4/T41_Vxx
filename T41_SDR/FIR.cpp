@@ -20,8 +20,7 @@ float32_t DMAMEM FIR_dec1_I_state[2074]; // numtaps+blocksize-1 = 27+2048-1 = 20
 float32_t DMAMEM FIR_dec1_Q_state[2074];
 float32_t DMAMEM FIR_dec2_I_state[544]; // numtaps+blocksize-1 = 33+512-1 = 544
 float32_t DMAMEM FIR_dec2_Q_state[544];
-float32_t DMAMEM FIR_dec3_1_state[288]; // numtaps+blocksize-1 = 33+256-1 = 288
-float32_t DMAMEM FIR_dec3_2_state[288]; // numtaps+blocksize-1 = 33+256-1 = 288
+float32_t DMAMEM FIR_dec3_state[544]; // numtaps+blocksize-1 = 33+512-1 = 544
 
 float32_t DMAMEM FIR_int1_I_state[279]; // (numTaps/L)+blockSize-1 = 48/2+256-1 = 279
 float32_t DMAMEM FIR_int1_Q_state[279];
@@ -32,8 +31,7 @@ arm_fir_decimate_instance_f32 FIR_dec1_I;
 arm_fir_decimate_instance_f32 FIR_dec1_Q;
 arm_fir_decimate_instance_f32 FIR_dec2_I;
 arm_fir_decimate_instance_f32 FIR_dec2_Q;
-arm_fir_decimate_instance_f32 FIR_dec3_1;
-arm_fir_decimate_instance_f32 FIR_dec3_2;
+arm_fir_decimate_instance_f32 FIR_dec3;
 
 arm_fir_interpolate_instance_f32 FIR_int1_I;
 arm_fir_interpolate_instance_f32 FIR_int1_Q;
@@ -43,6 +41,7 @@ arm_fir_interpolate_instance_f32 FIR_int2_Q;
 float32_t DMAMEM FIR_dec1_coeffs[27];
 float32_t DMAMEM FIR_dec2_coeffs[33];
 float32_t DMAMEM FIR_dec3_coeffs[33];
+float32_t DMAMEM FIR_dec3_2_coeffs[33];
 float32_t DMAMEM FIR_int1_coeffs[48];
 float32_t DMAMEM FIR_int2_coeffs[32];
 
@@ -130,7 +129,7 @@ void InitFIRFilters() {
       const uint16_t n_dec1_taps = (1 + (uint16_t)(90.0 / (22.0 * (n_fstop1 - n_fpass1))));
       const uint16_t n_dec2_taps = (1 + (uint16_t)(90.0 / (22.0 * (n_fstop2 - n_fpass2))));
 
-      gives: n_dec1_taps = 27, n_dec2_taps = 33 (see decFilterTaps.xlsx)
+      gives: n_dec1_taps = 27, n_dec2_taps = 33 (see decFilterTaps.xlsx in D:\Projects\Radio\Projects\T41_v12)
   ****************************************************************************************/
   // Decimation filter 1, M1 = 4
   CalcFIRCoeffs(FIR_dec1_coeffs, 27, 9000.0, 90.0, 0, 0.0, sampleRate);
@@ -142,10 +141,9 @@ void InitFIRFilters() {
   arm_fir_decimate_init_f32(&FIR_dec2_I, 33, 2, FIR_dec2_coeffs, FIR_dec2_I_state, 512);
   arm_fir_decimate_init_f32(&FIR_dec2_Q, 33, 2, FIR_dec2_coeffs, FIR_dec2_Q_state, 512);
 
-  // Decimation filter 3, M2 = 2
-  CalcFIRCoeffs(FIR_dec3_coeffs, 33, 9000.0, 90.0, 0, 0.0, sampleRate / 4.0);
-  arm_fir_decimate_init_f32(&FIR_dec3_1, 33, 2, FIR_dec3_coeffs, FIR_dec3_1_state, 256);
-  arm_fir_decimate_init_f32(&FIR_dec3_2, 33, 2, FIR_dec3_coeffs, FIR_dec3_2_state, 256);
+  // Decimation filter 3, M2 = 4 (from 48kps to 12kps)
+  CalcFIRCoeffs(FIR_dec3_coeffs, 50, 4000.0, 90.0, 0, 0.0, sampleRate / 4.0);
+  arm_fir_decimate_init_f32(&FIR_dec3, 50, 4, FIR_dec3_coeffs, FIR_dec3_state, 512);
 
   // Interpolation filter 1, L1 = 2
   CalcFIRCoeffs(FIR_int1_coeffs, 48, 9000.0, 90.0, 0, 0.0, sampleRate / 4.0);
