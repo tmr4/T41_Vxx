@@ -67,13 +67,13 @@ void SetBWFilters() {
 
   lastFilterEncoder = posFilterEncoder;
 
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_USB:
     case DEMOD_LSB:
     case DEMOD_PSK31:
     case DEMOD_FT8:
     case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
       AdjustFilterBW(filterChange);
       break;
@@ -172,7 +172,7 @@ void ProcessMenuEncoder() {
       }
       menuEncoderMove = 0;
     } else {
-      if(bands[currentBand].demod == DEMOD_NFM && nfmBWFilterActive) {
+      if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
         // we're adjusting NFM demod bandwidth
         filter_pos_BW = last_filter_pos_BW - 5 * menuEncoderMove;
       } else {

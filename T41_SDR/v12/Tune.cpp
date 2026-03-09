@@ -119,7 +119,7 @@ void SetCenterTune(int tuneChange) {
 void SetNCOFreq(int newNCOFreq) {
   int lowSideAdj = 0, highSideAdj = 0;
 
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_USB:
     case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:

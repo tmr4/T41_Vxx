@@ -145,7 +145,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   userNCOFreq = NCOFreq;
   userRadioState = radioState;
   userMode = radioMode;
-  userDemodMode = bands[currentBand].demod;
+  userDemodMode = currentDemodMode;
   userZoomIndex = spectrumZoom;
 
   // calibration specific configuration
@@ -156,7 +156,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
 
       currentFilterHiCut = 1000;
       currentFilterLoCut = -1000;
-      bands[currentBand].demod = DEMOD_SAM;
+      currentDemodMode = DEMOD_SAM;
       CalcFilters();
 
       spectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
@@ -265,13 +265,13 @@ FLASHMEM void CalibratePost(int calType) {
   NCOFreq = userNCOFreq;
   centerFreq = userCenterFreq;
   radioState = userRadioState;
-  bands[currentBand].demod = userDemodMode;
+  currentDemodMode = userDemodMode;
   spectrumZoom = userZoomIndex;
 
   // calibration specific restoration
   switch(calType) {
     case 0: // frequency cal
-      bands[currentBand].demod = userDemodMode;
+      currentDemodMode = userDemodMode;
       currentFilterLoCut = userFilterLowCut;
       currentFilterHiCut = userFilterHiCut;
       CalcFilters();
@@ -1294,12 +1294,12 @@ FLASHMEM float ShowSpectrum2() {
    * in Utility.cpp). We have zoom of x16, so the bin size is 375/16 = 23.4 Hz. So the
    * bin numbers are 256 + 750/(375/16) = 256+32 = 288 and 256-32 = 224
    ******************************/
-  if(calTypeFlag == 1 && bands[currentBand].demod == DEMOD_LSB) {
+  if(calTypeFlag == 1 && currentDemodMode == DEMOD_LSB) {
     capture_bins = 10;  // scans 2*capture_bins
     cal_bins[0] = 257 - 32;
     cal_bins[1] = 257 + 32;
   }  // Transmit calibration, LSB.
-  if(calTypeFlag == 1 && bands[currentBand].demod == DEMOD_USB) {
+  if(calTypeFlag == 1 && currentDemodMode == DEMOD_USB) {
     capture_bins = 10;  // scans 2*capture_bins
     cal_bins[0] = 257 + 32;
     cal_bins[1] = 257 - 32;
@@ -1875,22 +1875,22 @@ FLASHMEM void ProcessTransmitCalIQData() {
     //arm_scale_f32(audioBufferR, bands[currentBand].rfGain, audioBufferR, 2048);
 
     // Manual IQ amplitude correction
-    if(bands[currentBand].demod == DEMOD_LSB || bands[currentBand].demod == DEMOD_AM || bands[currentBand].demod == DEMOD_SAM) {
+    if(currentDemodMode == DEMOD_LSB || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM) {
       arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 2048);
       IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 2048);
     } else {
-      if(bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_AM || bands[currentBand].demod == DEMOD_SAM) {
-      //if(bands[currentBand].demod == DEMOD_USB || bands[currentBand].demod == DEMOD_FT8 || bands[currentBand].demod == DEMOD_AM || bands[currentBand].demod == DEMOD_SAM) {
+      if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM) {
+      //if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8 || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM) {
         arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 2048);
         IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 2048);
       }
     }
 
 
-    if(bands[currentBand].demod == DEMOD_LSB) {
+    if(currentDemodMode == DEMOD_LSB) {
       arm_scale_f32(audioBufferL, IQXAmpCorrectionFactor[currentBand], audioBufferL, 2048);
     }
-    else if(bands[currentBand].demod == DEMOD_USB) {
+    else if(currentDemodMode == DEMOD_USB) {
       arm_scale_f32(audioBufferL, -IQXAmpCorrectionFactor[currentBand], audioBufferL, 2048);
     }
     IQPhaseCorrection(audioBufferL, audioBufferR, IQXPhaseCorrectionFactor[currentBand], 2048);
@@ -2313,7 +2313,7 @@ void SetupSignalStrengthSource(int source) {
       minSignalStrength = 0;
       signalStrengthSource = 1;
       SendSetFreq(centerFreq + intermediateFreq);
-      if(bands[currentBand].demod == DEMOD_LSB) {
+      if(currentDemodMode == DEMOD_LSB) {
         SendSetMode(DEMOD_USB);
       } else {
         SendSetMode(DEMOD_LSB);

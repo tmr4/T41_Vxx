@@ -304,16 +304,16 @@ void MouseButtonOpStatsArea(int button) {
     }
   } else if(button == 1 && cursorX > OPERATION_STATS_MD - 5 && cursorX < OPERATION_STATS_CWF) {
     // change to the next mode: SSB -> CW -> DATA -> SSB
-    ChangeMode(radioMode + 1);
+    ButtonMode();
   } else if(button == 1 && cursorX > OPERATION_STATS_DMD - 5 && cursorX < OPERATION_STATS_DMD + 35) {
     // change to the next demod mode
-    ChangeDemodMode(bands[currentBand].demod + 1);
+    ChangeDemodMode(currentDemodMode + 1);
   }
 }
 
 void MouseButtonSpectrumWaterfall(int button) {
   if(button == 1) {
-    if(bands[currentBand].demod == DEMOD_FT8_DECODE && (cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8)) {
+    if(currentDemodMode == DEMOD_FT8_INTERNAL && (cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8)) {
       ft8MsgSelectActive = true;
       //int msg = wfRows - (YPIXELS - cursorY - CURSOR_H / 2) / 5;
       int y = YPIXELS - cursorY - CURSOR_H / 2;
@@ -434,7 +434,7 @@ void MouseLoop() {
         ButtonFilter();
       } else if(CursorInSpectrumWaterfall()) {
         MouseButtonSpectrumWaterfall(button);
-        if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
+        if(currentDemodMode == DEMOD_FT8_INTERNAL) {
           MouseButtonFT8(button);
         } else {
           MouseButtonSpectrumWaterfall(button);
@@ -452,7 +452,7 @@ void MouseLoop() {
       } else if(CursorInFreqArea()) {
         MouseWheelFreqArea(wheel);
       } else if(CursorInSpectrumWaterfall()) {
-        if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
+        if(currentDemodMode == DEMOD_FT8_INTERNAL) {
           MouseWheelFT8(wheel);
         } else {
           MouseWheelSpectrumWaterfall(wheel);
@@ -471,7 +471,7 @@ void MouseLoop() {
             }
           }
         } else {
-          if(bands[currentBand].demod == DEMOD_NFM && nfmBWFilterActive) {
+          if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
             // we're adjusting NFM demod bandwidth
             filter_pos_BW = last_filter_pos_BW - 5 * wheel;
           } else {

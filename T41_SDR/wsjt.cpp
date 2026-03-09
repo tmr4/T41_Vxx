@@ -209,7 +209,7 @@ int GetKenwoodMode() {
   if(radioMode == CW_MODE) {
     mode=3;
   } else {
-    switch(bands[currentBand].demod) {
+    switch(currentDemodMode) {
       case DEMOD_USB:
         mode=2; // USB
         break;
@@ -421,7 +421,7 @@ void WSJTLoop()
       case 'I':
         if(cmd[1] == 'D' && cmd[2] == ';') { // ID;
           // receipt of ID command will switch to FT8 Data mode if not already there
-          ChangeDemodMode(DEMOD_FT8);
+          ChangeMode(DATA_MODE, DEMOD_FT8);
 
           // reply with the TS-890S id
           sprintf(cmd,"ID024;");

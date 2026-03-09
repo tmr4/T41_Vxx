@@ -134,12 +134,16 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case DEMODULATION:  // 7
-      // change to the next standard demod mode
+      // change to the next standard demod mode for radio mode
+      // SSB:  USB <-> LSB
+      // CW:   USB <-> LSB
+      // DSB:  AM -> SAM -> FM -> AM (receive only)
+      // DATA: FT8 -> FT8.int -> FT8.wav
       ButtonDemodMode();
       break;
 
     case SET_MODE:  // 8
-      // change to the next mode: SSB -> CW -> DATA -> SSB
+      // change to the next mode: SSB -> CW -> DSB -> DATA -> SSB
       ButtonMode();
       break;
 
@@ -189,8 +193,8 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case UNUSED_1:  // 16
-      //ChangeDemodMode(DEMOD_FT8_WAV);
-      ChangeDemodMode(DEMOD_FT8_DECODE);
+      //ChangeMode(DATA_MODE, DEMOD_FT8_WAV);
+      ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
 
       // *** TODO: examine restoring this ***
       // *** TODO: from v12, validate v11 calibration routines

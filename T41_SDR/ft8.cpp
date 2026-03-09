@@ -100,7 +100,7 @@ int bufCount = 0;
 int frameCount = 0;
 
 //bool ft8SpectrumFlag; // true when ft8 frequency spectrum data is ready to be drawn
-bool ft8WavFlag;      // true when ft8 wav file has closed (signals need to shift to DEMOD_FT8_DECODE mode)
+bool ft8WavFlag;      // true when ft8 wav file has closed (signals need to shift to DEMOD_FT8_INTERNAL mode)
 
 #define FT8_DECODER_STATE_BUFFERING   0
 #define FT8_DECODER_STATE_PROCESSING  1
@@ -560,26 +560,6 @@ FLASHMEM bool InitFT8Decoder() {
   return result;
 }
 
-FLASHMEM bool SetupFT8Wav() {
-  int result;
-  uint32_t slot_period = 15;
-  uint32_t sample_rate = 12000;
-  uint32_t num_samples = slot_period * sample_rate;
-
-  result = LoadWav("ft8.wav", num_samples); //
-  //result = LoadWav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
-  //result = LoadWav("ft8_1.wav", num_samples); // CQ KN6ZDE CM87 at 1000
-  //result = LoadWav("ft8_10.wav", num_samples); // CQ KN6ZDE CM8x x=0-9 at 1000 + x*100
-  //result = LoadWav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
-
-  if(result != 0) {
-    DEBUG_MSG("Invalid wave file!");
-    return false;
-  }
-
-  return true;
-}
-
 FLASHMEM void ExitFT8Decoder() {
   // return if the FT8 decoder hasn't been initialized
   if(!ft8Init) return;
@@ -626,6 +606,26 @@ FLASHMEM void ExitFT8Decoder() {
   infoBoxItemActive[IB_ITEM_FT8_INT] = false;
   infoBoxItemActive[IB_ITEM_FT8_CQ] = false;
   UpdateInfoBox();
+}
+
+FLASHMEM bool SetupFT8Wav() {
+  int result;
+  uint32_t slot_period = 15;
+  uint32_t sample_rate = 12000;
+  uint32_t num_samples = slot_period * sample_rate;
+
+  result = LoadWav("ft8.wav", num_samples); //
+  //result = LoadWav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
+  //result = LoadWav("ft8_1.wav", num_samples); // CQ KN6ZDE CM87 at 1000
+  //result = LoadWav("ft8_10.wav", num_samples); // CQ KN6ZDE CM8x x=0-9 at 1000 + x*100
+  //result = LoadWav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
+
+  if(result != 0) {
+    DEBUG_MSG("Invalid wave file!");
+    return false;
+  }
+
+  return true;
 }
 
 bool ReadFT8Wav(float32_t *buf, int sizeBuf) {
@@ -828,7 +828,7 @@ void FT8DecoderLoop() {
 
         #ifdef USE_BUFFERED_FT8_WAV
         // delay a bit since wav buffer playback is a bit fast
-        if(bands[currentBand].demod == DEMOD_FT8_DECODE) {
+        if(currentDemodMode == DEMOD_FT8_INTERNAL) {
           //YieldForProcess(25);
         }
         #endif
@@ -936,8 +936,7 @@ void FT8DecoderLoop() {
 
   if(ft8WavFlag) {
     // done with wav file, switch to FT8 decode mode
-    ChangeDemodMode(DEMOD_FT8_DECODE);
-    //ChangeDemodMode(DEMOD_USB);
+    ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
     ft8WavFlag = false;
   }
 }

@@ -32,23 +32,26 @@ typedef __uint8_t uint8_t;
 #define CALIBRATE_TWOTONE_STATE 9
 #define CALIBRATE_DONE_STATE 10
 
-// SSB/CW demodulation modes
-#define DEMOD_MIN                   0
+// radio modes                      // associated demod modes
+#define SSB_MODE                  0 // USB, LSB
+#define CW_MODE                   1 // USB, LSB
+#define DSB_MODE                  2 // AM, SAM, FM (narrow band FM)
+#define DATA_MODE                 3 // FT8 (external), FT8 (internal), FT8 (wav for testing)
+
+// demodulation modes
+// SSB/CW
 #define DEMOD_USB                   0
 #define DEMOD_LSB                   1
+// DSB
 #define DEMOD_AM                    2
 #define DEMOD_SAM                   3
 #define DEMOD_NFM                   4
-#define DEMOD_MAX                   4
-
-// Data demodulation modes
-#define DEMOD_DATA_MIN              (DEMOD_MAX + 1)
-#define DEMOD_FT8                   (DEMOD_DATA_MIN + 0) // assumes a WSJT-X hook up
-#define DEMOD_FT8_DECODE            (DEMOD_DATA_MIN + 1) // demodulate FT8 signals via antenna input as USB for audio
-#define DEMOD_FT8_WAV               (DEMOD_DATA_MIN + 2)
-#define DEMOD_PSK31                 (DEMOD_DATA_MIN + 3)
-#define DEMOD_PSK31_WAV             (DEMOD_DATA_MIN + 4)
-#define DEMOD_DATA_MAX              (DEMOD_DATA_MIN + 2) // skip psk31 for now
+// Data
+#define DEMOD_FT8                   5
+#define DEMOD_FT8_INTERNAL          6
+#define DEMOD_FT8_WAV               7
+#define DEMOD_PSK31                 8
+#define DEMOD_PSK31_WAV             9
 
 #define NUMBER_OF_BANDS           7
 #define BAND_80M                  0
@@ -58,10 +61,6 @@ typedef __uint8_t uint8_t;
 #define BAND_15M                  4
 #define BAND_12M                  5
 #define BAND_10M                  6
-
-#define SSB_MODE                  0
-#define CW_MODE                   1
-#define DATA_MODE                 2
 
 #define OFF                       0
 #define ON                        1
@@ -93,7 +92,8 @@ typedef __uint8_t uint8_t;
 
 extern float sampleRate, intermediateFreq;
 
-extern int radioState, lastState;  // Used by the loop to monitor current state.
+extern int radioState, lastState;  // used by the main loop to monitor current state
+extern int currentDemodMode;
 
 extern int volSetting;
 

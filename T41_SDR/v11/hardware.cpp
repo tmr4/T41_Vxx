@@ -248,9 +248,6 @@ void ConfigRadioStateHardware() {
       break;
 
     case CW_RECEIVE_STATE:
-      if((decoderFlag == ON) && (lastState != CW_RECEIVE_STATE)) {
-        InitCW();
-      }
       break;
 
     case CW_TRANSMIT_STRAIGHT_STATE:

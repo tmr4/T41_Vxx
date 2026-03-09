@@ -5,6 +5,7 @@
 #include "Bearing.h"
 #include "Button.h"
 #include "ButtonProc.h"
+#include "CWProcessing.h"
 #include "Display.h"
 #include "EEPROM.h"
 #include "Encoders.h"
@@ -37,15 +38,11 @@ bool save_last_frequency = false;
 bool directFreqFlag = false;
 long TxRxFreqOld;
 
-// preserves mode and demod mode between mode and band changes
-int priorMode;
-
-// preserves data demod mode between band and mode changes
-int currentDataMode = DEMOD_FT8; // data mode starts in external FT8 mode
-
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
+
+int ValidateDemodMode(int demod);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -54,17 +51,12 @@ int currentDataMode = DEMOD_FT8; // data mode starts in external FT8 mode
 /*****
   Purpose: To process a band increase/decrease
 
-  *** radio mode and demolation mode are unchanged across band changes ***
+  *** radio mode and DSB/data demolation mode are unchanged across band changes ***
 *****/
 FLASHMEM void ChangeBand(int change) {
   // Added if so unused GPOs will not be touched
   if(currentBand < BAND_12M) {
     digitalWrite(bandswitchPins[currentBand], LOW);
-  }
-
-  if(radioMode == DATA_MODE) {
-    // restore old demodulation mode before we change bands
-    //bands[currentBand].demod = priorDemodMode;
   }
 
   currentBand += change;
@@ -73,6 +65,11 @@ FLASHMEM void ChangeBand(int change) {
   }
   if(currentBand < 0) {                 // Incremented too far?
     currentBand = NUMBER_OF_BANDS - 1;  // Yep. Roll to list front.
+  }
+
+  // *** DSB/data demolation mode are unchanged across band changes ***
+  if((radioMode == SSB_MODE) || (radioMode == CW_MODE)) {
+    currentDemodMode = ValidateDemodMode(-1);
   }
 
   NCOFreq = 0L;
@@ -122,13 +119,11 @@ FLASHMEM void ChangeBand(int change) {
   }
 
   if(radioMode == DATA_MODE) {
-    priorDemodMode = bands[currentBand].demod; // save demod mode for restoration later
-
-    switch(currentDataMode) {
+    switch(currentDemodMode) {
       case DEMOD_FT8:
         break;
 
-      case DEMOD_FT8_DECODE:
+      case DEMOD_FT8_INTERNAL:
       case DEMOD_FT8_WAV:
         // turn on FT8
         ft8SyncState = 0;
@@ -141,8 +136,6 @@ FLASHMEM void ChangeBand(int change) {
       case DEMOD_PSK31_WAV:
         break;
     }
-
-    bands[currentBand].demod = currentDataMode;
   }
 
   SetBand();
@@ -175,7 +168,7 @@ FLASHMEM void ChangeBand(long newFreq) {
   Purpose: Toggle which filter is adjusted by filter encoder
 *****/
 FLASHMEM void ButtonFilter() {
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_NFM:
     // Active filter in NFM demod mode:
     // At startup:  high audio
@@ -196,7 +189,7 @@ FLASHMEM void ButtonFilter() {
     }
     break;
 
-  case DEMOD_FT8_DECODE:
+  case DEMOD_FT8_INTERNAL:
   case DEMOD_FT8_WAV:
     // Filter sequence in FT8 mode:
     // At startup:  high audio
@@ -226,127 +219,7 @@ FLASHMEM void ButtonFilter() {
   DrawAudioFilterLines();
 }
 
-void SwitchDataMode(int mode) {
-  // wrap up current data mode
-  switch(currentDataMode) {
-    case DEMOD_FT8:
-      ExitFT8();
-      break;
-
-    case DEMOD_FT8_DECODE:
-      ExitFT8Decoder();
-      break;
-
-    case DEMOD_FT8_WAV:
-      break;
-
-    case DEMOD_PSK31:
-      //exitPSK31();
-      break;
-
-    default:
-      break;
-  }
-
-  currentDataMode = mode;
-  bands[currentBand].demod = currentDataMode;
-
-  switch(mode) {
-    case DEMOD_PSK31:
-      //  *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
-      //setupPSK31();
-      //bands[currentBand].demod = DEMOD_PSK31;
-      break;
-
-    case DEMOD_FT8:
-      InitFT8();
-      break;
-
-    case DEMOD_FT8_DECODE:
-      // try to set up internal FT8 ops
-      if(!InitFT8Decoder()) {
-        // can't set up FT8 decode, fall back to normal FT8
-        ExitFT8Decoder();
-
-        currentDataMode = DEMOD_FT8;
-        InitFT8();
-      }
-      break;
-
-    case DEMOD_FT8_WAV:
-      if(InitFT8Decoder()) {
-        // try to load wav file
-        if(SetupFT8Wav()) {
-          // switch to play a wav file
-          ft8SyncState = 1;
-          ft8SyncState = 1;
-          UpdateInfoBoxItem(IB_ITEM_FT8);
-        } else {
-          // couldn't load wav file
-          ExitFT8Decoder();
-
-          // can't set up FT8 decode, fall back to normal FT8
-          currentDataMode = DEMOD_FT8;
-          InitFT8();
-        }
-      } else {
-        // can't set up FT8 decode, fall back to normal FT8
-        ExitFT8Decoder();
-
-        currentDataMode = DEMOD_FT8;
-        InitFT8();
-      }
-      break;
-
-    default:
-      break;
-  }
-}
-
-/*****
-  Purpose: Change the demodulation mode
-          *** TODO: rework this if modes are expanded ********/
-FLASHMEM void ChangeDemodMode(int mode) {
-  if(mode == bands[currentBand].demod) {
-    return; // nothing to do
-  }
-
-  // ignore invalid modes
-  if((mode < DEMOD_MIN) || (mode > DEMOD_DATA_MAX)) {
-    return; // nothing to do
-  }
-
-  // change demod mode and radio mode if needed
-  switch(radioMode) {
-    case SSB_MODE:
-    case CW_MODE:
-      if(mode >= DEMOD_DATA_MIN) {
-        // switching to a data mode
-        currentDataMode = mode;
-        ChangeMode(DATA_MODE); // this will switch to the Data demod mode
-        return;
-      } else {
-        bands[currentBand].demod = mode;
-      }
-      break;
-
-    case DATA_MODE:
-      if(mode < DEMOD_DATA_MIN) {
-        // switching to a non-data mode
-        //ChangeMode(priorMode); // this will return demod mode to it's prior state
-        ChangeMode(priorMode); // this will return demod mode to it's prior state
-        bands[currentBand].demod = mode;
-        return;
-      } else {
-        // switching data modes
-        SwitchDataMode(mode);
-      }
-      break;
-
-    default:
-      break;
-  }
-
+FLASHMEM void UpdateModeDisplay() {
   SetupDemodFilterBW();
 
   switch(displayState) {
@@ -376,42 +249,91 @@ FLASHMEM void ChangeDemodMode(int mode) {
   //ShowAnalogGain();
 }
 
-/*****
-  Purpose: change to the next standard demod mode
-*****/
-FLASHMEM void ButtonDemodMode() {
-  int mode = bands[currentBand].demod + 1;
-
-  // limit demod mode depending on the mode
+// validate demod mode depending on the radio mode
+//  returns default demod mode if demod = -1
+FLASHMEM int ValidateDemodMode(int demod) {
   switch(radioMode) {
-    case DATA_MODE:
-      if(mode > DEMOD_DATA_MAX) {
-        mode = DEMOD_DATA_MIN;
-      }
-      if(mode < DEMOD_DATA_MIN) {
-        mode = DEMOD_DATA_MAX;
+    case SSB_MODE:
+    case CW_MODE:
+      if(demod < 0) {
+        demod = bands[currentBand].demod;
+      } else if((demod > DEMOD_LSB) || (demod < DEMOD_USB)) {
+        demod = DEMOD_USB;
       }
       break;
 
-    default:
-      if(mode > DEMOD_MAX) {
-        mode = DEMOD_MIN;
+    case DSB_MODE:
+      // unless specified DSB mode always starts in AM
+      if((demod < 0) || (demod > DEMOD_NFM) || (demod < DEMOD_AM)) {
+        demod = DEMOD_AM;
       }
-      if(mode < DEMOD_MIN) {
-        mode = DEMOD_MAX;
+      break;
+
+    case DATA_MODE:
+      // unless specified data mode always starts in FT8
+      if((demod < 0) || (demod > DEMOD_FT8_WAV) || (demod < DEMOD_FT8)) {
+        demod = DEMOD_FT8;
       }
       break;
   }
 
-  ChangeDemodMode(mode);
+  return demod;
 }
 
 /*****
-  Purpose: Sets operating mode, SSB, CW or Data
+  Purpose: Change the demodulation mode
+          *** can't use this to change radio mode ***
 *****/
-FLASHMEM void ChangeMode(int mode) {
-  if(mode == radioMode) {
+FLASHMEM void ChangeDemodMode(int demod) {
+  int mode;
+
+  if(demod == currentDemodMode) {
     return; // nothing to do
+  }
+
+  // change demod mode
+  mode = ValidateDemodMode(demod);
+  switch(radioMode) {
+    case SSB_MODE:
+    case CW_MODE:
+    case DSB_MODE:
+      currentDemodMode = mode;
+      break;
+
+    case DATA_MODE:
+      ChangeMode(DATA_MODE, mode);
+      return;
+      break;
+
+    default:
+      break;
+  }
+
+  UpdateModeDisplay();
+}
+
+/*****
+  Purpose: change to the next standard demod mode for radio mode
+      SSB:  USB <-> LSB
+      CW:   USB <-> LSB
+      DSB:  AM -> SAM -> FM -> AM (receive only)
+      DATA: FT8 -> FT8.int -> FT8.wav
+*****/
+FLASHMEM void ButtonDemodMode() {
+  ChangeDemodMode(currentDemodMode + 1);
+}
+
+/*****
+  Purpose: Sets radio operating mode
+    mode:  desired radio mode
+    demod: desired demod mode (-1 give default demod mode)
+    *** current demod mode is not preserved over mode changes ***
+*****/
+FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
+  if(mode == radioMode) {
+    if((demod < 0) || (demod == currentDemodMode)) {
+      return; // nothing to do
+    } // else continue to change demod mode for current radio mode
   }
 
   // ignore invalid modes
@@ -421,19 +343,13 @@ FLASHMEM void ChangeMode(int mode) {
 
   // switching modes, wrap up current mode
   switch(radioMode) {
-    case SSB_MODE:
-      // save demod mode if changing to Data mode
-      if(mode == DATA_MODE) {
-        bands[currentBand].normalDemod = bands[currentBand].demod; // save demod mode for restoration later
-        priorMode = SSB_MODE;
-      }
-      break;
-
     case CW_MODE:
-      // save demod mode if changing to Data mode
-      if(mode == DATA_MODE) {
-        bands[currentBand].normalDemod = bands[currentBand].demod; // save demod mode for restoration later
-        priorMode = CW_MODE;
+      if(decoderFlag == ON) {
+        // exit if decoding CW
+        ExitCWDecoder();
+
+        // restore waterfall height
+        wfRows = WATERFALL_H;
       }
 
       // turn off keyer
@@ -443,41 +359,42 @@ FLASHMEM void ChangeMode(int mode) {
       break;
 
     case DATA_MODE:
-      switch(bands[currentBand].demod) {
-        case DEMOD_PSK31:
-          //exitPSK31();
-          break;
-
+      switch(currentDemodMode) {
         case DEMOD_FT8:
           ExitFT8();
           break;
 
-        case DEMOD_FT8_DECODE:
+        case DEMOD_FT8_INTERNAL:
         case DEMOD_FT8_WAV:
           ExitFT8Decoder();
+          break;
+
+        case DEMOD_PSK31:
+        case DEMOD_PSK31_WAV:
+          //exitPSK31();
           break;
 
         default:
           break;
       }
-
-      // return demod mode to previous mode
-      bands[currentBand].demod = bands[currentBand].normalDemod;
       break;
 
     default:
       break;
   }
 
-  // set new mode and update
+  // set new radio mode and demod mode
   radioMode = mode;
-  switch(radioMode) {
-    case SSB_MODE:
-      break;
+  currentDemodMode = ValidateDemodMode(demod);
 
+  // set up radio for changes
+  switch(radioMode) {
     case CW_MODE:
-      // reduce waterfall height if we're decoding CW
       if(decoderFlag == ON) {
+        // init if decoding CW
+        InitCWDecoder();
+
+        // reduce waterfall height
         tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
         tft.writeTo(L2); // it's on layer 2 as well
         tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
@@ -485,57 +402,79 @@ FLASHMEM void ChangeMode(int mode) {
         wfRows = WATERFALL_H - CHAR_HEIGHT - 3;
       }
 
+      UpdateCWFilter();
+
       // turn on keyer
       keyerState = 1;
       infoBoxItemActive[IB_ITEM_KEYER] = true;
+      UpdateInfoBoxItem(IB_ITEM_KEYER);
       break;
 
     case DATA_MODE:
-      SwitchDataMode(currentDataMode);
-      break;
+      switch(currentDemodMode) {
+        case DEMOD_FT8:
+          InitFT8();
+          break;
 
-    default:
+        case DEMOD_FT8_INTERNAL:
+          // try to set up internal FT8 ops
+          if(!InitFT8Decoder()) {
+            // can't set up FT8 decode, fall back to normal FT8
+            ExitFT8Decoder();
+
+            currentDemodMode = DEMOD_FT8;
+            InitFT8();
+          }
+          break;
+
+        case DEMOD_FT8_WAV:
+          if(InitFT8Decoder()) {
+            // try to load wav file
+            if(SetupFT8Wav()) {
+              // switch to play a wav file
+              ft8SyncState = 1;
+              ft8SyncState = 1;
+              UpdateInfoBoxItem(IB_ITEM_FT8);
+            } else {
+              // couldn't load wav file
+              ExitFT8Decoder();
+
+              // can't set up FT8 decode, fall back to normal FT8
+              currentDemodMode = DEMOD_FT8;
+              InitFT8();
+            }
+          } else {
+            // can't set up FT8 decode, fall back to normal FT8
+            ExitFT8Decoder();
+
+            currentDemodMode = DEMOD_FT8;
+            InitFT8();
+          }
+          break;
+
+        case DEMOD_PSK31:
+          //  *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
+          //setupPSK31();
+          //currentDemodMode = DEMOD_PSK31;
+          break;
+
+        default:
+          break;
+      }
       break;
   }
 
-  SetupDemodFilterBW();
-  UpdateCWFilter();
-
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowOperatingStats();
-      ShowBandwidthBarValues();
-      DrawBandwidthBar();
-      DrawAudioSpectContainer();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_T41_FT8_DECODE:
-      ShowOperatingStats();
-      DrawAudioSpectContainer();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-      break;
-
-    default:
-    // no screen updates at all
-    break;
-  }
+  UpdateModeDisplay();
 }
 
 /*****
-  Purpose: change to the next standard mode, SSB -> CW -> Data -> SSB
+  Purpose: change to the next standard mode, SSB -> CW -> DSB -> Data -> SSB
 *****/
 FLASHMEM void ButtonMode() {
   int mode = radioMode + 1;
 
-  if(mode > DATA_MODE) {
+  if((mode > DATA_MODE) || (mode < SSB_MODE)) {
     mode = SSB_MODE;
-  }
-  if(mode < SSB_MODE) {
-    mode = DATA_MODE;
   }
 
   ChangeMode(mode);

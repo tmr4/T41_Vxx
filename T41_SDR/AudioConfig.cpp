@@ -351,7 +351,7 @@ void ConfigAudioState(int audioState) {
     // *** WSJT-X can still decode with audio sent over USB at 192kHz ***
     // *** TODO: consider passing audio to WSJT-X in internal FT8 mode ***
     case DATA_RECEIVE_STATE:
-      switch(bands[currentBand].demod) {
+      switch(currentDemodMode) {
         case DEMOD_FT8:
           //Q_out_Ex_Stop();
 
@@ -364,7 +364,7 @@ void ConfigAudioState(int audioState) {
           #endif
           break;
 
-        case DEMOD_FT8_DECODE:
+        case DEMOD_FT8_INTERNAL:
           //Q_out_Ex_Stop();
           break;
 
@@ -379,7 +379,7 @@ void ConfigAudioState(int audioState) {
       break;
 
     case DATA_TRANSMIT_STATE:
-      switch(bands[currentBand].demod) {
+      switch(currentDemodMode) {
         case DEMOD_FT8:
           // start USB audio transmit chain
           #ifdef T41_USB_AUDIO
@@ -391,7 +391,7 @@ void ConfigAudioState(int audioState) {
           #endif
           break;
 
-        case DEMOD_FT8_DECODE:
+        case DEMOD_FT8_INTERNAL:
           break;
 
         case DEMOD_FT8_WAV:

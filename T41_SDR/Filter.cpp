@@ -367,9 +367,9 @@ void SetDecIntFIRFilters(int decFilterBW = 0) {
 *****/
 void CalcFilters() {
   int loCut = 0, hiCut = 0;
-  float sr = sampleRate / (bands[currentBand].demod == DEMOD_FT8 ? 1.0 : 8.0);
+  float sr = sampleRate / (currentDemodMode == DEMOD_FT8 ? 1.0 : 8.0);
 
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_USB:
     case DEMOD_AM:
     case DEMOD_NFM:
@@ -377,7 +377,7 @@ void CalcFilters() {
     case DEMOD_FT8:
     case DEMOD_SAM:
     case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
       loCut = currentFilterLoCut;
       hiCut = currentFilterHiCut;
@@ -398,7 +398,7 @@ void CalcFilters() {
   UpdateAudioFilterMask(FIR_Coef_I, FIR_Coef_Q, 256 + 1, loCut, hiCut, sr);
 
   // update decimation and interpolation filters
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_NFM:
       SetDecIntFIRFilters(nfmFilterBW);
       break;
@@ -416,14 +416,14 @@ void CalcFilters() {
   Purpose: set filter BW appropriate for the current demod mode and updates filters
 *****/
 FLASHMEM void SetupDemodFilterBW() {
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_USB:
     case DEMOD_LSB:
     case DEMOD_NFM:
     case DEMOD_PSK31:
     case DEMOD_FT8:
     case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
       currentFilterLoCut = bands[currentBand].fLoCut;
       currentFilterHiCut = bands[currentBand].fHiCut;

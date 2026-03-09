@@ -127,7 +127,7 @@ FLASHMEM void SaveRadioState() {
   userCenterFreq = centerFreq;
   userRadioState = radioState;
   userMode = radioMode;
-  userDemodMode = bands[currentBand].demod;
+  userDemodMode = currentDemodMode;
   userZoomIndex = spectrumZoom;
   userBand = currentBand;
   userScale = currentScale;
@@ -174,7 +174,7 @@ FLASHMEM void RestoreRadioState() {
   centerFreq = userCenterFreq;
   radioState = userRadioState;
   radioMode = userMode;
-  bands[currentBand].demod = userDemodMode;
+  currentDemodMode = userDemodMode;
   spectrumZoom = userZoomIndex;
   currentScale = userScale;
   volSetting = userVol;
@@ -1174,21 +1174,21 @@ FLASHMEM void GetSignalStrength(float *pSS, int passes = 0, bool getMeanSS = tru
   //
   if(transmitCal) {
     // transmit calibration, 4x zoom
-    if(bands[currentBand].demod == DEMOD_LSB) {
+    if(currentDemodMode == DEMOD_LSB) {
       binCenter[0] = 256-32;
       binCenter[1] = 256+32;
     }
-    if(bands[currentBand].demod == DEMOD_USB) {
+    if(currentDemodMode == DEMOD_USB) {
       binCenter[1] = 256-32;
       binCenter[0] = 256+32;
     }
   } else {
     // receive calibration, 1x zoom
-    if(bands[currentBand].demod == DEMOD_LSB) {
+    if(currentDemodMode == DEMOD_LSB) {
       binCenter[0] = 256-128-8;
       binCenter[1] = 256+128+8;
     }
-    if(bands[currentBand].demod == DEMOD_USB) {
+    if(currentDemodMode == DEMOD_USB) {
       binCenter[0] = 256-128+8;
       binCenter[1] = 256+128-8;
     }
@@ -1284,7 +1284,7 @@ FLASHMEM void SetupSignalStrengthSource(int source) {
       minSignalStrength = 0;
       signalStrengthSource = 1;
       SendSetFreq(centerFreq + intermediateFreq);
-      if(bands[currentBand].demod == DEMOD_LSB) {
+      if(currentDemodMode == DEMOD_LSB) {
         SendSetMode(DEMOD_USB);
       } else {
         SendSetMode(DEMOD_LSB);

@@ -616,7 +616,7 @@ FLASHMEM void GetFavoriteFrequency() {
       //digitalWrite(bandswitchPins[currentBand], LOW);
       //ShowSpectrumdBScale();
       //ShowFreqSpectrum();
-      //bands[currentBand].demod = currentBand;
+      //currentDemodMode = currentBand;
       return;
     }
   }

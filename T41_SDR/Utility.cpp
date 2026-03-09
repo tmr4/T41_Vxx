@@ -335,6 +335,10 @@ FLASHMEM void SetBand() {
     case DISPLAY_BEACON_MONITOR:
       break;
 
+    case DISPLAY_T41_FT8_DECODE:
+      Serial.print("what needs updated here?");
+      break;
+
     case DISPLAY_FULL_MENU:
       ShowFrequency();
       ShowOperatingStats();

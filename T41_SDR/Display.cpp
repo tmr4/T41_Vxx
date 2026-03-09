@@ -210,10 +210,10 @@ const DEMOD_Descriptor DEMOD[10] = {
   { DEMOD_USB, "USB" },
   { DEMOD_LSB, "LSB" },
   { DEMOD_AM, "AM" },
-  { DEMOD_SAM, "SAM" }, // placeholder, not used
+  { DEMOD_SAM, "SAM" },
   { DEMOD_NFM, "NFM" },
   { DEMOD_FT8, "FT8" },
-  { DEMOD_FT8_DECODE, "FT8.dec" },
+  { DEMOD_FT8_INTERNAL, "FT8.int" },
   { DEMOD_FT8_WAV, "FT8.wav" },
   { DEMOD_PSK31, "PSK31" },
   { DEMOD_PSK31_WAV, "PSK31.wav" },
@@ -309,13 +309,13 @@ void DrawAudioFilterLines() {
   // draw fiter indicator lines on the audio spectrum
 
   // set color of active filter bar to green
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_USB:
     case DEMOD_LSB:
     case DEMOD_PSK31:
     case DEMOD_FT8:
     case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
       if(lowerAudioFilterActive) {
         filterLoColor = RA8875_GREEN;
@@ -622,12 +622,12 @@ FLASHMEM void ShowBandwidthBarValues() {
   tft.fillRect(posLeft, FILTER_PARAMETERS_Y, 200, tft.getFontHeight(), RA8875_BLACK);
 
   // set color of active filter value to green
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_USB:
     case DEMOD_PSK31:
     case DEMOD_FT8:
     case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
       if(!ft8MsgSelectActive) {
         if(lowerAudioFilterActive) {
@@ -670,7 +670,7 @@ FLASHMEM void ShowBandwidthBarValues() {
       break;
   }
 
-  if(bands[currentBand].demod != DEMOD_NFM) {
+  if(currentDemodMode != DEMOD_NFM) {
     tft.setTextColor(loColor);
     MyDrawFloat(loValue, 1, posLeft, FILTER_PARAMETERS_Y, buff);
     tft.print("kHz");
@@ -730,7 +730,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
     tft.setCursor(centerLine - 20, SPEC_BOX_LABELS);
   }
 
-  if(bands[currentBand].demod == DEMOD_FT8) {
+  if(currentDemodMode == DEMOD_FT8) {
     //tunedInx = -1;
     //cFreq += fInc;
     //tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
@@ -816,14 +816,18 @@ FLASHMEM void ShowOperatingStats() {
   tft.setCursor(OPERATION_STATS_MD, OPERATION_STATS_T);
 
   switch(radioMode) {
+    case SSB_MODE:
+      tft.print("SSB");
+      break;
+
     case CW_MODE:
       tft.print("CW ");
       tft.setCursor(OPERATION_STATS_CWF, OPERATION_STATS_T);
       tft.print(menuOptions[1][CWFilterIndex]);
       break;
 
-    case SSB_MODE:
-      tft.print("SSB");
+    case DSB_MODE:
+      tft.print("DSB");
       break;
 
     case DATA_MODE:
@@ -834,33 +838,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.setCursor(OPERATION_STATS_DMD, OPERATION_STATS_T);
   tft.setTextColor(RA8875_WHITE);
 
-  switch(bands[currentBand].demod) {
-    case DEMOD_USB:
-    case DEMOD_LSB:
-    case DEMOD_PSK31:
-    case DEMOD_FT8:
-    case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_DECODE:
-    case DEMOD_FT8_WAV:
-      if(activeVFO == VFO_A) {
-        tft.print(DEMOD[bands[currentBandA].demod].text);
-      } else {
-        tft.print(DEMOD[bands[currentBandB].demod].text);
-      }
-      break;
-
-    case DEMOD_AM:
-      tft.print("AM");
-      break;
-
-    case DEMOD_NFM:
-      tft.print("NFM");
-      break;
-
-    case DEMOD_SAM:
-      tft.print("SAM");
-      break;
-  }
+  tft.print(DEMOD[currentDemodMode].text);
 
   ShowCurrentPowerSetting();
 }
@@ -1091,7 +1069,7 @@ FASTRUN void DrawBandwidthBar() {
     zoomOffset = 48000.0 * pixel_per_hz;
   }
 
-  if(bands[currentBand].demod == DEMOD_FT8) {
+  if(currentDemodMode == DEMOD_FT8) {
     //zoomOffset = 44100.0 / 8.0 * pixel_per_hz / ((float)(1 << spectrumZoom)) * 2.0;
   }
 
@@ -1100,12 +1078,12 @@ FASTRUN void DrawBandwidthBar() {
   newFilterWidth = (int)(((float)(currentFilterHiCut - currentFilterLoCut)) * pixel_per_hz * 1.06);
 
   // make sure bandwidth is within zoom range
-  switch(bands[currentBand].demod) {
+  switch(currentDemodMode) {
     case DEMOD_USB:
     case DEMOD_PSK31:
     case DEMOD_FT8:
     case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_DECODE:
+    case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
       if(centerLine + NCOFreqX + newFilterWidth > SPECTRUM_RES) {
         resetTuningFlag = true;
@@ -1137,12 +1115,12 @@ FASTRUN void DrawBandwidthBar() {
 
   // update bar if we haven't reset tuning, otherwise this gets recalled by that routine
   if(!resetTuningFlag) {
-    switch(bands[currentBand].demod) {
+    switch(currentDemodMode) {
       case DEMOD_USB:
       case DEMOD_PSK31:
       case DEMOD_FT8:
       case DEMOD_PSK31_WAV:
-      case DEMOD_FT8_DECODE:
+      case DEMOD_FT8_INTERNAL:
       case DEMOD_FT8_WAV:
         newFilterX = centerLine + NCOFreqX + (float)currentFilterLoCut * pixel_per_hz;
         break;
@@ -1258,7 +1236,7 @@ FLASHMEM void DrawAudioSpectContainer() {
   int start = 1;
   int inc = 1;
 
-  if(bands[currentBand].demod == DEMOD_FT8) {
+  if(currentDemodMode == DEMOD_FT8) {
     pixels_kHz *= 24.0 / 44.1;
     ticks = 11;
     start = 2;
@@ -1365,7 +1343,7 @@ FLASHMEM void SetZoom(int zoom) {
   }
 
   // limit zoom in FT8 mode to 2x and 4x
-  if(bands[currentBand].demod == DEMOD_FT8) {
+  if(currentDemodMode == DEMOD_FT8) {
     if((spectrumZoom == 0) || (spectrumZoom > 2)) {
       spectrumZoom = 1;
     }

@@ -707,7 +707,7 @@ float goertzel_mag(int numSamples, int TARGET_FREQUENCY, int SAMPLING_RATE, floa
   return magnitude;
 }
 
-FLASHMEM void InitCW(void) {
+FLASHMEM void InitCWDecoder(void) {
   // *** TODO: validate which of these need to be properly alligned for CW decoding (old alignment: _attribute__ ((aligned (4)))) ***
   corrBuffer = (float32_t *)extmem_malloc(511 * sizeof(float32_t));
   gapHistogram = (int32_t *)extmem_malloc(HISTOGRAM_ELEMENTS * sizeof(int32_t));
@@ -716,13 +716,13 @@ FLASHMEM void InitCW(void) {
 
   if((corrBuffer == NULL) || (gapHistogram == NULL) || (signalHistogram == NULL) || (cwDecodeBuffer == NULL)) {
     decoderFlag = OFF;
-    ExitCW();
+    ExitCWDecoder();
 
-    Debug("InitCW failed");
+    Debug("InitCWDecoder failed");
   }
 }
 
-FLASHMEM void ExitCW(void) {
+FLASHMEM void ExitCWDecoder(void) {
   extmem_free(corrBuffer);
   extmem_free(gapHistogram);
   extmem_free(signalHistogram);

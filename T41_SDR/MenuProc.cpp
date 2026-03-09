@@ -112,11 +112,6 @@ FLASHMEM void RFGainFollowup() {
   Purpose: Used to change the currently active VFO
 *****/
 FLASHMEM void VFOSelect(int32_t index) {
-  if(radioMode == DATA_MODE) {
-    // restore old demodulation mode before we change bands
-    bands[currentBand].demod = priorDemodMode;
-  }
-
   splitVFO = false;
   NCOFreq = 0L;
 
@@ -147,17 +142,17 @@ FLASHMEM void VFOSelect(int32_t index) {
   // *** TODO: this needs reworked ***
   /*
   if(radioMode == DATA_MODE) {
-    priorDemodMode = bands[currentBand].demod; // save demod mode for restoration later
+    priorDemodMode = currentDemodMode; // save demod mode for restoration later
 
-    switch(bands[currentBand].demod) {
+    switch(currentDemodMode) {
       case DEMOD_PSK31_WAV:
       case DEMOD_PSK31:
-        bands[currentBand].demod = DEMOD_PSK31;
+        currentDemodMode = DEMOD_PSK31;
         break;
 
-      case DEMOD_FT8_DECODE:
+      case DEMOD_FT8_INTERNAL:
       case DEMOD_FT8_WAV:
-        bands[currentBand].demod = DEMOD_FT8_DECODE;
+        currentDemodMode = DEMOD_FT8_INTERNAL;
         ft8SyncState = 0;
         UpdateInfoBoxItem(IB_ITEM_FT8);
         break;

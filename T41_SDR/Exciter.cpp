@@ -34,22 +34,22 @@ extern AudioInputUSB usbIn;
 *****/
 void PlayExciterIQData() {
   int16_t *sp_L, *sp_R;
-  int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
+  int blocks = currentDemodMode == DEMOD_FT8 ? 2 : 16;
 /*
   // adjust IQ signal amplitude and phase
   // *** TODO: v66-9 has currentBandA, why? ***
-  if(bands[currentBand].demod == DEMOD_LSB) {
+  if(currentDemodMode == DEMOD_LSB) {
     arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
-  } else if(bands[currentBand].demod == DEMOD_USB) {
+  } else if(currentDemodMode == DEMOD_USB) {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
-  } else if(bands[currentBand].demod == DEMOD_FT8) {
+  } else if(currentDemodMode == DEMOD_FT8) {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
   }
 */
-  if(bands[currentBand].demod != DEMOD_FT8) {
+  if(currentDemodMode != DEMOD_FT8) {
     // return to 192kHz, interpolate by a factor of 8, once again in two steps to preserve the spectrum order
     // 24kHz effective sample rate here
     arm_fir_interpolate_f32(&FIR_int1_EX_I, audioBufferL_EX, audioBufferTemp, 256);
@@ -91,7 +91,7 @@ void PlayExciterIQData() {
   // pause while this plays to prevent churn
   // *** TODO: find right pause interval ***
   //CWPause(10); // audio memory usage increases with this
-  if(bands[currentBand].demod != DEMOD_FT8) {
+  if(currentDemodMode != DEMOD_FT8) {
     CWPause(5); // audio memory usage doesn't increase with this
     //CWPause(10);
   }
@@ -103,7 +103,7 @@ void PrepareExciterIQData() {
   // copy left buffer to right channel
   arm_copy_f32(audioBufferL_EX, audioBufferR_EX, 256);
 
-  if(bands[currentBand].demod != DEMOD_FT8) {
+  if(currentDemodMode != DEMOD_FT8) {
     #if HILBERT_SIZE == 256 // 24kHz sample rate
     #ifdef USE_24K_SPS
       // create I and Q signals with Hilbert transform
@@ -172,7 +172,7 @@ void PrepareExciterIQData() {
 *****/
 void PrepareMicExciterData() {
   int16_t *sp_L;
-  int blocks = bands[currentBand].demod == DEMOD_FT8 ? 2 : 16;
+  int blocks = currentDemodMode == DEMOD_FT8 ? 2 : 16;
 
   // process samples from queue buffer if there are at least 16 buffers available
   if(Q_in_L_Ex.available() > blocks) {
@@ -194,7 +194,7 @@ void PrepareMicExciterData() {
               192KHz/8 = 24KHz, with 8xsmaller sample sizes
      **********************************************************************************/
 
-    if(bands[currentBand].demod != DEMOD_FT8) {
+    if(currentDemodMode != DEMOD_FT8) {
       // reduce sample rate and size by decimation by 8
       // decimate in two stages to maintain spectrum order
       // 192kHz effective sample rate here

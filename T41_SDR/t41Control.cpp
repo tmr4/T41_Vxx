@@ -189,7 +189,7 @@ void SendAS() {
     TxRxFreq,                       // freq in Hz (%011d) at index 2
     currentBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
-    bands[currentBand].demod         // demodulation mode (%d)  at index 15
+    currentDemodMode         // demodulation mode (%d)  at index 15
   );
   T41ControlSendCmd(cmd);
 }
@@ -204,7 +204,7 @@ void SendIF() {
     TxRxFreq,                       // freq in Hz (%011d) at index 2
     currentBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
-    bands[currentBand].demod,        // demodulation mode (%d)  at index 15
+    currentDemodMode,        // demodulation mode (%d)  at index 15
     audioVolume,                    // audio volume (%03d) at index 16
     NCOFreq,                        // NCO freq (%+06d) at index 19
     currentNoiseFloor[currentBand], // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
@@ -229,7 +229,7 @@ int GetMode() {
   if(radioMode == CW_MODE) {
     mode=3;
   } else {
-    switch(bands[currentBand].demod) {
+    switch(currentDemodMode) {
       case DEMOD_USB:
         mode=2; // USB
         break;
@@ -419,7 +419,7 @@ void T41ControlLoop() {
       case 'M':
         if(cmd[1] == 'D' && cmd[2] == ';') {
           // send demod mode
-          sprintf(cmd,"MD%d;", useKenwoodIF ? mode : bands[currentBand].demod);
+          sprintf(cmd,"MD%d;", useKenwoodIF ? mode : currentDemodMode);
         } else if(cmd[1] == 'D' && cmd[3] == ';') {
           // set demod mode status
           ChangeDemodMode(atoi(&cmd[2]));
