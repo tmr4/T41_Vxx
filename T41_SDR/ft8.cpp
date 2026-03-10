@@ -50,8 +50,8 @@
 #ifdef USE_BUFFERED_FT8_WAV
 EXTMEM float32_t ft8WavBuf[15 * 12000]; // buffer a FT8 wav file for use with decoder
 //int numWavBuf = 0, countWavBuf = 1920 * 14, countWavBufStart = 1920 * 14; // first 14 frames are zero, gives -0.8 sec offset vs +1.3 sec for original wave file
-int numWavBuf = 0, countWavBuf = 1920 * 7, countWavBufStart = 1920 * 7; // first 14 frames are zero, gives +0.2 sec offset
-//int numWavBuf = 0, countWavBuf = 0, countWavBufStart = 0;
+//int numWavBuf = 0, countWavBuf = 1920 * 7, countWavBufStart = 1920 * 7; // first 14 frames are zero, gives +0.2 sec offset
+int numWavBuf = 0, countWavBuf = 0, countWavBufStart = 0;
 #endif
 
 float *ft8TxSignalBuf = NULL;
@@ -158,6 +158,38 @@ uint8_t *ft8lib_GetFT8SpectrumData(int symbol);
 
 bool ft8lib_GenFT8(char *message, float frequency);
 float *ft8lib_GetSignal();
+
+//-------------------------------------------------------------------------------------------------------------
+// Testing Code
+//-------------------------------------------------------------------------------------------------------------
+
+#define DEMOD_FT8_TESTING // plots frame by frame frequency spectrum of selected wav file (change frame with volume knob)
+
+#ifdef DEMOD_FT8_TESTING
+EXTMEM uint8_t freqSpectrum[512*79];
+bool testingInitilized = false;
+
+FLASHMEM void DrawTestSpectrum(uint8_t *spec) {
+  int yPlot, y1Plot = 0;
+
+  // clear old spectrum
+  //EraseSpectrumWindow();
+  tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+
+  for(int i = 0; i < 512; i++) {
+    // plot within spectrum area
+    //yPlot = SPECTRUM_BOTTOM - spec[i] / 2;
+    //y1Plot = SPECTRUM_BOTTOM - spec[i + 1] / 2;
+    //tft.drawLine(SPECTRUM_LEFT_X + i, y1Plot, SPECTRUM_LEFT_X + i, yPlot, RA8875_YELLOW);
+
+    // plot within message area
+    yPlot = YPIXELS - 10 - (int)((float)spec[i] / 1.5);
+    y1Plot = YPIXELS - 10 - (int)((float)spec[i + 1] / 1.5);
+    tft.drawLine(WATERFALL_L + i, y1Plot, WATERFALL_L + i, yPlot, RA8875_YELLOW);
+  }
+}
+
+#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -555,6 +587,18 @@ FLASHMEM bool InitFT8Decoder() {
     wfRows = WATERFALL_H - FT8_ROW_HEIGHT * FT8_ROWS - 3;
 
     result = true;
+
+#ifdef USE_BUFFERED_FT8_WAV
+    static bool done = false;
+
+    if(!done) {
+      // initialize buffered wav only once
+      for(int i = 0; i < 15 * 12000; i++) {
+        ft8WavBuf[i] = 0;
+      }
+      done = true;
+    }
+#endif
   }
 
   return result;
@@ -614,11 +658,11 @@ FLASHMEM bool SetupFT8Wav() {
   uint32_t sample_rate = 12000;
   uint32_t num_samples = slot_period * sample_rate;
 
-  result = LoadWav("ft8.wav", num_samples); //
+  //result = LoadWav("ft8.wav", num_samples); //
   //result = LoadWav("ft8_0.wav", num_samples); // 191111_110645.wav from ft8_lib
   //result = LoadWav("ft8_1.wav", num_samples); // CQ KN6ZDE CM87 at 1000
   //result = LoadWav("ft8_10.wav", num_samples); // CQ KN6ZDE CM8x x=0-9 at 1000 + x*100
-  //result = LoadWav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
+  result = LoadWav("ft8_7.wav", num_samples); // CQ KN6ZDE CM8x x=0-6 at 500 + x*500
 
   if(result != 0) {
     DEBUG_MSG("Invalid wave file!");
@@ -737,9 +781,42 @@ void DecodeFT8Data(struct tm *start) {
 
 // FT8 decoder state machine
 void FT8DecoderLoop() {
+#ifdef DEMOD_FT8_TESTING
+  static int frame = 0;
+#endif
+
   // *** TODO: this should be set per actual FT8 interval ***
   struct tm tmSlotStart; // = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
   char msg[] = "CQ KN6ZDE CM87";
+
+#ifdef DEMOD_FT8_TESTING
+    static int vol = -1;
+
+  // currently, the only way to exit testing is to restart the T41
+  if(!testingInitilized) {
+    vol = audioVolume;
+    testingInitilized = true;
+  }
+
+  // draw spectrum frame in response to volume change
+  if(audioVolume != vol) {
+    frame += audioVolume - vol;
+
+    if(frame < 0) frame = 78;
+    if(frame >= 79) frame = 0;
+
+    //Serial.println("@ DrawTestSpectrum");
+    DrawTestSpectrum(freqSpectrum + frame * 512);
+    tft.setTextColor(RA8875_GREEN);
+    tft.setFontScale((enum RA8875tsize)1);
+    tft.setCursor(10, SPECTRUM_BOTTOM+30);
+    tft.print(frame);
+
+    // reset volume flag
+    audioVolume = vol;
+    UpdateInfoBoxItem(IB_ITEM_VOL);
+  }
+#endif
 
   // *** TODO: examine various places that need input buffers cleared
   if((Q_in_L.available() > 100) && (Q_in_R.available() > 100)) {
@@ -791,12 +868,17 @@ void FT8DecoderLoop() {
       } else {
         // we have a frame of data, process it
         ft8DecoderState = FT8_DECODER_STATE_PROCESSING;
-
-        //bufCount = 0;
       }
       break;
 
     case FT8_DECODER_STATE_PROCESSING:
+      if(!ft8SyncState) {
+        // no need to waste time
+        bufCount = 0;
+        ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+        return;
+      }
+
       DEBUG_LOC("at FT8_DECODER_STATE_PROCESSING...");
 
       // a frame of data is available, process it
@@ -818,7 +900,19 @@ void FT8DecoderLoop() {
           uint8_t *spec = ft8lib_GetFT8SpectrumData(frameCount - 1);
 
           if(spec != NULL) {
-            DrawFT8Spectrum(spec, 512, frameCount == 77);
+            DrawFT8Spectrum(spec, 512, frameCount == 38 || frameCount == 77);
+
+            #ifdef DEMOD_FT8_TESTING
+            if(frame == 0) {
+              // don't update if we're examining it
+              for(int i = 0; i < 512; i++) {
+                freqSpectrum[(frameCount-1)*512 + i] =  spec[i];
+              }
+            }
+            for(int i = 0; i < 512; i++) {
+              freqSpectrum[(frameCount-1)*512 + i] =  spec[i];
+            }
+            #endif
           }
 
           ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
@@ -856,7 +950,10 @@ void FT8DecoderLoop() {
     case FT8_DECODER_STATE_RX_UPDATE:
       DEBUG_LOC("at FT8_DECODER_STATE_RX_UPDATE...");
 
+      #ifndef DEMOD_FT8_TESTING
+      // print messages if we're not testing
       ProcessFT8Messages();
+      #endif
 
       #ifdef USE_BUFFERED_FT8_WAV
       // reset read wav buffer
@@ -935,7 +1032,8 @@ void FT8DecoderLoop() {
   }
 
   if(ft8WavFlag) {
-    // done with wav file, switch to FT8 decode mode
+    // done with wav file
+    // switch to FT8 internal mode
     ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
     ft8WavFlag = false;
   }

@@ -167,23 +167,20 @@ int16_t spectrum_x = 10;
 // FT8 spectrum value is 0-255, index to this is value/10
 // *** 26 values here so 255/10 is a valid index ***
 /* PROGMEM */ const uint16_t ft8Gradient[] = {  // Color array for FT8 waterfall background
-  RA8875_BLACK, // 0 - 49
+  RA8875_BLACK, // 0 - 59
   RA8875_BLACK,
   RA8875_BLACK,
   RA8875_BLACK,
   RA8875_BLACK,
-  RA8875_BLUE,  // 50 - 59
+  RA8875_BLACK,
   RA8875_BLUE,  // 60 - 69
   RA8875_CYAN,  // 70 - 79
-  //RA8875_GREEN, // 80 - 89
-  //RA8875_YELLOW,// 90 - 99
-  //RA8875_LIGHT_ORANGE, // 100 - 109
+  RA8875_GREEN, // 80 - 89
+  RA8875_YELLOW,// 90 - 99
+  RA8875_LIGHT_ORANGE, // 100 - 109
   RA8875_DARK_ORANGE,  // 110 - 119
   RA8875_DARK_ORANGE,  // 120 - 129
   RA8875_RED, // 130 - 255
-  RA8875_RED,
-  RA8875_RED,
-  RA8875_RED,
   RA8875_RED,
   RA8875_RED,
   RA8875_RED,
@@ -1433,8 +1430,7 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
   int yPlot, y1Plot = 0;
   int samples = numSamples > WATERFALL_W ? WATERFALL_W : numSamples;
   static uint8_t oldSpec[WATERFALL_W + 1] = {0};
-  static uint8_t accSpec[WATERFALL_W + 1] = {0};
-  //static bool initialized = false;
+  static uint8_t accSpec[WATERFALL_W] = {0};
   uint8_t wfGradIndex;
   static uint16_t waterfall[WATERFALL_W] = {0};
   static int frameCount = 0;
@@ -1446,10 +1442,7 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
     y1Plot = SPECTRUM_TOP_Y + 85 - spec[i + 1] / 3;
 
     // erase old spectrum if initialized
-    //if(initialized)
-    {
-      tft.drawLine(SPECTRUM_LEFT_X + i, oldSpec[i+1], SPECTRUM_LEFT_X + i, oldSpec[i], RA8875_BLACK);
-    }
+    tft.drawLine(SPECTRUM_LEFT_X + i, oldSpec[i+1], SPECTRUM_LEFT_X + i, oldSpec[i], RA8875_BLACK);
 
     oldSpec[i] = yPlot;
     tft.drawLine(SPECTRUM_LEFT_X + i, y1Plot, SPECTRUM_LEFT_X + i, yPlot, RA8875_YELLOW);
@@ -1457,9 +1450,11 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
     // accumulate spectrum data for average waterfall over FT8 interval
     // exclude low data points that tends to dilute waterfall of strong signals
     //if(!((accSpec[i] > 100) && (spec[i] < 90)))
+    //if(frameCount > 9 && frameCount < 78)
     {
     //if(!(spec[i] < 60)) {
-      accSpec[i] = (accSpec[i] * frameCount + spec[i]) / (frameCount + 1);
+      //accSpec[i] = (accSpec[i] * frameCount + spec[i]) / (frameCount + 1);
+      accSpec[i] = max(accSpec[i], spec[i]);
     }
 
     // waterfall of accumulated data over ft8 interval
@@ -1473,6 +1468,7 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
   oldSpec[numSamples] = y1Plot;
 
   if(rollWaterfall) {
+  //if(0) {
     // scroll the waterfall display
     // Use the Block Transfer Engine (BTE) to move waterfall down a line
     // copy the waterfall to layer 2, moving it down to row 2
@@ -1482,12 +1478,14 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
     //     buffers have sufficient data to process at the start of the next
     //     loop.  Spectrum updates are skipped if this isn't the case.
     tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 102, 1, 2);
+    //tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 106, 1, 2);
     tft.readStatus(); // Make sure it is done.  Memory moves can take time. This is blocking. *** might need to be changed back to original if blocking nature is modified ***
 
     YieldToProcess();
 
     // copy the waterfall back to layer 1, row 2
     tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 102, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 102, 2);
+    //tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 106, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 101, 2);
     tft.readStatus(); // Make sure it's done.
 
     // *** TODO: add when waterfall is moved ***
@@ -1497,18 +1495,23 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
 
     // reset waterfall for next frame
     for(int i = 0; i < WATERFALL_W; i++) {
-      waterfall[i] = 0;
+      //waterfall[i] = RA8875_BLACK;
+      //waterfall[i] = 0; //RA8875_BLACK
+      accSpec[i] = 0;
     }
     frameCount = 0;
   } else {
+    if(frameCount > 9 && frameCount < 20) {
+      // write new row of data into the top row to finish the scrolling effect
+      tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 1, waterfall);
+      tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 101, WATERFALL_W, 1, waterfall);
+      //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 103, WATERFALL_W, 1, waterfall);
+      //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 104, WATERFALL_W, 1, waterfall);
+      //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 105, WATERFALL_W, 1, waterfall);
+    }
+
     ++frameCount;
   }
-
-  // write new row of data into the top row to finish the scrolling effect
-  tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 1, waterfall);
-  tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 101, WATERFALL_W, 1, waterfall);
-
-  //initialized = true;
 
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
 }
