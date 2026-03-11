@@ -167,20 +167,25 @@ int16_t spectrum_x = 10;
 // FT8 spectrum value is 0-255, index to this is value/10
 // *** 26 values here so 255/10 is a valid index ***
 /* PROGMEM */ const uint16_t ft8Gradient[] = {  // Color array for FT8 waterfall background
-  RA8875_BLACK, // 0 - 59
   RA8875_BLACK,
   RA8875_BLACK,
   RA8875_BLACK,
   RA8875_BLACK,
   RA8875_BLACK,
-  RA8875_BLUE,  // 60 - 69
-  RA8875_CYAN,  // 70 - 79
-  RA8875_GREEN, // 80 - 89
-  RA8875_YELLOW,// 90 - 99
-  RA8875_LIGHT_ORANGE, // 100 - 109
-  RA8875_DARK_ORANGE,  // 110 - 119
-  RA8875_DARK_ORANGE,  // 120 - 129
-  RA8875_RED, // 130 - 255
+  RA8875_BLACK,
+  RA8875_BLACK,
+  RA8875_BLACK,
+  RA8875_BLUE,
+  RA8875_CYAN,
+  //RA8875_GREEN,
+  //RA8875_YELLOW,
+  //RA8875_LIGHT_ORANGE,
+  //RA8875_DARK_ORANGE,
+  //RA8875_DARK_ORANGE,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
+  RA8875_RED,
   RA8875_RED,
   RA8875_RED,
   RA8875_RED,
@@ -1433,7 +1438,6 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
   static uint8_t accSpec[WATERFALL_W] = {0};
   uint8_t wfGradIndex;
   static uint16_t waterfall[WATERFALL_W] = {0};
-  static int frameCount = 0;
 
   for(int i = 0; i < samples; i++) {
     TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
@@ -1448,14 +1452,7 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
     tft.drawLine(SPECTRUM_LEFT_X + i, y1Plot, SPECTRUM_LEFT_X + i, yPlot, RA8875_YELLOW);
 
     // accumulate spectrum data for average waterfall over FT8 interval
-    // exclude low data points that tends to dilute waterfall of strong signals
-    //if(!((accSpec[i] > 100) && (spec[i] < 90)))
-    //if(frameCount > 9 && frameCount < 78)
-    {
-    //if(!(spec[i] < 60)) {
-      //accSpec[i] = (accSpec[i] * frameCount + spec[i]) / (frameCount + 1);
-      accSpec[i] = max(accSpec[i], spec[i]);
-    }
+    accSpec[i] = max(accSpec[i], spec[i]);
 
     // waterfall of accumulated data over ft8 interval
     // this will always be >0 and <26
@@ -1468,7 +1465,6 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
   oldSpec[numSamples] = y1Plot;
 
   if(rollWaterfall) {
-  //if(0) {
     // scroll the waterfall display
     // Use the Block Transfer Engine (BTE) to move waterfall down a line
     // copy the waterfall to layer 2, moving it down to row 2
@@ -1478,14 +1474,12 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
     //     buffers have sufficient data to process at the start of the next
     //     loop.  Spectrum updates are skipped if this isn't the case.
     tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 102, 1, 2);
-    //tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 106, 1, 2);
     tft.readStatus(); // Make sure it is done.  Memory moves can take time. This is blocking. *** might need to be changed back to original if blocking nature is modified ***
 
     YieldToProcess();
 
     // copy the waterfall back to layer 1, row 2
     tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 102, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 102, 2);
-    //tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 106, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 101, 2);
     tft.readStatus(); // Make sure it's done.
 
     // *** TODO: add when waterfall is moved ***
@@ -1495,22 +1489,12 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
 
     // reset waterfall for next frame
     for(int i = 0; i < WATERFALL_W; i++) {
-      //waterfall[i] = RA8875_BLACK;
-      //waterfall[i] = 0; //RA8875_BLACK
       accSpec[i] = 0;
     }
-    frameCount = 0;
   } else {
-    if(frameCount > 9 && frameCount < 20) {
-      // write new row of data into the top row to finish the scrolling effect
-      tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 1, waterfall);
-      tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 101, WATERFALL_W, 1, waterfall);
-      //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 103, WATERFALL_W, 1, waterfall);
-      //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 104, WATERFALL_W, 1, waterfall);
-      //tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 105, WATERFALL_W, 1, waterfall);
-    }
-
-    ++frameCount;
+    // write new row of data into the top row to finish the scrolling effect
+    tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 100, WATERFALL_W, 1, waterfall);
+    tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 101, WATERFALL_W, 1, waterfall);
   }
 
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
@@ -1519,12 +1503,10 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
 FLASHMEM void ShowFT8SpectrumFreqValues() {
   char txt[16];
   int tickX;
-  //float cFreq = 1600.0; // 6.25*512/2
-  //float freqOffset = 200.0;
-  float posOffset = -32.0;
+  float posOffset = -32.0; // 200Hz / 6.25Hz/pixel
   float lFreq;
   float fInc =  500.0;
-  float32_t pixel_per_hz = 6.25;
+  float hz_per_pixel = 6.25;
 
   tft.setFontScale((enum RA8875tsize)0);
 
@@ -1538,7 +1520,7 @@ FLASHMEM void ShowFT8SpectrumFreqValues() {
     // calculate label freq (always a whole number) and the exact position of its tick mark
     lFreq = (float)idx * fInc;
     ultoa(lFreq, txt, DEC);
-    tickX = (int)(lFreq / pixel_per_hz + posOffset);
+    tickX = (int)(lFreq / hz_per_pixel + posOffset);
 
     // print freq label and tick mark
     if(tickX > 0 && tickX < SPECTRUM_RES) {
@@ -1549,4 +1531,35 @@ FLASHMEM void ShowFT8SpectrumFreqValues() {
       tft.drawFastVLine(tickX, SPEC_BOX_LABELS - 4, 6, RA8875_YELLOW);
     }
   }
+}
+
+/*****
+  Purpose: Draw Tuned Bandwidth on FT8 Spectrum Plot
+*****/
+FASTRUN void DrawFT8BandwidthBar() {
+  // spectrum starts at 200 Hz so 0 Hz is at -32.0 pixels (200Hz / 6.25Hz per pixel)
+  // FT8 RX frequency defaults to 1000Hz, ft8RxFreq = 1000, this is at x=128 (1000 / 6.25 - 32)
+  // bar width = 8 (50Hz / 6.25Hz/pixel)
+  static int oldRx = 128; // *** update if ft8RxFreq is changed ***
+  static int oldTx = 128; // *** update if ft8TxFreq is changed ***
+  int newRx = (int)((float)ft8RxFreq / 6.25 - 32.0);
+  int newTx = (int)((float)ft8TxFreq / 6.25 - 32.0);
+
+  // erase old bars
+  tft.writeTo(L2);
+  tft.fillRect(oldRx, SPECTRUM_TOP_Y, 8, 44, RA8875_BLACK);
+  //tft.drawFastVLine(oldRx, SPECTRUM_TOP_Y, 44, RA8875_BLACK);
+  tft.fillRect(oldTx, SPECTRUM_TOP_Y + 44, 8, 44, RA8875_BLACK);
+  //tft.drawFastVLine(oldTx, SPECTRUM_TOP_Y + 44, 44, RA8875_BLACK);
+
+  // draw new bars and freq lines
+  tft.fillRect(newRx+1, SPECTRUM_TOP_Y, 7, 44, RA8875_GREEN);
+  tft.drawFastVLine(newRx, SPECTRUM_TOP_Y, 44, RA8875_WHITE);
+  tft.fillRect(newTx+1, SPECTRUM_TOP_Y + 44, 7, 44, RA8875_RED);
+  tft.drawFastVLine(newTx, SPECTRUM_TOP_Y + 44, 44, RA8875_WHITE);
+
+  oldRx = newRx;
+  oldTx = newTx;
+
+  tft.writeTo(L1);
 }

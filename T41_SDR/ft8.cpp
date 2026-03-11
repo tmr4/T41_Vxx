@@ -122,6 +122,7 @@ int ft8SyncState = 0; // sync status: 0 - not sync'd, 1 - sync'd
 
 int ft8TxFreq = 1000;
 int ft8RxFreq = 1000;
+bool txEqualsRx = true;
 
 extern char myGrid[];
 
@@ -163,7 +164,7 @@ float *ft8lib_GetSignal();
 // Testing Code
 //-------------------------------------------------------------------------------------------------------------
 
-#define DEMOD_FT8_TESTING // plots frame by frame frequency spectrum of selected wav file (change frame with volume knob)
+//#define DEMOD_FT8_TESTING // plots frame by frame frequency spectrum of selected wav file (change frame with volume knob)
 
 #ifdef DEMOD_FT8_TESTING
 EXTMEM uint8_t freqSpectrum[512*79];
@@ -308,25 +309,27 @@ void GetRxMessages() {
   }
 }
 
+// *** TODO: consider consolidating this and DisplayCqMessages ***
 void DisplayRxMessages() {
   char message[100];
   int rowCount = FT8_MSG_ROWS;
-  int columnOffset;
+  int rowHeight, colWidth, columnOffset;
   int count = 0;
 
-  if(numRxMsgs == 0) return;
-
   tft.setFontScale((enum RA8875tsize)0);
-  int rowHeight = tft.getFontHeight();
-  int colWidth = tft.getFontWidth();
-
+  rowHeight = tft.getFontHeight();
+  colWidth = tft.getFontWidth();
   columnOffset = colWidth * 21 * 2;
 
   // reset RX message area
   tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
 
+  if(numRxMsgs == 0) return;
+
   if(numRxMsgs > 11) {
     rxWindowTop = numRxMsgs - 11;
+  } else {
+    rxWindowTop = 0;
   }
 
   // print recent messages at RX frequency
@@ -369,22 +372,23 @@ void GetCqMessages() {
 void DisplayCqMessages() {
   char message[100];
   int rowCount = FT8_MSG_ROWS;
-  int columnOffset;
+  int rowHeight, colWidth, columnOffset;
   int count = 0;
 
-  if(numCqMsgs == 0) return;
-
   tft.setFontScale((enum RA8875tsize)0);
-  int rowHeight = tft.getFontHeight();
-  int colWidth = tft.getFontWidth();
-
+  rowHeight = tft.getFontHeight();
+  colWidth = tft.getFontWidth();
   columnOffset = colWidth * 21;
 
   // reset CQ message area
   tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
 
+  if(numCqMsgs == 0) return;
+
   if(numCqMsgs > 11) {
     cqWindowTop = numCqMsgs - 11;
+  } else {
+    cqWindowTop = 0;
   }
 
   // print recent CQ messages
@@ -414,20 +418,24 @@ void DisplayCqMessages() {
 void DisplayMessages() {
   char message[48];
   int rowCount = FT8_MSG_ROWS;
-  int columnOffset;
+  int rowHeight, colWidth, columnOffset;
   int count = 0;
 
   tft.setFontScale((enum RA8875tsize)0);
-  int rowHeight = tft.getFontHeight();
-  int colWidth = tft.getFontWidth();
+  rowHeight = tft.getFontHeight();
+  colWidth = tft.getFontWidth();
 
   columnOffset = 0;
 
-  // reset RX message area
+  // reset message area
   tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+
+  if(numDecodedMsgs == 0) return;
 
   if(numDecodedMsgs > 11) {
     allWindowTop = numDecodedMsgs - 11;
+  } else {
+    allWindowTop = 0;
   }
 
   // print most recent messages left column
@@ -467,6 +475,10 @@ void DisplayMessages() {
     //  }
     //}
   }
+}
+
+void DisplayOtherMessages() {
+  int rowHeight = tft.getFontHeight();
 
   DisplayActiveMessageDetails();
 
@@ -476,9 +488,10 @@ void DisplayMessages() {
 }
 
 void DisplayAllMessages() {
-  DisplayCqMessages();
   DisplayMessages();
+  DisplayCqMessages();
   DisplayRxMessages();
+  DisplayOtherMessages();
 }
 
 void ProcessFT8Messages() {
@@ -530,6 +543,7 @@ FLASHMEM bool InitFT8Decoder() {
   // return true if the FT8 decoder has already been initialized
   if(ft8Init) return true;
 
+  // *** TODO: consider changing ft8lib monitor configuration when audio filters are changed ***
   if(ft8lib_InitDecoder()) {
     EraseSpectrumDisplayContainer();
     DrawSpectrumFrame();
@@ -539,6 +553,7 @@ FLASHMEM bool InitFT8Decoder() {
     tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
     displayState = DISPLAY_T41_FT8_DECODE;
     ShowFT8SpectrumFreqValues();
+    DrawFT8BandwidthBar();
 
     //SetStationCoordinates(myGrid);
 
@@ -780,52 +795,44 @@ void DecodeFT8Data(struct tm *start) {
 
 // FT8 decoder state machine
 void FT8DecoderLoop() {
-#ifdef DEMOD_FT8_TESTING
-  static int frame = 0;
-  // 0: update spectrum
-  // 1: one interval completed updating paused
-  // 2:
-  static int testingState = 0;
-#endif
-
   // *** TODO: this should be set per actual FT8 interval ***
   struct tm tmSlotStart; // = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
   char msg[] = "CQ KN6ZDE CM87";
 
 #ifdef DEMOD_FT8_TESTING
-    static int vol = -1;
+  // 0: update spectrum
+  // 1: gathering one interval completed, updating paused
+  // 2: examining captured frames possible with volume knob, exit by moving down one click from 0
+  static int testingState = 0;
+  static int frame = 0;
+  static int vol = -1;
 
   // currently, the only way to exit testing is to restart the T41
   // draw spectrum frame in response to volume change
-  if(testingState == 1) {
-    if(audioVolume != vol) {
-      int tmp = audioVolume;
+  if(testingState != 0) {
+    if((audioVolume != vol) || (testingState == 1)) {
+      //int tmp = audioVolume;
       frame += audioVolume - vol;
 
-      // reset volume flag
-      audioVolume = vol;
-      UpdateInfoBoxItem(IB_ITEM_VOL);
-
+      if(frame >= 79) frame = 0;
       if(frame < 0) {
         frame = 0;
         tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
         testingState = 0;
+      } else {
+        DrawTestSpectrum(freqSpectrum + frame * 512);
+        tft.setTextColor(RA8875_GREEN);
+        tft.setFontScale((enum RA8875tsize)1);
+        tft.setCursor(10, SPECTRUM_BOTTOM+30);
+        tft.print(frame);
       }
-      if(frame >= 79) frame = 0;
 
-      //Serial.println("@ DrawTestSpectrum");
-      DrawTestSpectrum(freqSpectrum + frame * 512);
-      tft.setTextColor(RA8875_GREEN);
-      tft.setFontScale((enum RA8875tsize)1);
-      tft.setCursor(10, SPECTRUM_BOTTOM+30);
-      tft.print(frame);
+      if(testingState == 1) testingState = 2;
+
+      // reset volume flag
+      audioVolume = vol;
+      UpdateInfoBoxItem(IB_ITEM_VOL);
     }
-  } else if(testingState == 0) {
-    //DrawTestSpectrum(freqSpectrum + (frameCount - 1) * 512);
-    //tft.setTextColor(RA8875_GREEN);
-    //tft.setFontScale((enum RA8875tsize)1);
-    //tft.setCursor(10, SPECTRUM_BOTTOM+30);
-    //tft.print(frameCount-1);
   }
 
 #endif
@@ -900,34 +907,38 @@ void FT8DecoderLoop() {
       //  1920 bytes at 12k sample rate
       // it takes 15 buffer calls to fill a frame (128 * 15 = 1920)
       if(ProcessFT8Frame()) {
+        // draw spectrum for previous frame
+        uint8_t *spec = ft8lib_GetFT8SpectrumData(frameCount);
+
+        if(spec != NULL) {
+          DrawFT8Spectrum(spec, 512, frameCount == 38 || frameCount == 77);
+
+          #ifdef DEMOD_FT8_TESTING
+          if(testingState == 0) {
+            // update frame spectrum
+            for(int i = 0; i < 512; i++) {
+              freqSpectrum[frameCount*512 + i] =  spec[i];
+            }
+          }
+          #endif
+        }
+
         // next frame
+        // *** incrementing frame above moves to decoding one loop faster ***
         ++frameCount;
         // *** some portion of the next frame may already have been buffered
         //     just decrease buffer count by one frame size ***
         bufCount -= 15;
 
         if(frameCount < 79) {
-          // draw spectrum for previous frame
-          // *** incrementing frame above moves to decoding one loop faster ***
-          uint8_t *spec = ft8lib_GetFT8SpectrumData(frameCount - 1);
-
-          if(spec != NULL) {
-            DrawFT8Spectrum(spec, 512, frameCount == 38 || frameCount == 77);
-
-            #ifdef DEMOD_FT8_TESTING
-            if(testingState == 0) {
-              // update frame
-              for(int i = 0; i < 512; i++) {
-                freqSpectrum[(frameCount-1)*512 + i] =  spec[i];
-              }
-              vol = audioVolume;
-            }
-            #endif
-          }
-
           ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
         } else {
-          testingState = 1;
+          #ifdef DEMOD_FT8_TESTING
+          if(testingState == 0) {
+            testingState = 1;
+            vol = audioVolume;
+          }
+          #endif
           ft8DecoderState = FT8_DECODER_STATE_DECODING;
         }
 
@@ -1053,14 +1064,25 @@ void FT8DecoderLoop() {
 void ChangeFt8TxFreq(int wheel) {
   ft8TxFreq += wheel * ftIncrement;
 
+  // limit it to spectrum range
+  if(ft8TxFreq < 200) ft8TxFreq = 200;
+  if(ft8TxFreq > 3350) ft8TxFreq = 3350;
+
   UpdateInfoBoxItem(IB_ITEM_FT8_TXF);
+
+  DrawFT8BandwidthBar();
 }
 
 void ChangeFt8RxFreq(int wheel) {
   ft8RxFreq += wheel * ftIncrement;
 
+  // limit it to spectrum range
+  if(ft8RxFreq < 200) ft8RxFreq = 200;
+  if(ft8RxFreq > 3350) ft8RxFreq = 3350;
+
   UpdateInfoBoxItem(IB_ITEM_FT8_RXF);
 
+  DrawFT8BandwidthBar();
   GetRxMessages();
   DisplayRxMessages();
 }
@@ -1092,7 +1114,7 @@ void ChangeFt8TxState(int wheel) {
   UpdateInfoBoxItem(IB_ITEM_FT8_TX);
 }
 
-void ChangeFt8Window(int xcol, int wheel) {
+void ScrollFt8MsgWindow(int xcol, int wheel) {
   if(xcol < 512 / 3) {
     // mouse in all messages
     allWindowTop -= wheel;
@@ -1128,27 +1150,28 @@ void ChangeFt8Window(int xcol, int wheel) {
 }
 
 void ChangeFt8ActiveMsg(int x, int y) {
-  int row = (y - (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS)) / FT8_ROW_HEIGHT + 1;
-
-  if(row < 0) row = 0;
+  // (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS) / FT8_ROW_HEIGHT = 17
+  int row = ceil((float)y / 16.0 - 17.0 + 1);
+  //Serial.print(y); Serial.print(", "); Serial.println(row);
+  if(row < 0) return;
 
   if(x < 512 / 3) {
     // mouse in all messages
-    if(allWindowTop + row < numDecodedMsgs) {
+    if(allWindowTop + row <= numDecodedMsgs) {
       //activeMsg = numDecodedMsgs - 1;
     //} else {
-      activeMsg = allWindowTop + row;
+      activeMsg = allWindowTop + row - 1;
     }
   } else if(x > 512 * 2 / 3) {
     // mouse in RX messages
-    if(rxWindowTop + row < numRxMsgs) {
-      activeMsg = rxList[rxWindowTop + row];
+    if(rxWindowTop + row <= numRxMsgs) {
+      activeMsg = rxList[rxWindowTop + row - 1];
     }
   //} else if(x < 512 / 3) {
   } else {
     // mouse in CQ messages
-    if(cqWindowTop + row < numCqMsgs) {
-      activeMsg = cqList[cqWindowTop + row];
+    if(cqWindowTop + row <= numCqMsgs) {
+      activeMsg = cqList[cqWindowTop + row - 1];
     }
   }
 

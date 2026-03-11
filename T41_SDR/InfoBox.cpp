@@ -31,8 +31,7 @@ void IBEQFollowup(int row, int col);
 void IBTempFollowup(int row, int col);
 void IBLoadFollowup(int row, int col);
 void IBFT8Followup(int row, int col);
-void IBFT8TxFollowup(int row, int col);
-void IBFT8RxFollowup(int row, int col);
+void IBFT8RxTxFollowup(int row, int col);
 void IBKeyerFollowup(int row, int col);
 void IBStackFollowup(int row, int col);
 void IBHeapFollowup(int row, int col);
@@ -135,8 +134,8 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "Load:",       NULL,        NULL,                     0,        4,      1,   IB_COL_2_X,    IB_ROW_7_Y,    &IBLoadFollowup        },  // Teensy Load
   { "FT8       ",  ft8Opts,     &ft8SyncState,            0,        8,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   },  // FT8 sync
   { "Tx:",         ft8TxOpts,   &ft8TxState,              0,        7,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx enabled
-  { "Tx Freq:",    NULL,        &ft8TxFreq,                     0,        5,      0,   IB_COL_1_X,    IB_ROW_10_Y,   &IBFT8TxFollowup       },  // FT8 Tx freq
-  { "Rx Freq:",    NULL,        &ft8RxFreq,                     0,        5,      0,   IB_COL_2_X,    IB_ROW_10_Y,   &IBFT8RxFollowup       },  // FT8 Rx freq
+  { "Tx Freq:",    NULL,        &ft8TxFreq,               0,        5,      0,   IB_COL_1_X,    IB_ROW_10_Y,   &IBFT8RxTxFollowup     },  // FT8 Tx freq
+  { "Rx Freq:",    NULL,        &ft8RxFreq,               0,        5,      0,   IB_COL_2_X,    IB_ROW_10_Y,   &IBFT8RxTxFollowup     },  // FT8 Rx freq
   { "Tx Int:",     ft8IntOpts,  &ft8IntState,             0,        4,      0,   IB_COL_2_X,    IB_ROW_8_Y,    NULL                   },  // FT8 Tx interval
   { "CQ resp:",    ft8CqOpts,   &ft8CqState,              0,        4,      1,   IB_COL_2_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx interval
 //  { "Auto:",       ft8TxOpts, &ft8TxState,            0,        4,      1,   IB_COL_2_X,    IB_ROW_8_Y,    &IBFT8Followup         },  // FT8 auto
@@ -411,18 +410,43 @@ void IBLoadFollowup(int row, int col) {
 void IBFT8Followup(int row, int col) {
 }
 
-void IBFT8TxFollowup(int row, int col) {
+void IBFT8RxTxFollowup(int row, int col) {
+  // update item changed
   tft.setFontScale((enum RA8875tsize)0);
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(col, row);
-  tft.print(ft8TxFreq);
-}
+  if(col == IB_COL_1_X) {
+    // tx is in column 1 *** TODO: automate this to look up proper column ***
+    tft.print(ft8TxFreq);
+  } else {
+    tft.print(ft8RxFreq);
+  }
 
-void IBFT8RxFollowup(int row, int col) {
-  tft.setFontScale((enum RA8875tsize)0);
-  tft.setTextColor(RA8875_GREEN);
-  tft.setCursor(col, row);
-  tft.print(ft8RxFreq);
+  if(txEqualsRx) {
+    // update other item
+    if(col == IB_COL_1_X) {
+      // tx is in column 1
+      // update rx
+      ft8RxFreq = ft8TxFreq;
+      tft.fillRect(IB_COL_2_X, row, tft.getFontWidth() * 5, tft.getFontHeight(), RA8875_BLACK);
+      tft.setCursor(IB_COL_2_X, row);
+      tft.print(ft8RxFreq);
+    } else {
+      // update tx
+      ft8TxFreq = ft8RxFreq;
+      tft.fillRect(IB_COL_1_X, row, tft.getFontWidth() * 5, tft.getFontHeight(), RA8875_BLACK);
+      tft.setCursor(IB_COL_1_X, row);
+      tft.print(ft8RxFreq);
+    }
+
+    // draw TX = RX indicator
+    tft.setCursor((IB_COL_1_X+IB_COL_2_X)/2-tft.getFontWidth()*3, row);
+    tft.print("=");
+  } else {
+    // clear TX = RX indicator
+    tft.setCursor((IB_COL_1_X+IB_COL_2_X)/2-tft.getFontWidth()*3, row);
+    tft.print(" ");
+  }
 }
 
 void ClearInfoBoxKeyer() {

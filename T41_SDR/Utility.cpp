@@ -336,7 +336,9 @@ FLASHMEM void SetBand() {
       break;
 
     case DISPLAY_T41_FT8_DECODE:
-      Serial.print("what needs updated here?");
+      ShowFrequency();
+      ShowOperatingStats();
+      DrawAudioFilterLines();
       break;
 
     case DISPLAY_FULL_MENU:

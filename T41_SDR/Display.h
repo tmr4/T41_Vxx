@@ -200,6 +200,7 @@ void ShowAudioSpectrum();
 
 void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall = false);
 void ShowFT8SpectrumFreqValues();
+void DrawFT8BandwidthBar();
 
 void UpdateCWFilter();
 

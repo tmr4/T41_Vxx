@@ -5,6 +5,7 @@
 
 extern int ft8SyncState;
 extern int ft8TxFreq, ft8RxFreq, ft8TxState, ft8IntState, ft8CqState;
+extern bool txEqualsRx;
 
 extern bool ft8Init;
 
@@ -43,5 +44,5 @@ void ChangeFt8RxFreq(int wheel);
 void ChangeFt8TxInterval(int wheel);
 void ChangeFt8CqState(int wheel);
 void ChangeFt8TxState(int wheel);
-void ChangeFt8Window(int xcol, int wheel);
+void ScrollFt8MsgWindow(int xcol, int wheel);
 void ChangeFt8ActiveMsg(int x, int y);

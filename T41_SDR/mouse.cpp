@@ -79,7 +79,7 @@ void MoveCursor(int x, int y) {
 
   if(cursorX > cursorR - CURSOR_W) cursorX = cursorR - CURSOR_W;
   if(cursorX < cursorL) cursorX = cursorL;
-  if(cursorY > cursorB - CURSOR_H) cursorY = cursorB - CURSOR_H;
+  if(cursorY > cursorB - CURSOR_H + 8) cursorY = cursorB - CURSOR_H + 8;
   if(cursorY < cursorT) cursorY = cursorT;
 
   //Serial.print("cursorX = "); Serial.print(cursorX); Serial.print(" cursorY = "); Serial.println(cursorY);
@@ -313,17 +313,8 @@ void MouseButtonOpStatsArea(int button) {
 
 void MouseButtonSpectrumWaterfall(int button) {
   if(button == 1) {
-    if(currentDemodMode == DEMOD_FT8_INTERNAL && (cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8)) {
-      ft8MsgSelectActive = true;
-      //int msg = wfRows - (YPIXELS - cursorY - CURSOR_H / 2) / 5;
-      int y = YPIXELS - cursorY - CURSOR_H / 2;
-      //int msg = map(YPIXELS - cursorY - CURSOR_H / 2, YPIXELS - 25 * 5, 16, 0, 4);
-      int msg = map(y, 25 * 5, 16, 0, 4);
-      if(cursorX > 256) msg += 5;
-
-      if(numDecodedMsgs > 1 && msg < numDecodedMsgs) {
-        activeMsg = msg;
-      }
+    if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+      ChangeFt8ActiveMsg(cursorX, cursorY);
     } else {
       // there was a left click is in the spectrum or waterfall area, set the NCO frequency
 
@@ -355,10 +346,14 @@ void MouseButtonSpectrumWaterfall(int button) {
 }
 
 void MouseWheelSpectrumWaterfall(int wheel) {
-  if(mouseCenterTuneActive) {
-    SetCenterTune((long)freqIncrement * wheel);
+  if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+    if(wheel != 0) ScrollFt8MsgWindow(cursorX, wheel);
   } else {
-    SetFineTune((long)ftIncrement * wheel);
+    if(mouseCenterTuneActive) {
+      SetCenterTune((long)freqIncrement * wheel);
+    } else {
+      SetFineTune((long)ftIncrement * wheel);
+    }
   }
 
   // redraw cursor
@@ -403,7 +398,7 @@ void MouseWheelFT8(int wheel) {
   //  }
   //}
   if(wheel != 0)
-    ChangeFt8Window(cursorX, wheel);
+    ScrollFt8MsgWindow(cursorX, wheel);
 }
 
 void MouseLoop() {
