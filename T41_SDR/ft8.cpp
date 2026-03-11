@@ -167,7 +167,6 @@ float *ft8lib_GetSignal();
 
 #ifdef DEMOD_FT8_TESTING
 EXTMEM uint8_t freqSpectrum[512*79];
-bool testingInitilized = false;
 
 FLASHMEM void DrawTestSpectrum(uint8_t *spec) {
   int yPlot, y1Plot = 0;
@@ -783,6 +782,10 @@ void DecodeFT8Data(struct tm *start) {
 void FT8DecoderLoop() {
 #ifdef DEMOD_FT8_TESTING
   static int frame = 0;
+  // 0: update spectrum
+  // 1: one interval completed updating paused
+  // 2:
+  static int testingState = 0;
 #endif
 
   // *** TODO: this should be set per actual FT8 interval ***
@@ -793,29 +796,38 @@ void FT8DecoderLoop() {
     static int vol = -1;
 
   // currently, the only way to exit testing is to restart the T41
-  if(!testingInitilized) {
-    vol = audioVolume;
-    testingInitilized = true;
-  }
-
   // draw spectrum frame in response to volume change
-  if(audioVolume != vol) {
-    frame += audioVolume - vol;
+  if(testingState == 1) {
+    if(audioVolume != vol) {
+      int tmp = audioVolume;
+      frame += audioVolume - vol;
 
-    if(frame < 0) frame = 78;
-    if(frame >= 79) frame = 0;
+      // reset volume flag
+      audioVolume = vol;
+      UpdateInfoBoxItem(IB_ITEM_VOL);
 
-    //Serial.println("@ DrawTestSpectrum");
-    DrawTestSpectrum(freqSpectrum + frame * 512);
-    tft.setTextColor(RA8875_GREEN);
-    tft.setFontScale((enum RA8875tsize)1);
-    tft.setCursor(10, SPECTRUM_BOTTOM+30);
-    tft.print(frame);
+      if(frame < 0) {
+        frame = 0;
+        tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+        testingState = 0;
+      }
+      if(frame >= 79) frame = 0;
 
-    // reset volume flag
-    audioVolume = vol;
-    UpdateInfoBoxItem(IB_ITEM_VOL);
+      //Serial.println("@ DrawTestSpectrum");
+      DrawTestSpectrum(freqSpectrum + frame * 512);
+      tft.setTextColor(RA8875_GREEN);
+      tft.setFontScale((enum RA8875tsize)1);
+      tft.setCursor(10, SPECTRUM_BOTTOM+30);
+      tft.print(frame);
+    }
+  } else if(testingState == 0) {
+    //DrawTestSpectrum(freqSpectrum + (frameCount - 1) * 512);
+    //tft.setTextColor(RA8875_GREEN);
+    //tft.setFontScale((enum RA8875tsize)1);
+    //tft.setCursor(10, SPECTRUM_BOTTOM+30);
+    //tft.print(frameCount-1);
   }
+
 #endif
 
   // *** TODO: examine various places that need input buffers cleared
@@ -903,20 +915,19 @@ void FT8DecoderLoop() {
             DrawFT8Spectrum(spec, 512, frameCount == 38 || frameCount == 77);
 
             #ifdef DEMOD_FT8_TESTING
-            if(frame == 0) {
-              // don't update if we're examining it
+            if(testingState == 0) {
+              // update frame
               for(int i = 0; i < 512; i++) {
                 freqSpectrum[(frameCount-1)*512 + i] =  spec[i];
               }
-            }
-            for(int i = 0; i < 512; i++) {
-              freqSpectrum[(frameCount-1)*512 + i] =  spec[i];
+              vol = audioVolume;
             }
             #endif
           }
 
           ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
         } else {
+          testingState = 1;
           ft8DecoderState = FT8_DECODER_STATE_DECODING;
         }
 
