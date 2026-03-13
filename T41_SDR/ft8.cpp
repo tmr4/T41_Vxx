@@ -80,14 +80,42 @@ typedef struct
   int count;
 } Decode;
 
-//Decode *decoded;
+/*
+
+FT8 Message Window:
+The FT8 message window has three subwindows for (1) all messages to the left, (2) CQ messages in the middle,
+and (3) messages around the RX frequency to the right.  The subwindows are an 11 row snapshot into the
+associated message lists with the most recent messages toward the bottom of the list.  The windows are
+scrollable with the index of the message at the top of the window as a global variable.
+
+Message Lists:
+There is a list associated with each subwindow.  The lists are a circular buffer with the most recent messages
+at and before the head of the list and the oldest messages after the head.
+
+This structure follows a few rules:
+  (1) If the window top is the list head then only a single message is shown.
+  () The message window can never straddle the list head.
+  () If a new message is added to a list in the location of the window top then window top is incremented.
+  ()
+
+*/
+
 //#define MAX_DECODED_MESSAGES 10 // for testing of decode list getting full
 #define MAX_DECODED_MESSAGES 500
 EXTMEM Decode decodedList[MAX_DECODED_MESSAGES];
-#define MAX_LIST_MESSAGES 50
+
+// msg list size is a tradeoff of scrolling vs having old msg overwritten before desired
+//#define MAX_LIST_MESSAGES 50
+#define MAX_LIST_MESSAGES 500
 EXTMEM int rxList[MAX_LIST_MESSAGES], cqList[MAX_LIST_MESSAGES];
 
-int numDecodedMsgs = 0, numRxMsgs = 0, numCqMsgs = 0;
+#define ALL_WINDOW 0
+#define CQ_WINDOW 1
+#define RX_WINDOW 2
+
+int decodedMsgs = 0, rxMsgs = 0, cqMsgs = 0;
+int decodedHead = -1, rxHead = -1, cqHead = -1;
+bool decodedScroll = false, rxScroll = false, cqScroll = false; // false: latest msgs shown, true: msg list scrollable
 
 int activeMsg = 0;
 
@@ -226,11 +254,27 @@ void AutoSyncFT8() {
   UpdateInfoBoxItem(IB_ITEM_FT8);
 }
 
+// add a message index to the RX or CQ message lists
+void AddMsg(int *list, int msg, int &msgCount, int &listHead, int max) {
+  // head points to most recently added msg
+  // check if next addition is past end of list
+  if(++listHead >= max) {
+    listHead = 0; // roll it
+  }
+
+  list[listHead] = msg;
+
+  if(msgCount++ > max) {
+    msgCount = max;
+  }
+}
+
 void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq, char *msg) {
   static int nextMsgSlot = 0;
 
   // update decoded msg detail
-  strcpy(decodedList[nextMsgSlot].msg, msg);
+  strncpy(decodedList[nextMsgSlot].msg, msg, 35);
+  decodedList[nextMsgSlot].msg[34] = '\0'; // ensure msg is terminated (only needed w/ possible decode error)
   decodedList[nextMsgSlot].freq = freq;
   decodedList[nextMsgSlot].slot_time.tm_hour = tmSlot->tm_hour;
   decodedList[nextMsgSlot].slot_time.tm_min = tmSlot->tm_min;
@@ -245,11 +289,29 @@ void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float f
   //decodedList[nextMsgSlot].distance = CalcLocatorDistance(text);
   decodedList[nextMsgSlot].count = 1;
 
+  // split msg into fields for use in automated routines
+  // *** this doesn't cover all message types ***
+  strncpy(decodedList[nextMsgSlot].field1, strtok(msg, " "), 20);
+  strncpy(decodedList[nextMsgSlot].field2, strtok(NULL, " "), 20);
+  strncpy(decodedList[nextMsgSlot].field3, strtok(NULL, " "), 20);
+
+  //Serial.println(decodedList[nextMsgSlot].field1);
+  //Serial.println(decodedList[nextMsgSlot].field2);
+  //Serial.println(decodedList[nextMsgSlot].field3);
+
+  if(strcmp(decodedList[nextMsgSlot].field1, "CQ") == 0) {
+    AddMsg(cqList, nextMsgSlot, cqMsgs, cqHead, MAX_LIST_MESSAGES);
+  }
+  if((decodedList[nextMsgSlot].freq >= ft8RxFreq - 10.0) && (decodedList[nextMsgSlot].freq <= ft8RxFreq + 10.0)) {
+    AddMsg(rxList, nextMsgSlot, rxMsgs, rxHead, MAX_LIST_MESSAGES);
+  }
+
+  // update msg count
   ++nextMsgSlot;
   if(nextMsgSlot >= MAX_DECODED_MESSAGES) {
     nextMsgSlot = 0; // start overwriting older messages
   } else {
-    ++numDecodedMsgs;
+    ++decodedMsgs;
   }
 }
 
@@ -275,7 +337,7 @@ void DisplayActiveMessageDetails() {
   tft.setFontScale((enum RA8875tsize)0);
   int rowHeight = tft.getFontHeight();
 
-  if(numDecodedMsgs > 0) {
+  if(decodedMsgs > 0) {
     // erase old info
     tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * 2, WATERFALL_W, FT8_ROW_HEIGHT, RA8875_BLACK);
 
@@ -296,107 +358,70 @@ void DisplayActiveMessageDetails() {
   }
 }
 
+// *** TODO: these are inefficient, just add to list as msgs are added ***
 void GetRxMessages() {
-  numRxMsgs = 0;
+  int tmpList[MAX_LIST_MESSAGES];
+  int count = 0;
 
-  for(int i = 0; i < numDecodedMsgs; i++){
-    if(numRxMsgs >= MAX_LIST_MESSAGES)
+  rxMsgs = 0;
+
+  // find latest RX msgs
+  for(int i = decodedMsgs - 1; i >= 0; i--){
+    if(count >= MAX_LIST_MESSAGES)
       break;
 
     if((decodedList[i].freq >= ft8RxFreq - 10.0) && (decodedList[i].freq <= ft8RxFreq + 10.0)) {
-      rxList[numRxMsgs++] = i;
+      tmpList[count++] = i; // most recent msgs first
     }
+  }
+
+  // reset msg list
+  rxMsgs = count;
+  rxHead = count - 1;
+
+  // put list in proper order
+  for(int i = 0; i < rxMsgs; i++) {
+    rxList[i] = tmpList[--count];
   }
 }
 
-// *** TODO: consider consolidating this and DisplayCqMessages ***
-void DisplayRxMessages() {
+// window: 0: all, 1: CQ, 2: RX
+void DisplaySubwindowMessages(int window, int *list, int numMsgs, bool scroll, int &top, int head, int max) {
   char message[100];
-  int rowCount = FT8_MSG_ROWS;
   int rowHeight, colWidth, columnOffset;
-  int count = 0;
+  int count = 0; // count of rows displayed
+  int i, index;
 
   tft.setFontScale((enum RA8875tsize)0);
   rowHeight = tft.getFontHeight();
   colWidth = tft.getFontWidth();
-  columnOffset = colWidth * 21 * 2;
-
-  // reset RX message area
-  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
-
-  if(numRxMsgs == 0) return;
-
-  if(numRxMsgs > 11) {
-    rxWindowTop = numRxMsgs - 11;
-  } else {
-    rxWindowTop = 0;
-  }
-
-  // print recent messages at RX frequency
-  for(int i = rxWindowTop; i < numRxMsgs; i++){
-    if(count >= FT8_MSG_ROWS)
-      break;
-
-      if(rxList[i] == activeMsg) {
-      if(ft8MsgSelectActive) {
-        tft.setTextColor(RA8875_GREEN);
-      } else {
-        tft.setTextColor(YELLOW);
-      }
-    } else {
-      tft.setTextColor(RA8875_WHITE);
-    }
-
-    sprintf(message,"%.20s", decodedList[rxList[i]].msg);
-    tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (rowCount + 2) - 3);
-    tft.print(message);
-
-    ++count;
-    --rowCount;
-  }
-}
-
-void GetCqMessages() {
-  numCqMsgs = 0;
-
-  for(int i = 0; i < numDecodedMsgs; i++){
-    if(numCqMsgs >= MAX_LIST_MESSAGES)
-      break;
-
-    if((decodedList[i].msg[0] == 'C') && (decodedList[i].msg[1] == 'Q') && (decodedList[i].msg[2] == ' ')) {
-      cqList[numCqMsgs++] = i;
-    }
-  }
-}
-
-void DisplayCqMessages() {
-  char message[100];
-  int rowCount = FT8_MSG_ROWS;
-  int rowHeight, colWidth, columnOffset;
-  int count = 0;
-
-  tft.setFontScale((enum RA8875tsize)0);
-  rowHeight = tft.getFontHeight();
-  colWidth = tft.getFontWidth();
-  columnOffset = colWidth * 21;
+  columnOffset = colWidth * 21 * window;
 
   // reset CQ message area
   tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS, RA8875_BLACK);
 
-  if(numCqMsgs == 0) return;
+  if(numMsgs == 0) return;
 
-  if(numCqMsgs > 11) {
-    cqWindowTop = numCqMsgs - 11;
-  } else {
-    cqWindowTop = 0;
+  // set msg window top if not scrolling
+  if(!scroll) {
+    if(numMsgs > 11) {
+      top = head - 11;
+      if(top < 0) {
+        top += max;
+      }
+    } else {
+      top = 0;
+    }
   }
 
-  // print recent CQ messages
-  for(int i = cqWindowTop; i < numCqMsgs; i++){
-    if(count >= FT8_MSG_ROWS)
-      break;
+  i = top;
 
-    if(cqList[i] == activeMsg) {
+  // print recent messages
+  while(count < numMsgs) {
+    if(count >= FT8_MSG_ROWS) break;
+
+    index = list[i];
+    if(index == activeMsg) {
       if(ft8MsgSelectActive) {
         tft.setTextColor(RA8875_GREEN);
       } else {
@@ -406,12 +431,15 @@ void DisplayCqMessages() {
       tft.setTextColor(RA8875_WHITE);
     }
 
-    sprintf(message,"%.20s", decodedList[cqList[i]].msg);
-    tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (rowCount + 2) - 3);
+    sprintf(message,"%.20s", decodedList[index].msg);
+    tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (FT8_MSG_ROWS - count + 2) - 3);
     tft.print(message);
 
+    if(i == head) break; // window rules (1) and (2)
+
     ++count;
-    --rowCount;
+    ++i;
+    if(i >= max) i = 0;
   }
 }
 
@@ -428,21 +456,23 @@ void DisplayMessages() {
   columnOffset = 0;
 
   // reset message area
-  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+  tft.fillRect(columnOffset, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, colWidth * 21, FT8_ROW_HEIGHT * FT8_MSG_ROWS + 3, RA8875_BLACK);
 
-  if(numDecodedMsgs == 0) return;
+  if(decodedMsgs == 0) return;
 
-  if(numDecodedMsgs > 11) {
-    allWindowTop = numDecodedMsgs - 11;
-  } else {
-    allWindowTop = 0;
+  if(!decodedScroll) {
+    if(decodedMsgs > 11) {
+      allWindowTop = decodedMsgs - 11;
+    } else {
+      allWindowTop = 0;
+    }
   }
 
   // print most recent messages left column
   for(int i = 0; i < FT8_MSG_ROWS; i++){
     int x = allWindowTop + i; // message to display
 
-    if((x >= numDecodedMsgs) || (x >= MAX_DECODED_MESSAGES))
+    if((x >= decodedMsgs) || (x >= MAX_DECODED_MESSAGES))
       break;
 
     if(x == activeMsg) {
@@ -459,21 +489,11 @@ void DisplayMessages() {
     tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (rowCount + 2) - 3);
     tft.print(message);
 
-    //allWindowMsgs[count] = i;
-
     ++count;
-    if(count >= numDecodedMsgs)
+    if(count >= decodedMsgs)
       break;
 
     --rowCount;
-    //if(rowCount == 0) {
-    //  // move to next column
-    //  rowCount = FT8_MSG_ROWS;
-    //  columnOffset += colWidth * 21;
-    //  if(columnOffset > 500) {
-    //    columnOffset = 0;
-    //  }
-    //}
   }
 }
 
@@ -489,14 +509,15 @@ void DisplayOtherMessages() {
 
 void DisplayAllMessages() {
   DisplayMessages();
-  DisplayCqMessages();
-  DisplayRxMessages();
+  //for(int i = 0; i < cqMsgs; i++) {
+  //  Serial.println(cqList[i]);
+  //}
+  DisplaySubwindowMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqWindowTop, cqHead, MAX_LIST_MESSAGES);
+  DisplaySubwindowMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxWindowTop, rxHead, MAX_LIST_MESSAGES);
   DisplayOtherMessages();
 }
 
 void ProcessFT8Messages() {
-  GetRxMessages();
-  GetCqMessages();
   DisplayAllMessages();
 }
 
@@ -561,9 +582,12 @@ FLASHMEM bool InitFT8Decoder() {
     cqWindowTop = 0;
     allWindowTop = 0;
     rxWindowTop = 0;
-    numDecodedMsgs = 0;
-    numRxMsgs = 0;
-    numCqMsgs = 0;
+    decodedMsgs = 0;
+    rxMsgs = 0;
+    cqMsgs = 0;
+    decodedHead = -1;
+    rxHead = -1;
+    cqHead = -1;
 
     //for(int i = 0; i < MAX_LIST_MESSAGES; i++) {
     //  rxList[i] = 0;
@@ -652,7 +676,7 @@ FLASHMEM void ExitFT8Decoder() {
   ft8Init = false;
   ft8SyncState = 0;
 
-  numDecodedMsgs = 0;
+  decodedMsgs = 0;
   frameCount = 0;
   bufCount = 0;
 
@@ -1084,7 +1108,7 @@ void ChangeFt8RxFreq(int wheel) {
 
   DrawFT8BandwidthBar();
   GetRxMessages();
-  DisplayRxMessages();
+  DisplaySubwindowMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxWindowTop, rxHead, MAX_LIST_MESSAGES);
 }
 
 void ChangeFt8TxInterval(int wheel) {
@@ -1114,66 +1138,118 @@ void ChangeFt8TxState(int wheel) {
   UpdateInfoBoxItem(IB_ITEM_FT8_TX);
 }
 
+int CalcTop(int top, int inc, int num, int head, int max) {
+  int result = top - inc;
+
+  if(result < 0) {
+    // window top moved up beyond beginning of list
+    if(num < max) {
+      result = 0;
+    } else {
+      result += max;
+      if(result < head) result = head;
+    }
+  } else if(result >= num) {
+    // window top moved down beyond end of list
+    if(num < max) {
+      result = num - 1;
+    } else {
+      result = 0;
+    }
+  } else if(inc > 0) {
+    // window moving up
+    // top of window limited by head
+    if((top == head) && (result < head)) result = head;
+  } else if(inc < 0) {
+    // window moving down
+    // top of window limited by head
+    if((top == head) && (result > head)) result = head;
+  }
+
+  return result;
+}
+
+// scroll FT8 message window
+// *** Note scrolling rules noted in the Data section ***
 void ScrollFt8MsgWindow(int xcol, int wheel) {
   if(xcol < 512 / 3) {
-    // mouse in all messages
-    allWindowTop -= wheel;
-    if(allWindowTop < 0) {
-      allWindowTop = 0;
+    if(decodedScroll) {
+      // mouse in all messages
+      allWindowTop = CalcTop(allWindowTop, wheel, decodedMsgs, decodedHead, MAX_DECODED_MESSAGES);
+      DisplayMessages();
     }
-    if(allWindowTop >= numDecodedMsgs) {
-      allWindowTop = numDecodedMsgs - 1;
-    }
-    DisplayMessages();
   } else if(xcol > 512 * 2 / 3) {
-    // mouse in RX messages
-    rxWindowTop -= wheel;
-    if(rxWindowTop < 0) {
-      rxWindowTop = 0;
+    if(rxScroll) {
+      // mouse in RX messages
+      rxWindowTop = CalcTop(rxWindowTop, wheel, rxMsgs, rxHead, MAX_LIST_MESSAGES);
+      DisplaySubwindowMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxWindowTop, rxHead, MAX_LIST_MESSAGES);
     }
-    if(rxWindowTop >= numRxMsgs) {
-      rxWindowTop = numRxMsgs - 1;
-    }
-    DisplayRxMessages();
-  //} else if(xcol < 512 / 3) {
   } else {
-    // mouse in CQ messages
-    cqWindowTop -= wheel;
-    if(cqWindowTop < 0) {
-      cqWindowTop = 0;
+    if(cqScroll) {
+      // mouse in CQ messages
+      cqWindowTop = CalcTop(cqWindowTop, wheel, cqMsgs, cqHead, MAX_LIST_MESSAGES);
+      DisplaySubwindowMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqWindowTop, cqHead, MAX_LIST_MESSAGES);
     }
-    if(cqWindowTop >= numCqMsgs) {
-      cqWindowTop = numCqMsgs - 1;
-    }
-    DisplayCqMessages();
   }
 }
 
-void ChangeFt8ActiveMsg(int x, int y) {
+int GetMsg(int x, int y) {
+  int msgIndex = -1;
   // (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS) / FT8_ROW_HEIGHT = 17
   int row = ceil((float)y / 16.0 - 17.0 + 1);
   //Serial.print(y); Serial.print(", "); Serial.println(row);
-  if(row < 0) return;
+  if(row < 0) return msgIndex;
 
   if(x < 512 / 3) {
     // mouse in all messages
-    if(allWindowTop + row <= numDecodedMsgs) {
-      //activeMsg = numDecodedMsgs - 1;
-    //} else {
-      activeMsg = allWindowTop + row - 1;
+    if(allWindowTop + row <= decodedMsgs) {
+      msgIndex = allWindowTop + row - 1;
     }
   } else if(x > 512 * 2 / 3) {
     // mouse in RX messages
-    if(rxWindowTop + row <= numRxMsgs) {
-      activeMsg = rxList[rxWindowTop + row - 1];
+    if(rxWindowTop + row <= rxMsgs) {
+      msgIndex = rxList[rxWindowTop + row - 1];
     }
   //} else if(x < 512 / 3) {
   } else {
     // mouse in CQ messages
-    if(cqWindowTop + row <= numCqMsgs) {
-      activeMsg = cqList[cqWindowTop + row - 1];
+    if(cqWindowTop + row <= cqMsgs) {
+      msgIndex = cqList[cqWindowTop + row - 1];
     }
   }
+
+  return msgIndex;
+}
+
+void ChangeFt8ActiveMsg(int x, int y) {
+  int msgIndex = GetMsg(x, y);
+  if(msgIndex < 0) return;
+
+  activeMsg = msgIndex;
+
+  DisplayAllMessages();
+}
+
+// toggle msg window scroll lock
+void ChangeFt8ScrollLock(int x) {
+  if(x < 512 / 3) {
+    // mouse in all messages
+    decodedScroll = !decodedScroll;
+  } else if(x > 512 * 2 / 3) {
+    // mouse in RX messages
+    rxScroll = !rxScroll;
+  } else {
+    // mouse in CQ messages
+    cqScroll = !cqScroll;
+  }
+  Serial.print(decodedScroll); Serial.print(", "); Serial.print(cqScroll); Serial.print(", "); Serial.println(rxScroll);
+}
+
+void CreateFt8TxMsg(int x, int y) {
+  int msgIndex = GetMsg(x, y);
+  if(msgIndex < 0) return;
+
+  activeMsg = msgIndex;
 
   DisplayAllMessages();
 }

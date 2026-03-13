@@ -193,8 +193,8 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case UNUSED_1:  // 16
-      //ChangeMode(DATA_MODE, DEMOD_FT8_WAV);
-      ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
+      ChangeMode(DATA_MODE, DEMOD_FT8_WAV);
+      //ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
 
       // *** TODO: examine restoring this ***
       // *** TODO: from v12, validate v11 calibration routines

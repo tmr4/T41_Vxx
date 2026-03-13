@@ -3,6 +3,8 @@
 
 #include "SDT.h"
 
+#include "src\hardwareConfig.h"
+
 bool mouseCenterTuneActive = false;
 int mouseWheelValue = 0;
 int menuBarSelected = false;
@@ -79,7 +81,7 @@ void MoveCursor(int x, int y) {
 
   if(cursorX > cursorR - CURSOR_W) cursorX = cursorR - CURSOR_W;
   if(cursorX < cursorL) cursorX = cursorL;
-  if(cursorY > cursorB - CURSOR_H + 8) cursorY = cursorB - CURSOR_H + 8;
+  if(cursorY > cursorB - CURSOR_H + 8) cursorY = cursorB - CURSOR_H + 8; // *** extra 8 adjustment allows cursor to cover last row on display ***
   if(cursorY < cursorT) cursorY = cursorT;
 
   //Serial.print("cursorX = "); Serial.print(cursorX); Serial.print(" cursorY = "); Serial.println(cursorY);
@@ -312,36 +314,53 @@ void MouseButtonOpStatsArea(int button) {
 }
 
 void MouseButtonSpectrumWaterfall(int button) {
-  if(button == 1) {
-    if(currentDemodMode == DEMOD_FT8_INTERNAL) {
-      ChangeFt8ActiveMsg(cursorX, cursorY);
-    } else {
-      // there was a left click is in the spectrum or waterfall area, set the NCO frequency
+  switch(button) {
+    case 1: // left click
+      if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+        ChangeFt8ActiveMsg(cursorX, cursorY);
+      } else {
+        // there was a left click is in the spectrum or waterfall area, set the NCO frequency
 
-      // replace what was previously under the cursor
-      tft.BTE_move(0, 0, 16, 32, oldCursorX, oldCursorY, 2, 2);
+        // replace what was previously under the cursor
+        tft.BTE_move(0, 0, 16, 32, oldCursorX, oldCursorY, 2, 2);
 
-      SetNCOFreq((cursorX + CURSOR_W / 2 - centerLine) * sampleRate / (1 << spectrumZoom) / SPECTRUM_RES);
+        SetNCOFreq((cursorX + CURSOR_W / 2 - centerLine) * sampleRate / (1 << spectrumZoom) / SPECTRUM_RES);
 
-      switch(displayState) {
-        case DISPLAY_T41:
-          DrawBandwidthBar();
+        switch(displayState) {
+          case DISPLAY_T41:
+            DrawBandwidthBar();
+            break;
+
+          case DISPLAY_BEACON_MONITOR:
+            break;
+
+          case DISPLAY_FULL_MENU:
+            break;
+
+          default:
+          // no screen updates at all
           break;
+        }
 
-        case DISPLAY_BEACON_MONITOR:
-          break;
-
-        case DISPLAY_FULL_MENU:
-          break;
-
-        default:
-        // no screen updates at all
-        break;
+        // background under the cursor may have changed, copy it for replacement next time
+        tft.BTE_move(cursorX, cursorY, 16, 32, 0, 0, 2, 2);
       }
+      break;
 
-      // background under the cursor may have changed, copy it for replacement next time
-      tft.BTE_move(cursorX, cursorY, 16, 32, 0, 0, 2, 2);
-    }
+    case 2: // right click
+      if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+        ChangeFt8ScrollLock(cursorX);
+      }
+      break;
+
+    case 4: // wheel click
+      if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+        CreateFt8TxMsg(cursorX, cursorY);
+      }
+      break;
+
+    default:
+      break;
   }
 }
 
@@ -367,36 +386,11 @@ void MouseWheelSpectrumWaterfall(int wheel) {
 }
 
 void MouseButtonFT8(int button) {
-  //if(cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8) {
-  //  if(numDecodedMsgs > 0) {
-  //    activeMsg += wheel;
-  //    if(activeMsg >= numDecodedMsgs) {
-  //      activeMsg = 0;
-  //    } else {
-  //      if(activeMsg < 0) {
-  //        activeMsg = numDecodedMsgs - 1;
-  //      }
-  //    }
-  //  }
-  //  return;
-  //}
   if(button == 1)
     ChangeFt8ActiveMsg(cursorX, cursorY);
 }
 
 void MouseWheelFT8(int wheel) {
-  //if(cursorY > YPIXELS - 25 * 5 - CURSOR_H / 2 - 8) {
-  //  if(numDecodedMsgs > 0) {
-  //    activeMsg += wheel;
-  //    if(activeMsg >= numDecodedMsgs) {
-  //      activeMsg = 0;
-  //    } else {
-  //      if(activeMsg < 0) {
-  //        activeMsg = numDecodedMsgs - 1;
-  //      }
-  //    }
-  //  }
-  //}
   if(wheel != 0)
     ScrollFt8MsgWindow(cursorX, wheel);
 }
@@ -455,16 +449,16 @@ void MouseLoop() {
       } else if(CursorInAudioSpectrum()) {
         // *** TODO: consider refactoring with similar code in EncoderMenuChangeFilterISR()
         if(ft8MsgSelectActive) {
-          if(numDecodedMsgs > 0) {
-            activeMsg += wheel;
-            if(activeMsg >= numDecodedMsgs) {
-              activeMsg = 0;
-            } else {
-              if(activeMsg < 0) {
-                activeMsg = numDecodedMsgs - 1;
-              }
-            }
-          }
+          //if(numDecodedMsgs > 0) {
+          //  activeMsg += wheel;
+          //  if(activeMsg >= numDecodedMsgs) {
+          //    activeMsg = 0;
+          //  } else {
+          //    if(activeMsg < 0) {
+          //      activeMsg = numDecodedMsgs - 1;
+          //    }
+          //  }
+          //}
         } else {
           if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
             // we're adjusting NFM demod bandwidth

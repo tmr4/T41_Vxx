@@ -160,16 +160,16 @@ void ProcessMenuEncoder() {
     currentNoiseFloor[currentBand] += menuEncoderMove;
   } else {
     if(ft8MsgSelectActive) {
-      if(numDecodedMsgs > 0) {
-        activeMsg += menuEncoderMove;
-        if(activeMsg >= numDecodedMsgs) {
-          activeMsg = 0;
-        } else {
-          if(activeMsg < 0) {
-            activeMsg = numDecodedMsgs - 1;
-          }
-        }
-      }
+      //if(numDecodedMsgs > 0) {
+      //  activeMsg += menuEncoderMove;
+      //  if(activeMsg >= numDecodedMsgs) {
+      //    activeMsg = 0;
+      //  } else {
+      //    if(activeMsg < 0) {
+      //      activeMsg = numDecodedMsgs - 1;
+      //    }
+      //  }
+      //}
       menuEncoderMove = 0;
     } else {
       if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
