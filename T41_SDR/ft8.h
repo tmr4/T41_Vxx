@@ -20,7 +20,7 @@ extern float *ft8TxSignalBuf;
 //-------------------------------------------------------------------------------------------------------------
 
 void DisplayAllMessages();
-void DisplayActiveMessageDetails();
+void DisplaySelectedMessageDetail();
 
 void UpdateFT8Synchronization();
 
@@ -45,6 +45,7 @@ void ChangeFt8TxInterval(int wheel);
 void ChangeFt8CqState(int wheel);
 void ChangeFt8TxState(int wheel);
 void ScrollFt8MsgWindow(int xcol, int wheel);
-void ChangeFt8ActiveMsg(int x, int y);
-void ChangeFt8ScrollLock(int x);
-void CreateFt8TxMsg(int x, int y);
+//void ChangeFt8ActiveMsg(int x, int y);
+//void ChangeFt8ScrollLock(int x);
+//void CreateFt8TxMsg(int x, int y);
+void FT8MsgWindowClick(int x, int y, int button);

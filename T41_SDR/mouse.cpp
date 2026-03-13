@@ -314,49 +314,43 @@ void MouseButtonOpStatsArea(int button) {
 }
 
 void MouseButtonSpectrumWaterfall(int button) {
+  if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+    FT8MsgWindowClick(cursorX, cursorY, button);
+    return;
+  }
   switch(button) {
     case 1: // left click
-      if(currentDemodMode == DEMOD_FT8_INTERNAL) {
-        ChangeFt8ActiveMsg(cursorX, cursorY);
-      } else {
-        // there was a left click is in the spectrum or waterfall area, set the NCO frequency
+      // there was a left click is in the spectrum or waterfall area, set the NCO frequency
 
-        // replace what was previously under the cursor
-        tft.BTE_move(0, 0, 16, 32, oldCursorX, oldCursorY, 2, 2);
+      // replace what was previously under the cursor
+      tft.BTE_move(0, 0, 16, 32, oldCursorX, oldCursorY, 2, 2);
 
-        SetNCOFreq((cursorX + CURSOR_W / 2 - centerLine) * sampleRate / (1 << spectrumZoom) / SPECTRUM_RES);
+      SetNCOFreq((cursorX + CURSOR_W / 2 - centerLine) * sampleRate / (1 << spectrumZoom) / SPECTRUM_RES);
 
-        switch(displayState) {
-          case DISPLAY_T41:
-            DrawBandwidthBar();
-            break;
-
-          case DISPLAY_BEACON_MONITOR:
-            break;
-
-          case DISPLAY_FULL_MENU:
-            break;
-
-          default:
-          // no screen updates at all
+      switch(displayState) {
+        case DISPLAY_T41:
+          DrawBandwidthBar();
           break;
-        }
 
-        // background under the cursor may have changed, copy it for replacement next time
-        tft.BTE_move(cursorX, cursorY, 16, 32, 0, 0, 2, 2);
+        case DISPLAY_BEACON_MONITOR:
+          break;
+
+        case DISPLAY_FULL_MENU:
+          break;
+
+        default:
+        // no screen updates at all
+        break;
       }
+
+      // background under the cursor may have changed, copy it for replacement next time
+      tft.BTE_move(cursorX, cursorY, 16, 32, 0, 0, 2, 2);
       break;
 
     case 2: // right click
-      if(currentDemodMode == DEMOD_FT8_INTERNAL) {
-        ChangeFt8ScrollLock(cursorX);
-      }
       break;
 
     case 4: // wheel click
-      if(currentDemodMode == DEMOD_FT8_INTERNAL) {
-        CreateFt8TxMsg(cursorX, cursorY);
-      }
       break;
 
     default:
@@ -386,8 +380,7 @@ void MouseWheelSpectrumWaterfall(int wheel) {
 }
 
 void MouseButtonFT8(int button) {
-  if(button == 1)
-    ChangeFt8ActiveMsg(cursorX, cursorY);
+  FT8MsgWindowClick(cursorX, cursorY, button);
 }
 
 void MouseWheelFT8(int wheel) {
@@ -422,7 +415,6 @@ void MouseLoop() {
       } else if(CursorInAudioSpectrum()) {
         ButtonFilter();
       } else if(CursorInSpectrumWaterfall()) {
-        MouseButtonSpectrumWaterfall(button);
         if(currentDemodMode == DEMOD_FT8_INTERNAL) {
           MouseButtonFT8(button);
         } else {
