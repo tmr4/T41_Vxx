@@ -323,13 +323,8 @@ void DrawAudioFilterLines() {
         filterLoColor = RA8875_GREEN;
         filterHiColor = RA8875_LIGHT_GREY;
       } else {
-        if(ft8MsgSelectActive) {
-          filterLoColor = RA8875_LIGHT_GREY;
-          filterHiColor = RA8875_LIGHT_GREY;
-        } else {
-          filterLoColor = RA8875_LIGHT_GREY;
-          filterHiColor = RA8875_GREEN;
-        }
+        filterLoColor = RA8875_LIGHT_GREY;
+        filterHiColor = RA8875_GREEN;
       }
       break;
 
@@ -548,12 +543,6 @@ FASTRUN void ShowFreqSpectrum() {
 
     // write new row of data into the top row to finish the scrolling effect
     tft.writeRect(WATERFALL_L, WATERFALL_T, WATERFALL_W, 1, waterfall);
-
-    // update FT8 msg if appropriate
-    //if(ft8MsgSelectActive) {
-    if(ft8MsgSelectActive) {
-      //DisplayAllMessages();
-    }
   }
 
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
@@ -631,12 +620,10 @@ FLASHMEM void ShowBandwidthBarValues() {
     case DEMOD_PSK31_WAV:
     case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
-      if(!ft8MsgSelectActive) {
-        if(lowerAudioFilterActive) {
-          loColor = RA8875_GREEN;
-        } else {
-          hiColor = RA8875_GREEN;
-        }
+      if(lowerAudioFilterActive) {
+        loColor = RA8875_GREEN;
+      } else {
+        hiColor = RA8875_GREEN;
       }
       break;
 

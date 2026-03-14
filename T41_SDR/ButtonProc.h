@@ -9,7 +9,6 @@ extern bool lowerAudioFilterActive;
 extern int liveNoiseFloorFlag;
 
 extern bool nfmBWFilterActive;
-extern bool ft8MsgSelectActive;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

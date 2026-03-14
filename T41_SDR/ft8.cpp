@@ -120,7 +120,7 @@ EXTMEM int allList[MAX_LIST_MESSAGES], rxList[MAX_LIST_MESSAGES], cqList[MAX_LIS
 #define CQ_WINDOW 1
 #define RX_WINDOW 2
 
-int decodedMsgs = 0, decodedHead = -1;
+int decodedMsgs = 0;
 int allMsgs, cqMsgs = 0, rxMsgs = 0; // number of msgs in each list
 int allHead = -1, cqHead = -1, rxHead = -1; // head gets incremented prior to msg added to list
 bool allScroll = false, cqScroll = false, rxScroll = false; // false: latest msgs shown, true: msg list scrollable
@@ -313,43 +313,39 @@ void AddMsgs(int index) {
 }
 
 void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq, char *msg) {
-  static int nextMsgSlot = 0;
-
   // update decoded msg detail
-  strncpy(decodedDetails[nextMsgSlot].msg, msg, 35);
-  decodedDetails[nextMsgSlot].msg[34] = '\0'; // ensure msg is terminated (only needed w/ possible decode error)
-  decodedDetails[nextMsgSlot].freq = freq;
-  decodedDetails[nextMsgSlot].slot_time.tm_hour = tmSlot->tm_hour;
-  decodedDetails[nextMsgSlot].slot_time.tm_min = tmSlot->tm_min;
-  decodedDetails[nextMsgSlot].slot_time.tm_sec = tmSlot->tm_sec;
-  decodedDetails[nextMsgSlot].time_sec = time_sec;
+  strncpy(decodedDetails[decodedMsgs].msg, msg, 35);
+  decodedDetails[decodedMsgs].msg[34] = '\0'; // ensure msg is terminated (only needed w/ possible decode error)
+  decodedDetails[decodedMsgs].freq = freq;
+  decodedDetails[decodedMsgs].slot_time.tm_hour = tmSlot->tm_hour;
+  decodedDetails[decodedMsgs].slot_time.tm_min = tmSlot->tm_min;
+  decodedDetails[decodedMsgs].slot_time.tm_sec = tmSlot->tm_sec;
+  decodedDetails[decodedMsgs].time_sec = time_sec;
   GetTeensyTime();
-  decodedDetails[nextMsgSlot].hour = hour();
-  decodedDetails[nextMsgSlot].min = minute();
-  decodedDetails[nextMsgSlot].sec = second();
-  decodedDetails[nextMsgSlot].sync_score = score;
-  decodedDetails[nextMsgSlot].snr = (score - 160.0) / 6.0; // *** TODO: evaluate ft8_lib for better algorithm ***
-  //decodedDetails[nextMsgSlot].distance = CalcLocatorDistance(text);
-  decodedDetails[nextMsgSlot].count = 1;
+  decodedDetails[decodedMsgs].hour = hour();
+  decodedDetails[decodedMsgs].min = minute();
+  decodedDetails[decodedMsgs].sec = second();
+  decodedDetails[decodedMsgs].sync_score = score;
+  decodedDetails[decodedMsgs].snr = (score - 160.0) / 6.0; // *** TODO: evaluate ft8_lib for better algorithm ***
+  //decodedDetails[decodedMsgs].distance = CalcLocatorDistance(text);
+  decodedDetails[decodedMsgs].count = 1;
 
   // split msg into fields for use in automated routines
   // *** this doesn't cover all message types ***
-  strncpy(decodedDetails[nextMsgSlot].field1, strtok(msg, " "), 20);
-  strncpy(decodedDetails[nextMsgSlot].field2, strtok(NULL, " "), 20);
-  strncpy(decodedDetails[nextMsgSlot].field3, strtok(NULL, " "), 20);
+  strncpy(decodedDetails[decodedMsgs].field1, strtok(msg, " "), 20);
+  strncpy(decodedDetails[decodedMsgs].field2, strtok(NULL, " "), 20);
+  strncpy(decodedDetails[decodedMsgs].field3, strtok(NULL, " "), 20);
 
-  //Serial.println(decodedDetails[nextMsgSlot].field1);
-  //Serial.println(decodedDetails[nextMsgSlot].field2);
-  //Serial.println(decodedDetails[nextMsgSlot].field3);
+  //Serial.println(decodedDetails[decodedMsgs].field1);
+  //Serial.println(decodedDetails[decodedMsgs].field2);
+  //Serial.println(decodedDetails[decodedMsgs].field3);
 
-  AddMsgs(nextMsgSlot); // add messages to window lists
+  AddMsgs(decodedMsgs); // add messages to window lists
 
   // update msg count
-  ++nextMsgSlot;
-  if(nextMsgSlot >= MAX_DECODED_MESSAGES) {
-    nextMsgSlot = 0; // start overwriting older messages
-  } else {
-    ++decodedMsgs;
+  ++decodedMsgs;
+  if(decodedMsgs >= MAX_DECODED_MESSAGES) {
+    decodedMsgs = 0; // start overwriting older messages
   }
 }
 
@@ -414,8 +410,10 @@ void DisplaySelectedMessageDetail() {
   }
 }
 
-void DisplayStats(int window, int num, bool scroll) {
+void DisplayStats(int window, int num, int top, bool scroll) {
   int rowHeight, colWidth, columnOffset;
+  bool up = num > FT8_MSG_ROWS ? true : false;
+  bool down = up;
 
   tft.setFontScale((enum RA8875tsize)0);
   rowHeight = tft.getFontHeight();
@@ -442,33 +440,37 @@ void DisplayStats(int window, int num, bool scroll) {
   }
 
   tft.print(num);
-  tft.print(")");
+  tft.print(")   ");
   if(scroll) {
     tft.setTextColor(RA8875_GREEN);
   } else {
     tft.setTextColor(WHITE);
   }
-  tft.print(" Scroll");
+
+  if(top == 0) up = false;
+  if(top >= num-FT8_MSG_ROWS) down = false;
+  if(up) tft.write(30); // scroll up pointer
+  if(down) tft.write(31); // scroll down pointer
 }
 
 void DisplayListStats(int window) {
   switch(window) {
     case ALL_WINDOW:
-      DisplayStats(window, allMsgs, allScroll);
+      DisplayStats(window, allMsgs, allTop, allScroll);
       break;
 
     case CQ_WINDOW:
-      DisplayStats(window, cqMsgs, cqScroll);
+      DisplayStats(window, cqMsgs, cqTop, cqScroll);
       break;
 
     case RX_WINDOW:
-      DisplayStats(window, rxMsgs, rxScroll);
+      DisplayStats(window, rxMsgs, rxTop, rxScroll);
       break;
   }
 }
 
 // window: 0: all, 1: CQ, 2: RX
-void DisplaySubwindowMessages(int window, int *list, int numMsgs, bool scroll, int &top, int head, int max) {
+void DisplayMessages(int window, int *list, int numMsgs, bool scroll, int &top, int head, int max) {
   char message[100];
   int rowHeight, colWidth, columnOffset;
   int count = 0; // count of rows displayed
@@ -482,46 +484,43 @@ void DisplaySubwindowMessages(int window, int *list, int numMsgs, bool scroll, i
   // reset message area
   tft.fillRect(columnOffset, YPIXELS - rowHeight * (FT8_MSG_ROWS + 2), colWidth * 21, rowHeight * FT8_MSG_ROWS, RA8875_BLACK);
 
-  if(numMsgs == 0) return;
-
-  // set msg window top if not scrolling
-  if(!scroll) {
-    if(numMsgs > FT8_MSG_ROWS) {
-      top = head - FT8_MSG_ROWS;
-      if(top < 0) {
-        top += max;
-      }
-    } else {
-      top = 0;
-    }
-  }
-
-  i = top;
-
-  // print recent messages
-  while(count < numMsgs) {
-    if(count >= FT8_MSG_ROWS) break;
-
-    index = list[i];
-    if(index == activeMsg) {
-      if(ft8MsgSelectActive) {
-        tft.setTextColor(RA8875_GREEN);
+  if(numMsgs > 0) {
+    // set msg window top if not scrolling
+    if(!scroll) {
+      if(numMsgs > FT8_MSG_ROWS) {
+        top = head - FT8_MSG_ROWS + 1;
+        if(top < 0) {
+          top += max;
+        }
       } else {
-        tft.setTextColor(YELLOW);
+        top = 0;
       }
-    } else {
-      tft.setTextColor(RA8875_WHITE);
     }
 
-    sprintf(message,"%.20s", decodedDetails[index].msg);
-    tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (FT8_MSG_ROWS - count + 2) - 3);
-    tft.print(message);
+    i = top;
 
-    if(i == head) break; // window rules (1) and (2)
+    // print recent messages
+    while(count < numMsgs) {
+      if(count >= FT8_MSG_ROWS) break;
 
-    ++count;
-    ++i;
-    if(i >= max) i = 0;
+      index = list[i];
+      //Serial.print(index); Serial.print(", "); Serial.println(activeMsg);
+      if(index == activeMsg) {
+        tft.setTextColor(YELLOW);
+      } else {
+        tft.setTextColor(RA8875_WHITE);
+      }
+
+      sprintf(message,"%.20s", decodedDetails[index].msg);
+      tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (FT8_MSG_ROWS - count + 2) - 3);
+      tft.print(message);
+
+      if(i == head) break; // window rules (1) and (2)
+
+      ++count;
+      ++i;
+      if(i >= max) i = 0;
+    }
   }
 
   DisplayListStats(window);
@@ -544,9 +543,9 @@ void DisplayAllStats() {
 }
 
 void DisplayAllMessages() {
-  DisplaySubwindowMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
-  DisplaySubwindowMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
-  DisplaySubwindowMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
+  DisplayMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
+  DisplayMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
+  DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
   DisplayOtherMessages();
 }
 
@@ -593,11 +592,36 @@ FLASHMEM void ExitFT8() {
   }
 }
 
+void InitFTDecoderState() {
+  // initialize message lists
+  allTop = 0;
+  cqTop = 0;
+  rxTop = 0;
+  decodedMsgs = 0;
+  allMsgs = 0;
+  cqMsgs = 0;
+  rxMsgs = 0;
+  allHead = -1;
+  cqHead = -1;
+  rxHead = -1;
+
+  ft8SyncState = 0;
+  ft8WavFlag = false;
+  frameCount = 0;
+  bufCount = 0;
+
+  ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+}
+
 FLASHMEM bool InitFT8Decoder() {
   bool result = false;
 
-  // return true if the FT8 decoder has already been initialized
-  if(ft8Init) return true;
+  if(ft8Init) {
+    // FT8 decoder has already been initialized
+    // just reset state and return success
+    InitFTDecoderState();
+    return true;
+  }
 
   // *** TODO: consider changing ft8lib monitor configuration when audio filters are changed ***
   if(ft8lib_InitDecoder()) {
@@ -613,33 +637,9 @@ FLASHMEM bool InitFT8Decoder() {
 
     //SetStationCoordinates(myGrid);
 
-    // initialize message windows
-    cqTop = 0;
-    allTop = 0;
-    rxTop = 0;
-    decodedMsgs = 0;
-    allMsgs = 0;
-    cqMsgs = 0;
-    rxMsgs = 0;
-    decodedHead = -1;
-    allHead = -1;
-    cqHead = -1;
-    rxHead = -1;
-
-    //for(int i = 0; i < MAX_LIST_MESSAGES; i++) {
-    //  rxList[i] = 0;
-    //  cqList[i] = 0;
-    //}
-
-    ft8Init = true;
-    ft8SyncState = 0;
-    //ft8SpectrumFlag = false;
-    ft8WavFlag = false;
-    frameCount = 0;
-    bufCount = 0;
+    InitFTDecoderState();
 
     // update FT8 info box items
-    ft8SyncState = 0; // not sync'd
     infoBoxItemActive[IB_ITEM_FT8] = true;
     UpdateInfoBoxItem(IB_ITEM_FT8);
     infoBoxItemActive[IB_ITEM_FT8_TX] = true;
@@ -710,12 +710,7 @@ FLASHMEM void ExitFT8Decoder() {
   // restore waterfall area
 
   // reset FT8 flags and counters
-  ft8Init = false;
-  ft8SyncState = 0;
-
-  decodedMsgs = 0;
-  frameCount = 0;
-  bufCount = 0;
+  InitFTDecoderState();
 
   // update FT8 info box items
   infoBoxItemActive[IB_ITEM_FT8] = false;
@@ -1118,7 +1113,7 @@ void FT8DecoderLoop() {
     // done with wav file
     // switch to FT8 internal mode
     ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
-    ft8WavFlag = false;
+    InitFTDecoderState();
   }
 }
 
@@ -1145,7 +1140,7 @@ void ChangeFt8RxFreq(int wheel) {
 
   DrawFT8BandwidthBar();
   CreateList(RX_WINDOW);
-  DisplaySubwindowMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
+  DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
 }
 
 void ChangeFt8TxInterval(int wheel) {
@@ -1217,19 +1212,19 @@ void ScrollFt8MsgWindow(int xcol, int wheel) {
     if(allScroll) {
       // mouse in all messages
       allTop = CalcTop(allTop, wheel, allMsgs, allHead, MAX_LIST_MESSAGES);
-      DisplaySubwindowMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
+      DisplayMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
     }
   } else if(xcol > 512 * 2 / 3) {
     if(rxScroll) {
       // mouse in RX messages
       rxTop = CalcTop(rxTop, wheel, rxMsgs, rxHead, MAX_LIST_MESSAGES);
-      DisplaySubwindowMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
+      DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
     }
   } else {
     if(cqScroll) {
       // mouse in CQ messages
       cqTop = CalcTop(cqTop, wheel, cqMsgs, cqHead, MAX_LIST_MESSAGES);
-      DisplaySubwindowMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
+      DisplayMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
     }
   }
 }
@@ -1243,7 +1238,7 @@ int GetMsg(int x, int y) {
 
   if(x < 512 / 3) {
     // mouse in all messages
-    if(allTop + row <= decodedMsgs) {
+    if(allTop + row <= allMsgs) {
       msgIndex = allTop + row - 1;
     }
   } else if(x > 512 * 2 / 3) {
@@ -1301,16 +1296,22 @@ void CreateFt8TxMsg(int x, int y) {
 void ToggleList(int x) {
   if(x < 512 / 3) {
     // mouse in all messages
-    allTop = allTop < allMsgs ? allMsgs : 0;
-    DisplaySubwindowMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
+    if(allScroll) {
+      allTop = allTop < allMsgs ? allMsgs : 0;
+      DisplayMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
+    }
   } else if(x > 512 * 2 / 3) {
     // mouse in RX messages
+    if(rxScroll) {
     rxTop = rxTop < rxMsgs ? rxMsgs : 0;
-    DisplaySubwindowMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
+    DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
+    }
   } else {
     // mouse in CQ messages
-    cqTop = cqTop < cqMsgs ? cqMsgs : 0;
-    DisplaySubwindowMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
+    if(cqScroll) {
+      cqTop = cqTop < cqMsgs ? cqMsgs : 0;
+      DisplayMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
+    }
   }
 }
 
@@ -1319,22 +1320,30 @@ void FT8MsgWindowClick(int x, int y, int button) {
   //Serial.print(y); Serial.print(", "); Serial.print(row); Serial.print(", "); Serial.println(button);
   if(row < 0) return;
 
-  switch(button) {
-    case 1: // left click
-      if(row > 1) {
-        ChangeFt8ActiveMsg(x, y);
+  switch(row) {
+    case 1:
+      switch(button) {
+        case 1: // left click
+          //break;
+        case 2: // right click
+          ToggleList(x);
+          break;
+        case 4: // wheel click
+          ChangeFt8ScrollLock(x);
+          break;
       }
       break;
-    case 2: // right click
-      if(row == 1) {
-        ChangeFt8ScrollLock(x);
-      }
-      break;
-    case 4: // wheel click
-      if(row == 1) {
-        ToggleList(x);
-      } else {
-        CreateFt8TxMsg(x, y);
+
+    default:
+      switch(button) {
+        case 1: // left click
+          ChangeFt8ActiveMsg(x, y);
+          break;
+        case 2: // right click
+          break;
+        case 4: // wheel click
+          CreateFt8TxMsg(x, y);
+          break;
       }
       break;
   }

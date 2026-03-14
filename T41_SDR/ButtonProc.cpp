@@ -31,7 +31,6 @@ bool lowerAudioFilterActive = false; // false - upper, true - lower audio filter
 int liveNoiseFloorFlag = OFF;         // ON=1, OFF=0, Auto=-1
 
 bool nfmBWFilterActive = false; // false - audio filters active, true - NFM BW demod filter active
-bool ft8MsgSelectActive = false; // false - audio filters, true - msg select active
 
 //------------------------- Local Variables ----------
 bool save_last_frequency = false;
@@ -179,33 +178,11 @@ FLASHMEM void ButtonFilter() {
     if(nfmBWFilterActive) {
       nfmBWFilterActive = !nfmBWFilterActive;
       lowerAudioFilterActive = !lowerAudioFilterActive;
-      DisplayAllMessages();
     } else {
       if(lowerAudioFilterActive) {
         lowerAudioFilterActive = !lowerAudioFilterActive;
       } else {
         nfmBWFilterActive = !nfmBWFilterActive;
-      }
-    }
-    break;
-
-  case DEMOD_FT8_INTERNAL:
-  case DEMOD_FT8_WAV:
-    // Filter sequence in FT8 mode:
-    // At startup:  high audio
-    // 1st press:   FT8 msg selection
-    // 2nd press:   low audio
-    // 3rd press:   high audio
-    // repeat @ 1
-    if(ft8MsgSelectActive) {
-      ft8MsgSelectActive = !ft8MsgSelectActive;
-      lowerAudioFilterActive = !lowerAudioFilterActive;
-      DisplayAllMessages();
-    } else {
-      if(lowerAudioFilterActive) {
-        lowerAudioFilterActive = !lowerAudioFilterActive;
-      } else {
-        ft8MsgSelectActive = !ft8MsgSelectActive;
       }
     }
     break;

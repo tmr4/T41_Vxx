@@ -159,26 +159,12 @@ void ProcessMenuEncoder() {
     // we're setting noise floor
     currentNoiseFloor[currentBand] += menuEncoderMove;
   } else {
-    if(ft8MsgSelectActive) {
-      //if(numDecodedMsgs > 0) {
-      //  activeMsg += menuEncoderMove;
-      //  if(activeMsg >= numDecodedMsgs) {
-      //    activeMsg = 0;
-      //  } else {
-      //    if(activeMsg < 0) {
-      //      activeMsg = numDecodedMsgs - 1;
-      //    }
-      //  }
-      //}
-      menuEncoderMove = 0;
+    if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
+      // we're adjusting NFM demod bandwidth
+      filter_pos_BW = last_filter_pos_BW - 5 * menuEncoderMove;
     } else {
-      if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
-        // we're adjusting NFM demod bandwidth
-        filter_pos_BW = last_filter_pos_BW - 5 * menuEncoderMove;
-      } else {
-        // we're adjusting audio spectrum filter
-        posFilterEncoder = lastFilterEncoder - 5 * menuEncoderMove;
-      }
+      // we're adjusting audio spectrum filter
+      posFilterEncoder = lastFilterEncoder - 5 * menuEncoderMove;
     }
   }
 }

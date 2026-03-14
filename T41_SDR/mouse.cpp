@@ -439,26 +439,12 @@ void MouseLoop() {
           MouseWheelSpectrumWaterfall(wheel);
         }
       } else if(CursorInAudioSpectrum()) {
-        // *** TODO: consider refactoring with similar code in EncoderMenuChangeFilterISR()
-        if(ft8MsgSelectActive) {
-          //if(numDecodedMsgs > 0) {
-          //  activeMsg += wheel;
-          //  if(activeMsg >= numDecodedMsgs) {
-          //    activeMsg = 0;
-          //  } else {
-          //    if(activeMsg < 0) {
-          //      activeMsg = numDecodedMsgs - 1;
-          //    }
-          //  }
-          //}
+        if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
+          // we're adjusting NFM demod bandwidth
+          filter_pos_BW = last_filter_pos_BW - 5 * wheel;
         } else {
-          if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
-            // we're adjusting NFM demod bandwidth
-            filter_pos_BW = last_filter_pos_BW - 5 * wheel;
-          } else {
-            // we're adjusting audio spectrum filter
-            posFilterEncoder = lastFilterEncoder - 5 * wheel;
-          }
+          // we're adjusting audio spectrum filter
+          posFilterEncoder = lastFilterEncoder - 5 * wheel;
         }
       } else if(CursorInInfoBox()) {
         if(liveNoiseFloorFlag == 2) {
