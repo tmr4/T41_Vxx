@@ -395,7 +395,8 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
 
         case DEMOD_FT8_INTERNAL:
           // try to set up internal FT8 ops
-          if(!InitFT8Decoder()) {
+          // *** TODO: make generic from config file ***
+          if(!InitFT8Decoder("KN6ZDE", "CM87")) {
             // can't set up FT8 decode, fall back to normal FT8
             ExitFT8Decoder();
 
@@ -405,7 +406,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
           break;
 
         case DEMOD_FT8_WAV:
-          if(InitFT8Decoder()) {
+          if(InitFT8Decoder("KN6ZDE", "CM87")) {
             // try to load wav file
             if(SetupFT8Wav()) {
               // switch to play a wav file

@@ -16,7 +16,7 @@ extern float *ft8TxSignalBuf;
 bool InitFT8();
 void ExitFT8();
 
-bool InitFT8Decoder();
+bool InitFT8Decoder(const char *call, const char *grid);
 bool SetupFT8Wav();
 void ExitFT8Decoder();
 

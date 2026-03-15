@@ -58,32 +58,58 @@ float *ft8TxSignalBuf = NULL;
 
 #define RA8875_GREEN 0x07E0 // 0, 255, 0
 
-typedef struct
-{
+char baseCall[14], baseGrid[5];
+
+typedef struct {
+  char msg[35]; // FTX_MAX_MESSAGE_LENGTH = callsign[13] + space + callsign[13] + space + report[6] + terminator
+
   // three parts of FT8 message
   // *** put together with: sprintf(message,"%.13s %.13s %.6s",field1, field2, field3); ***
   char field1[20];
   char field2[20];
   char field3[20];
 
-  char msg[35]; // FTX_MAX_MESSAGE_LENGTH = callsign[13] + space + callsign[13] + space + report[6] + terminator
   float  freq; // hz
+
+  uint8_t hour, min, sec;
   float time_sec;
   tm slot_time;
 
-  //char decode_time[10];
-  uint8_t hour, min, sec;
   int  sync_score;
   float  snr;
-  int  distance;
+  //int  distance; // *** needs SetStationCoordinates in init ***
+} RxMsg;
 
-  int count;
-} Decode;
+typedef struct {
+  char msg[35]; // FTX_MAX_MESSAGE_LENGTH = callsign[13] + space + callsign[13] + space + report[6] + terminator
+
+  // three parts of FT8 message
+  // *** put together with: sprintf(message,"%.13s %.13s %.6s",field1, field2, field3); ***
+  char field1[20];
+  char field2[20];
+  char field3[20];
+
+  float  freq; // hz
+
+  //uint8_t hour, min, sec;
+  //float time_sec;
+  tm slot_time;
+
+  float  snr;
+
+  // 0: waiting
+  // 1: next to TX
+  // 2: no response after 10 tries (transmission disabled)
+  // 3: completed
+  int state;
+
+  int retries;
+} TxMsg;
 
 /*
 
 Detailed Message List:
-The decodedDetails list records the details of each decoded message.  It is sized to capture all
+The rxBuf list records the details of each decoded message.  It is sized to capture all
 messages from an FT8 session.
 
 FT8 Message Window:
@@ -93,7 +119,7 @@ associated message lists with the most recent messages toward the bottom of the 
 scrollable with the index of the message at the top of the window as a global variable.
 
 Subwindow Message Lists:
-There is an integer list associated with each subwindow.  The integer is an index into the decodedDetails
+There is an integer list associated with each subwindow.  The integer is an index into the rxBuf
 message list which is longer and . The lists are a circular
 buffer with the most recent messages at and before the head of the list and the oldest messages immediately after the head.
 
@@ -108,7 +134,7 @@ This structure follows a few rules:
 //#define MAX_DECODED_MESSAGES 10 // for testing of decode list getting full
 //#define MAX_DECODED_MESSAGES 500
 #define MAX_DECODED_MESSAGES 2400 // 10 msgs/interval * 4 intervals/min * 60 min/hr
-EXTMEM Decode decodedDetails[MAX_DECODED_MESSAGES];
+EXTMEM RxMsg rxBuf[MAX_DECODED_MESSAGES];
 
 // msg window list size is a tradeoff of scrolling vs having old msg overwritten before desired
 // having the allList separate from the details list allows a filter on the list (*** TODO: impliment ***)
@@ -141,29 +167,46 @@ int frameCount = 0;
 //bool ft8SpectrumFlag; // true when ft8 frequency spectrum data is ready to be drawn
 bool ft8WavFlag;      // true when ft8 wav file has closed (signals need to shift to DEMOD_FT8_INTERNAL mode)
 
-#define FT8_DECODER_STATE_BUFFERING   0
-#define FT8_DECODER_STATE_PROCESSING  1
-#define FT8_DECODER_STATE_DECODING    2
-#define FT8_DECODER_STATE_RX_UPDATE   3
-#define FT8_DECODER_STATE_TX          4
-#define FT8_DECODER_STATE_TX_UPDATE   5
+// FT8 Decoder States
+#define STATE_BUFFERING   0
+#define STATE_PROCESSING  1
+#define STATE_DECODING    2
+#define STATE_RX_UPDATE   3
+#define STATE_TX          4
+#define STATE_TX_UPDATE   5
 
-int ft8DecoderState = 0;
+int ft8DecoderState = STATE_BUFFERING;
 
-int ft8TxState = 0; // ft8 state status for info box: 0 - off, 1 - on
-int ft8IntState = 0; //  ft8 Tx interval state status for info box: 0 - even, 1 - odd
-int ft8CqState = 0; // ft8 CQ response state: 0 - man, 1 - respond automatically to CQ
+// FT8 Decoder Option States
+// *** these are also status for info box ***
+int ft8SyncState = 0; // sync status: 0 - not sync'd, 1 - sync'd
+int ft8TxState = 0; // auto transmission: 0 - off, 1 - enabled (transmission will start automatically at next tx interval)
+int ft8IntState = 0; // Tx interval: 0 - even, 1 - odd
+int ft8CqState = 0; // CQ response: 0 - manual, 1 - auto (respond automatically to strongest signal in last RX cycle)
 
 int master_offset, offset_step;
 
 bool ft8Init = false;
-int ft8SyncState = 0; // sync status: 0 - not sync'd, 1 - sync'd
 
 int ft8TxFreq = 1000;
 int ft8RxFreq = 1000;
 bool txEqualsRx = true;
 
-extern char myGrid[];
+// internal transmission queue
+// Follows message numbering structure of FT8 whitepaper section 7.
+// https://wsjt.sourceforge.io/FT4_FT8_QEX.pdf, except TX6 is txBuf[0]
+// index 0,2,4 are calling CQ QSOs
+// example from whitepaper
+//txBuf[0] = "CQ K1JT FN20";  // expected RX "K1JT K9AN EN50"
+//txBuf[2] = "K9AN K1JT +05"; // expected RX "K1JT K9AN R-12"
+//txBuf[4] = "K9AN K1JT RRR"; // expected RX "K1JT K9AN 73"
+// index 1,3,5 are for replying to CQ
+//txBuf[1] = "K1JT K9AN EN50" // expected RX to "CQ K1JT FN20";
+//txBuf[3] = "K1JT K9AN R-12  // expected RX to "K9AN K1JT +05";
+//txBuf[5] = "K1JT K9AN 73"   // expected RX to "K9AN K1JT RRR";
+TxMsg txBuf[6];
+int nextTX = 0; //, lastTx = -1;
+int txSequence = 0; // 0: only msg 0, 1: msgs 0,2,4, 2: msgs 1,3,5
 
 extern bool ft8PTT;
 
@@ -180,7 +223,11 @@ void ResetTuning();
 void YieldToProcess(bool updateSpectrum = false);
 void YieldForProcess(int ms);
 
+void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq, char *msg);
+
 void PrepareFT8ExciterIQData(float *sig);
+
+void ChangeFt8TxState(int wheel);
 
 // ft8lib
 bool ft8lib_InitDecoder();
@@ -195,12 +242,50 @@ bool ft8lib_GenFT8(char *message, float frequency);
 float *ft8lib_GetSignal();
 
 //-------------------------------------------------------------------------------------------------------------
-// Testing Code
+// External FT8 Code
 //-------------------------------------------------------------------------------------------------------------
 
-//#define DEMOD_FT8_TESTING // plots frame by frame frequency spectrum of selected wav file (change frame with volume knob)
+FLASHMEM bool InitFT8() {
+  bool result = true;
 
-#ifdef DEMOD_FT8_TESTING
+  if(sampleRate > 50000) {
+    sampleRate = 44100.0;
+    intermediateFreq = 11025.0;
+    // using 48k sample rate doesn't change FT8 transmision
+    //sampleRate = 48000.0;
+    //intermediateFreq = 12000.0;
+    SetI2SFreq(sampleRate);
+    InitFFTArrays();
+    SetZoom(1);
+    //InitZoomFFTFilter(); // *** TODO: can save some memory by specifying block size if will operate in FT8 a lot ***
+    InitHilbertFilters();
+    SetupDemodFilterBW();
+    ResetTuning();
+  }
+
+  return result;
+}
+
+FLASHMEM void ExitFT8() {
+  if(sampleRate < 50000) {
+    sampleRate = 192000.0;
+    intermediateFreq = 48000.0;
+    SetI2SFreq(sampleRate);
+    InitFFTArrays();
+    SetZoom(1);
+    InitHilbertFilters();
+    SetupDemodFilterBW();
+  }
+}
+
+//-------------------------------------------------------------------------------------------------------------
+// Internal FT8 Testing Code
+//-------------------------------------------------------------------------------------------------------------
+
+//#define SPECTRUM_TESTING // plots frequency spectrum frame instead of waterfall (change frame with volume knob)
+#define TX_TESTING // generates mock RX messages for "CQ KN6ZDE CM87" TX test
+
+#ifdef SPECTRUM_TESTING
 EXTMEM uint8_t freqSpectrum[512*79];
 
 FLASHMEM void DrawTestSpectrum(uint8_t *spec) {
@@ -222,11 +307,111 @@ FLASHMEM void DrawTestSpectrum(uint8_t *spec) {
     tft.drawLine(WATERFALL_L + i, y1Plot, WATERFALL_L + i, yPlot, RA8875_YELLOW);
   }
 }
+#endif
 
+// TX_TESTING only available on project system to prevent inadvertent transmissions
+// *** this won't compile on other systems ***
+// *** TODO: consider relaxing this w/ mock transmission mode on other versions ***
+#if defined(TX_TESTING) && defined(PROJECTSYSTEM)
+
+void DisplayMessages(int window, int *list, int numMsgs, bool scroll, int &top, int head, int max);
+void DisplayAllMessages();
+void DisplayTxMessages();
+void AddTxMsg(char *msg, int index, float freq, float  snr);
+
+void AddRxResponse(char *msg, float freq, struct tm *tmSlot, int16_t score) {
+  float time_sec = 0.0;
+
+  AddDecodedMessage(tmSlot, score, time_sec, freq, msg);
+  //DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
+  DisplayAllMessages();
+}
+
+bool MockMsgTraffic() {
+  bool result = false;
+
+  static int count = 0;
+  struct tm tmSlot = { .tm_sec = (second() / 15) * 15, .tm_min = minute(), .tm_hour = hour() };
+
+  // mock replies to my CQ
+  char msg1[35] = "KN6ZDE K9AN EN50"; // mock RX to "CQ KN6ZDE CM87"
+  char msg3[35] = "KN6ZDE K9AN +05";  // mock RX to "KN6ZDE K9AN R-12"
+  char msg5[35] = "KN6ZDE K9AN RRR";  // mock RX to "KN6ZDE K9AN 73"
+
+  //char msg0[35] = "CQ KN6ZDE CM87";
+  char msg2[35] = "KN6ZDE K9AN R-12"; // expected RX "K1JT K9AN R-12"
+  char msg4[35] = "K9AN K1JT RRR"; // expected RX "K1JT K9AN 73"
+
+  // mock CQ
+  //char msg0[35] = "CQ K1JT FN20"; // mock RX to "CQ KN6ZDE CM87"
+  //char msg2[35] = "K9AN K1JT +05"; // expected RX "K1JT K9AN R-12"
+  //char msg4[35] = "K9AN K1JT RRR"; // expected RX "K1JT K9AN 73"
+
+  switch(txSequence) {
+    case 0:
+      if(txBuf[0].state == 1) {
+        AddRxResponse(msg1, ft8RxFreq, &tmSlot, 148);
+        count++;
+        txSequence = 1;
+        nextTX = 2;
+        AddTxMsg(msg2, 2, ft8TxFreq, 78.0);
+        AddTxMsg(msg4, 4, ft8TxFreq, 78.0);
+        DisplayTxMessages();
+        txBuf[0].state = 3;
+        //txBuf[2].state = 1;
+      } else {
+        txBuf[0].state = 1;
+      }
+      break;
+
+    case 1:
+      switch(++count) {
+        case 0:
+          break;
+
+        case 1:
+          if(txBuf[2].state == 1) {
+            AddRxResponse(msg3, ft8RxFreq, &tmSlot, 148);
+            //txSequence = 1;
+            nextTX = 4;
+            txBuf[2].state = 3;
+            //txBuf[4].state = 1;
+          } else {
+            txBuf[2].state = 1;
+          }
+          break;
+
+        case 2:
+          if(txBuf[4].state == 1) {
+            AddRxResponse(msg5, ft8RxFreq, &tmSlot, 148);
+            count = 0;
+            //txSequence = 0;
+            nextTX = 0;
+            result = true;
+            ChangeFt8TxState(1); // turn FT8 transmission off
+            txBuf[4].state = 3;
+          } else {
+            txBuf[4].state = 1;
+          }
+          break;
+
+        default:
+          count = 0;
+          txSequence = 0;
+          break;
+      }
+      break;
+
+    case 2:
+      break;
+  }
+
+  return result;
+}
 #endif
 
 //-------------------------------------------------------------------------------------------------------------
-// Code
+// Internal FT8 Code - Sync and Message Lists
 //-------------------------------------------------------------------------------------------------------------
 
 void AutoSyncFT8() {
@@ -261,8 +446,8 @@ void AutoSyncFT8() {
 }
 
 // add a message index to the specified message list
-void AddMsg(int *list, int index, int &msgCount, int &listHead, int max, bool (&func)(Decode*)) {
-  if(func(&decodedDetails[index])) {
+void AddMsg(int *list, int index, int &msgCount, int &listHead, int max, bool (&func)(RxMsg*)) {
+  if(func(&rxBuf[index])) {
     // head points to most recently added msg
     // check if next addition is past end of list
     if(++listHead >= max) {
@@ -277,16 +462,16 @@ void AddMsg(int *list, int index, int &msgCount, int &listHead, int max, bool (&
   }
 }
 
-bool AllMsgCheck(Decode *msg) {
+bool AllMsgCheck(RxMsg *msg) {
   // *** TODO: impliment filters
   return true;
 }
 
-bool CqMsgCheck(Decode *msg) {
+bool CqMsgCheck(RxMsg *msg) {
   return strcmp(msg->field1, "CQ") == 0;
 }
 
-bool RxMsgCheck(Decode *msg) {
+bool RxMsgCheck(RxMsg *msg) {
   return (msg->freq >= ft8RxFreq - 10.0) && (msg->freq <= ft8RxFreq + 10.0);
 }
 
@@ -314,31 +499,30 @@ void AddMsgs(int index) {
 
 void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq, char *msg) {
   // update decoded msg detail
-  strncpy(decodedDetails[decodedMsgs].msg, msg, 35);
-  decodedDetails[decodedMsgs].msg[34] = '\0'; // ensure msg is terminated (only needed w/ possible decode error)
-  decodedDetails[decodedMsgs].freq = freq;
-  decodedDetails[decodedMsgs].slot_time.tm_hour = tmSlot->tm_hour;
-  decodedDetails[decodedMsgs].slot_time.tm_min = tmSlot->tm_min;
-  decodedDetails[decodedMsgs].slot_time.tm_sec = tmSlot->tm_sec;
-  decodedDetails[decodedMsgs].time_sec = time_sec;
+  strncpy(rxBuf[decodedMsgs].msg, msg, 35);
+  rxBuf[decodedMsgs].msg[34] = '\0'; // ensure msg is terminated (only needed w/ possible decode error)
+  rxBuf[decodedMsgs].freq = freq;
+  rxBuf[decodedMsgs].slot_time.tm_hour = tmSlot->tm_hour;
+  rxBuf[decodedMsgs].slot_time.tm_min = tmSlot->tm_min;
+  rxBuf[decodedMsgs].slot_time.tm_sec = tmSlot->tm_sec;
+  rxBuf[decodedMsgs].time_sec = time_sec;
   GetTeensyTime();
-  decodedDetails[decodedMsgs].hour = hour();
-  decodedDetails[decodedMsgs].min = minute();
-  decodedDetails[decodedMsgs].sec = second();
-  decodedDetails[decodedMsgs].sync_score = score;
-  decodedDetails[decodedMsgs].snr = (score - 160.0) / 6.0; // *** TODO: evaluate ft8_lib for better algorithm ***
-  //decodedDetails[decodedMsgs].distance = CalcLocatorDistance(text);
-  decodedDetails[decodedMsgs].count = 1;
+  rxBuf[decodedMsgs].hour = hour();
+  rxBuf[decodedMsgs].min = minute();
+  rxBuf[decodedMsgs].sec = second();
+  rxBuf[decodedMsgs].sync_score = score;
+  rxBuf[decodedMsgs].snr = (score - 160.0) / 6.0; // *** TODO: evaluate ft8_lib for better algorithm ***
+  //rxBuf[decodedMsgs].distance = CalcLocatorDistance(text);
 
   // split msg into fields for use in automated routines
   // *** this doesn't cover all message types ***
-  strncpy(decodedDetails[decodedMsgs].field1, strtok(msg, " "), 20);
-  strncpy(decodedDetails[decodedMsgs].field2, strtok(NULL, " "), 20);
-  strncpy(decodedDetails[decodedMsgs].field3, strtok(NULL, " "), 20);
+  strncpy(rxBuf[decodedMsgs].field1, strtok(msg, " "), 20);
+  strncpy(rxBuf[decodedMsgs].field2, strtok(NULL, " "), 20);
+  strncpy(rxBuf[decodedMsgs].field3, strtok(NULL, " "), 20);
 
-  //Serial.println(decodedDetails[decodedMsgs].field1);
-  //Serial.println(decodedDetails[decodedMsgs].field2);
-  //Serial.println(decodedDetails[decodedMsgs].field3);
+  //Serial.println(rxBuf[decodedMsgs].field1);
+  //Serial.println(rxBuf[decodedMsgs].field2);
+  //Serial.println(rxBuf[decodedMsgs].field3);
 
   AddMsgs(decodedMsgs); // add messages to window lists
 
@@ -347,6 +531,32 @@ void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float f
   if(decodedMsgs >= MAX_DECODED_MESSAGES) {
     decodedMsgs = 0; // start overwriting older messages
   }
+}
+
+// *** TODO: this should take call and report ***
+void AddTxMsg(char *msg, int index, float freq, float  snr) {
+  // update decoded msg detail
+  strncpy(txBuf[index].msg, msg, 35);
+  txBuf[index].msg[34] = '\0'; // ensure msg is terminated (only needed w/ possible decode error)
+  txBuf[index].freq = freq;
+  //txBuf[index].slot_time.tm_hour = tmSlot->tm_hour;
+  //txBuf[index].slot_time.tm_min = tmSlot->tm_min;
+  //txBuf[index].slot_time.tm_sec = tmSlot->tm_sec;
+  //txBuf[index].time_sec = time_sec;
+  //GetTeensyTime();
+  //rxBuf[index].hour = hour();
+  //rxBuf[index].min = minute();
+  //rxBuf[index].sec = second();
+  txBuf[index].snr = snr;
+
+  // split msg into fields for use in automated routines
+  // *** this doesn't cover all message types ***
+  strncpy(txBuf[index].field1, strtok(msg, " "), 20);
+  strncpy(txBuf[index].field2, strtok(NULL, " "), 20);
+  strncpy(txBuf[index].field3, strtok(NULL, " "), 20);
+
+  txBuf[0].state = 0;
+  txBuf[0].retries = -1;
 }
 
 // reset list
@@ -385,7 +595,7 @@ void CreateList(int window) {
 
 void DisplaySelectedMessageDetail() {
   char message[100];
-  Decode *msg = &decodedDetails[activeMsg];
+  RxMsg *msg = &rxBuf[activeMsg];
   tft.setFontScale((enum RA8875tsize)0);
   int rowHeight = tft.getFontHeight();
 
@@ -410,7 +620,7 @@ void DisplaySelectedMessageDetail() {
   }
 }
 
-void DisplayStats(int window, int num, int top, bool scroll) {
+void DisplayStats(int window, int num, int top, int head, bool scroll) {
   int rowHeight, colWidth, columnOffset;
   bool up = num > FT8_MSG_ROWS ? true : false;
   bool down = up;
@@ -448,7 +658,8 @@ void DisplayStats(int window, int num, int top, bool scroll) {
   }
 
   if(top == 0) up = false;
-  if(top >= num-FT8_MSG_ROWS) down = false;
+  //if(top >= num-FT8_MSG_ROWS) down = false;
+  if(top >= head - FT8_MSG_ROWS + 1) down = false;
   if(up) tft.write(30); // scroll up pointer
   if(down) tft.write(31); // scroll down pointer
 }
@@ -456,15 +667,15 @@ void DisplayStats(int window, int num, int top, bool scroll) {
 void DisplayListStats(int window) {
   switch(window) {
     case ALL_WINDOW:
-      DisplayStats(window, allMsgs, allTop, allScroll);
+      DisplayStats(window, allMsgs, allTop, allHead, allScroll);
       break;
 
     case CQ_WINDOW:
-      DisplayStats(window, cqMsgs, cqTop, cqScroll);
+      DisplayStats(window, cqMsgs, cqTop, cqHead, cqScroll);
       break;
 
     case RX_WINDOW:
-      DisplayStats(window, rxMsgs, rxTop, rxScroll);
+      DisplayStats(window, rxMsgs, rxTop, rxHead, rxScroll);
       break;
   }
 }
@@ -511,7 +722,7 @@ void DisplayMessages(int window, int *list, int numMsgs, bool scroll, int &top, 
         tft.setTextColor(RA8875_WHITE);
       }
 
-      sprintf(message,"%.20s", decodedDetails[index].msg);
+      sprintf(message,"%.20s", rxBuf[index].msg);
       tft.setCursor(WATERFALL_L + columnOffset, YPIXELS - rowHeight * (FT8_MSG_ROWS - count + 2) - 3);
       tft.print(message);
 
@@ -526,14 +737,76 @@ void DisplayMessages(int window, int *list, int numMsgs, bool scroll, int &top, 
   DisplayListStats(window);
 }
 
-void DisplayOtherMessages() {
+// TX msg color:
+//    White:  waiting
+//    Green:  next to TX
+//    Red:    no response previous interval
+//    Yellow: completed
+int GetTxMsgColor (int index) {
+  int color = WHITE; // waiting
+
+  switch(txBuf[index].state) {
+    case 1: // next to TX
+      if(ft8TxState) color = RA8875_GREEN;
+      break;
+
+    case 2: // no response
+      color = RED;
+      break;
+
+    case 3: // completed
+      color = YELLOW;
+      break;
+  }
+
+  return color;
+}
+
+void DisplayTxMessages() {
   int rowHeight = tft.getFontHeight();
 
-  DisplaySelectedMessageDetail();
+  // erase old info
+  tft.fillRect(WATERFALL_L, YPIXELS - rowHeight, WATERFALL_W, rowHeight, RA8875_BLACK);
 
-  tft.setTextColor(RA8875_GREEN);
-  tft.setCursor(WATERFALL_L, YPIXELS - rowHeight - 3);
-  tft.print("CQ KN6ZDE CM87");
+  if(txSequence < 2) {
+    // display CQ msg 0
+    tft.setTextColor(GetTxMsgColor(0));
+    tft.setCursor(WATERFALL_L, YPIXELS - rowHeight - 3);
+    tft.print(txBuf[0].msg);
+    if(txBuf[0].retries > 0) {
+      tft.print(" (");
+      tft.print(txBuf[0].retries);
+      tft.print(")");
+    }
+  }
+  if(txSequence == 1) {
+    tft.print("    ");
+
+    // display CQ msgs 2, 4
+    tft.setTextColor(GetTxMsgColor(2));
+    tft.print(txBuf[2].msg);
+
+    tft.print("    ");
+
+    tft.setTextColor(GetTxMsgColor(4));
+    tft.print(txBuf[4].msg);
+  }
+  if(txSequence == 2) {
+    // display CQ msgs 1, 3, 5
+    tft.setTextColor(GetTxMsgColor(1));
+    tft.setCursor(WATERFALL_L, YPIXELS - rowHeight - 3);
+    tft.print(txBuf[1].msg);
+
+    tft.print("    ");
+
+    tft.setTextColor(GetTxMsgColor(3));
+    tft.print(txBuf[3].msg);
+
+    tft.print("    ");
+
+    tft.setTextColor(GetTxMsgColor(5));
+    tft.print(txBuf[5].msg);
+  }
 }
 
 void DisplayAllStats() {
@@ -546,7 +819,8 @@ void DisplayAllMessages() {
   DisplayMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
   DisplayMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
   DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
-  DisplayOtherMessages();
+  DisplaySelectedMessageDetail();
+  DisplayTxMessages();
 }
 
 void ProcessFT8Messages() {
@@ -556,43 +830,27 @@ void ProcessFT8Messages() {
 }
 
 //-------------------------------------------------------------------------------------------------------------
-// other
+// Decoder State Code
 //-------------------------------------------------------------------------------------------------------------
 
-FLASHMEM bool InitFT8() {
-  bool result = true;
+void InitTxQueue(char *call, char *grid) {
+  // *** TODO: use AddTxMsg(char *msg, int index, float freq, float  snr) ***
+  char msg[35];
 
-  if(sampleRate > 50000) {
-    sampleRate = 44100.0;
-    intermediateFreq = 11025.0;
-    // using 48k sample rate doesn't change FT8 transmision
-    //sampleRate = 48000.0;
-    //intermediateFreq = 12000.0;
-    SetI2SFreq(sampleRate);
-    InitFFTArrays();
-    SetZoom(1);
-    //InitZoomFFTFilter(); // *** TODO: can save some memory by specifying block size if will operate in FT8 a lot ***
-    InitHilbertFilters();
-    SetupDemodFilterBW();
-    ResetTuning();
-  }
+  if(call != NULL && grid != NULL) {
+    sprintf(msg, "CQ %.13s %.6s", call, grid);
+    strncpy(txBuf[0].msg, msg, 35);
+    strncpy(txBuf[0].field1, strtok(msg, " "), 20);
+    strncpy(txBuf[0].field2, strtok(NULL, " "), 20);
+    strncpy(txBuf[0].field3, strtok(NULL, " "), 20);
 
-  return result;
-}
-
-FLASHMEM void ExitFT8() {
-  if(sampleRate < 50000) {
-    sampleRate = 192000.0;
-    intermediateFreq = 48000.0;
-    SetI2SFreq(sampleRate);
-    InitFFTArrays();
-    SetZoom(1);
-    InitHilbertFilters();
-    SetupDemodFilterBW();
+    txBuf[0].freq = ft8TxFreq; // *** set immediately prior to transmission ***
+    txBuf[0].state = 0;
+    txBuf[0].retries = -1; // incremented to 0 on first transmission
   }
 }
 
-void InitFTDecoderState() {
+void InitDecoderState(char *call = NULL, char *grid = NULL) {
   // initialize message lists
   allTop = 0;
   cqTop = 0;
@@ -610,70 +868,74 @@ void InitFTDecoderState() {
   frameCount = 0;
   bufCount = 0;
 
-  ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+  InitTxQueue(call, grid);
+
+  ft8DecoderState = STATE_BUFFERING;
 }
 
-FLASHMEM bool InitFT8Decoder() {
+FLASHMEM bool InitFT8Decoder(const char *call, const char *grid) {
   bool result = false;
 
   if(ft8Init) {
     // FT8 decoder has already been initialized
     // just reset state and return success
-    InitFTDecoderState();
-    return true;
+    result = true;
+  } else {
+    // *** TODO: consider changing ft8lib monitor configuration when audio filters are changed ***
+    if(ft8lib_InitDecoder()) {
+      EraseSpectrumDisplayContainer();
+      DrawSpectrumFrame();
+      tft.writeTo(L2);
+      tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
+      tft.writeTo(L1);
+      tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
+      displayState = DISPLAY_T41_FT8_DECODE;
+      ShowFT8SpectrumFreqValues();
+      DrawFT8BandwidthBar();
+
+      // update FT8 info box items
+      infoBoxItemActive[IB_ITEM_FT8] = true;
+      UpdateInfoBoxItem(IB_ITEM_FT8);
+      infoBoxItemActive[IB_ITEM_FT8_TX] = true;
+      UpdateInfoBoxItem(IB_ITEM_FT8_TX);
+      infoBoxItemActive[IB_ITEM_FT8_TXF] = true;
+      UpdateInfoBoxItem(IB_ITEM_FT8_TXF);
+      infoBoxItemActive[IB_ITEM_FT8_RXF] = true;
+      UpdateInfoBoxItem(IB_ITEM_FT8_RXF);
+      infoBoxItemActive[IB_ITEM_FT8_INT] = true;
+      UpdateInfoBoxItem(IB_ITEM_FT8_INT);
+      infoBoxItemActive[IB_ITEM_FT8_CQ] = true;
+      UpdateInfoBoxItem(IB_ITEM_FT8_CQ);
+
+      // set up message area
+      // Erase waterfall in decode area
+      tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+      tft.writeTo(L2); // it's on layer 2 as well
+      tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+      tft.writeTo(L1);
+      wfRows = WATERFALL_H - FT8_ROW_HEIGHT * FT8_ROWS - 3;
+
+      result = true;
+
+      #ifdef USE_BUFFERED_FT8_WAV
+      static bool done = false;
+
+      if(!done) {
+        // initialize buffered wav only once
+        for(int i = 0; i < 15 * 12000; i++) {
+          ft8WavBuf[i] = 0;
+        }
+        done = true;
+      }
+      #endif
+    }
   }
 
-  // *** TODO: consider changing ft8lib monitor configuration when audio filters are changed ***
-  if(ft8lib_InitDecoder()) {
-    EraseSpectrumDisplayContainer();
-    DrawSpectrumFrame();
-    tft.writeTo(L2);
-    tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
-    tft.writeTo(L1);
-    tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
-    displayState = DISPLAY_T41_FT8_DECODE;
-    ShowFT8SpectrumFreqValues();
-    DrawFT8BandwidthBar();
-
-    //SetStationCoordinates(myGrid);
-
-    InitFTDecoderState();
-
-    // update FT8 info box items
-    infoBoxItemActive[IB_ITEM_FT8] = true;
-    UpdateInfoBoxItem(IB_ITEM_FT8);
-    infoBoxItemActive[IB_ITEM_FT8_TX] = true;
-    UpdateInfoBoxItem(IB_ITEM_FT8_TX);
-    infoBoxItemActive[IB_ITEM_FT8_TXF] = true;
-    UpdateInfoBoxItem(IB_ITEM_FT8_TXF);
-    infoBoxItemActive[IB_ITEM_FT8_RXF] = true;
-    UpdateInfoBoxItem(IB_ITEM_FT8_RXF);
-    infoBoxItemActive[IB_ITEM_FT8_INT] = true;
-    UpdateInfoBoxItem(IB_ITEM_FT8_INT);
-    infoBoxItemActive[IB_ITEM_FT8_CQ] = true;
-    UpdateInfoBoxItem(IB_ITEM_FT8_CQ);
-
-    // set up message area
-    // Erase waterfall in decode area
-    tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
-    tft.writeTo(L2); // it's on layer 2 as well
-    tft.fillRect(WATERFALL_L, YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
-    tft.writeTo(L1);
-    wfRows = WATERFALL_H - FT8_ROW_HEIGHT * FT8_ROWS - 3;
-
-    result = true;
-
-#ifdef USE_BUFFERED_FT8_WAV
-    static bool done = false;
-
-    if(!done) {
-      // initialize buffered wav only once
-      for(int i = 0; i < 15 * 12000; i++) {
-        ft8WavBuf[i] = 0;
-      }
-      done = true;
-    }
-#endif
+  if(result) {
+    //SetStationCoordinates(call);
+    strncpy(baseCall, call, 14);
+    strncpy(baseGrid, grid, 5);
+    InitDecoderState(baseCall, baseGrid);
   }
 
   return result;
@@ -710,7 +972,7 @@ FLASHMEM void ExitFT8Decoder() {
   // restore waterfall area
 
   // reset FT8 flags and counters
-  InitFTDecoderState();
+  InitDecoderState();
 
   // update FT8 info box items
   infoBoxItemActive[IB_ITEM_FT8] = false;
@@ -798,7 +1060,7 @@ void BufferFT8Data(float *buf, int sizeBuf) {
     if(ft8lib_BufferSignal(buf, sizeBuf, frameCount * 1920 + bufCount * sizeBuf)) {
       ++bufCount;
       if(bufCount >= 15) {
-        ft8DecoderState = FT8_DECODER_STATE_PROCESSING;
+        ft8DecoderState = STATE_PROCESSING;
         //bufCount = 0;
         //++frameCount;
       }
@@ -849,13 +1111,73 @@ void DecodeFT8Data(struct tm *start) {
   Q_in_R.begin();
 }
 
+// prep txBuf and TX state for RX messages
+// returns true when a TX sequence is complete, otherwise false
+bool RXProcessing() {
+  bool result = false;
+
+#ifdef TX_TESTING
+  result = MockMsgTraffic() ;
+#endif
+
+  return result;
+}
+
+// prepare next TX (assumes txBuf already initialized)
+// returns true
+bool TXProcessing() {
+  bool result = false;
+  int index;
+
+  switch(txSequence) {
+    case 0: // only msg 0
+      if(txBuf[0].retries < 10) {
+        ++txBuf[0].retries;
+        txBuf[0].state = 1;
+        txBuf[0].freq = ft8TxFreq;
+        result = true;
+      } else if(txBuf[0].state == 2 && ft8TxState) {
+        // TX has been enabled again, reset
+        txBuf[0].state = 1;
+        txBuf[0].retries = 0;
+      } else {
+        txBuf[0].state = 2;
+        ChangeFt8TxState(1); // turn FT8 transmission off
+      }
+      break;
+
+    case 1:
+      index = txBuf[2].state != 3 ? 2 : 4;
+
+      if(txBuf[index].retries < 10) {
+        ++txBuf[index].retries;
+        txBuf[index].state = 1;
+        txBuf[index].freq = ft8TxFreq;
+        result = true;
+      } else if(txBuf[index].state == 2 && ft8TxState) {
+        // TX has been enabled again, reset
+        txBuf[index].state = 1;
+        txBuf[index].retries = 0;
+      } else {
+        txBuf[index].state = 2;
+        ChangeFt8TxState(1); // turn FT8 transmission off
+      }
+      break;
+
+    case 2:
+      break;
+  }
+
+  DisplayTxMessages();
+
+  return result;
+}
+
 // FT8 decoder state machine
 void FT8DecoderLoop() {
-  // *** TODO: this should be set per actual FT8 interval ***
-  struct tm tmSlotStart; // = { .tm_sec = 45, .tm_min = 06, .tm_hour = 11 };
-  char msg[] = "CQ KN6ZDE CM87";
+  struct tm tmSlotStart;
 
-#ifdef DEMOD_FT8_TESTING
+#ifdef SPECTRUM_TESTING
   // 0: update spectrum
   // 1: gathering one interval completed, updating paused
   // 2: examining captured frames possible with volume knob, exit by moving down one click from 0
@@ -901,8 +1223,8 @@ void FT8DecoderLoop() {
   }
 
   switch(ft8DecoderState) {
-    case FT8_DECODER_STATE_BUFFERING:
-      DEBUG_RXTX("at FT8_DECODER_STATE_BUFFERING...");
+    case STATE_BUFFERING:
+      DEBUG_RXTX("at STATE_BUFFERING...");
 
       // ensure we're in sync
       if(ft8SyncState) {
@@ -942,19 +1264,19 @@ void FT8DecoderLoop() {
         //}
       } else {
         // we have a frame of data, process it
-        ft8DecoderState = FT8_DECODER_STATE_PROCESSING;
+        ft8DecoderState = STATE_PROCESSING;
       }
       break;
 
-    case FT8_DECODER_STATE_PROCESSING:
+    case STATE_PROCESSING:
       if(!ft8SyncState) {
         // no need to waste time
         bufCount = 0;
-        ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+        ft8DecoderState = STATE_BUFFERING;
         return;
       }
 
-      DEBUG_LOC("at FT8_DECODER_STATE_PROCESSING...");
+      DEBUG_LOC("at STATE_PROCESSING...");
 
       // a frame of data is available, process it
       // a frame of data is a single FT8 symbol (0.16 seconds of data)
@@ -969,7 +1291,7 @@ void FT8DecoderLoop() {
         if(spec != NULL) {
           DrawFT8Spectrum(spec, 512, frameCount == 38 || frameCount == 77);
 
-          #ifdef DEMOD_FT8_TESTING
+          #ifdef SPECTRUM_TESTING
           if(testingState == 0) {
             // update frame spectrum
             for(int i = 0; i < 512; i++) {
@@ -987,15 +1309,15 @@ void FT8DecoderLoop() {
         bufCount -= 15;
 
         if(frameCount < 79) {
-          ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+          ft8DecoderState = STATE_BUFFERING;
         } else {
-          #ifdef DEMOD_FT8_TESTING
+          #ifdef SPECTRUM_TESTING
           if(testingState == 0) {
             testingState = 1;
             vol = audioVolume;
           }
           #endif
-          ft8DecoderState = FT8_DECODER_STATE_DECODING;
+          ft8DecoderState = STATE_DECODING;
         }
 
         #ifdef USE_BUFFERED_FT8_WAV
@@ -1007,8 +1329,8 @@ void FT8DecoderLoop() {
       }
       break;
 
-    case FT8_DECODER_STATE_DECODING:
-      DEBUG_LOC("at FT8_DECODER_STATE_DECODING...");
+    case STATE_DECODING:
+      DEBUG_LOC("at STATE_DECODING...");
 
       // FT8 interval completed, decode data
       // *** TODO: consider changes to allow continued signal processing while
@@ -1022,13 +1344,13 @@ void FT8DecoderLoop() {
       frameCount = 0;
       bufCount = 0;
 
-      ft8DecoderState = FT8_DECODER_STATE_RX_UPDATE;
+      ft8DecoderState = STATE_RX_UPDATE;
       break;
 
-    case FT8_DECODER_STATE_RX_UPDATE:
-      DEBUG_LOC("at FT8_DECODER_STATE_RX_UPDATE...");
+    case STATE_RX_UPDATE:
+      DEBUG_LOC("at STATE_RX_UPDATE...");
 
-      #ifndef DEMOD_FT8_TESTING
+      #ifndef SPECTRUM_TESTING
       // print messages if we're not testing
       ProcessFT8Messages();
       #endif
@@ -1039,35 +1361,44 @@ void FT8DecoderLoop() {
       UpdateInfoBoxItem(IB_ITEM_FT8);
       #endif
 
-      ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+      ft8DecoderState = STATE_BUFFERING;
 
       if(ft8TxState) {
+        // FT8 transmission is enabled
+
         // is next interval even?
         bool evenInterval = (((second() + 15) / 15) * 15) % 2 == 0;
 
         if((ft8IntState == 0 && evenInterval) || (ft8IntState == 1 && !evenInterval)) {
-          ft8DecoderState = FT8_DECODER_STATE_TX;
+          // the next interval is a transmission interval
 
-          // don't need to continue input queues
-          Q_in_L.end();
-          Q_in_R.end();
-          Q_in_L.clear();
-          Q_in_R.clear();
+          // examine rxBuf for expected RX msgs
+          if(!RXProcessing()) {
+            // we're at the start or within a transmission sequence
+
+            // prepare next TX message
+            if(TXProcessing()) {
+
+              // don't need to continue input queues
+              Q_in_L.end();
+              Q_in_R.end();
+              Q_in_L.clear();
+              Q_in_R.clear();
+
+              ft8DecoderState = STATE_TX;
+            }
+          }
 
           SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         }
-
-        // prepare next TX message
-        // to come
-
       }
 
       // force a sync cycle
       ft8SyncState = 0;
       break;
 
-    case FT8_DECODER_STATE_TX:
-      DEBUG_RXTX("at FT8_DECODER_STATE_TX...");
+    case STATE_TX:
+      DEBUG_RXTX("at STATE_TX...");
 
       TOGGLEPROFILEPIN(PROFILER_FT8GETDATA_PIN);
       if(!ft8PTT) {
@@ -1075,28 +1406,24 @@ void FT8DecoderLoop() {
         AutoSyncFT8();
 
         if(ft8SyncState) {
-          if(ft8lib_GenFT8(msg, 1000.0)) {
+          if(ft8lib_GenFT8(txBuf[nextTX].msg, txBuf[nextTX].freq)) {
             // get msg signal and set FT8 PTT flag
             ft8TxSignalBuf = ft8lib_GetSignal();
             ft8PTT = true;
           } else {
             DEBUG_MSG("ft8lib_GenFT8 failed");
           }
-          ft8DecoderState = FT8_DECODER_STATE_TX_UPDATE;
+          ft8DecoderState = STATE_TX_UPDATE;
         }
       } else {
-        ft8DecoderState = FT8_DECODER_STATE_TX_UPDATE;
+        ft8DecoderState = STATE_TX_UPDATE;
       }
       break;
 
-    case FT8_DECODER_STATE_TX_UPDATE:
-      DEBUG_LOC("at FT8_DECODER_STATE_TX_UPDATE...");
+    case STATE_TX_UPDATE:
+      DEBUG_LOC("at STATE_TX_UPDATE...");
 
-      // prepare for expected RX msgs
-      // to come
-
-      // prepare expected RX messages
-      ft8DecoderState = FT8_DECODER_STATE_BUFFERING;
+      ft8DecoderState = STATE_BUFFERING;
 
       // force a sync cycle
       ft8SyncState = 0;
@@ -1113,9 +1440,13 @@ void FT8DecoderLoop() {
     // done with wav file
     // switch to FT8 internal mode
     ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
-    InitFTDecoderState();
+    InitDecoderState();
   }
 }
+
+//-------------------------------------------------------------------------------------------------------------
+// Internal FT8 Code - User Input
+//-------------------------------------------------------------------------------------------------------------
 
 void ChangeFt8TxFreq(int wheel) {
   ft8TxFreq += wheel * ftIncrement;
@@ -1168,6 +1499,7 @@ void ChangeFt8TxState(int wheel) {
   if(ft8TxState > 1) ft8TxState = 0;
 
   UpdateInfoBoxItem(IB_ITEM_FT8_TX);
+  DisplayTxMessages();
 }
 
 int CalcTop(int top, int inc, int num, int head, int max) {
