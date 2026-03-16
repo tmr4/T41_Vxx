@@ -80,6 +80,14 @@ typedef struct {
   //int  distance; // *** needs SetStationCoordinates in init ***
 } RxMsg;
 
+// TX message status
+#define MSG_WAITING     0
+#define MSG_NEXT        1
+#define MSG_SENT        2
+#define MSG_ACK         3
+#define MSG_TIMEOUT     4
+#define MSG_COMPLETED   5
+
 typedef struct {
   char msg[35]; // FTX_MAX_MESSAGE_LENGTH = callsign[13] + space + callsign[13] + space + report[6] + terminator
 
@@ -99,11 +107,13 @@ typedef struct {
 
   // 0: waiting
   // 1: next to TX
-  // 2: no response after 10 tries (transmission disabled)
-  // 3: completed
-  int state;
+  // 2: sent
+  // 3: reply received/acknowledged
+  // 4: no response after 10 tries (transmission disabled)
+  // 5: QSO completed
+  int status;
 
-  int retries;
+  int tries;
 } TxMsg;
 
 /*
@@ -195,18 +205,30 @@ bool txEqualsRx = true;
 // internal transmission queue
 // Follows message numbering structure of FT8 whitepaper section 7.
 // https://wsjt.sourceforge.io/FT4_FT8_QEX.pdf, except TX6 is txBuf[0]
-// index 0,2,4 are calling CQ QSOs
 // example from whitepaper
+// index 0,2,4 are calling CQ QSOs
 //txBuf[0] = "CQ K1JT FN20";  // expected RX "K1JT K9AN EN50"
 //txBuf[2] = "K9AN K1JT +05"; // expected RX "K1JT K9AN R-12"
 //txBuf[4] = "K9AN K1JT RRR"; // expected RX "K1JT K9AN 73"
+
 // index 1,3,5 are for replying to CQ
 //txBuf[1] = "K1JT K9AN EN50" // expected RX to "CQ K1JT FN20";
 //txBuf[3] = "K1JT K9AN R-12  // expected RX to "K9AN K1JT +05";
 //txBuf[5] = "K1JT K9AN 73"   // expected RX to "K9AN K1JT RRR";
 TxMsg txBuf[6];
-int nextTX = 0; //, lastTx = -1;
-int txSequence = 0; // 0: only msg 0, 1: msgs 0,2,4, 2: msgs 1,3,5
+// *** TODO: consider saving transmission history ***
+
+// FT8 TX next outgoing message
+#define QSO_MSG_0     0
+// we've had a reply to our CQ
+#define QSO_MSG_2     2
+#define QSO_MSG_4     4
+// we've replied to a CQ
+#define QSO_MSG_1     1
+#define QSO_MSG_3     3
+#define QSO_MSG_5     5
+
+int txMsg = QSO_MSG_0; // default msg
 
 extern bool ft8PTT;
 
@@ -328,9 +350,7 @@ void AddRxResponse(char *msg, float freq, struct tm *tmSlot, int16_t score) {
 }
 
 bool MockMsgTraffic() {
-  bool result = false;
-
-  static int count = 0;
+  bool result = true;
   struct tm tmSlot = { .tm_sec = (second() / 15) * 15, .tm_min = minute(), .tm_hour = hour() };
 
   // mock replies to my CQ
@@ -347,64 +367,61 @@ bool MockMsgTraffic() {
   //char msg2[35] = "K9AN K1JT +05"; // expected RX "K1JT K9AN R-12"
   //char msg4[35] = "K9AN K1JT RRR"; // expected RX "K1JT K9AN 73"
 
-  switch(txSequence) {
-    case 0:
-      if(txBuf[0].state == 1) {
+  if(txBuf[txMsg].status == MSG_SENT) {
+    // add mock reply
+    switch(txMsg) {
+      case QSO_MSG_0:
         AddRxResponse(msg1, ft8RxFreq, &tmSlot, 148);
-        count++;
-        txSequence = 1;
-        nextTX = 2;
-        AddTxMsg(msg2, 2, ft8TxFreq, 78.0);
-        AddTxMsg(msg4, 4, ft8TxFreq, 78.0);
-        DisplayTxMessages();
-        txBuf[0].state = 3;
-        //txBuf[2].state = 1;
-      } else {
-        txBuf[0].state = 1;
-      }
+        AddTxMsg(msg2, QSO_MSG_2, ft8TxFreq, 78.0);
+        AddTxMsg(msg4, QSO_MSG_4, ft8TxFreq, 78.0);
+        txBuf[txMsg].status = MSG_ACK;
+        break;
+
+      case QSO_MSG_1:
+        break;
+
+      case QSO_MSG_2:
+        AddRxResponse(msg3, ft8RxFreq, &tmSlot, 148);
+        txBuf[txMsg].status = MSG_ACK;
+        break;
+
+      case QSO_MSG_3:
+        break;
+
+      case QSO_MSG_4:
+        AddRxResponse(msg5, ft8RxFreq, &tmSlot, 148);
+        txBuf[QSO_MSG_0].status = MSG_COMPLETED;
+        txBuf[QSO_MSG_2].status = MSG_COMPLETED;
+        txBuf[txMsg].status = MSG_COMPLETED;
+        break;
+
+      case QSO_MSG_5:
+        break;
+    }
+
+    DisplayTxMessages();
+  }
+/*
+  switch(txBuf[txMsg].status) {
+    case MSG_WAITING:
       break;
 
-    case 1:
-      switch(++count) {
-        case 0:
-          break;
-
-        case 1:
-          if(txBuf[2].state == 1) {
-            AddRxResponse(msg3, ft8RxFreq, &tmSlot, 148);
-            //txSequence = 1;
-            nextTX = 4;
-            txBuf[2].state = 3;
-            //txBuf[4].state = 1;
-          } else {
-            txBuf[2].state = 1;
-          }
-          break;
-
-        case 2:
-          if(txBuf[4].state == 1) {
-            AddRxResponse(msg5, ft8RxFreq, &tmSlot, 148);
-            count = 0;
-            //txSequence = 0;
-            nextTX = 0;
-            result = true;
-            ChangeFt8TxState(1); // turn FT8 transmission off
-            txBuf[4].state = 3;
-          } else {
-            txBuf[4].state = 1;
-          }
-          break;
-
-        default:
-          count = 0;
-          txSequence = 0;
-          break;
-      }
+    case MSG_NEXT:
       break;
 
-    case 2:
+    case MSG_SENT:
+      break;
+
+    case MSG_ACK:
+      break;
+
+    case MSG_TIMEOUT:
+      break;
+
+    case MSG_COMPLETED:
       break;
   }
+*/
 
   return result;
 }
@@ -555,8 +572,8 @@ void AddTxMsg(char *msg, int index, float freq, float  snr) {
   strncpy(txBuf[index].field2, strtok(NULL, " "), 20);
   strncpy(txBuf[index].field3, strtok(NULL, " "), 20);
 
-  txBuf[0].state = 0;
-  txBuf[0].retries = -1;
+  txBuf[0].status = MSG_WAITING;
+  txBuf[0].tries = 0;
 }
 
 // reset list
@@ -741,20 +758,25 @@ void DisplayMessages(int window, int *list, int numMsgs, bool scroll, int &top, 
 //    White:  waiting
 //    Green:  next to TX
 //    Red:    no response previous interval
-//    Yellow: completed
+//    Yellow: sent/acknowledged/completed
 int GetTxMsgColor (int index) {
   int color = WHITE; // waiting
 
-  switch(txBuf[index].state) {
-    case 1: // next to TX
+  switch(txBuf[index].status) {
+    case MSG_NEXT:
       if(ft8TxState) color = RA8875_GREEN;
       break;
 
-    case 2: // no response
+    case MSG_SENT:
+    case MSG_ACK:
+      color = YELLOW;
+      break;
+
+    case MSG_TIMEOUT:
       color = RED;
       break;
 
-    case 3: // completed
+    case MSG_COMPLETED:
       color = YELLOW;
       break;
   }
@@ -763,23 +785,26 @@ int GetTxMsgColor (int index) {
 }
 
 void DisplayTxMessages() {
-  int rowHeight = tft.getFontHeight();
+  int rowHeight;
+
+  tft.setFontScale((enum RA8875tsize)0);
+  rowHeight = tft.getFontHeight();
 
   // erase old info
   tft.fillRect(WATERFALL_L, YPIXELS - rowHeight, WATERFALL_W, rowHeight, RA8875_BLACK);
 
-  if(txSequence < 2) {
+  if(txMsg == QSO_MSG_0 || txMsg == QSO_MSG_2 || txMsg == QSO_MSG_4) {
     // display CQ msg 0
     tft.setTextColor(GetTxMsgColor(0));
     tft.setCursor(WATERFALL_L, YPIXELS - rowHeight - 3);
     tft.print(txBuf[0].msg);
-    if(txBuf[0].retries > 0) {
+    if(txBuf[0].tries > 0) {
       tft.print(" (");
-      tft.print(txBuf[0].retries);
+      tft.print(txBuf[0].tries);
       tft.print(")");
     }
   }
-  if(txSequence == 1) {
+  if(txMsg == QSO_MSG_2 || txMsg == QSO_MSG_4) {
     tft.print("    ");
 
     // display CQ msgs 2, 4
@@ -791,7 +816,7 @@ void DisplayTxMessages() {
     tft.setTextColor(GetTxMsgColor(4));
     tft.print(txBuf[4].msg);
   }
-  if(txSequence == 2) {
+  if(txMsg == QSO_MSG_1) {
     // display CQ msgs 1, 3, 5
     tft.setTextColor(GetTxMsgColor(1));
     tft.setCursor(WATERFALL_L, YPIXELS - rowHeight - 3);
@@ -845,8 +870,8 @@ void InitTxQueue(char *call, char *grid) {
     strncpy(txBuf[0].field3, strtok(NULL, " "), 20);
 
     txBuf[0].freq = ft8TxFreq; // *** set immediately prior to transmission ***
-    txBuf[0].state = 0;
-    txBuf[0].retries = -1; // incremented to 0 on first transmission
+    txBuf[0].status = MSG_WAITING;
+    txBuf[0].tries = 0; // incremented to 0 on first transmission
   }
 }
 
@@ -1112,9 +1137,9 @@ void DecodeFT8Data(struct tm *start) {
 }
 
 // prep txBuf and TX state for RX messages
-// returns true when a TX sequence is complete, otherwise false
+// returns false when a TX sequence is complete, otherwise true
 bool RXProcessing() {
-  bool result = false;
+  bool result = true;
 
 #ifdef TX_TESTING
   result = MockMsgTraffic() ;
@@ -1123,49 +1148,23 @@ bool RXProcessing() {
   return result;
 }
 
-// prepare next TX (assumes txBuf already initialized)
-// returns true
-bool TXProcessing() {
+// prepare next TX
+// assumes txBuf already initialized based on RX decodes
+// returns true if TX can continue, false otherwise
+bool TXPrep() {
   bool result = false;
-  int index;
 
-  switch(txSequence) {
-    case 0: // only msg 0
-      if(txBuf[0].retries < 10) {
-        ++txBuf[0].retries;
-        txBuf[0].state = 1;
-        txBuf[0].freq = ft8TxFreq;
-        result = true;
-      } else if(txBuf[0].state == 2 && ft8TxState) {
-        // TX has been enabled again, reset
-        txBuf[0].state = 1;
-        txBuf[0].retries = 0;
-      } else {
-        txBuf[0].state = 2;
-        ChangeFt8TxState(1); // turn FT8 transmission off
-      }
-      break;
-
-    case 1:
-      index = txBuf[2].state != 3 ? 2 : 4;
-
-      if(txBuf[index].retries < 10) {
-        ++txBuf[index].retries;
-        txBuf[index].state = 1;
-        txBuf[index].freq = ft8TxFreq;
-        result = true;
-      } else if(txBuf[index].state == 2 && ft8TxState) {
-        // TX has been enabled again, reset
-        txBuf[index].state = 1;
-        txBuf[index].retries = 0;
-      } else {
-        txBuf[index].state = 2;
-        ChangeFt8TxState(1); // turn FT8 transmission off
-      }
-      break;
-
-    case 2:
-      break;
+  if(txBuf[txMsg].tries < 11) { // 10 tries
+    txBuf[txMsg].freq = ft8TxFreq;
+    result = true;
+  } else if(txBuf[txMsg].status == 2 && ft8TxState) {
+    // TX has been enabled again, reset msg status
+    txBuf[txMsg].status = MSG_NEXT;
+    txBuf[txMsg].tries = 0;
+  } else {
+    // msg transmitted 10 times, disable FT8 transmission
+    txBuf[txMsg].status = MSG_TIMEOUT;
+    ChangeFt8TxState(1);
   }
 
   DisplayTxMessages();
@@ -1173,7 +1172,94 @@ bool TXProcessing() {
   return result;
 }
 
-// FT8 decoder state machine
+// wraps up TX process
+void TXProcessing() {
+  txBuf[txMsg].status = MSG_SENT;
+  ++txBuf[txMsg].tries;
+
+  switch(txMsg) {
+    case QSO_MSG_0:
+      txMsg = QSO_MSG_2;
+      break;
+
+    case QSO_MSG_1:
+      break;
+
+    case QSO_MSG_2:
+      txMsg = QSO_MSG_4;
+      break;
+
+    case QSO_MSG_3:
+      break;
+
+    case QSO_MSG_4:
+      ChangeFt8TxState(1); // turn FT8 transmission off
+      break;
+
+    case QSO_MSG_5:
+      break;
+  }
+
+  DisplayTxMessages();
+}
+
+/*
+FT8 decoder state machine
+FT8DecoderLoop is called from the main loop on DATA_RECEIVE_STATE. This loop performs one chunk of processing according to the
+FT8 decoder state.  It then returns to the main loop to allow other radio operations to continue.  Similar to other transmission
+states, a flag, ft8PTT is used to activate FT8 transmission in main loop. ft8PTT is set in this loop in STATE_TX which is set at
+the top of an even/odd interval (as selected by ft8IntState) when FT8 transmission is enabled.  Transmission begins within 0.25
+seconds (*** TODO: examine this further ***).
+
+Loop Process States:
+Buffering:
+Forced sync (see below), data buffering begins on sync via call to YieldToProcess. Buffers 128 bytes of 12ksps audio for 15 loops
+(1920 bytes total which is a frame of FT8 data or 1 symbol of the FT8 message 0.16 second long). YieldToProcess and
+ShowAudioSpectrum called each pass regardless of sync.  After a frame of data, state is changed to Processing.
+
+Processing:
+Returns to Buffering state if not in sync.  Processes a frame of data with ft8lib, draws the frame frequency spectrum, increments
+the frame counter, resets buffer counter and changes the state to Buffering or to Decoding when 79 frames have been processed.
+(1920 byte frame * 79 = 151680 bytes or 0.16 * 79 = 12.64 second FT8 message, leaving 2.36 seconds for decoding and other processing).
+
+Decoding:
+Decodes buffered interval data with ft8lib, adds decoded messages to list, resets frame and buffer counts and sets RX Update state.
+Input audio processing is paused and restarted as decoding is a long process.
+
+RX Update:
+Updates message windows with newly decoded messages and returns to Buffering state if FT8 transmission is not enabled. If FT8 transmission
+is enabled: (1) returns to Buffering state if the next interval is not a transmission interval or otherwise flagged by TX prep process, or
+(2) processes decoded messages and sets upcoming transmission message (see RX and TX Processing below) according to current transmission
+state.  Input audio processing is then stopped, TX state is set and forced sync flagged.
+
+TX:
+Forced sync. On sync, message signal for interval is generated, ft8PTT set and state changed to TX Update.  TX occurs in main loop
+where ft8PTT is reset.
+(*** TODO: review timing profile, consider generating message signal in RX Update, but here is probably appropriate because TX freq can change ***)
+
+TX Update:
+Forced sync flagged, state changed to Buffering and input audio processing started.
+
+Common routines:
+Forced sync:
+sync state set to false, call to AutoSyncFT8 allows returns to main loop for continued ops until 1 second before
+next interval where YieldToProcess is called until start of interval and released to continue processing in this loop.
+(*** TODO: 1 second sync lock ensures top of interval is caught but might be too restrictive for FT8 timing given decoding
+takes up about 0.8 seconds of 2.36 seconds of remaining interval ***).
+
+RX Processing:
+Evaluates decoded messages for proper response to last transmission and advances TX state if appropriate.  Returns true
+if QSO sequence is complete.
+
+TX Prep:
+Prepares for next transmission based on current TX state and status for current msg. TX for the current
+state continues untiL the msg has been transmitted 10 times without reply, afterwhich, FT8 transmission
+is disabled. TX can be continued by enabling FT8 transmission again.
+
+TX Processing:
+Updates tx message status for last transmission
+
+*/
 void FT8DecoderLoop() {
   struct tm tmSlotStart;
 
@@ -1373,11 +1459,11 @@ void FT8DecoderLoop() {
           // the next interval is a transmission interval
 
           // examine rxBuf for expected RX msgs
-          if(!RXProcessing()) {
+          if(RXProcessing()) {
             // we're at the start or within a transmission sequence
 
             // prepare next TX message
-            if(TXProcessing()) {
+            if(TXPrep()) {
 
               // don't need to continue input queues
               Q_in_L.end();
@@ -1406,7 +1492,7 @@ void FT8DecoderLoop() {
         AutoSyncFT8();
 
         if(ft8SyncState) {
-          if(ft8lib_GenFT8(txBuf[nextTX].msg, txBuf[nextTX].freq)) {
+          if(ft8lib_GenFT8(txBuf[txMsg].msg, txBuf[txMsg].freq)) {
             // get msg signal and set FT8 PTT flag
             ft8TxSignalBuf = ft8lib_GetSignal();
             ft8PTT = true;
@@ -1416,12 +1502,17 @@ void FT8DecoderLoop() {
           ft8DecoderState = STATE_TX_UPDATE;
         }
       } else {
-        ft8DecoderState = STATE_TX_UPDATE;
+        // ft8PTT = true
+        // *** should never be active with normal ops, but protects
+        //     against an endless loop on a transmission glitch ***
+        ft8DecoderState = STATE_BUFFERING;
       }
       break;
 
     case STATE_TX_UPDATE:
       DEBUG_LOC("at STATE_TX_UPDATE...");
+
+      TXProcessing();
 
       ft8DecoderState = STATE_BUFFERING;
 
