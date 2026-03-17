@@ -392,6 +392,7 @@ void ConfigAudioState(int audioState) {
           break;
 
         case DEMOD_FT8_INTERNAL:
+          Q_out_Start(); // sidetone
           break;
 
         case DEMOD_FT8_WAV:

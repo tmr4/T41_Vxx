@@ -36,14 +36,18 @@
 
 #define DEBUG_MSG(msg)
 //#define DEBUG_MSG(msg) Serial.println(msg)
+
 #define DEBUG_LOC(msg)
 //#define DEBUG_LOC(msg) Serial.println(msg)
+
 // RX/TX debug messages overwhelm output, treat them separately
 #define DEBUG_RXTX(msg)
 //#define DEBUG_RXTX(msg) Serial.println(msg)
-//#define DEBUG_MEM(msg)
-#define DEBUG_MEM(msg) \
-  Serial.print(msg); Serial.print(": "); Serial.println(AudioMemoryUsageMax()); \
+
+#define DEBUG_MEM(msg)
+//#define DEBUG_MEM(msg) \
+  Serial.print(msg); Serial.print(": "); \
+  Serial.println(AudioMemoryUsageMax()); \
   AudioMemoryUsageMaxReset();
 
 
@@ -399,7 +403,30 @@ bool MockMsgTraffic() {
         break;
     }
 
-    DisplayTxMessages();
+    switch(txMsg) {
+      case QSO_MSG_0:
+        txMsg = QSO_MSG_2;
+        break;
+
+      case QSO_MSG_1:
+        break;
+
+      case QSO_MSG_2:
+        txMsg = QSO_MSG_4;
+        break;
+
+      case QSO_MSG_3:
+        break;
+
+      case QSO_MSG_4:
+        ChangeFt8TxState(1); // turn FT8 transmission off
+        break;
+
+      case QSO_MSG_5:
+        break;
+    }
+
+    DisplayAllMessages();
   }
 /*
   switch(txBuf[txMsg].status) {
@@ -754,6 +781,11 @@ void DisplayMessages(int window, int *list, int numMsgs, bool scroll, int &top, 
   DisplayListStats(window);
 }
 
+// called on TX enable
+void ResetTXMessages() {
+
+}
+
 // TX msg color:
 //    White:  waiting
 //    Green:  next to TX
@@ -798,7 +830,7 @@ void DisplayTxMessages() {
     tft.setTextColor(GetTxMsgColor(0));
     tft.setCursor(WATERFALL_L, YPIXELS - rowHeight - 3);
     tft.print(txBuf[0].msg);
-    if(txBuf[0].tries > 0) {
+    if(txBuf[0].tries > 1) {
       tft.print(" (");
       tft.print(txBuf[0].tries);
       tft.print(")");
@@ -1156,6 +1188,7 @@ bool TXPrep() {
 
   if(txBuf[txMsg].tries < 11) { // 10 tries
     txBuf[txMsg].freq = ft8TxFreq;
+    txBuf[txMsg].status = MSG_NEXT;
     result = true;
   } else if(txBuf[txMsg].status == 2 && ft8TxState) {
     // TX has been enabled again, reset msg status
@@ -1176,29 +1209,6 @@ bool TXPrep() {
 void TXProcessing() {
   txBuf[txMsg].status = MSG_SENT;
   ++txBuf[txMsg].tries;
-
-  switch(txMsg) {
-    case QSO_MSG_0:
-      txMsg = QSO_MSG_2;
-      break;
-
-    case QSO_MSG_1:
-      break;
-
-    case QSO_MSG_2:
-      txMsg = QSO_MSG_4;
-      break;
-
-    case QSO_MSG_3:
-      break;
-
-    case QSO_MSG_4:
-      ChangeFt8TxState(1); // turn FT8 transmission off
-      break;
-
-    case QSO_MSG_5:
-      break;
-  }
 
   DisplayTxMessages();
 }
@@ -1487,8 +1497,9 @@ void FT8DecoderLoop() {
       DEBUG_RXTX("at STATE_TX...");
 
       TOGGLEPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+
       if(!ft8PTT) {
-        // waiting until top of interval to transmit
+        // we continue looping through here until start of interval to transmit
         AutoSyncFT8();
 
         if(ft8SyncState) {
@@ -1496,13 +1507,14 @@ void FT8DecoderLoop() {
             // get msg signal and set FT8 PTT flag
             ft8TxSignalBuf = ft8lib_GetSignal();
             ft8PTT = true;
+            ft8DecoderState = STATE_TX_UPDATE;
           } else {
             DEBUG_MSG("ft8lib_GenFT8 failed");
+            ft8DecoderState = STATE_BUFFERING; // ensure return to buffering on error
           }
-          ft8DecoderState = STATE_TX_UPDATE;
         }
       } else {
-        // ft8PTT = true
+        // ft8PTT is only set to true above, when FT8 state is also advanced
         // *** should never be active with normal ops, but protects
         //     against an endless loop on a transmission glitch ***
         ft8DecoderState = STATE_BUFFERING;
@@ -1590,6 +1602,14 @@ void ChangeFt8TxState(int wheel) {
   if(ft8TxState > 1) ft8TxState = 0;
 
   UpdateInfoBoxItem(IB_ITEM_FT8_TX);
+
+  // set message 0 status
+  // *** TODO: consider TX state changes in other situations ***
+  if(ft8TxState) {
+    txBuf[QSO_MSG_0].status = MSG_NEXT;
+  } else {
+    txBuf[QSO_MSG_0].status = MSG_WAITING;
+  }
   DisplayTxMessages();
 }
 
