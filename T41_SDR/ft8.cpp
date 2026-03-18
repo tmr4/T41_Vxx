@@ -120,11 +120,14 @@ typedef struct {
 typedef struct {
   int type; // 0: CQ, 1: CQ reply
 
-  int tx[3], rx[3];
+  // index 0,2,4 are calling CQ QSOs
+  // index 1,3,5 are for replying to CQ
+  int msg[6];
 
   // 0: waiting
-  // 1: completed
-  // 2: abandoned
+  // 1: in progress
+  // 2: completed
+  // 3: abandoned
   int status;
 } QsoView;
 
@@ -160,6 +163,10 @@ This structure follows a few rules:
 // Message buffers
 // store details of RX and TX messages
 EXTMEM RxMsg rxBuf[MAX_DECODED_MESSAGES];
+
+int decodedMsgs = 0, txMsgs = 0;
+int activeMsg = 0; // selected msg
+
 EXTMEM TxMsg txBuf[500]; // *** TODO: refine size ***
 
 // msg window list size is a tradeoff of scrolling vs having old msg overwritten before desired
@@ -173,22 +180,21 @@ EXTMEM int allList[MAX_LIST_MESSAGES], rxList[MAX_LIST_MESSAGES], cqList[MAX_LIS
 
 EXTMEM QsoView qsoList[MAX_LIST_MESSAGES];
 
+// TODO: examine a global variable for FT8_MSG_ROWS for proper msg display and scrolling when this is active ***
 bool qsoViewActive = false;
+int activeQSO = -1; // incremented on adding a new qso
+
+int allMsgs, cqMsgs = 0, rxMsgs = 0, qsos = 0; // number of items in each list
+int allHead = -1, cqHead = -1, rxHead = -1, qsoHead = -1; // head gets incremented prior to msg added to list
+bool allScroll = false, cqScroll = false, rxScroll = false; // false: latest msgs shown, true: msg list scrollable
+int allTop, cqTop, rxTop; // message window list top message index
+
+uint32_t current_time, start_time, ft8_time;
 
 // Message windows
 #define ALL_WINDOW 0
 #define CQ_WINDOW 1
 #define RX_WINDOW 2
-
-int decodedMsgs = 0, txMsgs = 0;
-int allMsgs, cqMsgs = 0, rxMsgs = 0; // number of msgs in each list
-int allHead = -1, cqHead = -1, rxHead = -1; // head gets incremented prior to msg added to list
-bool allScroll = false, cqScroll = false, rxScroll = false; // false: latest msgs shown, true: msg list scrollable
-int allTop, cqTop, rxTop; // message window list top message index
-
-int activeMsg = 0; // selected msg
-
-uint32_t current_time, start_time, ft8_time;
 
 // *** TODO: reconsider use of fixed row height vs display dependent in routines ***
 #define FT8_MSG_ROWS    10
@@ -204,11 +210,13 @@ uint32_t current_time, start_time, ft8_time;
 //#define FT8_TX_QUEUE_TOP        (YPIXELS - FT8_ROW_HEIGHT)
 
 // selected msg detail above and tx queue below msg lists
+// *** TODO: incorporate "-3" adjustments in tft.print statements ***
 #define FT8_WINDOW_TOP          (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS)
 #define FT8_MSG_LIST_TOP        (YPIXELS - FT8_ROW_HEIGHT * (FT8_MSG_ROWS + 1))
 #define FT8_MSG_LIST_SUMMARY    (YPIXELS - FT8_ROW_HEIGHT * (FT8_MSG_ROWS + 2))
 #define FT8_TX_QUEUE_TOP        (YPIXELS - FT8_ROW_HEIGHT)
 #define FT8_MSG_WINDOW_DETAIL   FT8_WINDOW_TOP
+#define FT8_QSO_VIEW_TOP        (YPIXELS - FT8_ROW_HEIGHT * 2)
 
 // FT8 processing
 int bufCount = 0;
@@ -255,6 +263,8 @@ bool txEqualsRx = true;
 //txQueue[1] = "K1JT K9AN EN50" // expected RX to "CQ K1JT FN20";
 //txQueue[3] = "K1JT K9AN R-12  // expected RX to "K9AN K1JT +05";
 //txQueue[5] = "K1JT K9AN 73"   // expected RX to "K9AN K1JT RRR";
+// *** duplicates info from qsoList[activeQSO] but allows flexibility in views and easier coding ***
+// *** TODO: check if txNextMsg and txQueue can be consolidated with qsoList ***
 TxMsg *txQueue[6] = {NULL}; // pointers into txBuf for appropriate msgs
 
 // FT8 TX next outgoing message
@@ -376,21 +386,23 @@ FLASHMEM void DrawTestSpectrum(uint8_t *spec) {
 // *** TODO: consider relaxing this w/ mock transmission mode on other versions ***
 #if defined(TX_TESTING) && defined(PROJECTSYSTEM)
 
-void DisplayMessages(int window, int *list, int numMsgs, bool scroll, int &top, int head, int max);
 void DisplayAllMessages();
-void DisplayTxMessages();
-TxMsg *AddTxMsg(char *msg, float freq, float  snr);
+int AddTxMsg(char *msg, float freq, float  snr);
 
-void AddRxResponse(char *msg, float freq, struct tm *tmSlot, int16_t score) {
+int AddRxResponse(char *msg, float freq, struct tm *tmSlot, int16_t score) {
   float time_sec = 0.0;
+  int index = decodedMsgs;
 
   AddDecodedMessage(tmSlot, score, time_sec, freq, msg);
   //DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
   DisplayAllMessages();
+
+  return index;
 }
 
 bool MockMsgTraffic() {
   TxMsg *txMsg = txQueue[txNextMsg];
+  int index;
   struct tm tmSlot = { .tm_sec = (second() / 15) * 15, .tm_min = minute(), .tm_hour = hour() };
   bool result = true;
 
@@ -400,8 +412,8 @@ bool MockMsgTraffic() {
   char msg5[35] = "KN6ZDE K9AN RRR";  // mock RX to "KN6ZDE K9AN 73"
 
   //char msg0[35] = "CQ KN6ZDE CM87";
-  char msg2[35] = "KN6ZDE K9AN R-12"; // expected RX "K1JT K9AN R-12"
-  char msg4[35] = "K9AN K1JT RRR"; // expected RX "K1JT K9AN 73"
+  char msg2[35] = "K9AN KN6ZDE R-12"; // expected RX "K1JT K9AN R-12"
+  char msg4[35] = "K9AN KN6ZDE RRR"; // expected RX "K1JT K9AN 73"
 
   // mock CQ
   //char msg0[35] = "CQ K1JT FN20"; // mock RX to "CQ KN6ZDE CM87"
@@ -414,9 +426,15 @@ bool MockMsgTraffic() {
     // add mock reply
     switch(txNextMsg) {
       case QSO_MSG_0:
-        AddRxResponse(msg1, ft8RxFreq, &tmSlot, 148);
-        txQueue[QSO_MSG_2] = AddTxMsg(msg2, ft8TxFreq, 78.0);
-        txQueue[QSO_MSG_4] = AddTxMsg(msg4, ft8TxFreq, 78.0);
+        qsoList[activeQSO].msg[QSO_MSG_1] = AddRxResponse(msg1, ft8RxFreq, &tmSlot, 148);
+
+        index = AddTxMsg(msg2, ft8TxFreq, 78.0);
+        qsoList[activeQSO].msg[QSO_MSG_2] = index;
+        txQueue[QSO_MSG_2] = &txBuf[index];
+
+        index = AddTxMsg(msg4, ft8TxFreq, 78.0);
+        qsoList[activeQSO].msg[QSO_MSG_4] = index;
+        txQueue[QSO_MSG_4] = &txBuf[index];
         txMsg->status = MSG_ACK;
         break;
 
@@ -424,7 +442,7 @@ bool MockMsgTraffic() {
         break;
 
       case QSO_MSG_2:
-        AddRxResponse(msg3, ft8RxFreq, &tmSlot, 148);
+        qsoList[activeQSO].msg[QSO_MSG_3] = AddRxResponse(msg3, ft8RxFreq, &tmSlot, 148);
         txMsg->status = MSG_ACK;
         break;
 
@@ -432,7 +450,7 @@ bool MockMsgTraffic() {
         break;
 
       case QSO_MSG_4:
-        AddRxResponse(msg5, ft8RxFreq, &tmSlot, 148);
+        qsoList[activeQSO].msg[QSO_MSG_5] = AddRxResponse(msg5, ft8RxFreq, &tmSlot, 148);
         txQueue[QSO_MSG_0]->status = MSG_COMPLETED;
         txQueue[QSO_MSG_2]->status = MSG_COMPLETED;
         txMsg->status = MSG_COMPLETED;
@@ -618,10 +636,12 @@ void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float f
 }
 
 // *** TODO: this should take call and report ***
-TxMsg *AddTxMsg(char *msg, float freq, float  snr) {
-  TxMsg *txMsg = &txBuf[txMsgs++];
+// returns index of msg
+int AddTxMsg(char *msg, float freq, float  snr) {
+  TxMsg *txMsg = &txBuf[txMsgs];
+  int index = txMsgs;
 
-  // update decoded msg detail
+  // update TX msg detail
   strncpy(txMsg->msg, msg, 35);
   txMsg->msg[34] = '\0'; // ensure msg is terminated (only needed w/ possible decode error)
   txMsg->freq = freq; // *** will be updated immediately prior to transmission ***
@@ -644,7 +664,9 @@ TxMsg *AddTxMsg(char *msg, float freq, float  snr) {
   txMsg->status = MSG_WAITING;
   txMsg->tries = 0; // incremented to 0 on first transmission
 
-  return txMsg;
+  ++txMsgs; // increment number of TX msgs
+
+  return index;
 }
 
 // reset list
@@ -861,59 +883,77 @@ int GetTxMsgColor (int index) {
   return color;
 }
 
-void DisplayTxMessages() {
-  int rowHeight;
+// displays QSO requested by index into qsoList
+void DisplayQSO(int qso = -1) {
+  int rowHeight, type, item, index;
+  int rx[3], tx[3];
 
-  tft.setFontScale((enum RA8875tsize)0);
-  rowHeight = tft.getFontHeight();
+  if(qso >= qsos) return;
+  index = qso == -1 ? activeQSO : qso;
 
-  // erase old info
-  tft.fillRect(WATERFALL_L, FT8_TX_QUEUE_TOP, WATERFALL_W, rowHeight, RA8875_BLACK);
-
-  tft.setCursor(WATERFALL_L, FT8_TX_QUEUE_TOP - 3);
-  //tft.print("TX Queue: ");
-
-  if(txNextMsg == QSO_MSG_0 || txNextMsg == QSO_MSG_2 || txNextMsg == QSO_MSG_4) {
-    if(txQueue[QSO_MSG_0] == NULL) return;
-
-    // display CQ msg 0
-    tft.setTextColor(GetTxMsgColor(0));
-    tft.print(txQueue[0]->msg);
-    if(txQueue[0]->tries > 1) {
-      tft.print(" (");
-      tft.print(txQueue[0]->tries);
-      tft.print(")");
+  if(qsoViewActive) {
+    type = qsoList[index].type;
+    if(type == 0) {
+      // CQ QSO
+      rx[0] = 1;
+      rx[1] = 3;
+      rx[2] = 5;
+      tx[0] = 0;
+      tx[1] = 2;
+      tx[2] = 4;
+    } else {
+      // CQ reply QSO
+      tx[0] = 1;
+      tx[1] = 3;
+      tx[2] = 5;
+      rx[0] = 0;
+      rx[1] = 2;
+      rx[2] = 4;
     }
-  }
-  if(txNextMsg == QSO_MSG_2 || txNextMsg == QSO_MSG_4) {
-    if(txQueue[QSO_MSG_2] == NULL || txQueue[QSO_MSG_4] == NULL) return;
 
-    tft.print("    ");
+    tft.setFontScale((enum RA8875tsize)0);
+    rowHeight = tft.getFontHeight();
 
-    // display CQ msgs 2, 4
-    tft.setTextColor(GetTxMsgColor(2));
-    tft.print(txQueue[2]->msg);
+    // erase old info
+    tft.fillRect(WATERFALL_L, FT8_QSO_VIEW_TOP, WATERFALL_W, rowHeight * 2, RA8875_BLACK);
 
-    tft.print("    ");
+    // print RX side of qso
+    tft.setTextColor(WHITE);
+    tft.setCursor(WATERFALL_L, FT8_QSO_VIEW_TOP - 3);
+    if(type == 0) {
+      //tft.print("RX: ");
+      tft.print("    "); // indent line
+    }
+    Serial.println("at a");
+    for(int i = 0; i < 3; i++) {
+      item = qsoList[index].msg[rx[i]];
+      Serial.print(i); Serial.print(", "); Serial.print(item); Serial.print(", "); Serial.println(activeQSO);
+      if(item > -1) {
+        RxMsg *rxMsg = &rxBuf[item];
+        //tft.setTextColor();
+        tft.print(rxMsg->msg);
+        tft.print("    ");
+      }
+    }
 
-    tft.setTextColor(GetTxMsgColor(4));
-    tft.print(txQueue[4]->msg);
-  }
-  if(txNextMsg == QSO_MSG_1) {
-    // display CQ msgs 1, 3, 5
-    tft.setTextColor(GetTxMsgColor(1));
-    tft.setCursor(WATERFALL_L, FT8_TX_QUEUE_TOP - 3);
-    tft.print(txQueue[1]->msg);
-
-    tft.print("    ");
-
-    tft.setTextColor(GetTxMsgColor(3));
-    tft.print(txQueue[3]->msg);
-
-    tft.print("    ");
-
-    tft.setTextColor(GetTxMsgColor(5));
-    tft.print(txQueue[5]->msg);
+    // print TX side of qso
+    //tft.setCursor(WATERFALL_L, FT8_TX_QUEUE_TOP - 3);
+    tft.setCursor(WATERFALL_L, FT8_QSO_VIEW_TOP + FT8_ROW_HEIGHT - 3);
+    if(type == 1) {
+      //tft.print("TX: ");
+      tft.print("    "); // indent line
+    }
+    Serial.println("at b");
+    for(int i = 0; i < 3; i++) {
+      item = qsoList[index].msg[tx[i]];
+      if(item > -1) {
+        TxMsg *txMsg = &txBuf[item];
+        tft.setTextColor(GetTxMsgColor(tx[i]));
+        Serial.println(txMsg->msg);
+        tft.print(txMsg->msg);
+        tft.print("    ");
+      }
+    }
   }
 }
 
@@ -928,7 +968,7 @@ void DisplayAllMessages() {
   DisplayMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
   DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
   DisplaySelectedMessageDetail();
-  DisplayTxMessages();
+  DisplayQSO();
 }
 
 void ProcessFT8Messages() {
@@ -944,15 +984,27 @@ void ProcessFT8Messages() {
 // set up TX messages for QSO type
 // type: 0=CQ, 1= CQ reply
 void InitQSO(int type, char *call, char *grid) {
-  // *** TODO: use AddTxMsg(char *msg, int index, float freq, float  snr) ***
   char msg[35];
+  int index;
 
   if(call != NULL && grid != NULL) {
+    ++activeQSO; // new qso
+
+    qsoList[activeQSO].type = type;
+    for(int i = 0; i < 6; i++) {
+      qsoList[activeQSO].msg[i] = -1;
+    }
+
     if(type == 0) {
       // CQ
       sprintf(msg, "CQ %.13s %.6s", call, grid);
 
-      txQueue[QSO_MSG_0] = AddTxMsg(msg, ft8TxFreq, 78.0);
+      index = AddTxMsg(msg, ft8TxFreq, 78.0);
+      txQueue[QSO_MSG_0] = &txBuf[index];
+
+      // init qso list item
+      qsoList[activeQSO].msg[QSO_MSG_0] = index;
+      qsoList[activeQSO].status = 1;
     } else {
       // CQ reply
 
@@ -961,24 +1013,36 @@ void InitQSO(int type, char *call, char *grid) {
 }
 
 void InitDecoderState(char *call = NULL, char *grid = NULL) {
+  // *** TODO: we go through here three times starting from FT8 wav.
+  //           Two makes sense, what's the cause of the third? ***
+  // *** it's extra calls to InitDecoderState (which caused crash), now commented, but why do these matter when properly initialized above ***
+  Serial.println("@ InitDecoderState");
+  decodedMsgs = 0;
+  txMsgs = 0;
+  activeMsg = 0;
+
   // initialize message lists
   allTop = 0;
   cqTop = 0;
   rxTop = 0;
-  decodedMsgs = 0;
   allMsgs = 0;
   cqMsgs = 0;
   rxMsgs = 0;
+  qsos = 0;
   allHead = -1;
   cqHead = -1;
   rxHead = -1;
+
+  txNextMsg = QSO_MSG_0;
+  activeQSO = -1;
+  qsoViewActive = false;
+
+  InitQSO(0, call, grid);
 
   ft8SyncState = 0;
   ft8WavFlag = false;
   frameCount = 0;
   bufCount = 0;
-
-  InitQSO(0, call, grid);
 
   ft8DecoderState = STATE_BUFFERING;
 }
@@ -1082,7 +1146,7 @@ FLASHMEM void ExitFT8Decoder() {
   // restore waterfall area
 
   // reset FT8 flags and counters
-  InitDecoderState();
+  //InitDecoderState();
 
   // update FT8 info box items
   infoBoxItemActive[IB_ITEM_FT8] = false;
@@ -1254,7 +1318,7 @@ bool TXPrep() {
     ChangeFt8TxState(1);
   }
 
-  DisplayTxMessages();
+  DisplayQSO();
 
   return result;
 }
@@ -1266,7 +1330,7 @@ void TXProcessing() {
   txMsg->status = MSG_SENT;
   ++txMsg->tries;
 
-  DisplayTxMessages();
+  DisplayQSO();
 }
 
 /*
@@ -1599,7 +1663,7 @@ void FT8DecoderLoop() {
     // done with wav file
     // switch to FT8 internal mode
     ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
-    InitDecoderState();
+    //InitDecoderState();
   }
 }
 
@@ -1663,10 +1727,15 @@ void ChangeFt8TxState(int wheel) {
   // *** TODO: consider TX state changes in other situations ***
   if(ft8TxState) {
     txQueue[QSO_MSG_0]->status = MSG_NEXT;
+    qsoViewActive = true;
   } else {
     txQueue[QSO_MSG_0]->status = MSG_WAITING;
+
+    // *** TODO: examine when to remove this view (mouse click in area) ***
+    //qsoViewActive = false;
   }
-  DisplayTxMessages();
+  //DisplayQSO();
+  DisplayAllMessages();
 }
 
 int CalcTop(int top, int inc, int num, int head, int max) {
