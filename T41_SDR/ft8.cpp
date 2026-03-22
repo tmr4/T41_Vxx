@@ -75,6 +75,7 @@ typedef struct {
   uint8_t hour, min, sec;
   float time_sec;
   tm slot_time;
+  bool evenInterval;
 
   int  sync_score;
   float  snr;
@@ -104,8 +105,6 @@ typedef struct {
   //float time_sec;
   tm slot_time;
 
-  float  snr;
-
   // 0: waiting
   // 1: next to TX
   // 2: sent
@@ -119,6 +118,8 @@ typedef struct {
 
 typedef struct {
   int type; // 0: CQ, 1: CQ reply
+
+  char call[20];
 
   // index 0,2,4 are calling CQ QSOs
   // index 1,3,5 are for replying to CQ
@@ -300,6 +301,8 @@ void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float f
 void PrepareFT8ExciterIQData(float *sig);
 
 void ChangeFt8TxState(int wheel);
+void UpdateFt8RxFreq(int freq);
+void UpdateFt8TxFreq(int freq);
 
 // ft8lib
 bool ft8lib_InitDecoder();
@@ -355,7 +358,7 @@ FLASHMEM void ExitFT8() {
 //-------------------------------------------------------------------------------------------------------------
 
 //#define SPECTRUM_TESTING // plots frequency spectrum frame instead of waterfall (change frame with volume knob)
-#define TX_TESTING // generates mock RX messages for "CQ KN6ZDE CM87" TX test
+//#define TX_TESTING // generates mock RX messages for "CQ KN6ZDE CM87" TX test
 
 #ifdef SPECTRUM_TESTING
 EXTMEM uint8_t freqSpectrum[512*79];
@@ -386,53 +389,59 @@ FLASHMEM void DrawTestSpectrum(uint8_t *spec) {
 // *** TODO: consider relaxing this w/ mock transmission mode on other versions ***
 #if defined(TX_TESTING) && defined(PROJECTSYSTEM)
 
-FLASHMEM void DisplayAllMessages();
-int AddTxMsg(char *msg, float freq, float  snr);
+void DisplayAllMessages();
 
-FLASHMEM int AddRxResponse(char *msg, float freq, struct tm *tmSlot, int16_t score) {
-  float time_sec = 0.0;
-  int index = decodedMsgs;
-
-  AddDecodedMessage(tmSlot, score, time_sec, freq, msg);
-  //DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
-  DisplayAllMessages();
-
-  return index;
-}
-
-FLASHMEM void MockRXMsgTraffic() {
+FLASHMEM void MockRXMsgTraffic(int type) {
   TxMsg *txMsg = txQueue[txNextMsg];
   struct tm tmSlot = { .tm_sec = (second() / 15) * 15, .tm_min = minute(), .tm_hour = hour() };
 
   // mock replies to CQ QSO
   char msg1[35] = "KN6ZDE K9AN EN50"; // mock RX to "CQ KN6ZDE CM87"
-  char msg3[35] = "KN6ZDE K9AN +05";  // mock RX to "KN6ZDE K9AN R-12"
-  char msg5[35] = "KN6ZDE K9AN RRR";  // mock RX to "KN6ZDE K9AN 73"
+  char msg3[35] = "KN6ZDE K9AN R+05";  // mock RX to "KN6ZDE K9AN R-12"
+  char msg5[35] = "KN6ZDE K9AN 73";  // mock RX to "KN6ZDE K9AN 73"
 
-  if(txMsg == NULL) return;
+  // mock CQ and replies
+  char msg0[35] = "CQ K9AN EN50";
+  char msg2[35] = "KN6ZDE K9AN +05";
+  char msg4[35] = "KN6ZDE K9AN RRR";
 
-  // add mock reply
-  switch(txNextMsg) {
-    case QSO_MSG_0:
-      AddRxResponse(msg1, ft8RxFreq, &tmSlot, 148);
-      break;
+  if(type == 0) {
+    if(txMsg == NULL) return;
 
-    case QSO_MSG_1:
-      break;
+    // add mock reply
+    switch(txNextMsg) {
+      case QSO_MSG_0:
+        // CQ QSO
+        AddDecodedMessage(&tmSlot, 148, 0.0, ft8RxFreq, msg1);
+        break;
 
-    case QSO_MSG_2:
-      AddRxResponse(msg3, ft8RxFreq, &tmSlot, 148);
-      break;
+      case QSO_MSG_1:
+        AddDecodedMessage(&tmSlot, 148, 0.0, 1200, msg2);
+        break;
 
-    case QSO_MSG_3:
-      break;
+      case QSO_MSG_2:
+        AddDecodedMessage(&tmSlot, 148, 0.0, ft8RxFreq, msg3);
+        break;
 
-    case QSO_MSG_4:
-      AddRxResponse(msg5, ft8RxFreq, &tmSlot, 148);
-      break;
+      case QSO_MSG_3:
+        AddDecodedMessage(&tmSlot, 148, 0.0, 1200, msg4);
+        break;
 
-    case QSO_MSG_5:
-      break;
+      case QSO_MSG_4:
+        AddDecodedMessage(&tmSlot, 148, 0.0, ft8RxFreq, msg5);
+        break;
+
+      case QSO_MSG_5:
+        break;
+    }
+  } else {
+    // add a mock CQ
+    switch(txNextMsg) {
+      case QSO_MSG_0:
+        // CQ reply QSO
+        AddDecodedMessage(&tmSlot, 148, 0.0, 1200, msg0);
+        break;
+    }
   }
 
   DisplayAllMessages();
@@ -496,6 +505,20 @@ FLASHMEM bool AllMsgCheck(RxMsg *msg) {
   return true;
 }
 
+FLASHMEM bool MsgCheckValue(RxMsg *msg) {
+  bool result = false;
+
+  if(*msg->field3 != '\0') {
+    char *endptr;
+    strtol(msg->field3, &endptr, 10);
+    // If endptr points to the end of string or just a newline, it's valid
+    result = *endptr == '\0' || *endptr == '\n';
+    //Serial.print(result); Serial.print(", "); Serial.println(*endptr);
+  }
+
+  return result;
+}
+
 FLASHMEM bool MsgCheck(RxMsg *msg, int type) {
   bool result = false;
 
@@ -505,24 +528,20 @@ FLASHMEM bool MsgCheck(RxMsg *msg, int type) {
       break;
 
     case QSO_MSG_1:
+      result = (strcmp(msg->field1, baseCall) == 0) && (strcmp(msg->field2, qsoList[activeQSO].call) == 0) && MsgCheckValue(msg);
       break;
 
     case QSO_MSG_2:
-      if(*msg->field3 != '\0') {
-        char *endptr;
-        strtol(msg->field3, &endptr, 10);
-        // If endptr points to the end of string or just a newline, it's valid
-        result = *endptr == '\0' || *endptr == '\n';
-        Serial.print(result); Serial.print(", "); Serial.println(*endptr);
-      }
+      result = MsgCheckValue(msg);
       break;
 
     case QSO_MSG_3:
+      result = (strcmp(msg->field1, baseCall) == 0) && (strcmp(msg->field2, qsoList[activeQSO].call) == 0) && strcmp(msg->field3, "RRR") == 0;
       break;
 
     case QSO_MSG_4:
       result = strcmp(msg->field3, "RRR") == 0;
-      Serial.println(result);
+      //Serial.println(result);
       break;
 
     case QSO_MSG_5:
@@ -570,6 +589,10 @@ FLASHMEM void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec
   rxBuf[decodedMsgs].slot_time.tm_hour = tmSlot->tm_hour;
   rxBuf[decodedMsgs].slot_time.tm_min = tmSlot->tm_min;
   rxBuf[decodedMsgs].slot_time.tm_sec = tmSlot->tm_sec;
+
+  // is interval even?
+  rxBuf[decodedMsgs].evenInterval = ((tmSlot->tm_sec / 15) * 15) % 2 == 0;
+
   rxBuf[decodedMsgs].time_sec = time_sec;
   GetTeensyTime();
   rxBuf[decodedMsgs].hour = hour();
@@ -594,14 +617,16 @@ FLASHMEM void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec
   }
 }
 
-// *** TODO: this should take call and report ***
 // returns index of msg
-FLASHMEM int AddTxMsg(char *msg, float freq, float  snr) {
+FLASHMEM int AddTxMsg(const char *call, const char *report, float freq) {
   TxMsg *txMsg = &txBuf[txMsgs];
   int index = txMsgs;
 
   // update TX msg detail
-  strncpy(txMsg->msg, msg, 35);
+  strncpy(txMsg->field1, call, 20);
+  strncpy(txMsg->field2, baseCall, 20);
+  strncpy(txMsg->field3, report, 20);
+  sprintf(txMsg->msg,"%.13s %.13s %.6s", call, baseCall, report);
   txMsg->msg[34] = '\0'; // ensure msg is terminated (only needed w/ possible decode error)
   txMsg->freq = freq; // *** will be updated immediately prior to transmission ***
   //txMsg->slot_time.tm_hour = tmSlot->tm_hour;
@@ -612,13 +637,6 @@ FLASHMEM int AddTxMsg(char *msg, float freq, float  snr) {
   //rxBuf[index].hour = hour();
   //rxBuf[index].min = minute();
   //rxBuf[index].sec = second();
-  txMsg->snr = snr;
-
-  // split msg into fields for use in automated routines
-  // *** this doesn't cover all message types ***
-  strncpy(txMsg->field1, strtok(msg, " "), 20);
-  strncpy(txMsg->field2, strtok(NULL, " "), 20);
-  strncpy(txMsg->field3, strtok(NULL, " "), 20);
 
   txMsg->status = MSG_WAITING;
   txMsg->tries = 0; // incremented to 0 on first transmission
@@ -846,75 +864,73 @@ FLASHMEM void DisplayQSO(int qso = -1) {
   int rowHeight, type, item, index;
   int rx[3], tx[3];
 
-  if(qso >= qsos) return;
+  if(qso >= qsos || !qsoViewActive) return;
   index = qso == -1 ? activeQSO : qso;
 
-  if(qsoViewActive) {
-    type = qsoList[index].type;
-    if(type == 0) {
-      // CQ QSO
-      rx[0] = 1;
-      rx[1] = 3;
-      rx[2] = 5;
-      tx[0] = 0;
-      tx[1] = 2;
-      tx[2] = 4;
-    } else {
-      // CQ reply QSO
-      tx[0] = 1;
-      tx[1] = 3;
-      tx[2] = 5;
-      rx[0] = 0;
-      rx[1] = 2;
-      rx[2] = 4;
+  type = qsoList[index].type;
+  if(type == 0) {
+    // CQ QSO
+    rx[0] = 1;
+    rx[1] = 3;
+    rx[2] = 5;
+    tx[0] = 0;
+    tx[1] = 2;
+    tx[2] = 4;
+  } else {
+    // CQ reply QSO
+    tx[0] = 1;
+    tx[1] = 3;
+    tx[2] = 5;
+    rx[0] = 0;
+    rx[1] = 2;
+    rx[2] = 4;
+  }
+
+  tft.setFontScale((enum RA8875tsize)0);
+  rowHeight = tft.getFontHeight();
+
+  // erase old info
+  tft.fillRect(WATERFALL_L, FT8_QSO_VIEW_TOP, WATERFALL_W, rowHeight * 2, RA8875_BLACK);
+
+  // print RX side of qso
+  tft.setTextColor(WHITE);
+  tft.setCursor(WATERFALL_L, FT8_QSO_VIEW_TOP - 3);
+  if(type == 0) {
+    //tft.print("RX: ");
+    tft.print("    "); // indent line
+  }
+
+  for(int i = 0; i < 3; i++) {
+    item = qsoList[index].msg[rx[i]];
+
+    if(item > -1) {
+      RxMsg *rxMsg = &rxBuf[item];
+      //tft.setTextColor();
+      tft.print(rxMsg->msg);
+      tft.print("    ");
     }
+  }
 
-    tft.setFontScale((enum RA8875tsize)0);
-    rowHeight = tft.getFontHeight();
+  // print TX side of qso
+  //tft.setCursor(WATERFALL_L, FT8_TX_QUEUE_TOP - 3);
+  tft.setCursor(WATERFALL_L, FT8_QSO_VIEW_TOP + FT8_ROW_HEIGHT - 3);
+  if(type == 1) {
+    //tft.print("TX: ");
+    tft.print("    "); // indent line
+  }
 
-    // erase old info
-    tft.fillRect(WATERFALL_L, FT8_QSO_VIEW_TOP, WATERFALL_W, rowHeight * 2, RA8875_BLACK);
-
-    // print RX side of qso
-    tft.setTextColor(WHITE);
-    tft.setCursor(WATERFALL_L, FT8_QSO_VIEW_TOP - 3);
-    if(type == 0) {
-      //tft.print("RX: ");
-      tft.print("    "); // indent line
-    }
-
-    for(int i = 0; i < 3; i++) {
-      item = qsoList[index].msg[rx[i]];
-
-      if(item > -1) {
-        RxMsg *rxMsg = &rxBuf[item];
-        //tft.setTextColor();
-        tft.print(rxMsg->msg);
-        tft.print("    ");
+  for(int i = 0; i < 3; i++) {
+    item = qsoList[index].msg[tx[i]];
+    if(item > -1) {
+      TxMsg *txMsg = &txBuf[item];
+      tft.setTextColor(GetTxMsgColor(txMsg));
+      tft.print(txMsg->msg);
+      if(txMsg->tries > 1) {
+        tft.print(" (");
+        tft.print(txMsg->tries);
+        tft.print(")");
       }
-    }
-
-    // print TX side of qso
-    //tft.setCursor(WATERFALL_L, FT8_TX_QUEUE_TOP - 3);
-    tft.setCursor(WATERFALL_L, FT8_QSO_VIEW_TOP + FT8_ROW_HEIGHT - 3);
-    if(type == 1) {
-      //tft.print("TX: ");
-      tft.print("    "); // indent line
-    }
-
-    for(int i = 0; i < 3; i++) {
-      item = qsoList[index].msg[tx[i]];
-      if(item > -1) {
-        TxMsg *txMsg = &txBuf[item];
-        tft.setTextColor(GetTxMsgColor(txMsg));
-        tft.print(txMsg->msg);
-        if(txMsg->tries > 1) {
-          tft.print(" (");
-          tft.print(txMsg->tries);
-          tft.print(")");
-        }
-        tft.print("    ");
-      }
+      tft.print("    ");
     }
   }
 }
@@ -944,9 +960,9 @@ FLASHMEM void ProcessFT8Messages() {
 //-------------------------------------------------------------------------------------------------------------
 
 // set up TX messages for QSO type
-// type: 0=CQ, 1= CQ reply
+// type: 0=CQ, 1= CQ reply (activeMsg is the CQ message)
 FLASHMEM void InitQSO(int type) {
-  char msg[35];
+  RxMsg *rxMsg = &rxBuf[activeMsg];
   int index;
 
   ++activeQSO; // new qso
@@ -956,23 +972,37 @@ FLASHMEM void InitQSO(int type) {
     txQueue[i] = NULL;
     qsoList[activeQSO].msg[i] = -1;
   }
-  txNextMsg = QSO_MSG_0;
 
   qsoList[activeQSO].type = type;
   if(type == 0) {
     // CQ
-    sprintf(msg, "CQ %.13s %.6s", baseCall, baseGrid);
-
-    index = AddTxMsg(msg, ft8TxFreq, 78.0);
+    index = AddTxMsg("CQ", baseGrid, ft8TxFreq);
     txQueue[QSO_MSG_0] = &txBuf[index];
     txQueue[QSO_MSG_0]->status = MSG_NEXT;
 
     // init qso list item
     qsoList[activeQSO].msg[QSO_MSG_0] = index;
-    qsoList[activeQSO].status = 1;
+    qsoList[activeQSO].status = 1; // in progress
+
+    txNextMsg = QSO_MSG_0;
   } else {
     // CQ reply
+    // default to sender's freq
+    UpdateFt8RxFreq(rxMsg->freq);
+    UpdateFt8TxFreq(rxMsg->freq);
 
+    qsoList[activeQSO].msg[QSO_MSG_0] = activeMsg;
+    strncpy(qsoList[activeQSO].call, rxBuf[activeMsg].field2, 20);
+
+    index = AddTxMsg(rxMsg->field2, baseGrid, ft8TxFreq);
+    txQueue[QSO_MSG_1] = &txBuf[index];
+    txQueue[QSO_MSG_1]->status = MSG_NEXT;
+
+    // init qso list item
+    qsoList[activeQSO].msg[QSO_MSG_1] = index;
+    qsoList[activeQSO].status = 1; // in progress
+
+    txNextMsg = QSO_MSG_1;
   }
 }
 
@@ -997,7 +1027,7 @@ FLASHMEM void InitDecoderState() {
   activeQSO = -1;
   qsoViewActive = false;
 
-  InitQSO(0);
+  //InitQSO(0);
 
   ft8SyncState = 0;
   ft8WavFlag = false;
@@ -1243,71 +1273,101 @@ FLASHMEM void DecodeFT8Data(struct tm *start) {
 }
 
 // evaluate whether any received messages are responsive to the active QSO
-// creates queue of responsive msgs (to come)
-// best response, based on signal strength for now, (at index 0 in queue) is set in QSO list
+// returns index and pointer to first responsive RX message
 // updates qso list status
-FLASHMEM void RXProcessing() {
+//
+// To come:
+// creates queue of responsive msgs
+// best response, based on signal strength, (at index 0 in queue) is set in QSO list
+// *** TODO: need to validate a reply by someone else isn't flagged as responsive (call check?) ***
+FLASHMEM RxMsg* RXProcessing() {
   TxMsg *txMsg = txQueue[txNextMsg];
-  RxMsg *rxMsg;
-  int index;
-  //struct tm tmSlot = { .tm_sec = (second() / 15) * 15, .tm_min = minute(), .tm_hour = hour() };
+  RxMsg *rxMsg = NULL;
+  int index = -1;
 
-  if(txMsg == NULL) return;
+  if(txMsg == NULL) return NULL;
 
   // check for responsive message
-  if(txMsg->status == MSG_SENT) {
-    #ifdef TX_TESTING
-      MockRXMsgTraffic();
-    #endif
+  #ifdef TX_TESTING
+    MockRXMsgTraffic(0);
+  #endif
 
-    for(int i = rxMsgs - 1; i >= 0; i--) {
-      index = rxList[i];
-      rxMsg = &rxBuf[index];
-      if(MsgCheck(rxMsg, txNextMsg)) {
-        switch(txNextMsg) {
-          case QSO_MSG_0:
-            qsoList[activeQSO].msg[QSO_MSG_1] = index;
-            txMsg->status = MSG_ACK;
-            break;
+  // set response message index
+  switch(txNextMsg) {
+    case QSO_MSG_0:
+      index = QSO_MSG_1;
+      break;
 
-          case QSO_MSG_1:
-            break;
+    case QSO_MSG_1:
+      index = QSO_MSG_2;
+      break;
 
-          case QSO_MSG_2:
-            qsoList[activeQSO].msg[QSO_MSG_3] = index;
-            txMsg->status = MSG_ACK;
-            break;
+    case QSO_MSG_2:
+      index = QSO_MSG_3;
+      break;
 
-          case QSO_MSG_3:
-            break;
+    case QSO_MSG_3:
+      index = QSO_MSG_4;
+      break;
 
-          case QSO_MSG_4:
-            qsoList[activeQSO].msg[QSO_MSG_5] = index;
-            txMsg->status = MSG_ACK;
-            break;
+    case QSO_MSG_4:
+      index = QSO_MSG_5;
+      break;
 
-          case QSO_MSG_5:
-            break;
-        }
-      }
+    case QSO_MSG_5:
+      // *** TODO: what to do here? ***
+      return rxMsg;
+      break;
+  }
+
+  for(int i = rxMsgs - 1; i >= 0; i--) {
+    int j = rxList[i];
+    rxMsg = &rxBuf[j];
+    if(MsgCheck(rxMsg, txNextMsg)) {
+      qsoList[activeQSO].msg[index] = j;
+      break;
+    } else {
+      rxMsg = NULL;
     }
   }
+
+  return rxMsg;
 }
 
-//prep txQueue and TX state for RX messages
-// prepare next TX
-// assumes txQueue already initialized based on RX decodes
+// prepare for next TX considering type of QSO and any responsive RX messages
 // returns true if TX can continue, false otherwise
 FLASHMEM bool TXPrep() {
   TxMsg *txMsg = txQueue[txNextMsg];
-  int index;
+  RxMsg *rxMsg = NULL;
+  char *call = NULL;
+  char report[6];
+  int index = -1;
   bool result = false;
 
-#ifdef TX_TESTING
-  //char msg0[35] = "CQ KN6ZDE CM87";
-  char msg2[35] = "K9AN KN6ZDE R-12"; // expected RX "K1JT K9AN R-12"
-  char msg4[35] = "K9AN KN6ZDE RRR"; // expected RX "K1JT K9AN 73"
-#endif
+  if(txMsg->status == MSG_SENT) {
+    // the next interval is a transmission interval
+    // see if there were any responsive messages in this interval
+    switch(txNextMsg) {
+      case QSO_MSG_0:
+      case QSO_MSG_1:
+      case QSO_MSG_2:
+      case QSO_MSG_3:
+      case QSO_MSG_4:
+      rxMsg = RXProcessing();
+      if(rxMsg != NULL) {
+        txMsg->status = MSG_ACK;
+        call = rxMsg->field2;
+      }
+        break;
+
+      case QSO_MSG_5:
+        txMsg->status = MSG_ACK;
+        break;
+    }
+  } else if(qsoList[activeQSO].type == 1) {
+    rxMsg = &rxMsg[qsoList[activeQSO].msg[QSO_MSG_0]];
+    call = rxMsg->field2;
+  }
 
   switch(txMsg->status) {
     case MSG_WAITING:
@@ -1329,13 +1389,16 @@ FLASHMEM bool TXPrep() {
     //  break;
 
     case MSG_ACK:
+      // *** @ RXProcessing above is the only way to get here so we know:
+      //     (1) rxMsg != NULL and (2) call is the replier to the QSO ***
       switch(txNextMsg) {
         case QSO_MSG_0:
-          index = AddTxMsg(msg2, ft8TxFreq, 78.0);
+          sprintf(report,"%+03d", (int)rxMsg->snr);
+          index = AddTxMsg(call, report, ft8TxFreq);
           qsoList[activeQSO].msg[QSO_MSG_2] = index;
           txQueue[QSO_MSG_2] = &txBuf[index];
 
-          index = AddTxMsg(msg4, ft8TxFreq, 78.0);
+          index = AddTxMsg(call, "RRR", ft8TxFreq);
           qsoList[activeQSO].msg[QSO_MSG_4] = index;
           txQueue[QSO_MSG_4] = &txBuf[index];
 
@@ -1346,6 +1409,15 @@ FLASHMEM bool TXPrep() {
           break;
 
         case QSO_MSG_1:
+          sprintf(report,"R%+03d", (int)rxMsg->snr);
+          index = AddTxMsg(call, report, ft8TxFreq);
+          qsoList[activeQSO].msg[QSO_MSG_3] = index;
+          txQueue[QSO_MSG_3] = &txBuf[index];
+
+          txMsg->status = MSG_COMPLETED;
+          txNextMsg = QSO_MSG_3;
+          txQueue[txNextMsg]->status = MSG_NEXT;
+          result = true;
           break;
 
         case QSO_MSG_2:
@@ -1356,6 +1428,14 @@ FLASHMEM bool TXPrep() {
           break;
 
         case QSO_MSG_3:
+          index = AddTxMsg(call, "73", ft8TxFreq);
+          qsoList[activeQSO].msg[QSO_MSG_5] = index;
+          txQueue[QSO_MSG_5] = &txBuf[index];
+
+          txMsg->status = MSG_COMPLETED;
+          txNextMsg = QSO_MSG_5;
+          txQueue[txNextMsg]->status = MSG_NEXT;
+          result = true;
           break;
 
         case QSO_MSG_4:
@@ -1367,6 +1447,9 @@ FLASHMEM bool TXPrep() {
           break;
 
         case QSO_MSG_5:
+          txMsg->status = MSG_COMPLETED;
+          ChangeFt8TxState(1); // turn FT8 transmission off
+          result = false;
           break;
       }
       break;
@@ -1670,6 +1753,8 @@ FLASHMEM void FT8DecoderLoop() {
       break;
 
     case STATE_RX_UPDATE:
+      // *** this state could be combined with STATE_DECODING but given that state
+      //     is long running, this state allows a sooner return to the main loop ***
       DEBUG_LOC("at STATE_RX_UPDATE...");
 
       #ifndef SPECTRUM_TESTING
@@ -1683,6 +1768,8 @@ FLASHMEM void FT8DecoderLoop() {
       UpdateInfoBoxItem(IB_ITEM_FT8);
       #endif
 
+      // *** setting buffering state here allows clean transition if:
+      //  1) TX isn't enabled or 2) TX is enabled but the next interval isn't TX ***
       ft8DecoderState = STATE_BUFFERING;
 
       if(ft8TxState) {
@@ -1691,10 +1778,6 @@ FLASHMEM void FT8DecoderLoop() {
         bool evenInterval = (((second() + 15) / 15) * 15) % 2 == 0;
 
         if((ft8IntState == 0 && evenInterval) || (ft8IntState == 1 && !evenInterval)) {
-          // the next interval is a transmission interval
-          // see if there were any responsive messages in this interval
-          RXProcessing();
-
           if(TXPrep()) {
             // we're at the start or within a transmission sequence
 
@@ -1709,6 +1792,11 @@ FLASHMEM void FT8DecoderLoop() {
 
           SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
         }
+#ifdef TX_TESTING
+      } else {
+        // add mock CQ message
+        MockRXMsgTraffic(1);
+#endif
       }
 
       // force a sync cycle
@@ -1772,8 +1860,43 @@ FLASHMEM void FT8DecoderLoop() {
 // Internal FT8 Code - User Input
 //-------------------------------------------------------------------------------------------------------------
 
-FLASHMEM void ChangeFt8TxFreq(int wheel) {
-  ft8TxFreq += wheel * ftIncrement;
+FLASHMEM int GetRow(int y) {
+  // (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS) / FT8_ROW_HEIGHT = 17
+  //int row = ceil((float)(y-5) / 16.0 - 17.0 + 1) - 1; // *** TODO: fine tune this ***
+  //Serial.print(y); Serial.print(", "); Serial.println(row);
+  //return row;
+  return ceil((float)(y-5) / 16.0 - 17.0 + 1) - 1; // *** TODO: fine tune this ***
+}
+
+FLASHMEM int GetMsg(int x, int y) {
+  int msgIndex = -1;
+  int row = GetRow(y);
+
+  if(row < 0) return msgIndex;
+
+  if(x < 512 / 3) {
+    // mouse in all messages
+    if(allTop + row <= allMsgs) {
+      msgIndex = allTop + row - 1;
+    }
+  } else if(x > 512 * 2 / 3) {
+    // mouse in RX messages
+    if(rxTop + row <= rxMsgs) {
+      msgIndex = rxList[rxTop + row - 1];
+    }
+  //} else if(x < 512 / 3) {
+  } else {
+    // mouse in CQ messages
+    if(cqTop + row <= cqMsgs) {
+      msgIndex = cqList[cqTop + row - 1];
+    }
+  }
+
+  return msgIndex;
+}
+
+FLASHMEM void UpdateFt8TxFreq(int freq) {
+  ft8TxFreq = freq;
 
   // limit it to spectrum range
   if(ft8TxFreq < 200) ft8TxFreq = 200; // bottom of ft8lib FT8 filter
@@ -1784,8 +1907,12 @@ FLASHMEM void ChangeFt8TxFreq(int wheel) {
   DrawFT8BandwidthBar();
 }
 
-FLASHMEM void ChangeFt8RxFreq(int wheel) {
-  ft8RxFreq += wheel * ftIncrement;
+FLASHMEM void ChangeFt8TxFreq(int wheel) {
+  UpdateFt8TxFreq(ft8TxFreq + wheel * ftIncrement);
+}
+
+FLASHMEM void UpdateFt8RxFreq(int freq) {
+  ft8RxFreq = freq;
 
   // limit it to spectrum range
   if(ft8RxFreq < 200) ft8RxFreq = 200; // bottom of ft8lib FT8 filter
@@ -1796,6 +1923,10 @@ FLASHMEM void ChangeFt8RxFreq(int wheel) {
   DrawFT8BandwidthBar();
   CreateList(RX_WINDOW);
   DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
+}
+
+FLASHMEM void ChangeFt8RxFreq(int wheel) {
+  UpdateFt8RxFreq(ft8RxFreq + wheel * ftIncrement);
 }
 
 FLASHMEM void ChangeFt8TxInterval(int wheel) {
@@ -1835,6 +1966,37 @@ FLASHMEM void ChangeFt8TxState(int wheel) {
     // *** TODO: examine when to remove this view (mouse click in area) ***
     //qsoViewActive = false;
   }
+
+  DisplayAllMessages();
+}
+
+FLASHMEM void ReplyToCQ(int x, int y) {
+  int msgIndex = GetMsg(x, y);
+
+  if(msgIndex < 0) return;
+
+  activeMsg = msgIndex;
+
+  if(CqMsgCheck(&rxBuf[msgIndex])) {
+    InitQSO(1);
+
+    // update FT8 state options for CQ msg params
+    ft8TxState = 1;
+    UpdateInfoBoxItem(IB_ITEM_FT8_TX);
+    ft8IntState = rxBuf[msgIndex].evenInterval ? 1 : 0;
+    UpdateInfoBoxItem(IB_ITEM_FT8_INT);
+
+    qsoViewActive = true;
+  }
+
+  DisplayAllMessages();
+}
+
+FLASHMEM void ChangeFt8ActiveMsg(int x, int y) {
+  int msgIndex = GetMsg(x, y);
+  if(msgIndex < 0) return;
+
+  activeMsg = msgIndex;
 
   DisplayAllMessages();
 }
@@ -1898,43 +2060,6 @@ FLASHMEM void ScrollFt8MsgWindow(int xcol, int wheel) {
   }
 }
 
-FLASHMEM int GetMsg(int x, int y) {
-  int msgIndex = -1;
-  // (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS) / FT8_ROW_HEIGHT = 17
-  int row = ceil((float)y / 16.0 - 17.0 + 1) - 1;
-  //Serial.print(y); Serial.print(", "); Serial.println(row);
-  if(row < 0) return msgIndex;
-
-  if(x < 512 / 3) {
-    // mouse in all messages
-    if(allTop + row <= allMsgs) {
-      msgIndex = allTop + row - 1;
-    }
-  } else if(x > 512 * 2 / 3) {
-    // mouse in RX messages
-    if(rxTop + row <= rxMsgs) {
-      msgIndex = rxList[rxTop + row - 1];
-    }
-  //} else if(x < 512 / 3) {
-  } else {
-    // mouse in CQ messages
-    if(cqTop + row <= cqMsgs) {
-      msgIndex = cqList[cqTop + row - 1];
-    }
-  }
-
-  return msgIndex;
-}
-
-FLASHMEM void ChangeFt8ActiveMsg(int x, int y) {
-  int msgIndex = GetMsg(x, y);
-  if(msgIndex < 0) return;
-
-  activeMsg = msgIndex;
-
-  DisplayAllMessages();
-}
-
 // toggle msg window scroll lock
 FLASHMEM void ChangeFt8ScrollLock(int x) {
   if(x < 512 / 3) {
@@ -1950,15 +2075,6 @@ FLASHMEM void ChangeFt8ScrollLock(int x) {
     cqScroll = !cqScroll;
     DisplayListStats(CQ_WINDOW);
   }
-}
-
-FLASHMEM void CreateFt8TxMsg(int x, int y) {
-  int msgIndex = GetMsg(x, y);
-  if(msgIndex < 0) return;
-
-  activeMsg = msgIndex;
-
-  DisplayAllMessages();
 }
 
 FLASHMEM void ToggleList(int x) {
@@ -1984,12 +2100,13 @@ FLASHMEM void ToggleList(int x) {
 }
 
 FLASHMEM void FT8MsgWindowClick(int x, int y, int button) {
-  int row = ceil((float)y / 16.0 - 17.0 + 1);
-  //Serial.print(y); Serial.print(", "); Serial.print(row); Serial.print(", "); Serial.println(button);
+  int row = GetRow(y);
+
   if(row < 0) return;
 
   switch(row) {
     case 1:
+      // click in summary row
       switch(button) {
         case 1: // left click
           //break;
@@ -2003,14 +2120,16 @@ FLASHMEM void FT8MsgWindowClick(int x, int y, int button) {
       break;
 
     default:
+      // click elsewhere
+      // *** TODO: need to address click in QSO area ***
       switch(button) {
         case 1: // left click
           ChangeFt8ActiveMsg(x, y);
           break;
         case 2: // right click
+          ReplyToCQ(x, y);
           break;
         case 4: // wheel click
-          CreateFt8TxMsg(x, y);
           break;
       }
       break;

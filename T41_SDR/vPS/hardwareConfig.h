@@ -12,7 +12,7 @@
 
 #define  PROJECTSYSTEM // some pin assignments change per project system design
 
-#define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
+//#define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
 
 // pick one of the following front panel configurations
 //#define MCP23017_FRONTPANEL // MCP23017 driven front panel
