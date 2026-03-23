@@ -35,20 +35,20 @@ extern AudioInputUSB usbIn;
 void PlayExciterIQData() {
   int16_t *sp_L, *sp_R;
   int blocks = currentDemodMode == DEMOD_FT8 ? 2 : 16;
-/*
+
   // adjust IQ signal amplitude and phase
   // *** TODO: v66-9 has currentBandA, why? ***
   if(currentDemodMode == DEMOD_LSB) {
     arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
-  } else if(currentDemodMode == DEMOD_USB) {
+  } else if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8_INTERNAL) {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
   } else if(currentDemodMode == DEMOD_FT8) {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
   }
-*/
+
   if(currentDemodMode != DEMOD_FT8) {
     // return to 192kHz, interpolate by a factor of 8, once again in two steps to preserve the spectrum order
     // 24kHz effective sample rate here
@@ -64,8 +64,13 @@ void PlayExciterIQData() {
     // 192kHz effective sample rate here
 
     // scale to compensate for losses during interpolation
-    arm_scale_f32(audioBufferL_EX, 8.0, audioBufferL_EX, blocks * 128);
-    arm_scale_f32(audioBufferR_EX, 8.0, audioBufferR_EX, blocks * 128);
+    //arm_scale_f32(audioBufferL_EX, 8.0, audioBufferL_EX, blocks * 128);
+    //arm_scale_f32(audioBufferR_EX, 8.0, audioBufferR_EX, blocks * 128);
+    float pwr = pow(10, log10((float)transmitPowerLevel * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
+
+    // *** currently pwr cal for FT8 internal ***
+    arm_scale_f32(audioBufferL_EX, pwr / 32.168 / 2.0, audioBufferL_EX, blocks * 128);
+    arm_scale_f32(audioBufferR_EX, pwr / 32.168 / 2.0, audioBufferR_EX, blocks * 128);
   } else {
     // measurements at dummy load tap which is -30dB with WSJT-X pwr level at -45dB
     // 2x scaler gives -6.6dbm

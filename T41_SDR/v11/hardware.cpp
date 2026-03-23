@@ -2,6 +2,11 @@
 
 #include "..\SDT.h"
 
+#ifdef USE_BPF_BOARD
+#include <Wire.h>
+#include <Adafruit_MCP23X17.h>
+#endif
+
 #include "..\Button.h"
 #include "Calibrate.h"
 #include "..\CW_Excite.h"
@@ -19,6 +24,9 @@
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+uint16_t GPAB_state;
+static Adafruit_MCP23X17 mcpBPF;
 
 //------------
 // Process.h
@@ -48,6 +56,33 @@ void FT8DoXmitCalibrate();
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+
+#ifdef USE_BPF_BOARD
+FLASHMEM void SetupBPF() {
+  // Set Wire2 I2C bus to 100KHz and start
+  Wire2.setClock(100000UL);
+  Wire2.begin();
+
+  while (!mcpBPF.begin_I2C(BPF_BOARD_MCP23017_ADDR,&Wire2)){
+    Serial.println("BPF MCP23017 not found at 0x"+String(BPF_BOARD_MCP23017_ADDR,HEX));
+    delay(5000);
+  }
+
+  Serial.println("BPF connected");
+
+  // Enable the address pins A0, A1, and A2.
+  mcpBPF.enableAddrPins();
+  // Set all chip pins to be outputs
+  for (int i=0;i<16;i++){
+    mcpBPF.pinMode(i, OUTPUT);
+  }
+
+  // Set to 40m band
+  GPAB_state = BPF_BAND_40M;
+  //GPAB_state = BPF_BAND_BYPASS;
+  mcpBPF.writeGPIOAB(GPAB_state);
+}
+#endif
 
 //------------
 // MenuProc.cpp
@@ -223,6 +258,10 @@ void InitHardware() {
 
   EnableButtonInterrupts();
   EncodersInit();
+
+#ifdef USE_BPF_BOARD
+  SetupBPF();
+#endif
 }
 
 void SoftResetHardware() {

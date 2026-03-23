@@ -13,7 +13,6 @@
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\ft8.h"
-#include "hardware.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"
@@ -21,7 +20,6 @@
 #include "..\Tune.h"
 #include "..\Utility.h"
 
-#include "hardwareConfig.h"
 #include "FrontPanel.h"
 
 //-------------------------------------------------------------------------------------------------------------

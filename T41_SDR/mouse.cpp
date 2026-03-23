@@ -379,15 +379,6 @@ void MouseWheelSpectrumWaterfall(int wheel) {
   //MoveCursor(0, 0);
 }
 
-void MouseButtonFT8(int button) {
-  FT8MsgWindowClick(cursorX, cursorY, button);
-}
-
-void MouseWheelFT8(int wheel) {
-  if(wheel != 0)
-    ScrollFt8MsgWindow(cursorX, wheel);
-}
-
 void MouseLoop() {
   int x, y, button, wheel;
 
@@ -416,12 +407,16 @@ void MouseLoop() {
         ButtonFilter();
       } else if(CursorInSpectrumWaterfall()) {
         if(currentDemodMode == DEMOD_FT8_INTERNAL) {
-          MouseButtonFT8(button);
+          FT8MsgWindowClick(cursorX, cursorY, button);
         } else {
           MouseButtonSpectrumWaterfall(button);
         }
       } else if(CursorInInfoBox()) {
-        MouseButtonInfoBox(button, cursorX + CURSOR_W / 2, cursorY + CURSOR_H / 2);
+        if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+          FT8MsgWindowClick(cursorX, cursorY, button);
+        } else {
+          MouseButtonInfoBox(button, cursorX + CURSOR_W / 2, cursorY + CURSOR_H / 2);
+        }
       }
     }
 
@@ -434,7 +429,7 @@ void MouseLoop() {
         MouseWheelFreqArea(wheel);
       } else if(CursorInSpectrumWaterfall()) {
         if(currentDemodMode == DEMOD_FT8_INTERNAL) {
-          MouseWheelFT8(wheel);
+          ScrollFt8MsgWindow(cursorX, wheel);
         } else {
           MouseWheelSpectrumWaterfall(wheel);
         }

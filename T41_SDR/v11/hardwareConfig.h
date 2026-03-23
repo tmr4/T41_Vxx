@@ -12,6 +12,8 @@
 
 //#define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
 
+#define USE_BPF_BOARD
+
 // pick one of the following front panel configurations
 //#define MCP23017_FRONTPANEL // MCP23017 driven front panel
 #define FOURSQRP_FRONTPANEL // resistive switch matrix front panel

@@ -95,16 +95,6 @@ int signalStrengthSource = 2; // signal strength source: 0 = manual user entry, 
 const char *signalStrengthSources[3] =  {"man", "ext", "loop"};
 
 // two tone variables
-uint16_t GPAB_state;
-#define BPF_BOARD_MCP23017_ADDR 0x20   // For BPF #0 Address
-
-// Define BPF Band words
-// Word definition: GPB7 GPB6 ... GPB0 GPA7 GPA6 ... GPA0
-#define BPF_BAND_BYPASS 0x0008
-#define BPF_BAND_40M    0x0800
-
-static Adafruit_MCP23X17 mcpBPF;
-
 
 int userTransmitPowerLevel;
 
@@ -129,37 +119,6 @@ void ChangeCalMode(int mode);
 void PrepareSpectrumArea();
 void ShowAutoCalTitle();
 void CalibrateIQAllBands();
-
-
-
-
-
-FLASHMEM void SetupBPF() {
-  // Set Wire2 I2C bus to 100KHz and start
-  Wire2.setClock(100000UL);
-  Wire2.begin();
-
-  while (!mcpBPF.begin_I2C(BPF_BOARD_MCP23017_ADDR,&Wire2)){
-    Serial.println("BPF MCP23017 not found at 0x"+String(BPF_BOARD_MCP23017_ADDR,HEX));
-    delay(5000);
-  }
-
-  Serial.println("BPF connected");
-
-  // Enable the address pins A0, A1, and A2.
-  mcpBPF.enableAddrPins();
-  // Set all chip pins to be outputs
-  for (int i=0;i<16;i++){
-    mcpBPF.pinMode(i, OUTPUT);
-  }
-
-  // Set to 40m band
-  GPAB_state = BPF_BAND_40M;
-  //GPAB_state = BPF_BAND_BYPASS;
-  mcpBPF.writeGPIOAB(GPAB_state);
-}
-
-
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -1381,7 +1340,7 @@ FLASHMEM bool ProcessPwrMenu() {
         // set BPF to 40m band
         GPAB_state = BPF_BAND_40M;
       }
-      mcpBPF.writeGPIOAB(GPAB_state);
+      //mcpBPF.writeGPIOAB(GPAB_state);
       break;
 
     case BEARING: // 17
@@ -2062,7 +2021,9 @@ FLASHMEM void CalibrateIQBoth() {
 FLASHMEM void CalibrateIQ() {
   int calFlag = 1; // 1 = do calibration, 0 = done
 
+#ifdef USE_BPF_BOARD
   SetupBPF();
+#endif
 
   calID = 0;
 
@@ -2256,7 +2217,9 @@ FLASHMEM void CalibratePwr() {
   int calFlag = 1; // 1 = do calibration, 0 = done
   int audioState = radioState;
 
+#ifdef USE_BPF_BOARD
   SetupBPF();
+#endif
 
   calID = 1;
 

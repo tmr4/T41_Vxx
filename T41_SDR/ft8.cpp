@@ -194,8 +194,9 @@ uint32_t current_time, start_time, ft8_time;
 
 // Message windows
 #define ALL_WINDOW 0
-#define CQ_WINDOW 1
-#define RX_WINDOW 2
+#define CQ_WINDOW  1
+#define RX_WINDOW  2
+#define INFO_BOX   3
 
 // *** TODO: reconsider use of fixed row height vs display dependent in routines ***
 #define FT8_MSG_ROWS    10
@@ -1375,7 +1376,7 @@ FLASHMEM bool TXPrep() {
 
     case MSG_NEXT:
     case MSG_SENT:
-      if(txMsg->tries < 11) { // 10 tries
+      if(txMsg->tries < 10) { // 10 tries
         txMsg->freq = ft8TxFreq;
         result = true;
       } else {
@@ -1860,6 +1861,27 @@ FLASHMEM void FT8DecoderLoop() {
 // Internal FT8 Code - User Input
 //-------------------------------------------------------------------------------------------------------------
 
+FLASHMEM int GetWindow(int x) {
+  int window = -1;
+
+  if(x < 512 / 3) {
+    // mouse in all messages
+    window = ALL_WINDOW;
+  } else if(x > 512 * 2 / 3 && x < 512) {
+    // mouse in RX messages
+    window = RX_WINDOW;
+  } else if(x > 512 / 3 && x < 512 * 2 / 3) {
+    // mouse in CQ messages
+    window = CQ_WINDOW;
+  } else if(x > 512) {
+    // mouse in info box
+    window = INFO_BOX;
+  }
+
+  //Serial.print(x); Serial.print(", "); Serial.println(window);
+  return window;
+}
+
 FLASHMEM int GetRow(int y) {
   // (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS) / FT8_ROW_HEIGHT = 17
   //int row = ceil((float)(y-5) / 16.0 - 17.0 + 1) - 1; // *** TODO: fine tune this ***
@@ -1868,28 +1890,32 @@ FLASHMEM int GetRow(int y) {
   return ceil((float)(y-5) / 16.0 - 17.0 + 1) - 1; // *** TODO: fine tune this ***
 }
 
-FLASHMEM int GetMsg(int x, int y) {
+FLASHMEM int GetMsg(int window, int row) {
   int msgIndex = -1;
-  int row = GetRow(y);
 
   if(row < 0) return msgIndex;
 
-  if(x < 512 / 3) {
+  switch(window) {
+    case ALL_WINDOW:
     // mouse in all messages
     if(allTop + row <= allMsgs) {
       msgIndex = allTop + row - 1;
     }
-  } else if(x > 512 * 2 / 3) {
-    // mouse in RX messages
-    if(rxTop + row <= rxMsgs) {
-      msgIndex = rxList[rxTop + row - 1];
-    }
-  //} else if(x < 512 / 3) {
-  } else {
-    // mouse in CQ messages
-    if(cqTop + row <= cqMsgs) {
-      msgIndex = cqList[cqTop + row - 1];
-    }
+    break;
+
+    case CQ_WINDOW:
+      // mouse in CQ messages
+      if(cqTop + row <= cqMsgs) {
+        msgIndex = cqList[cqTop + row - 1];
+      }
+      break;
+
+    case RX_WINDOW:
+      // mouse in RX messages
+      if(rxTop + row <= rxMsgs) {
+        msgIndex = rxList[rxTop + row - 1];
+      }
+      break;
   }
 
   return msgIndex;
@@ -1970,8 +1996,8 @@ FLASHMEM void ChangeFt8TxState(int wheel) {
   DisplayAllMessages();
 }
 
-FLASHMEM void ReplyToCQ(int x, int y) {
-  int msgIndex = GetMsg(x, y);
+FLASHMEM void ReplyToCQ(int window, int row) {
+  int msgIndex = GetMsg(window, row);
 
   if(msgIndex < 0) return;
 
@@ -1992,8 +2018,8 @@ FLASHMEM void ReplyToCQ(int x, int y) {
   DisplayAllMessages();
 }
 
-FLASHMEM void ChangeFt8ActiveMsg(int x, int y) {
-  int msgIndex = GetMsg(x, y);
+FLASHMEM void ChangeFt8ActiveMsg(int window, int row) {
+  int msgIndex = GetMsg(window, row);
   if(msgIndex < 0) return;
 
   activeMsg = msgIndex;
@@ -2061,77 +2087,95 @@ FLASHMEM void ScrollFt8MsgWindow(int xcol, int wheel) {
 }
 
 // toggle msg window scroll lock
-FLASHMEM void ChangeFt8ScrollLock(int x) {
-  if(x < 512 / 3) {
-    // mouse in all messages
-    allScroll = !allScroll;
-    DisplayListStats(ALL_WINDOW);
-  } else if(x > 512 * 2 / 3) {
-    // mouse in RX messages
-    rxScroll = !rxScroll;
-    DisplayListStats(RX_WINDOW);
-  } else {
-    // mouse in CQ messages
-    cqScroll = !cqScroll;
-    DisplayListStats(CQ_WINDOW);
+FLASHMEM void ChangeFt8ScrollLock(int window) {
+  switch(window) {
+    case ALL_WINDOW:
+      // mouse in all messages
+      allScroll = !allScroll;
+      DisplayListStats(ALL_WINDOW);
+      break;
+
+    case CQ_WINDOW:
+      // mouse in CQ messages
+      cqScroll = !cqScroll;
+      DisplayListStats(CQ_WINDOW);
+      break;
+
+    case RX_WINDOW:
+      // mouse in RX messages
+      rxScroll = !rxScroll;
+      DisplayListStats(RX_WINDOW);
+      break;
   }
 }
 
-FLASHMEM void ToggleList(int x) {
-  if(x < 512 / 3) {
-    // mouse in all messages
-    if(allScroll) {
-      allTop = allTop < allMsgs ? allMsgs : 0;
-      DisplayMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
-    }
-  } else if(x > 512 * 2 / 3) {
-    // mouse in RX messages
-    if(rxScroll) {
-    rxTop = rxTop < rxMsgs ? rxMsgs : 0;
-    DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
-    }
-  } else {
-    // mouse in CQ messages
-    if(cqScroll) {
-      cqTop = cqTop < cqMsgs ? cqMsgs : 0;
-      DisplayMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
-    }
+FLASHMEM void ToggleList(int window) {
+  switch(window) {
+    case ALL_WINDOW:
+      // mouse in all messages
+      if(allScroll) {
+        allTop = allTop < allMsgs ? allMsgs : 0;
+        DisplayMessages(ALL_WINDOW, allList, allMsgs, allScroll, allTop, allHead, MAX_LIST_MESSAGES);
+      }
+      break;
+
+    case CQ_WINDOW:
+      // mouse in CQ messages
+      if(cqScroll) {
+        cqTop = cqTop < cqMsgs ? cqMsgs : 0;
+        DisplayMessages(CQ_WINDOW, cqList, cqMsgs, cqScroll, cqTop, cqHead, MAX_LIST_MESSAGES);
+      }
+      break;
+
+    case RX_WINDOW:
+      // mouse in RX messages
+      if(rxScroll) {
+      rxTop = rxTop < rxMsgs ? rxMsgs : 0;
+      DisplayMessages(RX_WINDOW, rxList, rxMsgs, rxScroll, rxTop, rxHead, MAX_LIST_MESSAGES);
+      }
+      break;
   }
 }
 
 FLASHMEM void FT8MsgWindowClick(int x, int y, int button) {
   int row = GetRow(y);
+  int window = GetWindow(x);
 
   if(row < 0) return;
 
-  switch(row) {
-    case 1:
-      // click in summary row
-      switch(button) {
-        case 1: // left click
-          //break;
-        case 2: // right click
-          ToggleList(x);
-          break;
-        case 4: // wheel click
-          ChangeFt8ScrollLock(x);
-          break;
-      }
-      break;
+  if(window == INFO_BOX && row > 11 && button == 2) {
+    UpdateFt8RxFreq((ft8RxFreq / ftIncrement) * ftIncrement); // TX will be updated as well
+    //UpdateFt8TxFreq(1000);
+  } else {
+    switch(row) {
+      case 0:
+        // click in summary row
+        switch(button) {
+          case 1: // left click
+            //break;
+          case 2: // right click
+            ToggleList(window);
+            break;
+          case 4: // wheel click
+            ChangeFt8ScrollLock(window);
+            break;
+        }
+        break;
 
-    default:
-      // click elsewhere
-      // *** TODO: need to address click in QSO area ***
-      switch(button) {
-        case 1: // left click
-          ChangeFt8ActiveMsg(x, y);
-          break;
-        case 2: // right click
-          ReplyToCQ(x, y);
-          break;
-        case 4: // wheel click
-          break;
-      }
-      break;
+      default:
+        // click elsewhere
+        // *** TODO: need to address click in QSO area ***
+        switch(button) {
+          case 1: // left click
+            ChangeFt8ActiveMsg(window, row);
+            break;
+          case 2: // right click
+            ReplyToCQ(window, row);
+            break;
+          case 4: // wheel click
+            break;
+        }
+        break;
+    }
   }
 }
