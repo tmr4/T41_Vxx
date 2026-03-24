@@ -199,7 +199,7 @@ uint32_t current_time, start_time, ft8_time;
 #define INFO_BOX   3
 
 // *** TODO: reconsider use of fixed row height vs display dependent in routines ***
-#define FT8_MSG_ROWS    10
+#define FT8_MSG_ROWS    11
 #define FT8_ROWS        13
 #define FT8_ROW_HEIGHT  16
 #define FT8_COL_WIDTH   8
@@ -214,8 +214,8 @@ uint32_t current_time, start_time, ft8_time;
 // selected msg detail above and tx queue below msg lists
 // *** TODO: incorporate "-3" adjustments in tft.print statements ***
 #define FT8_WINDOW_TOP          (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS)
-#define FT8_MSG_LIST_TOP        (YPIXELS - FT8_ROW_HEIGHT * (FT8_MSG_ROWS + 1))
-#define FT8_MSG_LIST_SUMMARY    (YPIXELS - FT8_ROW_HEIGHT * (FT8_MSG_ROWS + 2))
+#define FT8_MSG_LIST_TOP        (YPIXELS - FT8_ROW_HEIGHT * (FT8_MSG_ROWS + 0))
+#define FT8_MSG_LIST_SUMMARY    (YPIXELS - FT8_ROW_HEIGHT * (FT8_MSG_ROWS + 1))
 #define FT8_TX_QUEUE_TOP        (YPIXELS - FT8_ROW_HEIGHT)
 #define FT8_MSG_WINDOW_DETAIL   FT8_WINDOW_TOP
 #define FT8_QSO_VIEW_TOP        (YPIXELS - FT8_ROW_HEIGHT * 2)
@@ -711,7 +711,8 @@ FLASHMEM void DisplaySelectedMessageDetail() {
 
 FLASHMEM void DisplayStats(int window, int num, int top, int head, bool scroll) {
   int rowHeight, colWidth, columnOffset;
-  bool up = num > FT8_MSG_ROWS ? true : false;
+  int rows = qsoViewActive ? FT8_MSG_ROWS - 2 : FT8_MSG_ROWS; // two fewer message rows are available in QSO view
+  bool up = num > rows ? true : false;
   bool down = up;
 
   tft.setFontScale((enum RA8875tsize)0);
@@ -748,7 +749,7 @@ FLASHMEM void DisplayStats(int window, int num, int top, int head, bool scroll) 
 
   if(top == 0) up = false;
   //if(top >= num-FT8_MSG_ROWS) down = false;
-  if(top >= head - FT8_MSG_ROWS + 1) down = false;
+  if(top >= head - rows + 1) down = false;
   if(up) tft.write(30); // scroll up pointer
   if(down) tft.write(31); // scroll down pointer
 }
@@ -775,6 +776,7 @@ FLASHMEM void DisplayMessages(int window, int *list, int numMsgs, bool scroll, i
   int rowHeight, colWidth, columnOffset;
   int count = 0; // count of rows displayed
   int i, index;
+  int rows = qsoViewActive ? FT8_MSG_ROWS - 2 : FT8_MSG_ROWS; // two fewer message rows are available in QSO view
 
   tft.setFontScale((enum RA8875tsize)0);
   rowHeight = tft.getFontHeight();
@@ -782,13 +784,13 @@ FLASHMEM void DisplayMessages(int window, int *list, int numMsgs, bool scroll, i
   columnOffset = colWidth * 21 * window;
 
   // reset message area
-  tft.fillRect(columnOffset, FT8_MSG_LIST_TOP, colWidth * 21, rowHeight * FT8_MSG_ROWS, RA8875_BLACK);
+  tft.fillRect(columnOffset, FT8_MSG_LIST_TOP, colWidth * 21, rowHeight * rows, RA8875_BLACK);
 
   if(numMsgs > 0) {
     // set msg window top if not scrolling
     if(!scroll) {
-      if(numMsgs > FT8_MSG_ROWS) {
-        top = head - FT8_MSG_ROWS + 1;
+      if(numMsgs > rows) {
+        top = head - rows + 1;
         if(top < 0) {
           top += max;
         }
@@ -801,7 +803,7 @@ FLASHMEM void DisplayMessages(int window, int *list, int numMsgs, bool scroll, i
 
     // print recent messages
     while(count < numMsgs) {
-      if(count >= FT8_MSG_ROWS || (qsoViewActive && (count + 1 >= FT8_MSG_ROWS))) break;
+      if(count >= rows) break;
 
       index = list[i];
       if(index == activeMsg) {
