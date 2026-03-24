@@ -21,13 +21,13 @@ This is a work in progress.  Some functions may be broken and will likely remain
   * Calibration of FT8 Data mode still in progress
 * Standalone FT8 based on [ft8_lib](https://github.com/kgoba/ft8_lib)
   * a modified version of the library for the T41 is in the *ft8_lib* folder within *src* folder and available to all hardware versions
-  * This mode is available with a special data mode, FT8 decode mode
-  * The mode can also play wav files. Decode of [wav file](https://github.com/kgoba/ft8_lib/blob/master/test/wav/191111_110645.wav)([text](https://github.com/kgoba/ft8_lib/blob/master/test/wav/191111_110645.txt)) is shown below.
+  * This mode is available with a special data mode, internal FT8 mode
+  * The mode can also play wav files.
   * FT8 UI is mouse driven at present
 
-![T41 Internal FT8 decode of wav file](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_ft8.jpg)
+![T41 Internal FT8 contact](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_ft8.jpg)
 
-The standalone FT8 interface is limited due to the display size.  Currently three message lists are available, all scrollable with a mouse wheel.  To the left is a list of all recent FT8 messages.  In the middle is a list of all recent CQ messages.  To the right is a list of all messages around the selected FT8 receive frequency as entered at the bottom of the infomation box.  The bottom line of the display in green shows the next FT8 message to be transmitted when enabled.  The line above it shows the details of the selected FT8 message, which can be changed by clicking on a message in any of the lists.
+The standalone FT8 interface is limited due to the display size.  Currently three message lists are available, all scrollable with a mouse wheel.  To the left is a list of all recent FT8 messages.  In the middle is a list of all recent CQ messages.  To the right is a list of all messages around the selected FT8 receive frequency as entered at the bottom of the infomation box.  The bottom lines of the display show the current/most recent QSO.  The next FT8 message to be transmitted is shown in green in the last line.  Yellow messages are completed.  The line above the message lists shows the details of the selected FT8 message, which can be changed by clicking on a message in any of the lists.
 
 ## Use
 
