@@ -23,8 +23,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define RIGNAME             "T41-EP SDT"
-
 // select display type
 #define RA8875_DISPLAY      1
 //#define ILI9488_DISPLAY     1

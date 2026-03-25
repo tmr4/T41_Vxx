@@ -37,9 +37,6 @@
 #include "Tune.h"
 #include "Utility.h"
 
-#include "src\hardwareConfig.h"
-#include "src\hardware.h"
-
 // special features
 #include "Beacon.h"
 #include "debug.h"
@@ -340,11 +337,7 @@ FLASHMEM void setup() {
 #endif
 
 #ifdef HOST_KEYBOARD_MOUSE_SUPPORT
-  // draw a white rectangle to layer 1 to mask the cursor copy area
-  //tft.fillRect(XPIXELS - 20, TIME_Y, 16, 32, RA8875_WHITE);
-  tft.fillRect(0, 0, 16, 32, RA8875_WHITE);
-  SetMouseArea(0, 0, XPIXELS, YPIXELS);
-  HighlightIBItem(IB_ITEM_FINE, RA8875_GREEN);
+  MouseInit();
 #endif
 
   //memCheck = true;

@@ -25,7 +25,6 @@
 //#include "t41USBHost.h"
 #include "Utility.h"
 
-#include "src\hardwareConfig.h"
 #include "debug.h"
 
 #include "keyboard.h"
@@ -45,7 +44,6 @@
   Static Areas:
     Static areas of the display usually don't change so these functions only need called once on startup or
     when that area of the display is used for another purpose:
-      ShowName
       DrawSpectrumFrame
       DrawSMeterContainer
       DrawAudioSpectContainer
@@ -98,7 +96,6 @@
 
 #define NEW_SI5351_FREQ_MULT  1UL
 #define FLOAT_PRECISION         6             // Assumed precision for a float
-#define RIGNAME_X_OFFSET      570             // Pixel count to rig name field
 
 //------------------------- Global Variables ----------
 
@@ -270,23 +267,6 @@ void ClearScreen() {
   tft.clearMemory();
   tft.writeTo(L1);
   tft.clearMemory();
-}
-
-/*****
-  Purpose: Show the program name and version number
-*****/
-FLASHMEM void ShowName() {
-  tft.fillRect(RIGNAME_X_OFFSET, 0, XPIXELS - RIGNAME_X_OFFSET, tft.getFontHeight(), RA8875_BLACK);
-
-  tft.setFontScale((enum RA8875tsize)1);
-
-  tft.setTextColor(RA8875_YELLOW);
-  tft.setCursor(RIGNAME_X_OFFSET - 20, 1);
-  tft.print(RIGNAME);
-  tft.setFontScale(0);
-  tft.print(" ");                  // Added to correct for deleted leading space 4/16/2022 JACK
-  tft.setTextColor(RA8875_GREEN);  // Make it green
-  tft.print(VERSION);
 }
 
 int filterLoPosition;
@@ -476,7 +456,7 @@ FASTRUN void ShowFreqSpectrum() {
     #endif
 
     // create data for waterfall
-    wfGradIndex = -yPlot + 230;  // Nudged waterfall towards blue
+    wfGradIndex = -yPlot + SPECTRUM_NOISE_FLOOR - 17;  // Nudged waterfall towards black
     if(wfGradIndex < 0) wfGradIndex = 0;
     if(wfGradIndex > 116) wfGradIndex = 116; // *** above is out of range of gradient ***
     waterfall[x1] = gradient[wfGradIndex];  // Try to put pixel values in middle of gradient array
@@ -901,7 +881,7 @@ FASTRUN void ShowFrequency() {
   FormatFrequency(TxRxFreq, freqBuffer);
   tft.setFontScale(3, 2);
 //  tft.fillRect(0, FREQUENCY_Y, SPEC_BOX_W, tft.getFontHeight(), RA8875_BLACK);
-  tft.fillRect(FREQUENCY_X, FREQUENCY_Y, TIME_X - 20, tft.getFontHeight(), RA8875_BLACK);
+  tft.fillRect(FREQUENCY_X, FREQUENCY_Y, SPEC_BOX_W, tft.getFontHeight(), RA8875_BLACK);
 
   if(activeVFO == VFO_A) {
     if(TxRxFreq < bands[currentBandA].fBandLow || TxRxFreq > bands[currentBandA].fBandHigh) {
@@ -948,7 +928,7 @@ FASTRUN void DrawSmeterBar() {
   // the S-Meter bar and the dBm value were inconsistent, as they were using different base values.
   // Moreover the bar could go over the limits of the S-meter box, as the map() function, does not constrain the values
   // S-Meter bar is consistent with the dBm value and the S-Meter bar will always be restricted to the box
-  tft.fillRect(SMETER_X + 1, SMETER_Y + 1, SMETER_BAR_LENGTH, SMETER_BAR_HEIGHT, RA8875_BLACK); // Erase old bar
+  tft.fillRect(SMETER_BAR_X, SMETER_BAR_Y, SMETER_BAR_LENGTH, SMETER_BAR_HEIGHT, RA8875_BLACK); // Erase old bar
 
   dbm = CalcSignalStrength();
 
@@ -975,14 +955,15 @@ FASTRUN void DrawSmeterBar() {
   // make sure, that it does not extend beyond the field
   smeterPad = max(0, smeterPad);
   smeterPad = min(SMETER_BAR_LENGTH, smeterPad);
-  tft.fillRect(SMETER_X + 1, SMETER_Y + 2, smeterPad, SMETER_BAR_HEIGHT-2, RA8875_RED); // bar 2*1 pixel smaller than the field
+  tft.fillRect(SMETER_BAR_X, SMETER_BAR_Y, smeterPad, SMETER_BAR_HEIGHT-2, RA8875_RED); // bar 2*1 pixel smaller than the field
 
+  // display signal strength
   tft.setTextColor(RA8875_WHITE);
   tft.setFontScale((enum RA8875tsize)0);
 
-  tft.fillRect(SMETER_X + 185, SMETER_Y, 80, tft.getFontHeight(), RA8875_BLACK);  // The dB figure at end of S
+  tft.fillRect(SMETER_CONTAINER_X + 185, SMETER_BAR_Y, 80, tft.getFontHeight(), RA8875_BLACK);  // The dB figure at end of S
 
-  MyDrawFloat(dbm, 1, SMETER_X + 184, SMETER_Y, buff);
+  MyDrawFloat(dbm, 1, SMETER_CONTAINER_X + 184, SMETER_BAR_Y, buff);
   tft.setTextColor(RA8875_GREEN);
   tft.print("dBm");
 
@@ -1025,7 +1006,6 @@ FLASHMEM void RedrawDisplayScreen() {
   // update display left to right, top to bottom
   // draw top of display
   ShowFrequency();
-  ShowName();
   ShowOperatingStats();
 
   // draw spectrum area
@@ -1171,44 +1151,45 @@ FLASHMEM void EraseSpectrumWindow() {
 FLASHMEM void DrawSMeterContainer() {
   int i;
   // the white line must only go till S9
-  tft.drawFastHLine(SMETER_X, SMETER_Y - 1, 9 * pixels_per_s, RA8875_WHITE);
-  tft.drawFastHLine(SMETER_X, SMETER_Y + SMETER_BAR_HEIGHT+2, 9 * pixels_per_s, RA8875_WHITE);  // changed 6 to 20
+  tft.drawFastHLine(SMETER_CONTAINER_X, SMETER_CONTAINER_Y - 1, 9 * pixels_per_s, RA8875_WHITE);
+  tft.drawFastHLine(SMETER_CONTAINER_X, SMETER_CONTAINER_Y + SMETER_BAR_HEIGHT+2, 9 * pixels_per_s, RA8875_WHITE);  // changed 6 to 20
 
   for(i = 0; i < 10; i++) {                                                // Draw tick marks for S-values
     // draw wider tick marks in the style of the Teensy Convolution SDR
-    tft.drawRect(SMETER_X + i * pixels_per_s, SMETER_Y - 6-(i%2)*2, 2, 6+(i%2)*2, RA8875_WHITE);
+    tft.drawRect(SMETER_CONTAINER_X + i * pixels_per_s, SMETER_CONTAINER_Y - 6-(i%2)*2, 2, 6+(i%2)*2, RA8875_WHITE);
   }
 
   // the green line must start at S9
-  tft.drawFastHLine(SMETER_X + 9*pixels_per_s, SMETER_Y - 1, SMETER_BAR_LENGTH+2-9*pixels_per_s, RA8875_GREEN);
-  tft.drawFastHLine(SMETER_X + 9*pixels_per_s, SMETER_Y + SMETER_BAR_HEIGHT+2, SMETER_BAR_LENGTH+2-9*pixels_per_s, RA8875_GREEN);
+  tft.drawFastHLine(SMETER_CONTAINER_X + 9*pixels_per_s, SMETER_CONTAINER_Y - 1, SMETER_BAR_LENGTH+2-9*pixels_per_s, RA8875_GREEN);
+  tft.drawFastHLine(SMETER_CONTAINER_X + 9*pixels_per_s, SMETER_CONTAINER_Y + SMETER_BAR_HEIGHT+2, SMETER_BAR_LENGTH+2-9*pixels_per_s, RA8875_GREEN);
 
   for(i = 1; i <= 3; i++) {                                                     // Draw tick marks for s9+ values in 10dB steps
     // draw wider tick marks in the style of the Teensy Convolution SDR
-    tft.drawRect(SMETER_X + 9*pixels_per_s + i * pixels_per_s*10.0/6.0, SMETER_Y - 8+(i%2)*2, 2, 8-(i%2)*2, RA8875_GREEN);
+    tft.drawRect(SMETER_CONTAINER_X + 9*pixels_per_s + i * pixels_per_s*10.0/6.0, SMETER_CONTAINER_Y - 8+(i%2)*2, 2, 8-(i%2)*2, RA8875_GREEN);
   }
 
-  tft.drawFastVLine(SMETER_X, SMETER_Y - 1, SMETER_BAR_HEIGHT+3, RA8875_WHITE);
-  tft.drawFastVLine(SMETER_X + SMETER_BAR_LENGTH+2, SMETER_Y - 1, SMETER_BAR_HEIGHT+3, RA8875_GREEN);
+  // close box with vertical lines
+  tft.drawFastVLine(SMETER_CONTAINER_X, SMETER_CONTAINER_Y - 1, SMETER_BAR_HEIGHT+3, RA8875_WHITE);
+  tft.drawFastVLine(SMETER_CONTAINER_X + SMETER_BAR_LENGTH+2, SMETER_CONTAINER_Y - 1, SMETER_BAR_HEIGHT+3, RA8875_GREEN);
 
   tft.setFontScale((enum RA8875tsize)0);
 
   tft.setTextColor(RA8875_WHITE);
   // moved single digits a bit to the right, to align
-  tft.setCursor(SMETER_X - 8, SMETER_Y - 25);
+  tft.setCursor(SMETER_CONTAINER_X - 8, SMETER_CONTAINER_Y - 25);
   tft.print("S");
-  tft.setCursor(SMETER_X + 8, SMETER_Y - 25);
+  tft.setCursor(SMETER_CONTAINER_X + 8, SMETER_CONTAINER_Y - 25);
   tft.print("1");
-  tft.setCursor(SMETER_X + 32, SMETER_Y - 25);  // was 28, 48, 68, 88, 120 and -15 changed to -20
+  tft.setCursor(SMETER_CONTAINER_X + 32, SMETER_CONTAINER_Y - 25);  // was 28, 48, 68, 88, 120 and -15 changed to -20
   tft.print("3");
-  tft.setCursor(SMETER_X + 56, SMETER_Y - 25);
+  tft.setCursor(SMETER_CONTAINER_X + 56, SMETER_CONTAINER_Y - 25);
   tft.print("5");
-  tft.setCursor(SMETER_X + 80, SMETER_Y - 25);
+  tft.setCursor(SMETER_CONTAINER_X + 80, SMETER_CONTAINER_Y - 25);
   tft.print("7");
-  tft.setCursor(SMETER_X + 104, SMETER_Y - 25);
+  tft.setCursor(SMETER_CONTAINER_X + 104, SMETER_CONTAINER_Y - 25);
   tft.print("9");
   // +20dB needs to get more left
-  tft.setCursor(SMETER_X + 133, SMETER_Y - 25);
+  tft.setCursor(SMETER_CONTAINER_X + 133, SMETER_CONTAINER_Y - 25);
   tft.print("+20dB");
 }
 
@@ -1233,17 +1214,17 @@ FLASHMEM void DrawAudioSpectContainer() {
   }
 
   // erase old box
-  tft.fillRect(AUDIO_SPEC_BOX_L, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_W, AUDIO_SPEC_BOX_H + 39, RA8875_BLACK);
+  tft.fillRect(AUDIO_SPEC_BOX_L, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_W, AUDIO_SPEC_BOX_BOTTOM + 7 + 16 - AUDIO_SPEC_BOX_T, RA8875_BLACK);
 
   tft.drawRect(AUDIO_SPEC_BOX_L, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_W, AUDIO_SPEC_BOX_H, RA8875_WHITE);
-  tft.drawFastVLine(AUDIO_SPEC_BOX_L + 1, AUDIO_SPEC_BOX_BOTTOM, 15, RA8875_WHITE);
+  tft.drawFastVLine(AUDIO_SPEC_BOX_L + 1, AUDIO_SPEC_BOX_BOTTOM, 6, RA8875_WHITE);
   tft.setTextColor(RA8875_WHITE);
-  tft.setCursor(AUDIO_SPEC_BOX_L - 3, AUDIO_SPEC_BOX_BOTTOM + 16);
+  tft.setCursor(AUDIO_SPEC_BOX_L - 3, AUDIO_SPEC_BOX_BOTTOM + 7);
   tft.print(0);
   tft.print("k");
   for(int k = start; k < ticks; k+=inc) {
-    tft.drawFastVLine(AUDIO_SPEC_BOX_L + 1 + ((float)k * pixels_kHz), AUDIO_SPEC_BOX_BOTTOM, 15, RA8875_WHITE);
-    tft.setCursor(AUDIO_SPEC_BOX_L - 3 + ((float)k * pixels_kHz), AUDIO_SPEC_BOX_BOTTOM + 16);
+    tft.drawFastVLine(AUDIO_SPEC_BOX_L + 1 + ((float)k * pixels_kHz), AUDIO_SPEC_BOX_BOTTOM, 6, RA8875_WHITE);
+    tft.setCursor(AUDIO_SPEC_BOX_L - 3 + ((float)k * pixels_kHz), AUDIO_SPEC_BOX_BOTTOM + 7);
     tft.print(k);
     tft.print("k");
   }
@@ -1285,7 +1266,7 @@ FLASHMEM void EraseSecondaryMenu() {
   Parameter list:
 *****/
 FLASHMEM void ShowTransmitReceiveStatus() {
-  tft.setFontScale((enum RA8875tsize)1);
+  tft.setFontScale((enum RA8875tsize)1, (enum RA8875tsize)0);
   tft.setTextColor(RA8875_BLACK);
 
   switch(radioState) {
@@ -1293,25 +1274,25 @@ FLASHMEM void ShowTransmitReceiveStatus() {
     case CW_TRANSMIT_STRAIGHT_STATE:
     case CW_TRANSMIT_KEYER_STATE:
     case DATA_TRANSMIT_STATE:
-      tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 25, RA8875_RED);
-      tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y - 5);
+      tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 18, RA8875_RED);
+      tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y);
       tft.print("XMT");
       break;
 
     case CALIBRATE_TRANSMIT_STATE:
     case CALIBRATE_TWOTONE_STATE:
       if((digitalRead(PTT) == LOW) || (digitalRead(paddleDit) == LOW)) {
-        tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 25, RA8875_RED);
-        tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y - 5);
+        tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 18, RA8875_RED);
+        tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y);
         tft.print("XMT");
       } else {
-        tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 25, RA8875_BLACK);
+        tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 18, RA8875_BLACK);
       }
       break;
 
     default:
-      tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 25, RA8875_GREEN);
-      tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y - 5);
+      tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 18, RA8875_GREEN);
+      tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y);
       tft.print("REC");
       break;
   }
@@ -1358,7 +1339,6 @@ FLASHMEM void SetZoom(int zoom) {
   Purpose: Draw static items on display
 *****/
 FLASHMEM void DrawStaticDisplayItems() {
-  ShowName();
   DrawSpectrumFrame();
   DrawSMeterContainer();
   DrawAudioSpectContainer();

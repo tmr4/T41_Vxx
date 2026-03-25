@@ -8,11 +8,11 @@
 #include "Display.h"
 #include "EEPROM.h"
 #include "Encoders.h"
+#include "InfoBox.h"
 #include "Menu.h"
 #include "MenuProc.h"
 #include "mouse.h"
 #include "Process.h"
-#include "Utility.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data

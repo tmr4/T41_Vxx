@@ -1,7 +1,6 @@
 
 #include <Metro.h>
 #include <SD.h>
-#include <TimeLib.h>                   // Part of Teensy Time library
 
 #include "SDT.h"
 
@@ -24,7 +23,6 @@
 #define TMS1_MEASURE_FREQ(x)        (((uint32_t)(((uint32_t)(x)) << 0U)) & 0xFFFFU)
 #define TEMPMON_ROOMTEMP    25.0f
 
-Metro ms_500 = Metro(500); // display clock updates
 Metro ms_5000 = Metro(5000); // memory, temp and load updates
 
 uint8_t display_dbm = DISPLAY_S_METER_DBM; // DISPLAY_S_METER_DBM or DISPLAY_S_METER_DBMHZ
@@ -270,48 +268,6 @@ float ApproxAtan(float z) {
   const float n1 = 0.97239411f;
   const float n2 = -0.19194795f;
   return (n1 + n2 * z * z) * z;
-}
-
-// ================== Clock stuff
-/*****
-  Purpose: DisplayClock()*****/
-void DisplayClock() {
-  char timeBuffer[15];
-  char temp[5];
-
-  temp[0]       = '\0';
-  timeBuffer[0] = '\0';
-  strcpy(timeBuffer, MY_TIMEZONE);         // e.g., EST
-#ifdef TIME_24H
-  itoa(hour(), temp, DEC);
-#else
-  itoa(hourFormat12(), temp, DEC);
-#endif
-  if(strlen(temp) < 2) {
-    strcat(timeBuffer, "0");
-  }
-  strcat(timeBuffer, temp);
-  strcat(timeBuffer, ":");
-
-  itoa(minute(), temp, DEC);
-  if(strlen(temp) < 2) {
-    strcat(timeBuffer, "0");
-  }
-  strcat(timeBuffer, temp);
-  strcat(timeBuffer, ":");
-
-  itoa(second(), temp, DEC);
-  if(strlen(temp) < 2) {
-    strcat(timeBuffer, "0");
-  }
-  strcat(timeBuffer, temp);
-
-  tft.setFontScale((enum RA8875tsize) 1);
-
-  tft.fillRect(TIME_X - 20, TIME_Y, XPIXELS - TIME_X - 1, CHAR_HEIGHT, RA8875_BLACK);
-  tft.setCursor(TIME_X - 20, TIME_Y);
-  tft.setTextColor(RA8875_WHITE);
-  tft.print(timeBuffer);
 }
 
 /*****
@@ -743,13 +699,6 @@ time_t GetTeensyTime() {
 }
 void SetTeensyTime(time_t time) {
   return Teensy3Clock.set(time); // sets RTC time, see above
-}
-
-void UpdateClock() {
-  // update clock
-  if(ms_500.check() == 1) {
-    DisplayClock();
-  }
 }
 
 void UpdateMemTempLoad() {

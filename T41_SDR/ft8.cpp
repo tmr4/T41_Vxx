@@ -26,9 +26,6 @@
 
 #include "debug.h"
 
-//#include "..\src\hardware.h"
-#include "src\hardware.h"
-#include "src\hardwareConfig.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -213,7 +210,8 @@ uint32_t current_time, start_time, ft8_time;
 
 // selected msg detail above and tx queue below msg lists
 // *** TODO: incorporate "-3" adjustments in tft.print statements ***
-#define FT8_WINDOW_TOP          (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS)
+//#define FT8_WINDOW_TOP          (YPIXELS - FT8_ROW_HEIGHT * FT8_ROWS)
+#define FT8_WINDOW_TOP          WATERFALL_T
 #define FT8_MSG_LIST_TOP        (YPIXELS - FT8_ROW_HEIGHT * (FT8_MSG_ROWS + 0))
 #define FT8_MSG_LIST_SUMMARY    (YPIXELS - FT8_ROW_HEIGHT * (FT8_MSG_ROWS + 1))
 #define FT8_TX_QUEUE_TOP        (YPIXELS - FT8_ROW_HEIGHT)
@@ -1055,7 +1053,8 @@ FLASHMEM bool InitFT8Decoder(const char *call, const char *grid) {
         EraseSpectrumDisplayContainer();
         DrawSpectrumFrame();
         tft.writeTo(L2);
-        tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
+        tft.clearMemory();
+        //tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
         tft.writeTo(L1);
         tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y, SPECTRUM_RES, SPECTRUM_HEIGHT, RA8875_BLACK);
         displayState = DISPLAY_T41_FT8_DECODE;
@@ -1078,9 +1077,9 @@ FLASHMEM bool InitFT8Decoder(const char *call, const char *grid) {
 
         // set up message area
         // Erase waterfall in decode area
-        tft.fillRect(WATERFALL_L, FT8_WINDOW_TOP, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
-        tft.writeTo(L2); // it's on layer 2 as well
-        tft.fillRect(WATERFALL_L, FT8_WINDOW_TOP, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
+        tft.fillRect(WATERFALL_L, FT8_WINDOW_TOP, WATERFALL_W, WATERFALL_H, RA8875_BLACK);
+        //tft.writeTo(L2); // it's on layer 2 as well
+        //tft.fillRect(WATERFALL_L, FT8_WINDOW_TOP, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
         tft.writeTo(L1);
         wfRows = WATERFALL_H - FT8_ROW_HEIGHT * FT8_ROWS - 3;
 

@@ -3,8 +3,6 @@
 
 #include "SDT.h"
 
-#include "src\hardwareConfig.h"
-
 bool mouseCenterTuneActive = false;
 int mouseWheelValue = 0;
 int menuBarSelected = false;
@@ -75,41 +73,64 @@ void ShowFrequency();
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+FLASHMEM void SetMouseArea(int left, int top, int width, int height) {
+  cursorL = left;
+  cursorT = top;
+  cursorR = left + width;
+  cursorB = top + height;
+
+  cursorX = left;
+  cursorY = top;
+  oldCursorX = left;
+  oldCursorY = top;
+}
+
+FLASHMEM void MouseInit() {
+  // draw a white rectangle to layer 1 to mask the cursor copy area
+  //tft.fillRect(XPIXELS - 20, TIME_Y, 16, 32, RA8875_WHITE);
+  //tft.fillRect(0, 0, 16, 32, RA8875_WHITE);
+  //tft.fillRect(800-14, 0, 14, 18, RA8875_GREEN);
+  SetMouseArea(0, 0, XPIXELS, YPIXELS);
+  HighlightIBItem(IB_ITEM_FINE, RA8875_GREEN);
+}
+
 void MoveCursor(int x, int y) {
+  int width = tft.getFontWidth();
+  int height = tft.getFontHeight();
+
   cursorX += x * 4;
   cursorY += y * 2;
 
-  if(cursorX > cursorR - CURSOR_W) cursorX = cursorR - CURSOR_W;
+  if(cursorX > cursorR - width) cursorX = cursorR - width;
   if(cursorX < cursorL) cursorX = cursorL;
-  if(cursorY > cursorB - CURSOR_H + 8) cursorY = cursorB - CURSOR_H + 8; // *** extra 8 adjustment allows cursor to cover last row on display ***
+  if(cursorY > cursorB - height + 0) cursorY = cursorB - height + 0; // *** extra 8 adjustment allows cursor to cover last row on display ***
   if(cursorY < cursorT) cursorY = cursorT;
 
   //Serial.print("cursorX = "); Serial.print(cursorX); Serial.print(" cursorY = "); Serial.println(cursorY);
-  tft.setFontScale((enum RA8875tsize)1);
+  //tft.setFontScale((enum RA8875tsize)1);
+  tft.setFontScale((enum RA8875tsize)0);
 
   // the cursor is drawn on layer 2, switch to it
   tft.writeTo(L2);
 
-  // other items occupy layer 2
-  // we need to prevent the cursor from overwriting them we do this by copying what
-  // will be under the cursor for restoration elsewhere.  The RA8875 has limited
-  // functionality to do this.  I've used a cursor sized block at 0,0 to handle this.
-  // A white block on layer 1 hides the layer 2 copy under it.  All's not wasted as
-  // this block has some functionality.  A problem occurs when the cursor is within
-  // this block so we'll handle that separately.
-  if(cursorY < FREQ_T) {
-    // there's no layer 2 items in this area
-    // erase old cursor by simply drawing it again in black
+  // Other items occupy layer 2, we need to prevent the cursor from overwriting them.
+  // We do this by copying what will be under the cursor for restoration later.
+  // The RA8875 has limited functionality to do this.  I've hidden the data
+  // on layer 2 behind the RX/TX indicator block.
+  if(cursorY < SPEC_BOX_T) {
+    // there's no layer 2 items in this area, erase old cursor by simply drawing it again in black
+    // this also serves to correct for when the cursor is within the data copy area
     tft.setTextColor(RA8875_BLACK);
     tft.setCursor(oldCursorX, oldCursorY);
     tft.print((char)7);
   } else {
     // replace what was previously on layer 2 under the cursor
     //BTE_move(SourceX, SourceY, Width, Height, DestX, DestY, SourceLayer, DestLayer,bool Transparent, uint8_t ROP, bool Monochrome, bool ReverseDir)
-    tft.BTE_move(0, 0, 16, 32, oldCursorX, oldCursorY, 2, 2);
+    //tft.BTE_move(0, 0, width, height, oldCursorX, oldCursorY, 2, 2);
+    tft.BTE_move(800-8, 0, width, height, oldCursorX, oldCursorY, 2, 2);
 
     // copy the background under the cursor for replacement next time
-    tft.BTE_move(cursorX, cursorY, 16, 32, 0, 0, 2, 2);
+    tft.BTE_move(cursorX, cursorY, width, height, 800-8, 0, 2, 2);
   }
 
   // draw new cursor
@@ -121,18 +142,6 @@ void MoveCursor(int x, int y) {
 
   oldCursorX = cursorX;
   oldCursorY = cursorY;
-}
-
-FLASHMEM void SetMouseArea(int left, int top, int width, int height) {
-  cursorL = left;
-  cursorT = top;
-  cursorR = left + width;
-  cursorB = top + height;
-
-  cursorX = left;
-  cursorY = top;
-  oldCursorX = left;
-  oldCursorY = top;
 }
 
 bool CursorInMenuArea() {
@@ -314,6 +323,9 @@ void MouseButtonOpStatsArea(int button) {
 }
 
 void MouseButtonSpectrumWaterfall(int button) {
+  int width = tft.getFontWidth();
+  int height = tft.getFontHeight();
+
   if(currentDemodMode == DEMOD_FT8_INTERNAL) {
     FT8MsgWindowClick(cursorX, cursorY, button);
     return;
@@ -323,7 +335,7 @@ void MouseButtonSpectrumWaterfall(int button) {
       // there was a left click is in the spectrum or waterfall area, set the NCO frequency
 
       // replace what was previously under the cursor
-      tft.BTE_move(0, 0, 16, 32, oldCursorX, oldCursorY, 2, 2);
+      tft.BTE_move(800-8, 0, width, height, oldCursorX, oldCursorY, 2, 2);
 
       SetNCOFreq((cursorX + CURSOR_W / 2 - centerLine) * sampleRate / (1 << spectrumZoom) / SPECTRUM_RES);
 
@@ -344,7 +356,7 @@ void MouseButtonSpectrumWaterfall(int button) {
       }
 
       // background under the cursor may have changed, copy it for replacement next time
-      tft.BTE_move(cursorX, cursorY, 16, 32, 0, 0, 2, 2);
+      tft.BTE_move(cursorX, cursorY, width, height, 800-8, 0, 2, 2);
       break;
 
     case 2: // right click

@@ -32,7 +32,6 @@ float32_t log10f_fast(float32_t X);
 float32_t AlphaBetaMag(float32_t  inphase, float32_t  quadrature);
 float ApproxAtan(float z);
 void SaveAnalogSwitchValues();
-void DisplayClock();
 void SetBand();
 int SDPresentCheck();
 void ShowTempAndLoad();
@@ -54,5 +53,4 @@ int GetXRState();
 time_t GetTeensyTime();
 void SetTeensyTime(time_t time);
 
-void UpdateClock();
 void UpdateMemTempLoad();

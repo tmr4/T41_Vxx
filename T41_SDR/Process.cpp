@@ -26,7 +26,6 @@
 #include "t41USBHost.h"
 #include "Utility.h"
 
-#include "src\hardwareConfig.h"
 #include "debug.h"
 
 #ifdef PROJECTSYSTEM_ENCODER_MCP

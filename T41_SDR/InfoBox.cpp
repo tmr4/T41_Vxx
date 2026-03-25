@@ -1,5 +1,7 @@
 
 #include <malloc.h>
+#include <Metro.h>
+#include <TimeLib.h>                   // Part of Teensy Time library
 
 #include "SDT.h"
 
@@ -43,6 +45,8 @@ void ClearInfoBox();
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+Metro ms_500 = Metro(500); // display clock updates
+
 typedef  struct {
   const char *label;      // info box label
   const char **options;   // label options
@@ -62,7 +66,9 @@ typedef  struct {
 #define IB_COL_1_X        INFO_BOX_L + 90  // X coordinate for info box 1st column field
 #define IB_COL_2_X        INFO_BOX_L + 220 // X coordinate for info box 2nd column field
 #define IB_COL_2L_X       INFO_BOX_L + 205 // X coordinate for info box 2nd column field
-#define IB_ROW_1_Y        INFO_BOX_T + 1
+
+// 14 rows possible with current spacing
+#define IB_ROW_1_Y        INFO_BOX_T + 20
 #define IB_ROW_2_Y        IB_ROW_1_Y + 12
 #define IB_ROW_3_Y        IB_ROW_2_Y + 20
 #define IB_ROW_4_Y        IB_ROW_3_Y + 20
@@ -72,6 +78,11 @@ typedef  struct {
 #define IB_ROW_8_Y        IB_ROW_7_Y + 20
 #define IB_ROW_9_Y        IB_ROW_8_Y + 20
 #define IB_ROW_10_Y       IB_ROW_9_Y + 20
+#define IB_ROW_11_Y       IB_ROW_10_Y + 20
+#define IB_ROW_12_Y       IB_ROW_11_Y + 20
+#define IB_ROW_13_Y       IB_ROW_12_Y + 20
+#define IB_ROW_14_Y       IB_ROW_13_Y + 20
+//#define IB_ROW_15_Y       IB_ROW_14_Y + 20
 
 #define DECODER_WPM_X     IB_COL_1_X + 37
 
@@ -120,18 +131,19 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   false, // Equalizers
 };
 
+// *** TODO: add version ***
 /* PROGMEM */ const infoBoxItem infoBox[] =
 { //                                                     font    # chars
   // label         options      option                   size    to erase  flag  col            row,           follow-up function
   { "Vol:",        NULL,        &audioVolume,                     1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
   { "AGC",         agcOpts,     &AGCMode,                 1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
-  { "Increment:",  tuneValues,  &tuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // Tune Inc
+  { "CT Inc:",     tuneValues,  &tuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // Tune Inc
   { "FT Inc:",     ftValues,    &ftIndex,                 0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
   { "Zoom:",       zoomOptions, (int*)&spectrumZoom,      0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    NULL                   }, // Zoom
   { "Decoder:",    onOff,       &decoderFlag,             0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Decoder
   { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,      0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
-  { "Temp:",       NULL,        NULL,                     0,        3,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBTempFollowup        }, // Teensy Temp
-  { "Load:",       NULL,        NULL,                     0,        4,      1,   IB_COL_2_X,    IB_ROW_7_Y,    &IBLoadFollowup        },  // Teensy Load
+  { "Temp:",       NULL,        NULL,                     0,        3,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
+  { "Load:",       NULL,        NULL,                     0,        4,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBLoadFollowup        },  // Teensy Load
   { "FT8       ",  ft8Opts,     &ft8SyncState,            0,        8,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   },  // FT8 sync
   { "Tx:",         ft8TxOpts,   &ft8TxState,              0,        7,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx enabled
   { "Tx Freq:",    NULL,        &ft8TxFreq,               0,        5,      0,   IB_COL_1_X,    IB_ROW_10_Y,   &IBFT8RxTxFollowup     },  // FT8 Tx freq
@@ -140,8 +152,8 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "CQ resp:",    ft8CqOpts,   &ft8CqState,              0,        4,      1,   IB_COL_2_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx interval
 //  { "Auto:",       ft8TxOpts, &ft8TxState,            0,        4,      1,   IB_COL_2_X,    IB_ROW_8_Y,    &IBFT8Followup         },  // FT8 auto
   { "Keyer     ",  keyerOpts,   &keyerState,              0,       10,      1,   IB_COL_1_X,    IB_ROW_8_Y,    &IBKeyerFollowup       },  // Keyer
-  { "Stack:",      NULL,        NULL,                     0,        4,      2,   IB_COL_1_X,    IB_ROW_6_Y,    &IBStackFollowup       },  // Stack
-  { "Heap:",       NULL,        NULL,                     0,        4,      2,   IB_COL_2_X,    IB_ROW_6_Y,    &IBHeapFollowup        },  // Heap
+  { "Stack:",      NULL,        NULL,                     0,        4,      2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBStackFollowup       },  // Stack
+  { "Heap:",       NULL,        NULL,                     0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBHeapFollowup        },  // Heap
   { "AutoNotch:",  onOff,       (int*)&ANR_notchOn,       0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
   { "Noise:",      filter,      &nrOptionSelect,          0,        8,      1,   IB_COL_1_X,    IB_ROW_6_Y,    NULL                   }, // Noise Filter
   { "Compress:",   onOff,       &compressorFlag,          0,        6,      1,   IB_COL_2_X,    IB_ROW_5_Y,    &IBCompressionFollowup }, // Compress
@@ -852,4 +864,57 @@ void HighlightIBItem(uint8_t item, int color) {
   label_x = xOffset - 5 - strlen(infoBox[item].label) * tft.getFontWidth();
   tft.setCursor(label_x, yOffset);
   tft.print(infoBox[item].label);
+}
+
+/*****
+  Purpose: DisplayClock()*****/
+void DisplayClock() {
+  char timeBuffer[15];
+  char temp[5];
+
+  temp[0]       = '\0';
+  timeBuffer[0] = '\0';
+  strcpy(timeBuffer, MY_TIMEZONE);         // e.g., EST
+#ifdef TIME_24H
+  itoa(hour(), temp, DEC);
+#else
+  itoa(hourFormat12(), temp, DEC);
+#endif
+  if(strlen(temp) < 2) {
+    strcat(timeBuffer, "0");
+  }
+  strcat(timeBuffer, temp);
+  strcat(timeBuffer, ":");
+
+  itoa(minute(), temp, DEC);
+  if(strlen(temp) < 2) {
+    strcat(timeBuffer, "0");
+  }
+  strcat(timeBuffer, temp);
+  strcat(timeBuffer, ":");
+
+  itoa(second(), temp, DEC);
+  if(strlen(temp) < 2) {
+    strcat(timeBuffer, "0");
+  }
+  strcat(timeBuffer, temp);
+
+  tft.setFontScale((enum RA8875tsize) 0);
+
+  tft.fillRect(TIME_X, TIME_Y, 15 * tft.getFontWidth(), tft.getFontHeight(), RA8875_BLACK);
+  tft.setCursor(TIME_X, TIME_Y);
+  //tft.setTextColor(RA8875_WHITE);
+  tft.setTextColor(YELLOW);
+  tft.print(timeBuffer);
+
+
+  tft.print("     ");
+  tft.print(VERSION);
+}
+
+void UpdateClock() {
+  // update clock
+  if(ms_500.check() == 1) {
+    DisplayClock();
+  }
 }

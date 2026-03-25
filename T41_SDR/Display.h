@@ -18,11 +18,29 @@
 #define PIXELS_PER_EQUALIZER_DELTA   10           // Number of pixels per detent of encoder for equalizer changes
 #define PIXELS_PER_AUDIO_DELTA       10
 
+#define FREQUENCY_X           0
+#define FREQUENCY_Y           0 //28
+#define FREQUENCY_X_SPLIT     280
+#define VFO_B_ACTIVE_OFFSET   FREQUENCY_X_SPLIT - 60
+#define VFO_B_INACTIVE_OFFSET FREQUENCY_X_SPLIT + 60
+
+#define OPERATION_STATS_L     5
+#define OPERATION_STATS_T     (FREQUENCY_Y + 47)
+#define OPERATION_STATS_W     (512 + 2 - OPERATION_STATS_L)
+#define OPERATION_STATS_H     25
+
+#define OPERATION_STATS_CF    100 // center frequency
+#define OPERATION_STATS_BD    180 // band
+#define OPERATION_STATS_MD    220 // mode
+#define OPERATION_STATS_CWF   245 // CW filter
+#define OPERATION_STATS_DMD   310 // demod mode
+#define OPERATION_STATS_PWR   405 // power level
+
 #define SPECTRUM_RES          512
 #define SPECTRUM_HEIGHT       150                 // This is the pixel height of spectrum plot area without disturbing the axes
 
 #define SPEC_BOX_L            0
-#define SPEC_BOX_T            99
+#define SPEC_BOX_T            (OPERATION_STATS_T + 24) //99
 #define SPEC_BOX_W            SPECTRUM_RES + 2
 #define SPEC_BOX_H            SPECTRUM_HEIGHT + 2
 
@@ -30,13 +48,11 @@
 #define SPECTRUM_TOP_Y        SPEC_BOX_T + 1            // Start of spectrum plot space
 #define SPECTRUM_BOTTOM       SPECTRUM_TOP_Y + SPECTRUM_HEIGHT - 1
 
+#define SPECTRUM_NOISE_FLOOR  (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT - 3)
 #define SPEC_BOX_LABELS       (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT + 5)
 
-#define FREQUENCY_X           0
-#define FREQUENCY_Y           28
-#define FREQUENCY_X_SPLIT     280
-#define VFO_B_ACTIVE_OFFSET   FREQUENCY_X_SPLIT - 60
-#define VFO_B_INACTIVE_OFFSET FREQUENCY_X_SPLIT + 60
+#define FILTER_PARAMETERS_X   5 //(XPIXELS * 0.22)
+#define FILTER_PARAMETERS_Y   (SPECTRUM_TOP_Y + 2) //(YPIXELS * 0.213)
 
 #define WATERFALL_L           SPECTRUM_LEFT_X
 #define WATERFALL_T           (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT + 25)
@@ -48,11 +64,21 @@
 #define TEMP_X_OFFSET         15
 #define TEMP_Y_OFFSET         465                                           // 480 * 0.97 = 465
 
+#define X_R_STATUS_X          (XPIXELS - 55)
+#define X_R_STATUS_Y          0
+
+#define SMETER_CONTAINER_X    (SPECTRUM_LEFT_X + SPECTRUM_RES + 15)
+#define SMETER_CONTAINER_Y    25
+#define SMETER_BAR_X          (SMETER_CONTAINER_X + 1)
+#define SMETER_BAR_Y          (SMETER_CONTAINER_Y + 2)
+#define SMETER_BAR_HEIGHT     16
+#define SMETER_BAR_LENGTH     180
+
 #define AUDIO_SPEC_BOX_L      (SPECTRUM_LEFT_X + SPECTRUM_RES + 15)
-#define AUDIO_SPEC_BOX_T      SPECTRUM_BOTTOM - 118
+#define AUDIO_SPEC_BOX_T      OPERATION_STATS_T
 #define AUDIO_SPEC_BOX_W      (XPIXELS - AUDIO_SPEC_BOX_L) // use up rest of screen right
 #define AUDIO_SPEC_BOX_H      118
-#define AUDIO_SPEC_BOX_BOTTOM SPECTRUM_BOTTOM
+#define AUDIO_SPEC_BOX_BOTTOM (OPERATION_STATS_T + AUDIO_SPEC_BOX_H)
 
 #define AUDIO_SPEC_RES        (AUDIO_SPEC_BOX_W - 2)
 #define AUDIO_SPEC_L          AUDIO_SPEC_BOX_L + 1
@@ -64,30 +90,15 @@
 
 #define CLIP_AUDIO_PEAK       115           // The pixel value where audio peak overwrites S-meter
 
-#define OPERATION_STATS_L     5
-#define OPERATION_STATS_T     FREQUENCY_Y + 47
-#define OPERATION_STATS_W     SPEC_BOX_W - OPERATION_STATS_L
-#define OPERATION_STATS_H     25
+// info box coordinates and item identifiers
+#define INFO_BOX_L            (SPECTRUM_LEFT_X + SPECTRUM_RES + 15)
+#define INFO_BOX_T            (AUDIO_SPEC_BOX_BOTTOM + 25) //(SPECTRUM_TOP_Y + SPECTRUM_HEIGHT + 40)
+#define INFO_BOX_W            XPIXELS - INFO_BOX_L // use up remainder of screen right
+#define INFO_BOX_H            YPIXELS - INFO_BOX_T // use up remainder of screen bottom
 
-#define OPERATION_STATS_CF    100 // center frequency
-#define OPERATION_STATS_BD    180 // band
-#define OPERATION_STATS_MD    220 // mode
-#define OPERATION_STATS_CWF   245 // CW filter
-#define OPERATION_STATS_DMD   310 // demod mode
-#define OPERATION_STATS_PWR   405 // power level
+#define TIME_X                INFO_BOX_L + 10       // Upper-left corner for time
+#define TIME_Y                INFO_BOX_T + 2
 
-#define X_R_STATUS_X          735
-#define X_R_STATUS_Y          70
-
-#define SMETER_X              SPECTRUM_LEFT_X + SPECTRUM_RES + 15
-#define SMETER_Y              YPIXELS * 0.22                // 480 * 0.22 = 106
-#define SMETER_BAR_HEIGHT     18
-#define SMETER_BAR_LENGTH     180
-#define SPECTRUM_NOISE_FLOOR  (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT - 3)
-#define TIME_X                (XPIXELS * 0.73)                            // Upper-left corner for time
-#define TIME_Y                (YPIXELS * 0.07)
-#define FILTER_PARAMETERS_X   (XPIXELS * 0.22)
-#define FILTER_PARAMETERS_Y   (YPIXELS * 0.213)
 #define DEFAULT_EQUALIZER_BAR 100                                         // Default equalizer bar height
 #define VFO_A                 0
 #define VFO_B                 1
@@ -172,7 +183,6 @@ extern int nf2PC;
 void InitDisplay();
 
 // static items
-void ShowName();
 void DrawSpectrumFrame();
 //void DrawSMeterContainer();
 

@@ -10,6 +10,6 @@ extern int menuBarSelected;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void SetMouseArea(int left, int top, int width, int height);
+void MouseInit();
 
 void MouseLoop();

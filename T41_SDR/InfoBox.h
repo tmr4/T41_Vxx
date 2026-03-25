@@ -3,12 +3,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-// info box coordinates and item identifiers
-#define INFO_BOX_L        (SPECTRUM_LEFT_X + SPECTRUM_RES + 15)
-#define INFO_BOX_T        (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT + 40)
-#define INFO_BOX_W        XPIXELS - INFO_BOX_L // use up remainder of screen right
-#define INFO_BOX_H        YPIXELS - INFO_BOX_T // use up remainder of screen bottom
-
 #define IB_ITEM_VOL       0
 #define IB_ITEM_AGC       1
 #define IB_ITEM_TUNE      2
@@ -55,3 +49,6 @@ void HighlightIBItem(uint8_t item, int color);
 void SetFtActive(int flag);
 
 void ClearInfoBoxKeyer();
+
+void DisplayClock();
+void UpdateClock();
