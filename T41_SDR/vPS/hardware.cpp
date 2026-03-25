@@ -29,6 +29,9 @@
 #ifdef PROJECTSYSTEM_ENCODER_1
 extern Bounce encoderSwitch;
 #endif
+#ifdef PROJECTSYSTEM_ENCODER_2
+extern Bounce encoder2Switch;
+#endif
 
 //------------
 // Process.h
@@ -59,7 +62,7 @@ void InitFrontPanel();
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-#ifdef PROJECTSYSTEM_ENCODER_1
+#if defined(PROJECTSYSTEM_ENCODER_1) || defined(PROJECTSYSTEM_ENCODER_2)
 
 //------------
 // Button.cpp
@@ -247,26 +250,16 @@ float CalcSignalStrength() {
 
 void InitHardware() {
   // set up hardware specific Teensy pins that aren't handled elsewhere
-  pinMode(FILTERPIN15M, OUTPUT);
-  pinMode(FILTERPIN20M, OUTPUT);
-  pinMode(FILTERPIN40M, OUTPUT);
-  pinMode(FILTERPIN80M, OUTPUT);
-
   pinMode(MUTE, OUTPUT);
   digitalWrite(MUTE, LOW);
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
-#if defined(FOURSQRP_FRONTPANEL)
-  EnableButtonInterrupts();
+#if defined(PROJECTSYSTEM_ENCODER_1) || defined(PROJECTSYSTEM_ENCODER_2)
   EncodersInit();
-#else
-  #ifdef PROJECTSYSTEM_ENCODER_1
-  EncodersInit();
-  #endif
-  #ifdef PROJECTSYSTEM_ENCODER_MCP
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_MCP
   InitFrontPanel();
-  #endif
 #endif
 }
 
@@ -313,6 +306,13 @@ void HardwareLoopStart() {
   if(encoderSwitch.update() && encoderSwitch.fallingEdge()) {
     // load wave file and begin decoding internally if successful
     ExecuteButtonPress(16);
+  }
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_2
+  // poll encoder switch
+  if(encoder2Switch.update() && encoder2Switch.fallingEdge()) {
+    // load wave file and begin decoding internally if successful
+    ExecuteButtonPress(1);
   }
 #endif
 }

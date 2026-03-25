@@ -46,6 +46,16 @@
     #define VOLUME_ENCODER_B         3
     #define ENCODER_1_SWITCH         2
     #endif
+    #ifdef PROJECTSYSTEM_ENCODER_2
+    #define FILTER_ENCODER_A         29 // switched to reverse direction
+    #define FILTER_ENCODER_B         28
+    #define ENCODER_2_SWITCH         30
+    #endif
+    #ifdef PROJECTSYSTEM_ENCODER_3
+    #define FINETUNE_ENCODER_A       28
+    #define FINETUNE_ENCODER_B       29
+    #define ENCODER_3_SWITCH         30
+    #endif
 
     #define PROFILER_MAINLOOP_PIN         33
     #define PROFILER_PROCESS_PIN          34
@@ -54,7 +64,7 @@
     #define PROFILER_FT8PROCESSBLOCK_PIN  35
     #define PROFILER_FT8GETDATA_PIN       36
     #define PROFILER_FT8DECODE_PIN        38
-    #define PROFILER_FT8_TX_PIN           28
+    #define PROFILER_FT8_TX_PIN           31
 #endif
 
 #define PTT          37    // Transmit/Receive
@@ -62,7 +72,17 @@
 #ifdef PROJECTSYSTEM_ENCODER_1
 #include <Rotary.h>                    // https://github.com/brianlow/Rotary
 
-extern Rotary volumeEncoder;        // (2,  3)
+extern Rotary volumeEncoder;
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_2
+#include <Rotary.h>                    // https://github.com/brianlow/Rotary
+
+extern Rotary menuChangeEncoder;
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_3
+//#include <Rotary.h>                    // https://github.com/brianlow/Rotary
+
+extern Rotary fineTuneEncoder;
 #endif
 
 //------------
@@ -134,6 +154,11 @@ void HardwareLoopStart();
 #ifdef PROJECTSYSTEM_ENCODER_1
 void EncodersInit();
 void EncoderVolumeISR();
+#endif
+
+#ifdef PROJECTSYSTEM_ENCODER_2
+void EncodersInit();
+void EncoderMenuChangeFilterISR();
 #endif
 
 #ifdef PROJECTSYSTEM_ENCODER_MCP

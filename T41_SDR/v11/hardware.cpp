@@ -250,6 +250,7 @@ void InitHardware() {
   pinMode(FILTERPIN20M, OUTPUT);
   pinMode(FILTERPIN40M, OUTPUT);
   pinMode(FILTERPIN80M, OUTPUT);
+  SetBandRelay(HIGH);
 
   pinMode(MUTE, OUTPUT);
   digitalWrite(MUTE, LOW);

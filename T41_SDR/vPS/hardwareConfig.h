@@ -25,6 +25,8 @@
 // *** currently Rotary and Rotary_V12 can't coexist so only ENCODER_1 or ENCODER_MCP be enabled ***
 // *** currently these are both controlling the volume encoder so only one should be enabled at a time ***
 #define PROJECTSYSTEM_ENCODER_1   // for testing v11 type encoder w/ project system
+#define PROJECTSYSTEM_ENCODER_2   // for testing v11 type encoder w/ project system
+//#define PROJECTSYSTEM_ENCODER_3   // for testing v11 type encoder w/ project system
 //#define PROJECTSYSTEM_ENCODER_MCP // for testing MCP23017 type encoder w/ project system
 
 #define VOLUME_REVERSED false

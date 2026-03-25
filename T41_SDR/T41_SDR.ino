@@ -276,7 +276,6 @@ FLASHMEM void SoftReset() {
 
   NCOFreq = 0;
   ResetTuning();
-  SetBandRelay(HIGH);
 }
 
 // *** for testing ***
