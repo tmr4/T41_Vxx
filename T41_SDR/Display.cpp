@@ -362,6 +362,12 @@ FASTRUN void ShowFreqSpectrum() {
   static int yOldPlot[SPECTRUM_RES];
   static int currentNF = 0;
   uint16_t waterfall[WATERFALL_W];
+  static int tik = 1, tok = 2;
+
+  // *** this assumes my normal convention of always returning to layer 1 in any routine that changes layers ***
+  if(tik == 2) {
+    tft.writeTo(L2);
+  }
 
   YieldToProcess(true);
 
@@ -410,17 +416,17 @@ FASTRUN void ShowFreqSpectrum() {
     }
 
     // clear erase flag if we don't need to erase anything
-    if((yOldPlot[x1] == SPECTRUM_BOTTOM) && (yOldPlot[x1 + 1] == SPECTRUM_BOTTOM)) {
-      eraseSpec = false;
-    }
-    if((yOldPlot[x1] == SPECTRUM_TOP_Y) && (yOldPlot[x1 + 1] == SPECTRUM_TOP_Y)) {
-      eraseSpec = false;
-    }
+    //if((yOldPlot[x1] == SPECTRUM_BOTTOM) && (yOldPlot[x1 + 1] == SPECTRUM_BOTTOM)) {
+    //  eraseSpec = false;
+    //}
+    //if((yOldPlot[x1] == SPECTRUM_TOP_Y) && (yOldPlot[x1 + 1] == SPECTRUM_TOP_Y)) {
+    //  eraseSpec = false;
+    //}
 
     // erase the old spectrum if needed
-    if(eraseSpec && (displayState == DISPLAY_T41)) {
-      tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
-    }
+    //if(eraseSpec && (displayState == DISPLAY_T41)) {
+    //  tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+    //}
 
     // prevent drawing spectrum outside of the spectrum area
     // also clear draw flag if we don't need to draw anything
@@ -447,7 +453,7 @@ FASTRUN void ShowFreqSpectrum() {
     }
 
     // save plot value to erase spectrum next loop
-    yOldPlot[x1] = yPlot;
+    //yOldPlot[x1] = yPlot;
 
     #ifdef T41_REMOTE_DISPLAY
     if(connected) {
@@ -468,7 +474,7 @@ FASTRUN void ShowFreqSpectrum() {
     delayMicroseconds(147);
     #endif
 
-    YieldToProcess();
+    //YieldToProcess();
   }
 
   // save last plot value for erasing on next loop
@@ -507,24 +513,30 @@ FASTRUN void ShowFreqSpectrum() {
   // Use the Block Transfer Engine (BTE) to move waterfall down a line
   // copy the waterfall between layers in a DMA ping/pong manner, moving it down to row 2
   if(displayState == DISPLAY_T41) {
-    static int tik = 1, tok = 2;
 
     tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfRows, WATERFALL_L, WATERFALL_T + 1, tik, tok);
     tft.readStatus(); // Make sure it is done.  Memory moves can take time. This is blocking. *** might need to be changed back to original if blocking nature is modified ***
-    if(tik == 1) {
-      tik = 2;
-      tok = 1;
-      tft.writeTo(L2);
-    } else {
-      tik = 1;
-      tok = 2;
-      tft.writeTo(L1);
-    }
 
     // write new row of data into the top row to finish the scrolling effect
     tft.writeRect(WATERFALL_L, WATERFALL_T, WATERFALL_W, 1, waterfall);
-    tft.writeTo(L1);
   }
+
+  if(tik == 1) {
+    // erase old spectrum on layer 2
+    tft.writeTo(L2);
+    tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y + 18, SPECTRUM_RES, SPECTRUM_HEIGHT - 18, RA8875_BLACK);
+    tik = 2;
+    tok = 1;
+  } else {
+    // erase old spectrum on layer 1
+    tft.writeTo(L1);
+    tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y + 18, SPECTRUM_RES, SPECTRUM_HEIGHT - 18, RA8875_BLACK);
+    tik = 1;
+    tok = 2;
+  }
+  DrawBandwidthBar();
+
+  tft.writeTo(L1);
 
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
 }
@@ -537,6 +549,8 @@ FASTRUN void ShowFreqSpectrum() {
 *****/
 FASTRUN void ShowAudioSpectrum() {
   static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
+
+  YieldToProcess();
 
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
@@ -565,7 +579,7 @@ FASTRUN void ShowAudioSpectrum() {
     }
 
     // *** TODO: verify need for this ***
-    YieldToProcess();
+    //YieldToProcess();
   }
 
   RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
@@ -1078,10 +1092,10 @@ FASTRUN void DrawBandwidthBar() {
   }
 
   // erase old bar
-  tft.writeTo(L2);
+  //tft.writeTo(L2);
   //tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y + 20, SPECTRUM_RES, SPECTRUM_HEIGHT - 20, RA8875_BLACK);
-  tft.fillRect(oldFilterX, SPECTRUM_TOP_Y + 20, oldFilterWidth + 1, SPECTRUM_HEIGHT - 20, RA8875_BLACK);
-  tft.drawFastVLine(oldTuneLine, SPECTRUM_TOP_Y + 20, SPECTRUM_HEIGHT - 20, RA8875_BLACK);
+  //tft.fillRect(oldFilterX, SPECTRUM_TOP_Y + 20, oldFilterWidth + 1, SPECTRUM_HEIGHT - 20, RA8875_BLACK);
+  //tft.drawFastVLine(oldTuneLine, SPECTRUM_TOP_Y + 20, SPECTRUM_HEIGHT - 20, RA8875_BLACK);
 
   // update bar if we haven't reset tuning, otherwise this gets recalled by that routine
   if(!resetTuningFlag) {
