@@ -505,24 +505,25 @@ FASTRUN void ShowFreqSpectrum() {
 
   // scroll the waterfall display
   // Use the Block Transfer Engine (BTE) to move waterfall down a line
-  // copy the waterfall to layer 2, moving it down to row 2
-  //
-  // *** The waterfall update takes ~20ms or more in total.
-  //     The process depends on this in part to ensure that the IQ input
-  //     buffers have sufficient data to process at the start of the next
-  //     loop.  Spectrum updates are skipped if this isn't the case.
+  // copy the waterfall between layers in a DMA ping/pong manner, moving it down to row 2
   if(displayState == DISPLAY_T41) {
-    tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfRows, WATERFALL_L, WATERFALL_T + 1, 1, 2);
+    static int tik = 1, tok = 2;
+
+    tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfRows, WATERFALL_L, WATERFALL_T + 1, tik, tok);
     tft.readStatus(); // Make sure it is done.  Memory moves can take time. This is blocking. *** might need to be changed back to original if blocking nature is modified ***
-
-    YieldToProcess();
-
-    // copy the waterfall back to layer 1, row 2
-    tft.BTE_move(WATERFALL_L, WATERFALL_T + 1, WATERFALL_W, wfRows, WATERFALL_L, WATERFALL_T + 1, 2);
-    tft.readStatus(); // Make sure it's done.
+    if(tik == 1) {
+      tik = 2;
+      tok = 1;
+      tft.writeTo(L2);
+    } else {
+      tik = 1;
+      tok = 2;
+      tft.writeTo(L1);
+    }
 
     // write new row of data into the top row to finish the scrolling effect
     tft.writeRect(WATERFALL_L, WATERFALL_T, WATERFALL_W, 1, waterfall);
+    tft.writeTo(L1);
   }
 
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
