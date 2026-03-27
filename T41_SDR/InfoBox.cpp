@@ -69,7 +69,7 @@ typedef  struct {
 
 // 14 rows possible with current spacing
 #define IB_ROW_1_Y        INFO_BOX_T + 20
-#define IB_ROW_2_Y        IB_ROW_1_Y + 12
+#define IB_ROW_2_Y        IB_ROW_1_Y + 12 // extra padding, not useable if row 1 is large
 #define IB_ROW_3_Y        IB_ROW_2_Y + 20
 #define IB_ROW_4_Y        IB_ROW_3_Y + 20
 #define IB_ROW_5_Y        IB_ROW_4_Y + 20
@@ -92,88 +92,86 @@ const char *ftValues[] = { "10", "50", "250", "500" };
 const char *filter[] = { "Off", "Kim", "Spectral", "LMS" };
 const char *onOff[2] = { "Off", "On" };
 const char *nfOptions[3] = { "Off", "Auto", "On"};
-const char *optionsWPM[2] = { "Straight Key", "Paddles " };
 const char *zoomOptions[] = { "1x ", "2x ", "4x ", "8x ", "16x" }; // combine with MAX_ZOOM_ENTRIES somewhere
+
+const char *keyerOpts[] = { "Off", "WPM" };
+const char *optionsWPM[2] = { "Straight Key", "Paddles " };
 
 const char *ft8Opts[] = { "no sync", "sync" };
 const char *ft8TxOpts[] = { "Off", "enabled" };
 const char *ft8IntOpts[] = { "even", "odd" };
 const char *ft8CqOpts[] = { "man", "auto" };
 
-const char *keyerOpts[] = { "Off", "WPM" };
-
 #define IB_NUM_ITEMS 24
 
+// true = info box is active and shown
 bool infoBoxItemActive[IB_NUM_ITEMS] = {
   true,  // Vol
   true,  // AGC
-  true,  // Incr
+  true,  // CT Inc
   true,  // FT Inc
   true,  // Zoom
-  true,  // Decoder
-  true,  // NF Set
-  true,  // Temp
-  true,  // Load
-  false, // FT8
-  false, // FT8 Auto
-  false, // FT8 Tx Freq
-  false, // FT8 Rx Freq
-  false, // FT8 Tx interval
-  false, // FT8 CQ
+  true,  // Noise Floor
+  true,  // Auto Notch
+  true,  // Compress
+  true,  // Noise Filter
+  true,  // RF Gain
+  true,  // Equalizers
+  false, // Decoder
+  false, // Key Type
   false, // Keyer
+  false, // FT8 sync
+  false, // FT8 Tx interval
+  false, // FT8 Tx enabled
+  false, // FT8 Tx interval
+  false, // FT8 Tx freq
+  false, // FT8 Rx freq
   true,  // Stack
   true,  // Heap
-  false, // AutoNotch
-  false, // Noise
-  false, // Compress
-  false, // Keyer
-  true,  // RF Gain
-  false, // Equalizers
+  true,  // Teensy Temp
+  true   // Teensy Load
 };
 
 // *** TODO: add version ***
 /* PROGMEM */ const infoBoxItem infoBox[] =
 { //                                                     font    # chars
   // label         options      option                   size    to erase  flag  col            row,           follow-up function
-  { "Vol:",        NULL,        &audioVolume,                     1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
+  { "Vol:",        NULL,        &audioVolume,             1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
   { "AGC",         agcOpts,     &AGCMode,                 1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
-  { "CT Inc:",     tuneValues,  &tuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // Tune Inc
+  { "CT Inc:",     tuneValues,  &tuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
   { "FT Inc:",     ftValues,    &ftIndex,                 0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
   { "Zoom:",       zoomOptions, (int*)&spectrumZoom,      0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    NULL                   }, // Zoom
-  { "Decoder:",    onOff,       &decoderFlag,             0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Decoder
   { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,      0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
-  { "Temp:",       NULL,        NULL,                     0,        3,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
-  { "Load:",       NULL,        NULL,                     0,        4,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBLoadFollowup        },  // Teensy Load
-  { "FT8       ",  ft8Opts,     &ft8SyncState,            0,        8,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   },  // FT8 sync
-  { "Tx:",         ft8TxOpts,   &ft8TxState,              0,        7,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx enabled
-  { "Tx Freq:",    NULL,        &ft8TxFreq,               0,        5,      0,   IB_COL_1_X,    IB_ROW_10_Y,   &IBFT8RxTxFollowup     },  // FT8 Tx freq
-  { "Rx Freq:",    NULL,        &ft8RxFreq,               0,        5,      0,   IB_COL_2_X,    IB_ROW_10_Y,   &IBFT8RxTxFollowup     },  // FT8 Rx freq
-  { "Tx Int:",     ft8IntOpts,  &ft8IntState,             0,        4,      0,   IB_COL_2_X,    IB_ROW_8_Y,    NULL                   },  // FT8 Tx interval
-  { "CQ resp:",    ft8CqOpts,   &ft8CqState,              0,        4,      1,   IB_COL_2_X,    IB_ROW_9_Y,    NULL                   },  // FT8 Tx interval
-//  { "Auto:",       ft8TxOpts, &ft8TxState,            0,        4,      1,   IB_COL_2_X,    IB_ROW_8_Y,    &IBFT8Followup         },  // FT8 auto
-  { "Keyer     ",  keyerOpts,   &keyerState,              0,       10,      1,   IB_COL_1_X,    IB_ROW_8_Y,    &IBKeyerFollowup       },  // Keyer
-  { "Stack:",      NULL,        NULL,                     0,        4,      2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBStackFollowup       },  // Stack
-  { "Heap:",       NULL,        NULL,                     0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBHeapFollowup        },  // Heap
   { "AutoNotch:",  onOff,       (int*)&ANR_notchOn,       0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
-  { "Noise:",      filter,      &nrOptionSelect,          0,        8,      1,   IB_COL_1_X,    IB_ROW_6_Y,    NULL                   }, // Noise Filter
   { "Compress:",   onOff,       &compressorFlag,          0,        6,      1,   IB_COL_2_X,    IB_ROW_5_Y,    &IBCompressionFollowup }, // Compress
-  { "Keyer:",      optionsWPM,  &EEPROMData.keyType,      0,       12,      0,   IB_COL_1_X,    IB_ROW_8_Y,    &IBWPMFollowup         }, // Keyer
-  { "RF Gain:",    NULL,        NULL,                     0,        3,      0,   IB_COL_2_X,    IB_ROW_5_Y,    &IBRFGainFollowup      }, // RF Gain
-  { "Equalizers:", NULL,        NULL,                     0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,   &IBEQFollowup          }  // Equalizers
 
-  // alternate arrangement
-  //{ "Vol:",       NULL,        NULL,                      1,        2,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
-  //{ "AGC",        agcOpts,     &AGCMode,                  1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
-  //{ "Increment:", tuneValues,  &tuneIndex,                0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    NULL                   }, // Tune Inc
-  //{ "FT Inc:",    ftValues,    &ftIndex,                  0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    NULL                   }, // FT Inc
-  //{ "AutoNotch:", onOff,       (int*)&ANR_notchOn,        0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
-  //{ "Noise:",     filter,      &nrOptionSelect,           0,        8,      1,   IB_COL_1_X,    IB_ROW_4_Y,    NULL                   }, // Noise Filter
-  //{ "Zoom:",      zoomOptions, (int*)&spectrumZoom,      0,        3,      0,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Zoom
-  //{ "Compress:",  onOff,       &compressorFlag,           0,        6,      1,   IB_COL_1_X,    IB_ROW_6_Y,    &IBCompressionFollowup }, // Compress
-  //{ "Keyer:",     optionsWPM,  &EEPROMData.keyType,       0,       12,      0,   IB_COL_1_X,    IB_ROW_8_Y,    &IBWPMFollowup         }, // Keyer
-  //{ "Decoder:",   onOff,       &decoderFlag,              0,        3,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   }, // Decoder
-  //{ "NF Set:",    onOff,       &liveNoiseFloorFlag,       0,        3,      1,   IB_COL_2_X,    IB_ROW_5_Y,    NULL                   }  // Noise Floor
+  // Noise needs to be in column 1
+  { "Noise:",      filter,      &nrOptionSelect,          0,        8,      1,   IB_COL_1_X,    IB_ROW_6_Y,    NULL                   }, // Noise Filter
+  { "RF Gain:",    NULL,        NULL,                     0,        3,      0,   IB_COL_2_X,    IB_ROW_6_Y,    &IBRFGainFollowup      }, // RF Gain
 
+  // Equalizers takes two columns
+  { "Equalizer:",  NULL,        NULL,                     0,       10,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBEQFollowup          }, // Equalizers
+
+  // Decider must be in column 1
+  { "Decoder:",    onOff,       &decoderFlag,             0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
+
+  // Key type takes two columns
+  { "Key Type:",   optionsWPM,  &EEPROMData.keyType,      0,       12,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
+
+  // Memory keyer requires 3 rows
+  { "Keyer     ",  keyerOpts,   &keyerState,              0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer
+
+  { "FT8       ",  ft8Opts,     &ft8SyncState,            0,        8,      1,   IB_COL_1_X,    IB_ROW_10_Y,   NULL                   }, // FT8 sync
+  { "Tx Int:",     ft8IntOpts,  &ft8IntState,             0,        4,      0,   IB_COL_2_X,    IB_ROW_10_Y,   NULL                   }, // FT8 Tx interval
+  { "Tx:",         ft8TxOpts,   &ft8TxState,              0,        7,      1,   IB_COL_1_X,    IB_ROW_11_Y,   NULL                   }, // FT8 Tx enabled
+  { "CQ resp:",    ft8CqOpts,   &ft8CqState,              0,        4,      1,   IB_COL_2_X,    IB_ROW_11_Y,   NULL                   }, // FT8 Tx interval
+  { "Tx Freq:",    NULL,        &ft8TxFreq,               0,        5,      0,   IB_COL_1_X,    IB_ROW_12_Y,   &IBFT8RxTxFollowup     }, // FT8 Tx freq
+  { "Rx Freq:",    NULL,        &ft8RxFreq,               0,        5,      0,   IB_COL_2_X,    IB_ROW_12_Y,   &IBFT8RxTxFollowup     }, // FT8 Rx freq
+
+  { "Stack:",      NULL,        NULL,                     0,        4,      2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBStackFollowup       }, // Stack
+  { "Heap:",       NULL,        NULL,                     0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBHeapFollowup        }, // Heap
+  { "Temp:",       NULL,        NULL,                     0,        3,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
+  { "Load:",       NULL,        NULL,                     0,        4,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBLoadFollowup        }  // Teensy Load
 };
 
 //-------------------------------------------------------------------------------------------------------------

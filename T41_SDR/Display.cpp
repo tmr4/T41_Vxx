@@ -538,6 +538,9 @@ FASTRUN void ShowFreqSpectrum() {
 FASTRUN void ShowAudioSpectrum() {
   static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
 
+  // *** TODO: verify need for this ***
+  YieldToProcess();
+
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
     TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
@@ -565,7 +568,7 @@ FASTRUN void ShowAudioSpectrum() {
     }
 
     // *** TODO: verify need for this ***
-    YieldToProcess();
+    //YieldToProcess();
   }
 
   RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
