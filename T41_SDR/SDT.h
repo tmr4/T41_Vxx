@@ -65,23 +65,6 @@ typedef __uint8_t uint8_t;
 #define OFF                       0
 #define ON                        1
 
-//---- Global Teensy 4.1 Pin assignments
-#define RXTX                        22    // Transmit/Receive
-#define KEYER_DAH_INPUT_RING        35    // Ring connection for keyer  -- default for righthanded user
-#define KEYER_DIT_INPUT_TIP         36    // Tip connection for keyer
-
-// Pins 0 and 1 are usually reserved for the USB COM port communications
-// On the Teensy 4.1 board, pins GND, 0-12, and pins 13-23, 3.3V, GND, and
-// Vin are "covered up" by the Audio board. However, not all of those pins are
-// actually used by the board. See: https://www.pjrc.com/store/teensy3_audio.html
-// Filter Board pins
-#define FILTERPIN80M 30    // 80M filter relay
-#define FILTERPIN40M 31    // 40M filter relay
-#define FILTERPIN20M 28    // 20M filter relay
-#define FILTERPIN15M 29    // 15M filter relay
-
-//---- End Global Teensy 4.1 Pin assignments
-
 #define CLEAR_VAR(x) memset(x, 0, sizeof(x))
 #define SET_VAR(x,y) memset(x, y, sizeof(x))
 
@@ -120,4 +103,5 @@ typedef struct {
 
 extern band bands[];
 
+// *** TODO: move to appropriate front panel hardware ***
 extern int bandswitchPins[];

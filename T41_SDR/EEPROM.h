@@ -23,7 +23,7 @@ typedef struct {
   long spectrumZoom;
   float spectrum_display_scale;
 
-  int CWFilterIndex;
+  int cwFilterIndex;
   int paddleDit;
   int paddleDah;
   int decoderFlag;

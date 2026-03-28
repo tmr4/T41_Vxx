@@ -41,7 +41,7 @@ config_t EEPROMData {
   1,                            // long spectrumZoom = SPECTRUM_ZOOM_2
   20.0,                         // float spectrum_display_scale
 
-  5,                            // int CWFilterIndex
+  5,                            // int cwFilterIndex
   36,                           // int paddleDit
   35,                           // int paddleDah
   DECODER_STATE,                // int decoderFlag
@@ -229,8 +229,8 @@ FLASHMEM void EEPROMShow() {
   Serial.print("spect_display_scale             = ");
   Serial.println(EEPROMData.spectrum_display_scale);
   Serial.println("----- CW Parameters: -----");
-  Serial.print("CWFilterIndex                   = ");
-  Serial.println(EEPROMData.CWFilterIndex);
+  Serial.print("cwFilterIndex                   = ");
+  Serial.println(EEPROMData.cwFilterIndex);
   Serial.print("paddleDah                       = ");
   Serial.println(EEPROMData.paddleDah);
   Serial.print("paddleDit                       = ");
@@ -644,7 +644,7 @@ FLASHMEM void EEPROMSaveDefaults2() {
   EEPROMData.spectrumZoom = 1;
   EEPROMData.spectrum_display_scale = 20.0;  // 4 bytes
 
-  EEPROMData.CWFilterIndex = 5;  // Off
+  EEPROMData.cwFilterIndex = 5;  // Off
   EEPROMData.paddleDit = 36;
   EEPROMData.paddleDah = 35;
   EEPROMData.decoderFlag = 0;
@@ -901,7 +901,7 @@ FLASHMEM int CopySDToEEPROM() {
         EEPROMData.spectrum_display_scale = atof(temp);
         break;
       case 13:
-        EEPROMData.CWFilterIndex = atoi(temp);
+        EEPROMData.cwFilterIndex = atoi(temp);
         break;
       case 14:
         EEPROMData.paddleDit = atoi(temp);
@@ -1508,8 +1508,8 @@ FLASHMEM int CopyEEPROMToSD() {
   dtostrf(spectrum_display_scale, 6, 1, temp);             // Field of up to 6 digits with 1 decimal place
   strcat(buffer, temp);
   file.println(buffer);
-  strcpy(buffer, "EEPROMData.CWFilterIndex = ");
-  itoa(CWFilterIndex, temp, DEC);
+  strcpy(buffer, "EEPROMData.cwFilterIndex = ");
+  itoa(cwFilterIndex, temp, DEC);
   strcat(buffer, temp);
   file.println(buffer);
   strcpy(buffer, "EEPROMData.paddleDit = ");

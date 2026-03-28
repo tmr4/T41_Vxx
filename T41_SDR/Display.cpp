@@ -487,8 +487,8 @@ FASTRUN void ShowFreqSpectrum() {
   if(liveNoiseFloorFlag == 1) {
     // auto noise floor give priority to ensuring the noise floor is visible in the lower portion of the spectrum display
     // the spectrum is 512 pixels wide, the noise floor is adjusted as follows (in order of priority):
-    //    1) increased if more than a 20% of the spectrum is the bottom bin
-    //    2) decreased if more than 5% is in the top bin
+    //    1) increase if more than 20% of the spectrum is in the bottom bin
+    //    2) decrease if more than 5% is in the top bin
     //    3) decrease if less than 10% is in bottom bin
     // *** TODO: consider using other histogram bins to more rapidly set noise flow ***
     if(hLo > 102) {
@@ -796,7 +796,7 @@ FLASHMEM void ShowOperatingStats() {
     case CW_MODE:
       tft.print("CW ");
       tft.setCursor(OPERATION_STATS_CWF, OPERATION_STATS_T);
-      tft.print(menuOptions[1][CWFilterIndex]);
+      tft.print(menuOptions[1][cwFilterIndex]);
       break;
 
     case DSB_MODE:
@@ -829,14 +829,17 @@ FLASHMEM void ShowCurrentPowerSetting() {
 }
 
 /*****
-  Purpose: Update CW Filter
+  Purpose: Update CW Filter View
 *****/
 FLASHMEM void UpdateCWFilter() {
+  // *** TODO: float here no longer used (was it ever?) ***
   float CWFilterPosition = 85.0; // max filter position
+  int color = MAROON;
 
-  tft.writeTo(L2);
   if(radioMode == CW_MODE) {
-    switch(CWFilterIndex) {
+    tft.writeTo(L2);
+
+    switch(cwFilterIndex) {
       case 0:
         CWFilterPosition = 35.7;  // 0.84 * 42.5;
         break;
@@ -853,20 +856,14 @@ FLASHMEM void UpdateCWFilter() {
         CWFilterPosition = 85.0;  // 2.0 * 42.5;
         break;
       case 5:
-        CWFilterPosition = 0.0;
+        color = RA8875_BLACK;
         break;
     }
 
-    // *** TODO: drawing and clearing filter lines needs updated ***
-    tft.fillRect(AUDIO_SPEC_L, AUDIO_SPEC_T, CWFilterPosition, 120, MAROON);
-    // this bounding line is confusing given the filter lines already in the audio spectrum box
-    //tft.drawFastVLine(AUDIO_SPEC_BOX_L + 2 + CWFilterPosition, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, RA8875_LIGHT_GREY);
-  } else {
-    // clear CW filter
-    tft.fillRect(AUDIO_SPEC_L, AUDIO_SPEC_T, CWFilterPosition, 120, RA8875_BLACK);
-  }
+    tft.fillRect(AUDIO_SPEC_L, AUDIO_SPEC_T, CWFilterPosition, 120, color);
 
-  tft.writeTo(L1);
+    tft.writeTo(L1);
+  }
 }
 
 /*****

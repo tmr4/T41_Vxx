@@ -29,7 +29,7 @@ int currentScale = 1;  // 20 dB/division
 int spectrumZoom = 1; // SPECTRUM_ZOOM_2
 float spectrum_display_scale = 20.0;     // 30.0
 
-int CWFilterIndex = 5;
+int cwFilterIndex = 5;
 int paddleDit = KEYER_DIT_INPUT_TIP;
 int paddleDah = KEYER_DAH_INPUT_RING;
 int decoderFlag = DECODER_STATE;  // Startup state for decoder
@@ -155,7 +155,7 @@ void LoadOpVars() {
   spectrumZoom = EEPROMData.spectrumZoom;
   spectrum_display_scale = EEPROMData.spectrum_display_scale;
 
-  CWFilterIndex = EEPROMData.CWFilterIndex;
+  cwFilterIndex = EEPROMData.cwFilterIndex;
   paddleDit = EEPROMData.paddleDit;
   paddleDah = EEPROMData.paddleDah;
   decoderFlag = EEPROMData.decoderFlag;

@@ -36,7 +36,7 @@ void EnterLoop() {
   oldEEPROMData.spectrumZoom = spectrumZoom;
   oldEEPROMData.spectrum_display_scale = spectrum_display_scale;
 
-  oldEEPROMData.CWFilterIndex = CWFilterIndex;
+  oldEEPROMData.cwFilterIndex = cwFilterIndex;
   oldEEPROMData.paddleDit = paddleDit;
   oldEEPROMData.paddleDah = paddleDah;
   oldEEPROMData.decoderFlag = decoderFlag;
@@ -148,7 +148,7 @@ void ExitLoop() {
   if(oldEEPROMData.spectrumZoom != spectrumZoom) { Serial.println("  spectrumZoom changed"); }
   if(oldEEPROMData.spectrum_display_scale != spectrum_display_scale) { Serial.println("  spectrum_display_scale changed"); }
 
-  if(oldEEPROMData.CWFilterIndex != CWFilterIndex) { Serial.println("  CWFilterIndex changed"); }
+  if(oldEEPROMData.cwFilterIndex != cwFilterIndex) { Serial.println("  cwFilterIndex changed"); }
   if(oldEEPROMData.paddleDit != paddleDit) { Serial.println("  paddleDit changed"); }
   if(oldEEPROMData.paddleDah != paddleDah) { Serial.println("  paddleDah changed"); }
   if(oldEEPROMData.decoderFlag != decoderFlag) { Serial.println("  decoderFlag changed"); }
@@ -248,7 +248,7 @@ void EnterLoop() {
   oldEEPROMData.spectrumZoom = EEPROMData.spectrumZoom;
   oldEEPROMData.spectrum_display_scale = EEPROMData.spectrum_display_scale;
 
-  oldEEPROMData.CWFilterIndex = EEPROMData.CWFilterIndex;
+  oldEEPROMData.cwFilterIndex = EEPROMData.cwFilterIndex;
   oldEEPROMData.paddleDit = EEPROMData.paddleDit;
   oldEEPROMData.paddleDah = EEPROMData.paddleDah;
   oldEEPROMData.decoderFlag = EEPROMData.decoderFlag;
@@ -347,7 +347,7 @@ void ExitLoop() {
   if(oldEEPROMData.spectrumZoom != EEPROMData.spectrumZoom) { Serial.print("Loop #: "); Serial.println(loopCount); Serial.println("spectrumZoom changed"); }
   if(oldEEPROMData.spectrum_display_scale != EEPROMData.spectrum_display_scale) { Serial.print("Loop #: "); Serial.println(loopCount); Serial.println("spectrum_display_scale changed"); }
 
-  if(oldEEPROMData.CWFilterIndex != EEPROMData.CWFilterIndex) { Serial.print("Loop #: "); Serial.println(loopCount); Serial.println("CWFilterIndex changed"); }
+  if(oldEEPROMData.cwFilterIndex != EEPROMData.cwFilterIndex) { Serial.print("Loop #: "); Serial.println(loopCount); Serial.println("cwFilterIndex changed"); }
   if(oldEEPROMData.paddleDit != EEPROMData.paddleDit) { Serial.print("Loop #: "); Serial.println(loopCount); Serial.println("paddleDit changed"); }
   if(oldEEPROMData.paddleDah != EEPROMData.paddleDah) { Serial.print("Loop #: "); Serial.println(loopCount); Serial.println("paddleDah changed"); }
   if(oldEEPROMData.decoderFlag != EEPROMData.decoderFlag) { Serial.print("Loop #: "); Serial.println(loopCount); Serial.println("decoderFlag changed"); }

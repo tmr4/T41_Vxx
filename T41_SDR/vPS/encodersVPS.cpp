@@ -61,7 +61,6 @@ void EncodersInit() {
   menuChangeEncoder.begin(true);
   attachInterrupt(digitalPinToInterrupt(FILTER_ENCODER_A), EncoderMenuChangeFilterISR, CHANGE);
   attachInterrupt(digitalPinToInterrupt(FILTER_ENCODER_B), EncoderMenuChangeFilterISR, CHANGE);
-  Serial.println("menu encoder init");
 
   // set up encoder switch debounce
   pinMode(ENCODER_2_SWITCH, INPUT_PULLUP);

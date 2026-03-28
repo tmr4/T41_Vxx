@@ -25,6 +25,7 @@ void ButtonNR();
 void ButtonNotchFilter();
 void ButtonFrequencyEntry();
 void ToggleLiveNoiseFloorFlag();
+void ToggleCWDecoder();
 
 void ChangeFreqIncrement(int change);
 void ChangeFtIncrement(int change);

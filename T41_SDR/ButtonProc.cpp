@@ -321,18 +321,24 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
   // switching modes, wrap up current mode
   switch(radioMode) {
     case CW_MODE:
-      if(decoderFlag == ON) {
-        // exit if decoding CW
-        ExitCWDecoder();
+      // hide cw related items in info box
+      infoBoxItemActive[IB_ITEM_DECODER] = false;
+      infoBoxItemActive[IB_ITEM_KEY] = false;
+      UpdateInfoBoxItem(IB_ITEM_DECODER);
+      UpdateInfoBoxItem(IB_ITEM_KEY);
 
-        // restore waterfall height
-        wfRows = WATERFALL_H;
+      if(decoderFlag == ON) {
+        ExitCWDecoder();
       }
 
       // turn off keyer
       keyerState = 0;
       infoBoxItemActive[IB_ITEM_KEYER] = false;
       ClearInfoBoxKeyer();
+
+      // *** TODO: do this early here, otherwise this won't erase filter if on as radio mode hasn't changed yet ***
+      radioMode = mode;
+      UpdateCWFilter();
       break;
 
     case DATA_MODE:
@@ -367,19 +373,18 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
   // set up radio for changes
   switch(radioMode) {
     case CW_MODE:
+      // show cw related items in info box
+      infoBoxItemActive[IB_ITEM_DECODER] = true;
+      infoBoxItemActive[IB_ITEM_KEY] = true;
+      UpdateInfoBoxItem(IB_ITEM_DECODER);
+      UpdateInfoBoxItem(IB_ITEM_KEY);
+
       if(decoderFlag == ON) {
         // init if decoding CW
         InitCWDecoder();
 
-        // reduce waterfall height
-        tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
-        tft.writeTo(L2); // it's on layer 2 as well
-        tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
-        tft.writeTo(L1);
-        wfRows = WATERFALL_H - CHAR_HEIGHT - 3;
+        UpdateCWFilter();
       }
-
-      UpdateCWFilter();
 
       // turn on keyer
       keyerState = 1;
@@ -534,6 +539,24 @@ FLASHMEM void ChangeFtIncrement(int change) {
   ftIncrement = selectFT[ftIndex];
 
   UpdateInfoBoxItem(IB_ITEM_FINE);
+}
+
+/*****
+  Purpose: To process a fine tune frequency increment button push
+*****/
+FLASHMEM void ToggleCWDecoder() {
+  decoderFlag = !decoderFlag;
+  UpdateInfoBoxItem(IB_ITEM_DECODER);
+
+  if(radioMode == CW_MODE) {
+    if(decoderFlag == ON) {
+      InitCWDecoder();
+    } else {
+      ExitCWDecoder();
+    }
+
+    UpdateCWFilter();
+  }
 }
 
 /*****

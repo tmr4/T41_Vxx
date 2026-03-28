@@ -162,7 +162,7 @@ FLASHMEM void SetKeyPowerUp() {
 
 FLASHMEM void SelectCWFilterFollowup() {
   // update CW filters if index is different
-  if(CWFilterIndex != getMenuInc) {
+  if(cwFilterIndex != getMenuInc) {
     ShowOperatingStats();
     if(radioMode == CW_MODE) {
       UpdateCWFilter();
@@ -170,8 +170,19 @@ FLASHMEM void SelectCWFilterFollowup() {
   }
 }
 
+FLASHMEM void ToggleCWFilter() {
+  // save CW filter index for later
+  getMenuInc = cwFilterIndex;
+  ++cwFilterIndex;
+  if(cwFilterIndex > 5) {
+    cwFilterIndex = 0;
+  }
+
+  SelectCWFilterFollowup();
+}
+
 /*****
-  Purpose: Select CW Filter. CWFilterIndex has these values:
+  Purpose: Select CW Filter. cwFilterIndex has these values:
            0 = 840Hz
            1 = 1kHz
            2 = 1.3kHz
@@ -181,10 +192,10 @@ FLASHMEM void SelectCWFilterFollowup() {
 *****/
 FLASHMEM void SelectCWFilter() {
   // save CW filter index for later
-  getMenuInc = CWFilterIndex;
+  getMenuInc = cwFilterIndex;
 
   //GetMenuOption(optionIndex, *currentValue, *setup(), *getValue(), *followup());
-  GetMenuOption(1, &CWFilterIndex, NULL, NULL, &SelectCWFilterFollowup);
+  GetMenuOption(1, &cwFilterIndex, NULL, NULL, &SelectCWFilterFollowup);
 }
 
 FLASHMEM void DoPaddleFlipFollowup() {
@@ -304,8 +315,12 @@ void DoCWReceiveProcessing() {
     UpdateDecodeLockIndicator();
 
     combinedCoeff2Old = combinedCoeff2;
+
+    // *** TODO: should this be someplace else? ***
+    // draw decoder guide lines
     tft.drawFastVLine(AUDIO_SPEC_BOX_L + 29, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, ORANGE);  //CW lower freq indicator
     tft.drawFastVLine(AUDIO_SPEC_BOX_L + 37, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, ORANGE);  //CW upper freq indicator
+
     if(combinedCoeff > 50) {                                                                  // if  have a reasonable corr coeff, >50, then we have a keeper. // AFP 10-26-22
       audioTemp = 1;
     } else {
@@ -719,6 +734,13 @@ FLASHMEM void InitCWDecoder(void) {
     ExitCWDecoder();
 
     Debug("InitCWDecoder failed");
+  } else {
+    // reduce waterfall height if we're decoding CW
+    tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
+    tft.writeTo(L2); // it's on layer 2 as well
+    tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
+    tft.writeTo(L1);
+    wfRows = WATERFALL_H - CHAR_HEIGHT - 3;
   }
 }
 
@@ -727,4 +749,12 @@ FLASHMEM void ExitCWDecoder(void) {
   extmem_free(gapHistogram);
   extmem_free(signalHistogram);
   extmem_free(cwDecodeBuffer);
+
+  // erase any decoded CW and return waterfall to normal
+  tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
+  wfRows = WATERFALL_H;
+
+  // erase decoder guide lines
+  tft.drawFastVLine(AUDIO_SPEC_BOX_L + 29, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, RA8875_BLACK);  //CW lower freq indicator
+  tft.drawFastVLine(AUDIO_SPEC_BOX_L + 37, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, RA8875_BLACK);  //CW upper freq indicator
 }

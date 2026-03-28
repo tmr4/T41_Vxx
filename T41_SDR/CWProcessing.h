@@ -65,6 +65,8 @@ void SetSideToneVolumeValue();
 void SetSideToneVolumeFollowup();
 void SetTransmitDelayFollowup();
 
+void ToggleCWFilter();
+
 void DoCWReceiveProcessing();
 void SetDitLength(int wpm);
 

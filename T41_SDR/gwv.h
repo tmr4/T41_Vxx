@@ -20,7 +20,7 @@ extern int currentScale;
 extern int spectrumZoom;
 extern float spectrum_display_scale;
 
-extern int CWFilterIndex;
+extern int cwFilterIndex;
 extern int paddleDit;
 extern int paddleDah;
 extern int decoderFlag;

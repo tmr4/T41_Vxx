@@ -23,6 +23,7 @@ extern uint16_t GPAB_state;
 // Encoders.h
 
 //---- Teensy 4.1 Pin assignments
+// *** TODO: rework front panel stuff to eliminate this ***
 #if defined(FOURSQRP_FRONTPANEL)
     #define VOLUME_ENCODER_A         2
     #define VOLUME_ENCODER_B         3
@@ -43,9 +44,23 @@ extern uint16_t GPAB_state;
     #define TUNE_ENCODER_B          17
 #endif
 
-#define PTT          37    // Transmit/Receive
+#define PTT          37    // TX input
+#define RXTX         22    // TX/RX relay
 
-// *** TODO: set proper profiler pins ***
+#define KEYER_DAH_INPUT_RING        35    // Ring connection for keyer  -- default for righthanded user
+#define KEYER_DIT_INPUT_TIP         36    // Tip connection for keyer
+
+// Pins 0 and 1 are usually reserved for the USB COM port communications
+// On the Teensy 4.1 board, pins GND, 0-12, and pins 13-23, 3.3V, GND, and
+// Vin are "covered up" by the Audio board. However, not all of those pins are
+// actually used by the board. See: https://www.pjrc.com/store/teensy3_audio.html
+// Filter Board pins
+#define FILTERPIN80M 30    // 80M filter relay
+#define FILTERPIN40M 31    // 40M filter relay
+#define FILTERPIN20M 28    // 20M filter relay
+#define FILTERPIN15M 29    // 15M filter relay
+
+// *** TODO: set proper profiler pins if used ***
 #define PROFILER_MAINLOOP_PIN         1
 #define PROFILER_PROCESS_PIN          1
 #define PROFILER_DRAWFREQSPEC_PIN     1
@@ -53,6 +68,7 @@ extern uint16_t GPAB_state;
 #define PROFILER_FT8PROCESSBLOCK_PIN  1
 #define PROFILER_FT8GETDATA_PIN       1
 #define PROFILER_FT8DECODE_PIN        1
+#define PROFILER_FT8_TX_PIN           1
 
 //------------
 // Menu.cpp

@@ -152,7 +152,7 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   // Equalizers takes two columns
   { "Equalizer:",  NULL,        NULL,                     0,       10,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBEQFollowup          }, // Equalizers
 
-  // Decider must be in column 1
+  // Decider takes two columns
   { "Decoder:",    onOff,       &decoderFlag,             0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
 
   // Key type takes two columns
@@ -515,17 +515,17 @@ void IBKeyerFollowup(int row, int col) {
   }
 }
 
-// *** TODO: eliminate hard coded column/row references in next two ***
-// *** TODO: CW decoder items are overwriting other infobox items ***
 /*****
   Purpose: Show estimated WPM in information box
            Assumes decoder is in column 1 row 9
 *****/
 void UpdateIBWPM() {
+  int yOffset = infoBox[IB_ITEM_DECODER].row;
+
   tft.setFontScale((enum RA8875tsize)0);
   tft.setTextColor(RA8875_GREEN);
-  tft.fillRect(IB_COL_1_X + 37, IB_ROW_4_Y, tft.getFontWidth() * 10, tft.getFontHeight(), RA8875_BLACK);
-  tft.setCursor(IB_COL_1_X + 38, IB_ROW_4_Y);
+  tft.fillRect(IB_COL_1_X + 37, yOffset, tft.getFontWidth() * 10, tft.getFontHeight(), RA8875_BLACK);
+  tft.setCursor(IB_COL_1_X + 38, yOffset);
   tft.print("(");
   tft.print(1200L / (dahLength / 3));
   tft.print(" WPM)");
@@ -671,7 +671,7 @@ void MouseButtonInfoBox(int button, int x, int y) {
 
 
   // *** TODO: rework this after we add full capability
-  for(int i = 0; i < 4; i++) {
+  for(int i = 0; i < 5; i++) {
     switch(i) {
       case 0:
         item = IB_ITEM_TUNE;
@@ -684,6 +684,9 @@ void MouseButtonInfoBox(int button, int x, int y) {
         break;
       case 3:
         item = IB_ITEM_FLOOR;
+        break;
+      case 4:
+        item = IB_ITEM_DECODER;
         break;
     }
 
@@ -721,6 +724,10 @@ void MouseButtonInfoBox(int button, int x, int y) {
           ToggleLiveNoiseFloorFlag();
           break;
 
+        case IB_ITEM_DECODER:
+          ToggleCWDecoder();
+          break;
+
         default:
           break;
       }
@@ -729,9 +736,9 @@ void MouseButtonInfoBox(int button, int x, int y) {
 }
 
 void MouseWheelInfoBox(int wheel, int x, int y) {
-  // *** TODO: this is weak ***
   int item, itemX, itemY, itemSize, itemChars, itemW, itemH;
 
+  // *** TODO: this is weak ***
   for(int i = 0; i < 9; i++) {
     switch(i) {
       case 0:

@@ -18,6 +18,7 @@
 // Encoders.h
 
 //---- Teensy 4.1 Pin assignments
+// *** TODO: rework front panel stuff to eliminate this ***
 #if defined(FOURSQRP_FRONTPANEL)
     #define VOLUME_ENCODER_A         2
     #define VOLUME_ENCODER_B         3
@@ -67,7 +68,21 @@
     #define PROFILER_FT8_TX_PIN           31
 #endif
 
-#define PTT          37    // Transmit/Receive
+#define PTT          37    // TX input
+#define RXTX         22    // TX/RX relay
+
+#define KEYER_DAH_INPUT_RING        1 // 35    // Ring connection for keyer  -- default for righthanded user
+#define KEYER_DIT_INPUT_TIP         1 // 36    // Tip connection for keyer
+
+// Pins 0 and 1 are usually reserved for the USB COM port communications
+// On the Teensy 4.1 board, pins GND, 0-12, and pins 13-23, 3.3V, GND, and
+// Vin are "covered up" by the Audio board. However, not all of those pins are
+// actually used by the board. See: https://www.pjrc.com/store/teensy3_audio.html
+// Filter Board pins
+#define FILTERPIN80M 1 // 30    // 80M filter relay
+#define FILTERPIN40M 1 // 31    // 40M filter relay
+#define FILTERPIN20M 1 // 28    // 20M filter relay
+#define FILTERPIN15M 1 // 29    // 15M filter relay
 
 #ifdef PROJECTSYSTEM_ENCODER_1
 #include <Rotary.h>                    // https://github.com/brianlow/Rotary

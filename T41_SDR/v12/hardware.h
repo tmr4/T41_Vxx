@@ -36,13 +36,15 @@
 #define XMIT_SSB                  1
 #define XMIT_CW                   0
 
-#define PTT                         37    // Transmit/Receive
+#define PTT          37    // TX input
+#define RXTX         22    // TX/RX relay
 
 // v12 RF board signals
 #define RF_CW_SIGNAL 33     // CW on/off (H = on, L = off)
 #define RF_XMIT_RELAY 34    // Transmit relay (H = SSB, L = CW)
 #define RF_CAL_RELAY 38     // calibration relay, signal routed to board (H = input, L = output)
 
+// *** TODO: rework front panel stuff to eliminate this ***
 #ifdef FOURSQRP_FRONTPANEL
 #define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
 #endif
@@ -50,7 +52,21 @@
 #define INT_PIN_1 14
 #define INT_PIN_2 15
 
-// *** TODO: set proper profiler pins ***
+#define KEYER_DAH_INPUT_RING        35    // Ring connection for keyer  -- default for righthanded user
+#define KEYER_DIT_INPUT_TIP         36    // Tip connection for keyer
+
+// Pins 0 and 1 are usually reserved for the USB COM port communications
+// On the Teensy 4.1 board, pins GND, 0-12, and pins 13-23, 3.3V, GND, and
+// Vin are "covered up" by the Audio board. However, not all of those pins are
+// actually used by the board. See: https://www.pjrc.com/store/teensy3_audio.html
+// Filter Board pins
+// *** these are available on the v12 main board for use with v11 front panel, but not used otherwise ***
+#define FILTERPIN80M 30    // 80M filter relay
+#define FILTERPIN40M 31    // 40M filter relay
+#define FILTERPIN20M 28    // 20M filter relay
+#define FILTERPIN15M 29    // 15M filter relay
+
+// *** TODO: set proper profiler pins if used ***
 #define PROFILER_MAINLOOP_PIN         1
 #define PROFILER_PROCESS_PIN          1
 #define PROFILER_DRAWFREQSPEC_PIN     1
@@ -58,6 +74,7 @@
 #define PROFILER_FT8PROCESSBLOCK_PIN  1
 #define PROFILER_FT8GETDATA_PIN       1
 #define PROFILER_FT8DECODE_PIN        1
+#define PROFILER_FT8_TX_PIN           1
 
 //------------
 // T41_SDR.ino

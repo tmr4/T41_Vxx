@@ -780,8 +780,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       DoCWReceiveProcessing();
 
       // ----------------------  CW Narrow band filters -------------------------
-      if(CWFilterIndex != 5) {
-        switch(CWFilterIndex) {
+      if(cwFilterIndex != 5) {
+        switch(cwFilterIndex) {
           case 0:  // 0.8 KHz
             arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter1, audioBufferL, audioBufferR, 256);
             arm_copy_f32(audioBufferR, audioBufferL, 256);

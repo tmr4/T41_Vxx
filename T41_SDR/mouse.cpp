@@ -10,6 +10,7 @@ int menuBarSelected = false;
 #ifdef HOST_KEYBOARD_MOUSE_SUPPORT
 
 #include "ButtonProc.h"
+#include "CWProcessing.h"
 #include "Display.h"
 #include "Encoders.h"
 #include "ft8.h"
@@ -33,8 +34,14 @@ extern MouseController mouseController;
 
 #define FREQ_W  32
 #define FREQ_H  48
-#define CURSOR_W  16
-#define CURSOR_H  32
+
+// mouse cursor is the RA8875 0x07 character which is a solid circle rendered
+// in the middle of the cell.  Therefore when use selects something with the
+// cursor, the reported x and y will be offset to the right and high.  These
+// are used to adjust the reported position.
+// *** TODO: make global set up on initialization ***
+#define CURSOR_W  8
+#define CURSOR_H  16
 
 // active VFO y axis frequency position translated for center of cursor
 #define FREQ_T  FREQUENCY_Y - (CURSOR_H / 2)
@@ -117,7 +124,7 @@ void MoveCursor(int x, int y) {
   // We do this by copying what will be under the cursor for restoration later.
   // The RA8875 has limited functionality to do this.  I've hidden the data
   // on layer 2 behind the RX/TX indicator block.
-  if(cursorY < SPEC_BOX_T) {
+  if(cursorY < SPEC_BOX_T - height) { // *** entire cursor must be out of this region ***
     // there's no layer 2 items in this area, erase old cursor by simply drawing it again in black
     // this also serves to correct for when the cursor is within the data copy area
     tft.setTextColor(RA8875_BLACK);
@@ -316,6 +323,8 @@ void MouseButtonOpStatsArea(int button) {
   } else if(button == 1 && cursorX > OPERATION_STATS_MD - 5 && cursorX < OPERATION_STATS_CWF) {
     // change to the next mode: SSB -> CW -> DATA -> SSB
     ButtonMode();
+  } else if(button == 1 && cursorX > OPERATION_STATS_CWF - 5 && cursorX < OPERATION_STATS_DMD - 5) {
+    ToggleCWFilter();
   } else if(button == 1 && cursorX > OPERATION_STATS_DMD - 5 && cursorX < OPERATION_STATS_DMD + 35) {
     // change to the next demod mode
     ChangeDemodMode(currentDemodMode + 1);
