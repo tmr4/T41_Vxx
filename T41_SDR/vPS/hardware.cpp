@@ -1,4 +1,4 @@
-// v11 specific hardware source file
+// Project System specific hardware source file
 
 #include <Bounce.h>
 

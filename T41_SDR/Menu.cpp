@@ -273,8 +273,7 @@ void GetMenuValueLoop() {
     tft.setFontScale((enum RA8875tsize)1);
 
     // erase old value
-    // *** TODO: consider tft.getFontWidth() * value width in place of fixed value below ***
-    tft.fillRect(SECONDARY_MENU_X + getMenuOffset, MENUS_Y, 65, CHAR_HEIGHT, RA8875_MAGENTA);
+    tft.fillRect(SECONDARY_MENU_X + getMenuOffset, MENUS_Y, BOTH_MENU_WIDTHS - SECONDARY_MENU_X - getMenuOffset, CHAR_HEIGHT, RA8875_MAGENTA);
 
     // update current value
     tft.setTextColor(RA8875_WHITE);

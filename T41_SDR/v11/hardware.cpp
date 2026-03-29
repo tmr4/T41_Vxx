@@ -14,6 +14,7 @@
 #include "..\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
+#include "..\Exciter.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"
