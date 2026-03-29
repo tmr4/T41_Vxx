@@ -93,6 +93,14 @@ FLASHMEM void ShowMenu(const char *menu[], int where) {
 
   switch(where) {
     case PRIMARY_MENU:
+      // *** TODO: cosolidate all code that reduces and restores waterfall height ***
+      // reduce waterfall height if we're decoding CW
+      tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
+      tft.writeTo(L2); // it's on layer 2 as well
+      tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
+      tft.writeTo(L1);
+      wfRows = WATERFALL_H - CHAR_HEIGHT - 3;
+
       tft.fillRect(PRIMARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_BLUE);
       tft.setCursor(PRIMARY_MENU_X + 1, MENUS_Y);
       tft.setTextColor(RA8875_WHITE);

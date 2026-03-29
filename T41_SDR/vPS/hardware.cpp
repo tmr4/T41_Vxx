@@ -31,6 +31,7 @@ extern Bounce encoderSwitch;
 #endif
 #ifdef PROJECTSYSTEM_ENCODER_2
 extern Bounce encoder2Switch;
+static bool menuDone = false;
 #endif
 
 //------------
@@ -77,7 +78,16 @@ void InitFrontPanel();
     int                   -1 if not valid push button, ADC value if valid
 *****/
 int ReadSelectedPushButton() {
-  return 0;
+#ifdef PROJECTSYSTEM_ENCODER_2
+  if(menuDone) {
+    return 0;
+  } else {
+    return -1;
+  }
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_1
+  return -1;
+#endif
 }
 
 int ProcessButtonPress(int valPin) {
@@ -309,10 +319,27 @@ void HardwareLoopStart() {
   }
 #endif
 #ifdef PROJECTSYSTEM_ENCODER_2
+  // menu testing
+  static bool menuActive = false;
+  static int count = 0;
+
   // poll encoder switch
   if(encoder2Switch.update() && encoder2Switch.fallingEdge()) {
-    // load wave file and begin decoding internally if successful
-    ExecuteButtonPress(1);
+    if(!menuActive) {
+      // show menu
+      ShowMenuBar(0, 1);
+      menuActive = true;
+      //ExecuteButtonPress(1);
+    } else {
+      // select menu item
+      if(count++ < 3) {
+        MenuBarSelect();
+      } else {
+        menuDone = true;
+        menuActive = false;
+        count = 0;
+      }
+    }
   }
 #endif
 }

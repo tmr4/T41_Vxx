@@ -1238,7 +1238,12 @@ FLASHMEM void DrawAudioSpectContainer() {
 *****/
 FLASHMEM void EraseMenus() {
   tft.fillRect(PRIMARY_MENU_X, MENUS_Y, BOTH_MENU_WIDTHS, CHAR_HEIGHT + 1, RA8875_BLACK);  // Erase menu choices
-//  menuStatus = NO_MENUS_ACTIVE;                                                            // Change menu state
+
+  // erase menu and return waterfall to normal
+  tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
+  wfRows = WATERFALL_H;
+
+  //menuStatus = NO_MENUS_ACTIVE;                                                            // Change menu state
 }
 
 /*****

@@ -70,7 +70,7 @@ This is a work in progress.  Some functions may be broken and will likely remain
 
 Adds mouse support.   Currently the mouse can be used as follows:
 
-* Within the menu area:
+* Within the menu area (bottom of waterfall):
   * Open menu with right click
   * Scroll through menu options with the mouse wheel
   * Select menu option with left click
@@ -127,7 +127,7 @@ Adds a keyboard/memory CW keyer.  It currently requires the keyboard feature but
 
 ### T41 beacon monitor
 
-![Beacon Monitor](https://github.com/tmr4/T41_SDR/blob/dev/v0.01/images/beacon_monitor.jpg)
+![Beacon Monitor](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/beacon_monitor.jpg)
 
 * a world map view with the SNR for each frequency located in a small colored square below the call sign for each beacon location (image below with random SNR values to show effect).  I've only show three bands above but all five bands could be displayed with a bit of fiddling.  This view includes some monitor info at the bottom left of the display (band and beacon currently being monitored and the audio volume).  The information, including any volume changes, is currently only updated every 10 seconds. There is room for other information.
 * the beacon monitor can be accessed via button 18 (sorry Bearing map!) or the *Beacon Monitor* menu item.  You can exit the Beacon Monitor by pressing button 18 again or via the menu.
@@ -144,7 +144,7 @@ Adds a keyboard/memory CW keyer.  It currently requires the keyboard feature but
   * an azimuthal map showing the bearing to the currently active beacons
   * a world map view with the call sign highlighted according to the SNR for the frequency shown (cycles through the five bands, one every 10 seconds)
 
-![Beacon Monitor with random SNR](https://github.com/tmr4/T41_SDR/blob/dev/v0.01/images/bm_random_snr.jpg)
+![Beacon Monitor with random SNR](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/bm_random_snr.jpg)
 
 * See also [Beacon Monitor](https://github.com/tmr4/BeaconMonitor) for a PC app version.
 
@@ -158,7 +158,7 @@ Adds narrow-band FM demodulation. Adds separate, adjustable demodulation filter 
 
 ### PC control app
 
-![PC Control App](https://github.com/tmr4/T41_SDR/blob/dev/v0.01/images/T41_pcControlApp.jpg)
+![PC Control App](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_pcControlApp.jpg)
 
 Adds communications with PC control app over SerialUSB1 (must select `Dual` or `Triple` USB Type when compiling).  A separate control app running on your PC is required [T41_Views](https://github.com/tmr4/T41_Views).  The control app has the following features:
 
@@ -184,9 +184,9 @@ Adds communications with PC control app over SerialUSB1 (must select `Dual` or `
 
 Windows console apps designed to facilitate communication between the T41 and multiple PC applications over a single USB serial connection.  Multiple debug windows can be open at the same time.
 
-![T41Server](https://github.com/tmr4/T41_SDR/blob/dev/v0.01/images/T41Server.jpg)
+![T41Server](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41Server.jpg)
 
-![T41Debug](https://github.com/tmr4/T41_SDR/blob/dev/v0.01/images/t41Server_Debug.jpg)
+![T41Debug](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/t41Server_Debug.jpg)
 
  See [T41Server](https://github.com/tmr4/T41Server) and [T41Debug](https://github.com/tmr4/T41Debug).
 

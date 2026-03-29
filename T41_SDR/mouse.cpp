@@ -152,7 +152,7 @@ void MoveCursor(int x, int y) {
 }
 
 bool CursorInMenuArea() {
-  return (cursorY < FREQ_T) && (cursorX < TIME_X - 20);
+  return (cursorY > MENUS_Y) && (cursorX < BOTH_MENU_WIDTHS);
 }
 
 bool CursorInFreqArea() {
