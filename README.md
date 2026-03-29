@@ -58,7 +58,7 @@ This is a work in progress.  Some functions may be broken and will likely remain
 
 ### v12
 
-![v12 pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/V12_Teensy_Pin_Usage.png)
+![v12 pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/V12_Teensy_Pin_Usage.jpg)
 
 ### Project System
 
@@ -158,7 +158,7 @@ Adds narrow-band FM demodulation. Adds separate, adjustable demodulation filter 
 
 ### PC control app
 
-![PC Control App](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_pcControlApp.jpg)
+![PC Control App](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_pcControlApp.png)
 
 Adds communications with PC control app over SerialUSB1 (must select `Dual` or `Triple` USB Type when compiling).  A separate control app running on your PC is required [T41_Views](https://github.com/tmr4/T41_Views).  The control app has the following features:
 
@@ -184,9 +184,9 @@ Adds communications with PC control app over SerialUSB1 (must select `Dual` or `
 
 Windows console apps designed to facilitate communication between the T41 and multiple PC applications over a single USB serial connection.  Multiple debug windows can be open at the same time.
 
-![T41Server](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41Server.jpg)
+![T41Server](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41Server.png)
 
-![T41Debug](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/t41Server_Debug.jpg)
+![T41Debug](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/t41Server_Debug.png)
 
  See [T41Server](https://github.com/tmr4/T41Server) and [T41Debug](https://github.com/tmr4/T41Debug).
 
