@@ -38,20 +38,6 @@
 //#define I2C_DELAY_LONG 10000L   // How long to show I2C screen with errors
 #define I2C_DELAY_SHORT 1000L   // How long to show I2C screen when no error
 
-// ==== Pick one of the following front panel configurations
-#define MCP23017_FRONTPANEL // MCP23017 driven front panel
-//#define FOURSQRP_FRONTPANEL // resistive switch matrix front panel
-
-#ifdef MCP23017_FRONTPANEL
-#define V12_PANEL_MCP23017_ADDR_1 0x20
-#define V12_PANEL_MCP23017_ADDR_2 0x21
-
-#define VOLUME_REVERSED false
-#define FILTER_REVERSED false
-#define MAIN_TUNE_REVERSED false
-#define FINE_TUNE_REVERSED false
-#endif
-
 // Set the I2C addresses of the LPF, BPF, and RF boards
 #define V12_LPF_MCP23017_ADDR 0x25
 #define BPF_MCP23017_ADDR 0x24

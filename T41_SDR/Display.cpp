@@ -529,7 +529,6 @@ FASTRUN void ShowFreqSpectrum() {
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
 }
 
-
 /*****
   Purpose: Update audio spectrum
             This is is a long running process.  It yields periodically to allow normal

@@ -13,6 +13,8 @@
 #include "Exciter.h"
 #include "Filter.h"
 #include "FIR.h"
+#include "src\FrontPanel.h"
+
 #include "ft8.h"
 #include "InfoBox.h"
 #include "keyer.h"
@@ -27,10 +29,6 @@
 #include "Utility.h"
 
 #include "debug.h"
-
-#ifdef PROJECTSYSTEM_ENCODER_MCP
-#include "src\FrontPanel.h"
-#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -916,10 +914,7 @@ FASTRUN void ProcessControls() {
     break;
   }
 
-#ifdef FRONT_PANEL_POLLING_OPS
-  // *** TODO: this looks like it is never active, no header to include ***
-  PollFrontPanel();
-#endif
+  PollFrontPanel(); // *** inline function to poll front panel if needed, empty function if not ***
 
   // update volume if changed
   if(volumeChangeFlag) {

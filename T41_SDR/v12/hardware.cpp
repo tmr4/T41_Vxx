@@ -333,19 +333,6 @@ void InitHardware() {
   pinMode(ShutdownOutPin, OUTPUT);
   digitalWrite(ShutdownOutPin,LOW);
 
-#ifdef FOURSQRP_FRONTPANEL
-  pinMode(FILTERPIN15M, OUTPUT);
-  pinMode(FILTERPIN20M, OUTPUT);
-  pinMode(FILTERPIN40M, OUTPUT);
-  pinMode(FILTERPIN80M, OUTPUT);
-  SetBandRelay(HIGH);
-
-  pinMode(BUSY_ANALOG_PIN, INPUT);
-
-  EnableButtonInterrupts();
-  EncodersInit();
-#endif
-
   // set RF board configuration:
   //   - transmit mode relay to SSB
   //   - CW signal off
@@ -361,9 +348,7 @@ void InitHardware() {
 
   SetRF_InAtten(currentRF_InAtten);
 
-#ifdef MCP23017_FRONTPANEL
   InitFrontPanel();
-#endif
 
   I2C_display();
 }

@@ -14,6 +14,7 @@
 #include "..\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
+#include "FrontPanel.h"
 #include "..\Exciter.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
@@ -258,8 +259,7 @@ void InitHardware() {
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
-  EnableButtonInterrupts();
-  EncodersInit();
+  InitFrontPanel();
 
 #ifdef USE_BPF_BOARD
   SetupBPF();

@@ -6,10 +6,10 @@
 #define PRIMARY_MENU                  0
 #define SECONDARY_MENU                1
 
-#define PRIMARY_MENU_X                0
+#define PRIMARY_MENU_X                1
 #define SECONDARY_MENU_X              256
 #define MENUS_Y                       (480-32)
-#define EACH_MENU_WIDTH               256
+#define EACH_MENU_WIDTH               255
 #define BOTH_MENU_WIDTHS             (EACH_MENU_WIDTH * 2)
 
 #define DIRECT_FREQ_ENTRY           16

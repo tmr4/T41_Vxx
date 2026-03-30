@@ -36,6 +36,8 @@
 #define XMIT_SSB                  1
 #define XMIT_CW                   0
 
+//---- Teensy 4.1 Pin assignments
+// *** Teensy pins are also defined in v12 FrontPanel.h
 #define PTT          37    // TX input
 #define RXTX         22    // TX/RX relay
 
@@ -43,14 +45,6 @@
 #define RF_CW_SIGNAL 33     // CW on/off (H = on, L = off)
 #define RF_XMIT_RELAY 34    // Transmit relay (H = SSB, L = CW)
 #define RF_CAL_RELAY 38     // calibration relay, signal routed to board (H = input, L = output)
-
-// *** TODO: rework front panel stuff to eliminate this ***
-#ifdef FOURSQRP_FRONTPANEL
-#define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
-#endif
-
-#define INT_PIN_1 14
-#define INT_PIN_2 15
 
 #define KEYER_DAH_INPUT_RING        35    // Ring connection for keyer  -- default for righthanded user
 #define KEYER_DIT_INPUT_TIP         36    // Tip connection for keyer

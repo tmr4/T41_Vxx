@@ -1,33 +1,40 @@
-// v12 specific hardware file
-
-#pragma once
-
-#include <stdint.h>
-#include "Rotary_V12.h"
+// v12 specific Front Panel hardware file
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-//#define AUDIO_VOLUME 0
-//#define MIC_GAIN 1
-//#define AGC_GAIN 2
-//#define SIDETONE_VOLUME 3
-//#define NOISE_FLOOR_LEVEL 4
-//#define SQUELCH_LEVEL 5
-
 #define FRONT_PANEL_POLLING_OPS
 
-extern int ButtonPressed;
-extern int volumeFunction;
-//extern int my_ptt;
+//---- Teensy 4.1 Pin assignments
+#define INT_PIN_1 14
+#define INT_PIN_2 15
+
+#define V12_PANEL_MCP23017_ADDR_1 0x20
+#define V12_PANEL_MCP23017_ADDR_2 0x21
+
+//-------------------------------------------------------------------------------------------------------------
+// Forwards
+//-------------------------------------------------------------------------------------------------------------
+
+void Mcp1Isr();
+void Mcp2Isr();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
 void InitFrontPanel();
-//void FrontPanelSetLed(int led, uint8_t state);
-//void PTT_Interrupt();
 
-void PollFrontPanel();
+#ifdef FRONT_PANEL_POLLING_OPS
+inline void PollFrontPanel() {
+  if(digitalRead(INT_PIN_1) == LOW) {
+    Mcp1Isr();
+  }
+  if(digitalRead(INT_PIN_2) == LOW) {
+    Mcp2Isr();
+  }
+}
+#else
+inline void PollFrontPanel() {}
+#endif

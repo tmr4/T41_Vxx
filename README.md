@@ -11,7 +11,10 @@ The driver for this project was to leverage all of the work I put into adding fe
 ## Ongoing Work
 
 * Hardware version specific front panel and display
-  * I've extracted most of the T41 hardware specific code into separate version specific hardware *libraries*.  The front panel and display are two areas I haven't attempted, for different reasons.  I've tried to make the front panel code applicable to all versions with a group of defines activating the correct code depending on the selected front panel. While I've consolidated a lot of the display code into a single file, call to RA8875 display functions are still sprinkled throughout the code.  This effort defines a common set of front panel and display functions that the hardware libraries must satisfy for a functional T41. First up, the front panel.
+  * I've extracted most of the T41 hardware specific code into separate version specific hardware *libraries*.  The front panel and display are two areas I haven't previously attempted, for different reasons.  My original thought was to make the front panel code applicable to all versions with a group of defines activating the correct code depending on the selected front panel. This created confusing code and while seemingly practical, was never used in practice as my radios all have a version specific front panel.
+  * I've also consolidated a lot of the display code into a single file, but calls to RA8875 display functions are still sprinkled throughout the code.
+  * This effort cleans up the front panel code, retaining only a single front panel source in each version (in FrontPanel_vXX.cpp and FrontPanel.h).  The files should be interchangable between hardware versions as long as the actual front panel hardware exists for the hardware version it's applied to.  I haven't tested this.
+  * More work is required for the display.  My plan is to define a common set of display functions that the hardware libraries must satisfy for a functional T41. I'm working on that effort now.
 
 ## Recent Work
 

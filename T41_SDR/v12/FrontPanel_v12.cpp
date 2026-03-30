@@ -1,6 +1,7 @@
 // v12 specific hardware file
 
 /*********************************************************************************************
+ * some code modified from:
  *
  * G0ORX Front Panel
  *
@@ -30,25 +31,43 @@
 #include "..\SDT.h"
 
 #include <Adafruit_MCP23X17.h>
+#include <stdint.h>
 
-#include "FrontPanel.h"
-
+#include "..\Button.h"
+#include "..\CWProcessing.h"
 #include "..\Encoders.h"
+#include "FrontPanel.h"
+#include "..\MenuProc.h"
+#include "..\Tune.h"
 #include "..\Utility.h"
+
+#include "Rotary_V12.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+#define VOLUME_REVERSED false
+#define FILTER_REVERSED false
+#define MAIN_TUNE_REVERSED false
+#define FINE_TUNE_REVERSED false
+
+//#define AUDIO_VOLUME 0
+//#define MIC_GAIN 1
+//#define AGC_GAIN 2
+//#define SIDETONE_VOLUME 3
+//#define NOISE_FLOOR_LEVEL 4
+//#define SQUELCH_LEVEL 5
 
 int ButtonPressed = -1;
 int my_ptt=HIGH;  // active LOW
 
 #define DEBOUNCE_DELAY 250
 
-extern Rotary_V12 volumeEncoder;
-extern Rotary_V12 menuChangeEncoder;
-extern Rotary_V12 tuneEncoder;
-extern Rotary_V12 fineTuneEncoder;
+Rotary_V12 volumeEncoder( VOLUME_REVERSED );
+Rotary_V12 tuneEncoder( MAIN_TUNE_REVERSED );
+Rotary_V12 menuChangeEncoder( FILTER_REVERSED );
+Rotary_V12 fineTuneEncoder( FINE_TUNE_REVERSED );
 
 #define e1 volumeEncoder
 #define e2 menuChangeEncoder
@@ -79,9 +98,166 @@ void EncoderVolume();
 void EncoderFineTune();
 void EncoderFilter();
 
+void ProcessMenuEncoder();
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+
+// Switch Matrix
+
+/*****
+  Purpose: Determine which UI button was pressed
+
+  Parameter list:
+    int valPin            the ADC value from analogRead()
+
+  Return value:
+    int                   -1 if not valid push button, index of push button if valid
+*****/
+int ProcessButtonPress(int valPin) {
+  return valPin;
+}
+
+/*****
+  Purpose: Check for UI button press. If pressed, return the ADC value
+
+  Parameter list:
+    none
+
+  Return value:
+    int                   -1 if not valid push button, ADC value if valid
+*****/
+int ReadSelectedPushButton() {
+  int pressed;
+
+  //__disable_irq();
+
+  PollFrontPanel();
+
+  pressed = ButtonPressed;
+  ButtonPressed = BOGUS_PIN_READ;
+  //__enable_irq();
+
+  return pressed;
+}
+
+// Encoders
+
+/*****
+  Purpose: Set center tune frequency based on
+*****/
+void EncoderCenterTune() {
+  int result;
+
+  result = tuneEncoder.process();  // Read the encoder
+
+  if(result == 0)  // Nothing read
+    return;
+
+  if(radioMode == CW_MODE && decoderFlag == ON) {  // No reason to reset if we're not doing decoded CW
+    ResetHistograms();
+  }
+
+  tuneChange = result;
+
+  // *** TODO: from v12, validate v11 calibration routines
+  // center tune used in calibration routines, return to process
+  //   - receive calibrate adjusts noise floor
+  //   - transmit calibrate adjusts image value
+  //   - two tone adjusts tone 1
+  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
+
+  SetCenterTune((long)freqIncrement * tuneChange);
+}
+
+/*****
+  Purpose: Encoder volume control
+*****/
+// why not FASTRUN
+// TODO: front panel placeholders for now
+void EncoderVolume() {
+  int result;
+
+  result = volumeEncoder.process();  // Read the encoder
+
+
+  if(result == 0) {  // Nothing read
+    return;
+  }
+
+  adjustVolEncoder = result;
+
+  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
+
+  audioVolume += adjustVolEncoder;
+  adjustVolEncoder = 0;
+
+  if(audioVolume > MAX_AUDIO_VOLUME) {
+    audioVolume = MAX_AUDIO_VOLUME;
+  } else if(audioVolume < MIN_AUDIO_VOLUME) {
+    audioVolume = MIN_AUDIO_VOLUME;
+  }
+
+  volumeChangeFlag = true; // flag needed for display update
+}
+
+/*****
+  Purpose: Fine tune control
+*****/
+// TODO: front panel placeholders for now
+void EncoderFineTune() {
+  int result;
+
+  result = fineTuneEncoder.process();  // Read the encoder
+
+// *** TODO: we'll go through here many times if fine tune encoder bounces ***
+  // *** If fineTuneEncoderMove isn't processed in the meantime,
+  //    and result == 0, then fineTuneEncoderMove will be reset to zero ***
+
+  if(result == 0) {                   // Nothing read
+    fineTuneEncoderMove = 0L;
+    return;
+  }
+
+  fineTuneEncoderMove = result;
+
+  // *** TODO: from v12, validate v11 calibration routines
+  // fine tune used in calibration routines, return to process
+  //   - receive calibrate adjusts In/Out attenuation
+  //   - transmit calibrate adjusts In/Out attenuation
+  //   - two tone adjusts tone 2
+  if((calibrateItem >= 1) && (calibrateItem <= 3)) {
+    // TODO: not currently used in v12
+    //calNFAdjust -= fineTuneEncoderMove;
+    fineTuneEncoderMove = 0;
+    return;
+  }
+
+  SetFineTune(ftIncrement * fineTuneEncoderMove);
+
+  fineTuneEncoderMove = 0L;
+}
+
+/*****
+  Purpose: Menu/Change/Filter encoder movement
+*****/
+// TODO: front panel placeholders for now
+void EncoderFilter() {
+  int result;
+
+  result = menuChangeEncoder.process();  // Read the encoder
+
+  if(result == 0) {
+    return;
+  }
+
+  menuEncoderMove = result;
+
+  ProcessMenuEncoder();
+}
+
+// MCP23017
 
 //FASTRUN void PTT_Interrupt() {
 //  my_ptt = digitalRead(PTT);
@@ -268,12 +444,3 @@ void InitFrontPanel() {
 //      break;
 //  }
 //}
-
-void PollFrontPanel() {
-  if(digitalRead(INT_PIN_1) == LOW) {
-    Mcp1Isr();
-  }
-  if(digitalRead(INT_PIN_2) == LOW) {
-    Mcp2Isr();
-  }
-}

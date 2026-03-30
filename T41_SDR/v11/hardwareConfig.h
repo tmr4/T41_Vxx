@@ -14,10 +14,6 @@
 
 #define USE_BPF_BOARD
 
-// pick one of the following front panel configurations
-//#define MCP23017_FRONTPANEL // MCP23017 driven front panel
-#define FOURSQRP_FRONTPANEL // resistive switch matrix front panel
-
 // uncomment below for USB Host support
 #define USB_HOST_SUPPORT
 

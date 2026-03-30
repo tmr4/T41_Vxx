@@ -6,7 +6,6 @@
 #include "src\Calibrate.h"
 #include "Display.h"
 #include "EEPROM.h"
-#include "src\FrontPanel.h"
 #include "ft8.h"
 #include "InfoBox.h"
 #include "Menu.h"

@@ -6,44 +6,8 @@
 
 extern uint16_t GPAB_state;
 
-#define BPF_BOARD_MCP23017_ADDR 0x20   // For BPF #0 Address
-
-// Define BPF Band words
-// Word definition: GPB7 GPB6 ... GPB0 GPA7 GPA6 ... GPA0
-#define BPF_BAND_BYPASS 0x0008
-#define BPF_BAND_40M    0x0800
-
-//------------
-// Display.h
-
-// radio specific display calibration factors
-#define FREQSPEC_OFFSET_10DB  80
-
-//------------
-// Encoders.h
-
 //---- Teensy 4.1 Pin assignments
-// *** TODO: rework front panel stuff to eliminate this ***
-#if defined(FOURSQRP_FRONTPANEL)
-    #define VOLUME_ENCODER_A         2
-    #define VOLUME_ENCODER_B         3
-    #define FILTER_ENCODER_A        16
-    #define FILTER_ENCODER_B        15
-    #define FINETUNE_ENCODER_A       4
-    #define FINETUNE_ENCODER_B       5
-    #define TUNE_ENCODER_A          14
-    #define TUNE_ENCODER_B          17
-#elif defined(MCP23017_FRONTPANEL)
-    #define VOLUME_ENCODER_A         2
-    #define VOLUME_ENCODER_B         3
-    #define FILTER_ENCODER_A        15
-    #define FILTER_ENCODER_B        14
-    #define FINETUNE_ENCODER_A       4
-    #define FINETUNE_ENCODER_B       5
-    #define TUNE_ENCODER_A          16
-    #define TUNE_ENCODER_B          17
-#endif
-
+// *** Teensy pins are also defined in FrontPanel_v11.cpp
 #define PTT          37    // TX input
 #define RXTX         22    // TX/RX relay
 
@@ -70,6 +34,23 @@ extern uint16_t GPAB_state;
 #define PROFILER_FT8DECODE_PIN        1
 #define PROFILER_FT8_TX_PIN           1
 
+#define MUTE                        38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
+#define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
+
+// v11 using v12 BPF
+#define BPF_BOARD_MCP23017_ADDR 0x20   // For BPF #0 Address
+
+// Define BPF Band words
+// Word definition: GPB7 GPB6 ... GPB0 GPA7 GPA6 ... GPA0
+#define BPF_BAND_BYPASS 0x0008
+#define BPF_BAND_40M    0x0800
+
+//------------
+// Display.h
+
+// radio specific display calibration factors
+#define FREQSPEC_OFFSET_10DB  80
+
 //------------
 // Menu.cpp
 
@@ -87,12 +68,6 @@ extern uint16_t GPAB_state;
 #define AUDIO_SPEC_SHIFT_NFM 105.0
 #define VOL_FACTOR            20.0
 #define AUDIO_SCALER_NFM       0.005
-
-//------------
-// SDT.h
-
-#define MUTE                        38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
-#define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
 
 //------------
 // T41_SDR.ino

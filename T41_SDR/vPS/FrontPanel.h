@@ -1,11 +1,7 @@
-// vPS version of this is empty for now but still required for overall project
+// vPS specific Front Panel hardware file
 
-#pragma once
-
-#ifdef PROJECTSYSTEM_ENCODER_MCP
-
-#include <stdint.h>
-#include "Rotary_V12.h"
+//#include <stdint.h>
+//#include "Rotary_V12.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -13,28 +9,21 @@
 
 //#define FRONT_PANEL_POLLING_OPS
 
-extern int volumeFunction;
-
-// Define a structure to hold the results of built-in-test routine
-typedef struct {
-  bool RF_I2C_present;
-  bool RF_Si5351_present;
-  bool BPF_I2C_present;
-  bool V12_LPF_I2C_present;
-  bool V12_LPF_AD7991_present;
-  bool FRONT_PANEL_I2C_1_present;
-  bool FRONT_PANEL_I2C_2_present;
-  byte AD7991_I2C_ADDR;
-} I2C;
-
-extern I2C bit_results;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
 void InitFrontPanel();
 
-void PollFrontPanel();
-
+#ifdef FRONT_PANEL_POLLING_OPS
+inline void PollFrontPanel() {
+  if(digitalRead(INT_PIN_1) == LOW) {
+    Mcp1Isr();
+  }
+  if(digitalRead(INT_PIN_2) == LOW) {
+    Mcp2Isr();
+  }
+}
+#else
+inline void PollFrontPanel() {}
 #endif

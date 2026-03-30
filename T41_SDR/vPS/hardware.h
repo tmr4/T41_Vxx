@@ -18,55 +18,34 @@
 // Encoders.h
 
 //---- Teensy 4.1 Pin assignments
-// *** TODO: rework front panel stuff to eliminate this ***
-#if defined(FOURSQRP_FRONTPANEL)
-    #define VOLUME_ENCODER_A         2
-    #define VOLUME_ENCODER_B         3
-    #define FILTER_ENCODER_A        16
-    #define FILTER_ENCODER_B        15
-    #define FINETUNE_ENCODER_A       4
-    #define TUNE_ENCODER_A          14
-    #define TUNE_ENCODER_B          17
-#elif defined(MCP23017_FRONTPANEL)
-    #define VOLUME_ENCODER_A         2
-    #define VOLUME_ENCODER_B         3
-    #define FILTER_ENCODER_A        15
-    #define FILTER_ENCODER_B        14
-    #define FINETUNE_ENCODER_A       4
-    #define FINETUNE_ENCODER_B       5
-    #define TUNE_ENCODER_A          16
-    #define TUNE_ENCODER_B          17
-#elif defined(PROJECTSYSTEM_EXPANDED_IO)
-#else
-    #ifdef PROJECTSYSTEM_FINETUNE_ENCODER
-    #define FINETUNE_ENCODER_A       4
-    #define FINETUNE_ENCODER_B      24 // pin 5 is TFT_CS on Project System (the pin assigned here is only meaningful when testing fine tune encoder on non-front panel systems)
-    #endif
-    #ifdef PROJECTSYSTEM_ENCODER_1
-    #define VOLUME_ENCODER_A         4
-    #define VOLUME_ENCODER_B         3
-    #define ENCODER_1_SWITCH         2
-    #endif
-    #ifdef PROJECTSYSTEM_ENCODER_2
-    #define FILTER_ENCODER_A         29 // switched to reverse direction
-    #define FILTER_ENCODER_B         28
-    #define ENCODER_2_SWITCH         30
-    #endif
-    #ifdef PROJECTSYSTEM_ENCODER_3
-    #define FINETUNE_ENCODER_A       28
-    #define FINETUNE_ENCODER_B       29
-    #define ENCODER_3_SWITCH         30
-    #endif
-
-    #define PROFILER_MAINLOOP_PIN         33
-    #define PROFILER_PROCESS_PIN          34
-    #define PROFILER_DRAWFREQSPEC_PIN     41
-    #define PROFILER_DRAWAUDIOSPEC_PIN    14
-    #define PROFILER_FT8PROCESSBLOCK_PIN  35
-    #define PROFILER_FT8GETDATA_PIN       36
-    #define PROFILER_FT8DECODE_PIN        38
-    #define PROFILER_FT8_TX_PIN           31
+#ifdef PROJECTSYSTEM_FINETUNE_ENCODER
+#define FINETUNE_ENCODER_A       4
+#define FINETUNE_ENCODER_B      24 // pin 5 is TFT_CS on Project System (the pin assigned here is only meaningful when testing fine tune encoder on non-front panel systems)
 #endif
+#ifdef PROJECTSYSTEM_ENCODER_1
+#define VOLUME_ENCODER_A         4
+#define VOLUME_ENCODER_B         3
+#define ENCODER_1_SWITCH         2
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_2
+#define FILTER_ENCODER_A         29 // switched to reverse direction
+#define FILTER_ENCODER_B         28
+#define ENCODER_2_SWITCH         30
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_3
+#define FINETUNE_ENCODER_A       28
+#define FINETUNE_ENCODER_B       29
+#define ENCODER_3_SWITCH         30
+#endif
+
+#define PROFILER_MAINLOOP_PIN         33
+#define PROFILER_PROCESS_PIN          34
+#define PROFILER_DRAWFREQSPEC_PIN     41
+#define PROFILER_DRAWAUDIOSPEC_PIN    14
+#define PROFILER_FT8PROCESSBLOCK_PIN  35
+#define PROFILER_FT8GETDATA_PIN       36
+#define PROFILER_FT8DECODE_PIN        38
+#define PROFILER_FT8_TX_PIN           31
 
 #define PTT          37    // TX input
 #define RXTX         22    // TX/RX relay
