@@ -1,6 +1,6 @@
 # T41_Vxx
 
-This is a combination of my T41 v11 and v12 projects.  This should make it easier to maintain consistency between the two versions.
+This is a combination of my T41 v11 and v12 projects, creating a consistent code base for my T41 projects.  The combinations should make it easier to maintain consistency between the two versions and allow me to easily add new versions.
 
 The driver for this project was to leverage all of the work I put into adding features to my v11 radio such as:
 
@@ -8,7 +8,10 @@ The driver for this project was to leverage all of the work I put into adding fe
 * new modes (NFM demodulation and some data modes)
 * new features (beacon monitor, CW message keyer, CAT control, remote display, USB host connection to another T41)
 
-In anticipation of the T41 Mini, I've extracted the hardware specific routines from the Button and Encoder modules.  I've also added a hardware specific folder (vPS) for the [ProtoSupplies Project System](https://protosupplies.com/product/project-system-for-teensy-4-1/).  I use that board frequently in tests where I don't want to load the updated T41 software onto an actual radio.
+## Ongoing Work
+
+* Hardware version specific front panel and display
+  * I've extracted most of the T41 hardware specific code into separate version specific hardware *libraries*.  The front panel and display are two areas I haven't attempted, for different reasons.  I've tried to make the front panel code applicable to all versions with a group of defines activating the correct code depending on the selected front panel. While I've consolidated a lot of the display code into a single file, call to RA8875 display functions are still sprinkled throughout the code.  This effort defines a common set of front panel and display functions that the hardware libraries must satisfy for a functional T41. First up, the front panel.
 
 ## Recent Work
 
@@ -21,7 +24,7 @@ In anticipation of the T41 Mini, I've extracted the hardware specific routines f
   * a modified version of the library for the T41 is in the *ft8_lib* folder within *src* folder and available to all hardware versions
   * This mode is available with a special data mode, internal FT8 mode
   * The mode can also play wav files.
-  * FT8 UI is mouse driven at present
+  * FT8 UI is mouse driven at present and requires PSRAM.
 
 ![T41 Internal FT8 contact](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_ft8.jpg)
 
@@ -37,6 +40,8 @@ The standalone FT8 interface is limited due to the display size.  Currently thre
 ### Project Structure
 
 A handy Arduino feature makes maintaining the common project easy. The Arduino compiler will compile any source and header files in the sketch folder ***and*** the *src* subfolder. All other subfolders in the sketch folder are ignored. That makes the following folder structure possible:
+
+In anticipation of the T41 Mini, I've extracted the hardware specific routines from the Button and Encoder modules.  I've also added a hardware specific folder (vPS) for the [ProtoSupplies Project System](https://protosupplies.com/product/project-system-for-teensy-4-1/).  I use that board frequently in tests where I don't want to load the updated T41 software onto an actual radio.
 
 ![Project folder structure](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/CommonCodeFolderStructure.png)
 
@@ -64,11 +69,11 @@ This is a work in progress.  Some functions may be broken and will likely remain
 
 ![ps pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/ProjectSystem_Teensy_Pin_Usage.png)
 
-## Features
+## Features Available to All Hardware Versions
 
 ### Mouse
 
-Adds mouse support.   Currently the mouse can be used as follows:
+Adds mouse support to models with a USB host connection.   Currently the mouse can be used as follows:
 
 * Within the menu area (bottom of waterfall):
   * Open menu with right click
@@ -108,7 +113,7 @@ Adds mouse support.   Currently the mouse can be used as follows:
 
 ### Keyboard
 
-Adds optional keyboard support to the T41. It uses about 7k RAM.  Keyboard connects to the Teensy USB Host connection.
+Adds optional keyboard support to a T41 with a USB host connection. It uses about 7k RAM.  Keyboard connects to the Teensy USB Host connection.
 
 ### Morse code keyer
 
