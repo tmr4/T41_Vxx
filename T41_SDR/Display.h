@@ -19,7 +19,7 @@
 #define PIXELS_PER_AUDIO_DELTA       10
 
 #define FREQUENCY_X           0
-#define FREQUENCY_Y           0 //28
+#define FREQUENCY_Y           0
 #define FREQUENCY_X_SPLIT     280
 #define VFO_B_ACTIVE_OFFSET   FREQUENCY_X_SPLIT - 60
 #define VFO_B_INACTIVE_OFFSET FREQUENCY_X_SPLIT + 60
@@ -37,10 +37,10 @@
 #define OPERATION_STATS_PWR   405 // power level
 
 #define SPECTRUM_RES          512
-#define SPECTRUM_HEIGHT       150                 // This is the pixel height of spectrum plot area without disturbing the axes
+#define SPECTRUM_HEIGHT       150 // This is the pixel height of spectrum plot area without disturbing the axes
 
 #define SPEC_BOX_L            0
-#define SPEC_BOX_T            (OPERATION_STATS_T + 24) //99
+#define SPEC_BOX_T            (OPERATION_STATS_T + 24)
 #define SPEC_BOX_W            SPECTRUM_RES + 2
 #define SPEC_BOX_H            SPECTRUM_HEIGHT + 2
 
@@ -56,10 +56,9 @@
 
 #define WATERFALL_L           SPECTRUM_LEFT_X
 #define WATERFALL_T           (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT + 25)
-#define WATERFALL_W           SPECTRUM_RES            // Pixel width of waterfall
-#define WATERFALL_H           YPIXELS - WATERFALL_T       // use up remainder of 480 rows
-
-#define WATERFALL_BOTTOM      (WATERFALL_T + WATERFALL_H)
+#define WATERFALL_BOTTOM      YPIXELS              // use up remainder of 480 rows
+#define WATERFALL_W           SPECTRUM_RES
+#define WATERFALL_H           WATERFALL_BOTTOM - WATERFALL_T
 
 #define TEMP_X_OFFSET         15
 #define TEMP_Y_OFFSET         465                                           // 480 * 0.97 = 465
@@ -159,8 +158,6 @@ extern int centerLine;
 
 extern int16_t pixelnew[SPECTRUM_RES];
 
-extern int wfRows;
-
 extern RA8875 tft;
 
 typedef struct {
@@ -228,3 +225,6 @@ void MyDrawFloat(float val, int decimals, int x, int y, char *buff);
 void MyDrawFloatP(float val, int decimals, int x, int y, char *buff, int width);
 
 void PrintKeyboardBuffer();
+
+void SetWaterfallHeight(int pixels);
+void ResetWaterfallHeight();

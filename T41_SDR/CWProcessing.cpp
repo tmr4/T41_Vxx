@@ -736,11 +736,7 @@ FLASHMEM void InitCWDecoder(void) {
     Debug("InitCWDecoder failed");
   } else {
     // reduce waterfall height if we're decoding CW
-    tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
-    tft.writeTo(L2); // it's on layer 2 as well
-    tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
-    tft.writeTo(L1);
-    wfRows = WATERFALL_H - CHAR_HEIGHT - 3;
+    SetWaterfallHeight(CHAR_HEIGHT);
   }
 }
 
@@ -751,8 +747,7 @@ FLASHMEM void ExitCWDecoder(void) {
   extmem_free(cwDecodeBuffer);
 
   // erase any decoded CW and return waterfall to normal
-  tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
-  wfRows = WATERFALL_H;
+  ResetWaterfallHeight();
 
   // erase decoder guide lines
   tft.drawFastVLine(AUDIO_SPEC_BOX_L + 29, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, RA8875_BLACK);  //CW lower freq indicator

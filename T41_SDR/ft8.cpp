@@ -1076,12 +1076,7 @@ FLASHMEM bool InitFT8Decoder(const char *call, const char *grid) {
         UpdateInfoBoxItem(IB_ITEM_FT8_CQ);
 
         // set up message area
-        // Erase waterfall in decode area
-        tft.fillRect(WATERFALL_L, FT8_WINDOW_TOP, WATERFALL_W, WATERFALL_H, RA8875_BLACK);
-        //tft.writeTo(L2); // it's on layer 2 as well
-        //tft.fillRect(WATERFALL_L, FT8_WINDOW_TOP, WATERFALL_W, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
-        tft.writeTo(L1);
-        wfRows = WATERFALL_H - FT8_ROW_HEIGHT * FT8_ROWS - 3;
+        SetWaterfallHeight(FT8_ROW_HEIGHT * FT8_ROWS);
 
         result = true;
 
@@ -1124,8 +1119,7 @@ FLASHMEM void ExitFT8Decoder() {
   displayState = DISPLAY_T41;
 
   // restore waterfall area
-  tft.fillRect(WATERFALL_L, FT8_WINDOW_TOP, 512, FT8_ROW_HEIGHT * FT8_ROWS + 3, RA8875_BLACK);
-  wfRows = WATERFALL_H;
+  ResetWaterfallHeight();
 
   // redraw frequency spectrum area
   EraseSpectrumDisplayContainer();

@@ -878,12 +878,8 @@ void Psk31Decoder(float32_t* input, float32_t* output, int size) {
 
 FLASHMEM bool setupPSK31() {
   // set up message area
-  // Erase waterfall in decode area
-  tft.fillRect(WATERFALL_L, YPIXELS - 25 * 1, WATERFALL_W, 25 * 1 + 3, RA8875_BLACK);
-  tft.writeTo(L2); // it's on layer 2 as well
-  tft.fillRect(WATERFALL_L, YPIXELS - 25 * 1, WATERFALL_W, 25 * 1 + 3, RA8875_BLACK);
-  tft.writeTo(L1);
-  wfRows = WATERFALL_H - 25 * 1 - 3;
+  // Erase waterfall in message area
+  SetWaterfallHeight(25);
 
   return true;
 }
@@ -910,8 +906,7 @@ FLASHMEM bool setupPSK31Wav() {
 
 FLASHMEM void exitPSK31() {
   // restore message area
-  tft.fillRect(WATERFALL_L, YPIXELS - 20 * 6, WATERFALL_W, 25 * 5 + 3, RA8875_BLACK);
-  wfRows = WATERFALL_H;
+  ResetWaterfallHeight();
 }
 
 void ProcessPSK31WaveData() {

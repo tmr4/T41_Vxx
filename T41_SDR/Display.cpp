@@ -106,7 +106,7 @@ int centerLine = SPECTRUM_RES / 2 + SPECTRUM_LEFT_X;
 int16_t pixelnew[SPECTRUM_RES];
 int nf2PC;
 
-int wfRows = WATERFALL_H;
+int wfHeight = WATERFALL_H;
 
 #ifdef RA8875_DISPLAY
 #define RA8875_CS TFT_CS
@@ -509,7 +509,7 @@ FASTRUN void ShowFreqSpectrum() {
   if(displayState == DISPLAY_T41) {
     static int tik = 1, tok = 2;
 
-    tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfRows, WATERFALL_L, WATERFALL_T + 1, tik, tok);
+    tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfHeight, WATERFALL_L, WATERFALL_T + 1, tik, tok);
     tft.readStatus(); // Make sure it is done.  Memory moves can take time. This is blocking. *** might need to be changed back to original if blocking nature is modified ***
     if(tik == 1) {
       tik = 2;
@@ -1231,19 +1231,36 @@ FLASHMEM void DrawAudioSpectContainer() {
   }
 }
 
+FLASHMEM void SetWaterfallHeight(int pixels) {
+  int y = pixels + 3; // pad area by 3 pixels to increase visual separation with waterfall
+
+  // Erase an area in lower waterfall
+  tft.fillRect(WATERFALL_L, WATERFALL_BOTTOM - y, WATERFALL_W, y, RA8875_BLACK);
+  tft.writeTo(L2); // it's on layer 2 as well
+  tft.fillRect(WATERFALL_L, WATERFALL_BOTTOM - y, WATERFALL_W, y, RA8875_BLACK);
+  tft.writeTo(L1);
+
+  // adjust waterfall height
+  wfHeight = WATERFALL_H - y;
+}
+
+// erase whatever extra was drawn in waterfall region and return waterfall height to normal
+FLASHMEM void ResetWaterfallHeight() {
+  int y = WATERFALL_T + wfHeight;
+
+  tft.fillRect(WATERFALL_L, y, WATERFALL_W, WATERFALL_BOTTOM - y, RA8875_BLACK);
+  wfHeight = WATERFALL_H;
+}
+
 /*****
-  Purpose: To erase both primary and secondary menus from display
+  Purpose: erase both primary and secondary menus from display
 
   Parameter list:
 *****/
 FLASHMEM void EraseMenus() {
-  tft.fillRect(PRIMARY_MENU_X, MENUS_Y, BOTH_MENU_WIDTHS, CHAR_HEIGHT + 1, RA8875_BLACK);  // Erase menu choices
+  ResetWaterfallHeight();
 
-  // erase menu and return waterfall to normal
-  tft.fillRect(WATERFALL_L, YPIXELS - 35, WATERFALL_W, CHAR_HEIGHT + 3, RA8875_BLACK);  // Erase waterfall in decode area
-  wfRows = WATERFALL_H;
-
-  //menuStatus = NO_MENUS_ACTIVE;                                                            // Change menu state
+  //menuStatus = NO_MENUS_ACTIVE; // Change menu state
 }
 
 /*****
@@ -1252,8 +1269,9 @@ FLASHMEM void EraseMenus() {
   Parameter list:
 *****/
 FLASHMEM void ErasePrimaryMenu() {
-  tft.fillRect(PRIMARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT + 1, RA8875_BLACK);  // Erase menu choices
-//  menuStatus = NO_MENUS_ACTIVE;                                                           // Change menu state
+  tft.fillRect(PRIMARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT + 1, RA8875_BLACK);
+
+  //menuStatus = NO_MENUS_ACTIVE; // Change menu state
 }
 
 /*****

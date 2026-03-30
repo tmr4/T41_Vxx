@@ -116,16 +116,6 @@ void BeaconInit() {
   displayState = DISPLAY_BEACON_MONITOR;
   //displayState = 2; // use for testing that normal updates have been eliminated, should be a blank display with the exception of the xmit indicator
 
-  // *** temporary ***
-  // create area on T41 display for beacon info
-  // Erase waterfall in region
-  //tft.fillRect(WATERFALL_L, YPIXELS - 25 * 5, WATERFALL_W, 25 * 5 + 3, RA8875_BLACK);
-  //tft.writeTo(L2); // it's on layer 2 as well
-  //tft.fillRect(WATERFALL_L, YPIXELS - 25 * 5, WATERFALL_W, 25 * 5 + 3, RA8875_BLACK);
-  //tft.writeTo(L1);
-  // set waterfall to one less row
-  //wfRows = WATERFALL_H - 25 * 5 - 3;
-
   // initialize beacon SNR
   for(int j = 0; j < 18; j++) {
     for(int i = 0; i < 5; i++) {
