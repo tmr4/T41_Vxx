@@ -19,7 +19,6 @@
 #include "SDT.h"
 
 #include "AudioConfig.h"
-#include "Bearing.h"
 #include "Button.h"
 #include "CWProcessing.h"
 #include "CW_Excite.h"
@@ -30,7 +29,6 @@
 #include "Exciter.h"
 #include "Filter.h"
 #include "FIR.h"
-#include "InfoBox.h"
 #include "Menu.h"
 #include "Noise.h"
 #include "Process.h"
@@ -38,7 +36,6 @@
 #include "Utility.h"
 
 // special features
-#include "Beacon.h"
 #include "debug.h"
 #include "keyboard.h"
 #include "keyer.h"
@@ -129,7 +126,6 @@ int SetI2SFreq(int freq);
 FLASHMEM void InitializeDataArrays() {
   InitFFTArrays();
 
-  SET_VAR(pixelnew, SPECTRUM_BOTTOM);
   CLEAR_VAR(NR_FFT_buffer);
   CLEAR_VAR(NR_output_audio_buffer);
   CLEAR_VAR(NR_last_iFFT_result);
@@ -165,15 +161,6 @@ FLASHMEM void InitializeDataArrays() {
 }
 
 FLASHMEM void Splash() {
-  int centerTxt;
-  int line1_Y = YPIXELS / 10;
-  int line2_Y = line1_Y + 100;
-  int line3_Y = line2_Y + 50;
-  int line4_Y = line3_Y + 150;
-  int line5_Y = line4_Y + 40;
-  //int line6_Y = YPIXELS / 2 + 110;
-  //int line7_Y = line6_Y + 50;
-
   // 50 char max for 800x480 display with font scale = 1:
   //                     "          1         2         3         4"
   //                     "01234567890123456789012345678901234567890123456789";
@@ -184,48 +171,7 @@ FLASHMEM void Splash() {
   const char*line5Txt = "";
   //const char*line6Txt = "Property of:"; // line 7 MY_CALL
 
-  tft.fillWindow(RA8875_BLACK);
-
-  tft.setFontScale(3);
-  tft.setTextColor(RA8875_GREEN);
-  centerTxt = (XPIXELS - strlen(line1Txt) * tft.getFontWidth()) / 2;
-  tft.setCursor(centerTxt, line1_Y);
-  tft.print(line1Txt);
-
-  tft.setFontScale(1);
-  tft.setTextColor(RA8875_YELLOW);
-  centerTxt = (XPIXELS - (strlen(line2Txt) + strlen(VERSION)) * tft.getFontWidth()) / 2;
-  tft.setCursor(centerTxt, line2_Y);
-  tft.print("Version: ");
-  tft.print(VERSION);
-
-  centerTxt = (XPIXELS - strlen(line3Txt) * tft.getFontWidth()) / 2;
-  tft.setCursor(centerTxt, line3_Y);
-  tft.print(line3Txt);
-
-  tft.setFontScale(0);
-  tft.setTextColor(RA8875_WHITE);
-  centerTxt = (XPIXELS - strlen(line4Txt) * tft.getFontWidth()) / 2;
-  tft.setCursor(centerTxt, line4_Y);
-  tft.print(line4Txt);
-  centerTxt = (XPIXELS - strlen(line5Txt) * tft.getFontWidth()) / 2;
-  tft.setCursor(centerTxt, line5_Y);
-  tft.print(line5Txt);
-
-/*
-  tft.setFontScale(1);
-  centerTxt = (XPIXELS - strlen(line6Txt) * tft.getFontWidth()) / 2;
-  tft.setCursor(centerTxt, line6_Y);
-  tft.print(line6Txt);
-
-  tft.setTextColor(RA8875_GREEN);
-  centerTxt = (XPIXELS - strlen(MY_CALL) * tft.getFontWidth()) / 2;
-  tft.setCursor(centerTxt, line7_Y);
-  tft.print(MY_CALL);
-*/
-  delay(1000);
-  //delay(SPLASH_DELAY);
-  tft.fillWindow(RA8875_BLACK);
+  ShowSplash(line1Txt, line2Txt, line3Txt, line4Txt, line5Txt);
 }
 
 /*****
@@ -287,11 +233,8 @@ FLASHMEM void setup() {
   //uint8_t size = external_psram_size;
   //if (size == 0) {
   //  Serial.println("No PSRAM Installed");
-  //  //tft.println("No PSRAM Installed");
   //} else {
   //  Serial.printf("PSRAM Memory Size = %d Mbyte\n", size);
-  //  //tft.printf("PSRAM Memory Size = %d Mbyte\n", size);
-  //  //tft.println();
   //}
 
   // set system time
@@ -312,9 +255,17 @@ FLASHMEM void setup() {
   InitDisplay();
   Splash();
 
-  sdCardPresent = InitializeSDCard();  // Is there an SD card that can be initialized?
+  // SD card is required for normal T41 operations
+  // *** TODO: reconsider this ***
+  //if(CheckDataFileEEPROM() == 0) { // *** requires SDEEPROMData.txt on SD card ***
+  if(InitializeSDCard() == 0) {
+    Debug("No SD card");
+    return;
+  } else {
+    sdCardPresent = 1;
+  }
   EEPROMStartup();
-  sdCardPresent = SDPresentCheck();
+
 #ifdef DEBUG
   EEPROMShow();
 #endif
@@ -534,8 +485,8 @@ FASTRUN void loop() {
     case CW_RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
-          ShowFreqSpectrum();
-          ShowAudioSpectrum();
+          DrawFreqSpectrum();
+          DrawAudioSpectrum();
           break;
 
         case DISPLAY_BEACON_MONITOR:
@@ -551,8 +502,8 @@ FASTRUN void loop() {
     case DATA_RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
-          ShowFreqSpectrum();
-          ShowAudioSpectrum();
+          DrawFreqSpectrum();
+          DrawAudioSpectrum();
           break;
 
         case DISPLAY_T41_FT8_DECODE:
@@ -713,7 +664,7 @@ FASTRUN void loop() {
 #endif
 
 #ifdef NO_DISPLAY
-  // along with the delay in ShowFreqSpectrum this duplicates overall loop timing
+  // along with the delay in DrawFreqSpectrum this duplicates overall loop timing
   // with a display.  These are needed to regulate the flow of messages to the
   // PC control app.  These may not be needed if that app isn't used.
   delay(12);

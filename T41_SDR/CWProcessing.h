@@ -6,10 +6,11 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+// *** these are display dependent ***
 #define CW_TEXT_START_X             5
 #define CW_TEXT_START_Y             449                   // 480 * 0.97 = 465 - height = 465 - 16 = 449
 #define CW_MESSAGE_WIDTH            WATERFALL_W   // 512
-#define CW_MESSAGE_HEIGHT           16                    // tft.getFontHeight()
+#define CW_MESSAGE_HEIGHT           16
 
 #define IIR_CW_ORDER              8
 #define IIR_CW_NUMSTAGES          4

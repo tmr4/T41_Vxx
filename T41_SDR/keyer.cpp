@@ -5,7 +5,6 @@
 #include "CWProcessing.h"
 #include "CW_Excite.h"
 #include "Display.h"
-#include "InfoBox.h"
 #include "keyboard.h"
 #include "keyer.h"
 #include "pi.h"

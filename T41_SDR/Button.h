@@ -35,4 +35,3 @@ void EnableButtonInterrupts();
 int ProcessButtonPress(int valPin);
 int ReadSelectedPushButton();
 void ExecuteButtonPress(int val);
-void NoActiveMenu();

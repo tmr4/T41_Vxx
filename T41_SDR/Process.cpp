@@ -16,7 +16,6 @@
 #include "src\FrontPanel.h"
 
 #include "ft8.h"
-#include "InfoBox.h"
 #include "keyer.h"
 #include "Menu.h"
 #include "MenuProc.h"
@@ -34,6 +33,9 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+// *** TODO: this is display dependent, but also fundamental to much of how the DSP process works ***
+#define SPECTRUM_RES          512
+
 bool FFTupdated;
 
 arm_biquad_casd_df1_inst_f32 biquad_lowpass1;
@@ -42,7 +44,6 @@ float32_t biquad_lowpass1_coeffs[5] = { 0, 0, 0, 0, 0 };
 
 float32_t audioMaxSquaredAve = 0.01; // this will blow up dBm if 0
 
-int audioYPixel[1024]; // *** TODO: this doesn't need to be this big ***
 float32_t audioSpectBuffer[1024]; // This can't be DMAMEM.  It will break the S-Meter.
 
 uint8_t NB_on = 0; // noise blanker: 0 - off, 1 - on
@@ -161,7 +162,8 @@ void CalcAudioMax() {
 // offset: audio spectrum is move downward by this many pixels
 // imComp: FFT has an imaginary component (default: true)
 // reset:  reset FFT
-void AudioDSP(bool updateSpectrumData, int offset, bool imComp = true) {
+//void AudioDSP(bool updateSpectrumData, int offset, bool imComp = true) {
+void AudioDSP(bool updateSpectrumData, bool imComp = true) {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
   float32_t audioMaxSquared;
   uint32_t audioMaxIndex;
@@ -194,17 +196,6 @@ void AudioDSP(bool updateSpectrumData, int offset, bool imComp = true) {
   if(updateSpectrumData) {
     for(int k = 0; k < 1024; k++) {
       audioSpectBuffer[1023 - k] = (audioIFFT[k] * audioIFFT[k]);
-    }
-
-    for(int k = 0; k < AUDIO_SPEC_RES; k++) {
-      if(currentDemodMode == DEMOD_LSB) {
-        audioYPixel[k] = offset +  map(15 * log10f((audioSpectBuffer[k] + audioSpectBuffer[k + 1] + audioSpectBuffer[k + 2]) / 3), 0, 100, 0, AUDIO_SPEC_H);
-      } else {
-        audioYPixel[k] = offset +  map(15 * log10f((audioSpectBuffer[1021 - k] + audioSpectBuffer[1022 - k] + audioSpectBuffer[1023 - k]) / 3), 0, 100, 0, AUDIO_SPEC_H);
-      }
-      if(audioYPixel[k] < 0) {
-        audioYPixel[k] = 0;
-      }
     }
 
     if(currentDemodMode != DEMOD_NFM)
@@ -265,7 +256,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   //
   // The T41 takes ~1.5-5.0 ms (depending on display update, mode and options) to process 16 audio packets
   // afterwards it may take up to 10 ms to refill the buffers until 16 packets are available (thus this if block is
-  // skipped and we return immediately to ShowFreqSpectrum to continue updating the display)
+  // skipped and we return immediately to DrawFreqSpectrum to continue updating the display)
   // This entire process serves to regulate the audio output stream and changes may affect that stream.
   // For example, playing a wav file without some display updates (audio spectrum
   // for example), will cause a faster (unnatural) playback speed.
@@ -567,18 +558,21 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       //  // *** TODO: consider if AGC (in default below) for FT8 is desirable with WSJT-X ***
       //  // *** without AGC the T41 volume is less in this mode than equivalent SSB ***
       //  AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
+      //  AudioDSP(updateFreqSpec);
       //  break;
 
       #ifdef USE_BUFFERED_FT8_WAV
       case DEMOD_FT8_INTERNAL: // *** TODO: this is USE_BUFFERED_FT8_WAV only ***
       #endif
       case DEMOD_FT8_WAV:
-        AudioDSP(updateFreqSpec, 20, false); // no imaginary component for these
+        //AudioDSP(updateFreqSpec, 20, false); // no imaginary component for these
+        AudioDSP(updateFreqSpec, false); // no imaginary component for these
         break;
 
       default:
         // prepare audio signals for all other modes
-        AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
+        //AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
+        AudioDSP(updateFreqSpec);
 
         // apply automatic gain control
         // AGC acts upon on the audio data in audioIFFT
@@ -645,7 +639,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, sampleRate / 8.0);
 
         // process audio for demodulated NFM and FT8 wave file
-        AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT_NFM, false); // no imaginary component for these
+        //AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT_NFM, false); // no imaginary component for these
+        AudioDSP(updateFreqSpec, false); // no imaginary component for these
 
         // apply automatic gain control
         // AGC acts upon on the audio data in audioIFFT
@@ -710,11 +705,11 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
     // send audio data to control app if applicable
     if(updateFreqSpec && controlDataFlag) {
-      for(int i = 0; i < AUDIO_SPEC_RES; i++) {
-        // audioYPixel is already >= 0, limit it to 255
-        specData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
-      }
-      T41ControlSendData(specData, AUDIO_SPEC_RES);
+      //for(int i = 0; i < AUDIO_SPEC_RES; i++) {
+      //  // audioYPixel is already >= 0, limit it to 255
+      //  specData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
+      //}
+      //T41ControlSendData(specData, AUDIO_SPEC_RES);
     }
 
 #ifdef T41_REMOTE_DISPLAY
@@ -1286,20 +1281,25 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
     int16_t min = 0;
     int16_t max = 0;
     int16_t data[SPECTRUM_RES];
+
     for(int i = 0; i < SPECTRUM_RES; i++) {
       freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
       prevFreqSpecBuf[i] = freqSpecBuf[i];
-
-      pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
 
       // *** TODO: evaluate noise floor default setting for new v12 hardware ***
       // *** TODO: some calibration routines need this adjustment because there is no noise floor adjustment ***
       //pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i])) + 50;
 
       if(controlDataFlag) {
+        // pixelnew = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
+        // hardwire for 10dB scale, 20 pixel offset, 20 dBScale
+        int16_t pixelnew = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
+
         // T41 spectrum equation: spectrumNoiseFloor - pixelnew[i] - currentNF;
         //data[i] = spectrumNoiseFloor - pixelnew[i] - currentNF;
-        data[i] = pixelnew[i] + nf2PC;
+        //data[i] = pixelnew + nf2PC;
+        // *** control app data no longer has current noise floor as that is display dependent ***
+        data[i] = pixelnew;
         if(data[i] < min) {
           min = data[i];
         }
@@ -1309,30 +1309,9 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
       }
     }
 
-    // set up specData for frequency spectrum command
-    // FDxxx[512]; where xxx = 255 - max and [512] = 512 bytes spectrum data
-    sprintf((char*)specData, "FD%03d", 255 - max);
-    specData[517] = ';';
-
-    // shift spectrum data and send it to PC if applicable
-    // we have to scale and apply noise floor in the control app
+    // set up specData for frequency spectrum command if applicable
     if(controlDataFlag) {
-      int tmp = 0;
-      for(int i = 0; i < SPECTRUM_RES; i++) {
-        // shift data so max = 255
-        // *** TODO: consider scaling here fits data into a 0-255 range ***
-        tmp = data[i] + 255 - max;
-        // though unlikely, data can still be negative, limit it
-        if(tmp < 0) {
-          tmp = 0;
-        }
-        //if(tmp > 255) {
-        //  tmp = 255;
-        //}
-        specData[i + 5] = (uint8_t)tmp;
-      }
-
-      T41ControlSendData(specData, SPECTRUM_RES + 6);
+      T41PrepareSpectrumData(data, max);
     }
     //if(connected) {
     //  int tmp = 0;
@@ -1356,6 +1335,7 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
 /*****
   Purpose: Calcculate zoom magnification when Spectrum Zoom = 1
 *****/
+// *** updateSpectrumData is assumed true ***
 void Calc1xFreqSpec() {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
   float32_t spec_help = 0.0;
@@ -1388,12 +1368,6 @@ void Calc1xFreqSpec() {
   for(int x = 0; x < SPECTRUM_RES; x++) {
     spec_help = LPFcoeff * freqSpecBuf[x] + (1.0 - LPFcoeff) * prevFreqSpecBuf[x];
     prevFreqSpecBuf[x] = spec_help;
-
-#ifdef USE_LOG10FAST
-    pixelnew[x] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x]));
-#else
-    pixelnew[x] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f(spec_help));
-#endif
   }
 }
 

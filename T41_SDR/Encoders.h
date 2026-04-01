@@ -30,4 +30,3 @@ extern int tuneChange;
 
 void SetBWFilters();
 void EncoderCenterTune();
-float GetEncoderValueLive(float minValue, float maxValue, float startValue, float increment, char prompt[]);

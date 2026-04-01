@@ -424,7 +424,6 @@ int ProcessButtonPress(int valPin) {
 
   if(valPin == BOGUS_PIN_READ) {  // Not valid press
 #ifdef DEBUG_SW
-//  NoActiveMenu();
   Serial.println("NAM BOGUS_PIN_READ");
 #endif
     return -1;
@@ -432,7 +431,6 @@ int ProcessButtonPress(int valPin) {
 
   if(valPin == MENU_OPTION_SELECT && menuStatus == NO_MENUS_ACTIVE) {
 #ifdef DEBUG_SW
-  NoActiveMenu();
   Serial.println("NAM #2");
 #endif
     return -1;

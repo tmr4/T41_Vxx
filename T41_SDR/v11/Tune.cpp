@@ -8,7 +8,7 @@
 #include "..\Display.h"
 #include "..\Encoders.h"
 #include "..\Filter.h"
-#include "..\InfoBox.h"
+#include "displayRA8875\InfoBox.h"
 #include "..\Menu.h"
 #include "..\Tune.h"
 #include "..\Utility.h"

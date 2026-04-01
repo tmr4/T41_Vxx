@@ -1,14 +1,14 @@
 
 #include <SD.h>
 
-#include "SDT.h"
+#include "..\..\SDT.h"
 
 #include "Bearing.h"
-#include "Button.h"
+#include "..\..\Button.h"
 #include "Display.h"
-#include "Encoders.h"
+#include "..\..\Encoders.h"
 #include "Menu.h"
-#include "Utility.h"
+#include "..\..\Utility.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -564,11 +564,60 @@ uint16_t read16(File &f);
 uint32_t read32(File &f);
 int CreateMapList(char ptrMaps[][50], int *count);
 int WhichOneToUse(char ptrMaps[][50], int count);
-void WaitforWRComplete();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+
+/*****
+  Purpose: Bearing display
+*****/
+FLASHMEM void ButtonBearing() {
+  int buttonIndex, doneViewing, valPin;
+  float retVal;
+
+  tft.clearScreen(RA8875_BLACK);
+
+  DrawKeyboard();
+  CaptureKeystrokes();
+  retVal = BearingHeading(keyboardBuffer);
+
+
+  if(retVal != -1.0) {                           // We have valid country
+    bmpDraw((char *)myMapFiles[selectedMapIndex].mapNames, IMAGE_CORNER_X, IMAGE_CORNER_Y);
+    doneViewing = false;
+  } else {
+    tft.setTextColor(RA8875_RED);
+    tft.setCursor(380 - (17 * tft.getFontWidth(0)) / 2, 240);   // Center message
+    tft.print("Country not found");
+    tft.setTextColor(RA8875_WHITE);
+  }
+  while(true) {
+    valPin = ReadSelectedPushButton();            // Poll UI push buttons
+    delay(100L);
+    if(valPin != BOGUS_PIN_READ) {               // If a button was pushed...
+      buttonIndex = ProcessButtonPress(valPin);   // Winner, winner...chicken dinner!
+      switch(buttonIndex) {
+        case BEARING:                             // Pressed puchbutton 18
+          doneViewing = true;
+          break;
+        default:
+          break;
+      }
+    }
+
+    if(doneViewing == true) {
+        //tft.clearMemory();          // Need to clear overlay too
+        //tft.writeTo(L2);
+        //tft.fillWindow();
+      break;
+    }
+  }
+
+  RedrawDisplayScreen();
+  ShowFrequency();
+  ShowSpectrumFreqValues();
+}
 
 /*****
   Purpose: To draw the onscreen keyboard and prompts
@@ -1285,16 +1334,7 @@ uint16_t Color565(uint8_t r, uint8_t g, uint8_t b) {
 
 // helper to helper...
 inline void writeRect(int x, int y, int cx, int cy, uint16_t *pixels) {
-#if defined(_RA8876_T3)
-  tft.useCanvas();
-  tft.putPicture_16bpp(x, y, cx, cy);
-  tft.startSend();
-  SPI.transfer(RA8876_SPI_DATAWRITE);
-  SPI.transfer(pixels, NULL, cx * cy * 2);
-  tft.endSend(true);
-#else
   tft.writeRect(x, y, cx, cy, pixels);
-#endif
 }
 
 FLASHMEM void writeClippedRect(int x, int y, int cx, int cy, uint16_t *pixels, bool waitForWRC) {
@@ -1321,8 +1361,6 @@ FLASHMEM void writeClippedRect(int x, int y, int cx, int cy, uint16_t *pixels, b
     }
 
     g_WRCount++;
-
-    if(waitForWRC) WaitforWRComplete();
     // only process if something is visible.
   } else if((end_x >= 0) && (end_y >= 0) && (x < g_tft_width) && (y < g_tft_height)) {
 
@@ -1380,44 +1418,13 @@ FLASHMEM void writeClippedRect(int x, int y, int cx, int cy, uint16_t *pixels, b
 #endif
 
 /*****
-  Purpose: Initialize the SD card
-
-
-  Return value:
-    int                   0 if cannot initialize, 1 otherwise
-*****/
-FLASHMEM int InitializeSDCard() {
-  tft.setFontScale((enum RA8875tsize)1);
-  tft.setTextColor(RA8875_RED, RA8875_BLACK);
-  tft.setCursor(100, 240);
-  if(!SD.begin(BUILTIN_SDCARD)) {
-    tft.print("SD card cannot be initialized.");
-    delay(2000L);  // Given them time to read it.
-    return 0;
-  }
-
-  //  tft.print("Initializing SD card.");
-  //  delay(2000L);
-  return 1;
-}
-
-FLASHMEM void WaitforWRComplete() {
-#if defined(_RA8876_T3)
-  // bugbug: ra8876 may use dma code, and since some of our decoders
-  // want to reuse the same memory we wait for these to complete
-  while(!tft.DMAFinished())
-    ;
-#endif
-}
-
-/*****
   Purpose: TO present a list of the bearing maps on the SD card.
 *****/
 FLASHMEM void BearingMaps() {
   char ptrMaps[10][50];
   int count;
 
-  if(sdCardPresent == 0) {
+  if(InitializeSDCard() == 0) {
     tft.setCursor(200, 300);
     tft.setTextColor(RA8875_RED, RA8875_BLACK);
     tft.println("No SD card.");

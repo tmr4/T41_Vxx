@@ -7,13 +7,15 @@
 extern float32_t /*DMAMEM*/ audioFFT[];
 extern float32_t /*DMAMEM*/ audioIFFT[];
 
+extern float32_t /*DMAMEM*/ freqSpecBuf[1024];
 extern float32_t /*DMAMEM*/ prevFreqSpecBuf[1024];
 
 extern float32_t biquad_lowpass1_coeffs[];
 
 extern uint8_t ANR_notch;
 extern uint8_t ANR_notchOn;
-extern int audioYPixel[];
+
+extern float32_t audioSpectBuffer[]; // This can't be DMAMEM.  It will break the S-Meter.
 extern float32_t audioMaxSquaredAve;
 
 //-------------------------------------------------------------------------------------------------------------
@@ -27,7 +29,7 @@ void InitAMDemodBiquadFilter();
 int ProcessReceiverData(bool updateSpectrumData = false);
 void ProcessControls();
 
-void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
+void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData, int16_t *pixelnew);
 
 void YieldToProcess(bool updateSpectrum = false);
 void YieldForProcess(int ms);

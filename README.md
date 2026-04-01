@@ -15,6 +15,11 @@ The driver for this project was to leverage all of the work I put into adding fe
   * I've also consolidated a lot of the display code into a single file, but calls to RA8875 display functions are still sprinkled throughout the code.
   * This effort cleans up the front panel code, retaining only a single front panel source in each version (in FrontPanel_vXX.cpp and FrontPanel.h).  The files should be interchangable between hardware versions as long as the actual front panel hardware exists for the hardware version it's applied to.  I haven't tested this.
   * More work is required for the display.  My plan is to define a common set of display functions that the hardware libraries must satisfy for a functional T41. I'm working on that effort now.
+  * I've completed the RA8875 display module and tested against the Project System hardware.  This was the easiest hardware version as I haven't defined calibration code for it.  As a test, I also create two other display types: (1) no display and (2) an RA8875 version where only a smaller frequency spectrum and waterfall are drawn.
+
+![displayFreqSpec](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_altDisplay.jpg)
+
+  * More work is needed to accomodate the calibration routines.  These are highly display specific as well as hardware specific to some extent.
 
 ## Recent Work
 

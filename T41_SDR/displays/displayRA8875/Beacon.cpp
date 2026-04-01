@@ -2,14 +2,15 @@
 #include <SD.h>
 #include <TimeLib.h>                   // Part of Teensy Time library
 
-#include "SDT.h"
+#include "..\..\SDT.h"
 
 #include "Bearing.h"
-#include "ButtonProc.h"
+#include "..\..\ButtonProc.h"
 #include "Display.h"
-#include "Process.h"
-#include "t41Beacon.h"
-#include "Tune.h"
+#include "..\..\Display.h"
+#include "..\..\Process.h"
+#include "..\..\t41Beacon.h"
+#include "..\..\Tune.h"
 
 // International beacon transmission schedule, see https://www.ncdxf.org/beacon/
 

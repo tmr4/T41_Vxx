@@ -6,7 +6,7 @@
 #include "..\Display.h"
 #include "..\Encoders.h"
 #include "..\Filter.h"
-#include "..\InfoBox.h"
+#include "displayRA8875\InfoBox.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "si5351.h" // modified https://github.com/etherkit/Si5351Arduino

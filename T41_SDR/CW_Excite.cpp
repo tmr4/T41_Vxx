@@ -12,7 +12,7 @@
 
 // keyPressedOn set to 1 in ISR indicating a dit or dah key press in CW mode.
 // This should be reset to 0 after processing the key click.
-// I've removed check for this being set in ShowFreqSpectrum and ProcessReceiverData.
+// I've removed check for this being set in DrawFreqSpectrum and ProcessReceiverData.
 // This means there will be an increased lag from when the CW key is pressed
 // until it is recognized in the next processing loop after the current loop completes.
 // I haven't noticed this, perhaps because a more efficient processing loop.

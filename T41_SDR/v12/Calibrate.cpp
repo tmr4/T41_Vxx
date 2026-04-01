@@ -17,7 +17,7 @@
 #include "..\Filter.h"
 #include "..\FIR.h"
 #include "..\gwv.h"
-#include "..\InfoBox.h"
+#include "displayRA8875\InfoBox.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"

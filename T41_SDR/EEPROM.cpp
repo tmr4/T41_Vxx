@@ -31,7 +31,7 @@ config_t EEPROMData {
   1,                            // int AGCMode
   30,                           // int audioVolume
   0,                            // int rfGainAllBands
-  SPECTRUM_NOISE_FLOOR,         // int spectrumNoiseFloor
+  0,                            // int spectrumNoiseFloor, *** display dependent SPECTRUM_NOISE_FLOOR ***
   DEFAULTFREQINDEX,             // int tuneIndex
   DEFAULT_FT_INDEX,             // int ftIndex
   DEFAULT_POWER_LEVEL,          // int transmitPowerLevel
@@ -461,168 +461,6 @@ FLASHMEM void EEPROMStuffFavorites(unsigned long current[]) {
 }
 
 /*****
-  Purpose: Used to save a favortie frequency to EEPROM
-
-  Parameter list:
-
-  CAUTION: This code assumes you have set the curently active VFO frequency to the new
-           frequency you wish to save. You them use the menu encoder to scroll through
-           the current list of stored frequencies. Stop on the one that you wish to
-           replace and press Select to save in EEPROM. The currently active VFO frequency
-           is then stored to EEPROM.
-*****/
-FLASHMEM void SetFavoriteFrequency() {
-  int index;
-  int val;
-
-  tft.setFontScale((enum RA8875tsize)1);
-
-  index = 0;
-  tft.setTextColor(RA8875_WHITE);
-  tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
-  tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
-  tft.print(EEPROMData.favoriteFreqs[index]);
-  while(true) {
-    if(menuEncoderMove != 0) {  // Changed encoder?
-      index += menuEncoderMove;  // Yep
-      if(index < 0) {
-        index = MAX_FAVORITES - 1;  // Wrap to last one
-      } else {
-        if(index > MAX_FAVORITES)
-          index = 0;  // Wrap to first one
-      }
-      tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
-      tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
-      tft.print(EEPROMData.favoriteFreqs[index]);
-      menuEncoderMove = 0;
-    }
-
-    val = ReadSelectedPushButton();  // Read pin that controls all switches
-    val = ProcessButtonPress(val);
-    delay(150L);
-    if(val == MENU_OPTION_SELECT) {  // Make a choice??
-      EraseMenus();
-      EEPROMData.favoriteFreqs[index] = TxRxFreq;
-
-      if(activeVFO == VFO_A) {
-        currentFreqA = TxRxFreq;
-      } else {
-        currentFreqB = TxRxFreq;
-      }
-
-      SetFreq();
-      ShowOperatingStats();
-      ShowBandwidthBarValues();
-      CalcFilters();
-      ShowFrequency();
-      break;
-    }
-  }
-}
-
-/*****
-  Purpose: Used to fetch a favortie frequency as stored in EEPROM. It then copies that
-           frequency to the currently active VFO
-
-  Parameter list:
-*****/
-FLASHMEM void GetFavoriteFrequency() {
-  int index = 0;
-  int val;
-  int currentBand2 = 0;
-  tft.setFontScale((enum RA8875tsize)1);
-
-  tft.setTextColor(RA8875_WHITE);
-  tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
-  tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
-  tft.print(EEPROMData.favoriteFreqs[index]);
-  while(true) {
-    if(menuEncoderMove != 0) {  // Changed encoder?
-      index += menuEncoderMove;  // Yep
-      if(index < 0) {
-        index = MAX_FAVORITES - 1;  // Wrap to last one
-      } else {
-        if(index > MAX_FAVORITES)
-          index = 0;  // Wrap to first one
-      }
-      tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
-      tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
-      tft.print(EEPROMData.favoriteFreqs[index]);
-      menuEncoderMove = 0;
-    }
-
-    val = ReadSelectedPushButton();  // Read pin that controls all switches
-    val = ProcessButtonPress(val);
-    delay(150L);
-
-    centerFreq = EEPROMData.favoriteFreqs[index];  // current frequency  AFP 09-27-22
-    if(centerFreq >= bands[BAND_80M].fBandLow && centerFreq <= bands[BAND_80M].fBandHigh) {
-      currentBand2 = BAND_80M;
-    } else if(centerFreq >= bands[BAND_80M].fBandHigh && centerFreq <= 7000000L) {  // covers 5MHz WWV AFP 11-03-22
-      currentBand2 = BAND_80M;
-    } else if(centerFreq >= bands[BAND_40M].fBandLow && centerFreq <= bands[BAND_40M].fBandHigh) {
-      currentBand2 = BAND_40M;
-    } else if(centerFreq >= bands[BAND_40M].fBandHigh && centerFreq <= 14000000L) {  // covers 10MHz WWV AFP 11-03-22
-      currentBand2 = BAND_40M;
-    } else if(centerFreq >= bands[BAND_20M].fBandLow && centerFreq <= bands[BAND_20M].fBandHigh) {
-      currentBand2 = BAND_20M;
-    } else if(centerFreq >= 14000000L && centerFreq <= 18000000L) {  // covers 15MHz WWV AFP 11-03-22
-      currentBand2 = BAND_20M;
-    } else if(centerFreq >= bands[BAND_17M].fBandLow && centerFreq <= bands[BAND_17M].fBandHigh) {
-      currentBand2 = BAND_17M;
-    } else if(centerFreq >= bands[BAND_15M].fBandLow && centerFreq <= bands[BAND_15M].fBandHigh) {
-      currentBand2 = BAND_15M;
-    } else if(centerFreq >= bands[BAND_12M].fBandLow && centerFreq <= bands[BAND_12M].fBandHigh) {
-      currentBand2 = BAND_12M;
-    } else if(centerFreq >= bands[BAND_10M].fBandLow && centerFreq <= bands[BAND_10M].fBandHigh) {
-      currentBand2 = BAND_10M;
-    }
-    currentBand = currentBand2;
-
-
-    if(val == MENU_OPTION_SELECT) {  // Make a choice??
-      switch(activeVFO) {
-        case VFO_A:
-          if(currentBandA == NUMBER_OF_BANDS) {  // Incremented too far?
-            currentBandA = 0;                     // Yep. Roll to list front.
-          }
-          currentBandA = currentBand2;
-          TxRxFreq = centerFreq + NCOFreq;
-          lastFrequencies[currentBand][VFO_A] = TxRxFreq;
-          break;
-
-        case VFO_B:
-          if(currentBandB == NUMBER_OF_BANDS) {  // Incremented too far?
-            currentBandB = 0;                     // Yep. Roll to list front.
-          }                                       // Same for VFO B
-          currentBandB = currentBand2;
-          TxRxFreq = centerFreq + NCOFreq;
-          lastFrequencies[currentBand][VFO_B] = TxRxFreq;
-          break;
-      }
-    }
-    if(val == MENU_OPTION_SELECT) {
-
-      //EraseSpectrumDisplayContainer();
-      //DrawSpectrumFrame();
-      //ShowSpectrumFreqValues();
-      //SetBand();
-      //ShowSpectrumdBScale();
-      //EraseMenus();
-      //ResetTuning();
-      //ShowOperatingStats();
-      //NCOFreq = 0L;
-      //DrawBandwidthBar();  // AFP 10-20-22
-      //digitalWrite(bandswitchPins[currentBand], LOW);
-      //ShowSpectrumdBScale();
-      //ShowFreqSpectrum();
-      //currentDemodMode = currentBand;
-      return;
-    }
-  }
-}
-
-/*****
   Purpose: To save the default setting for EEPROM variables
 
   Parameter list:
@@ -634,7 +472,7 @@ FLASHMEM void EEPROMSaveDefaults2() {
   EEPROMData.AGCMode = 1;
   EEPROMData.audioVolume = 30;  // 4 bytes
   EEPROMData.rfGainAllBands = 0;
-  EEPROMData.spectrumNoiseFloor = SPECTRUM_NOISE_FLOOR;
+  EEPROMData.spectrumNoiseFloor = 0; // SPECTRUM_NOISE_FLOOR *** display dependent SPECTRUM_NOISE_FLOOR ***
   EEPROMData.tuneIndex = 5;
   //EEPROMData.ftIncrement = 50L;
   EEPROMData.transmitPowerLevel = DEFAULT_POWER_LEVEL;

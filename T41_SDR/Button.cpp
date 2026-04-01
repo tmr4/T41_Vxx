@@ -1,13 +1,11 @@
 #include "SDT.h"
 
-#include "Beacon.h"
 #include "Button.h"
 #include "ButtonProc.h"
 #include "src\Calibrate.h"
 #include "Display.h"
 #include "EEPROM.h"
 #include "ft8.h"
-#include "InfoBox.h"
 #include "Menu.h"
 #include "MenuProc.h"
 #include "Process.h"
@@ -47,7 +45,6 @@ FLASHMEM void ExecuteButtonPress(int val) {
       if(USE_FULL_MENU) {
         if(val == MENU_OPTION_SELECT && menuStatus == NO_MENUS_ACTIVE) {  // Pressed Select with no primary/secondary menu selected
 #ifdef DEBUG_SW
-  //NoActiveMenu();
   Serial.print("NAM #0: val = ");
   Serial.println(val);
 #endif
@@ -85,7 +82,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
         }
 
         displayState = DISPLAY_T41;
-        tft.fillRect(1, SPECTRUM_TOP_Y + 1, 513, 379, RA8875_BLACK);          // Erase Menu box
+        EraseMenus();
         DrawSpectrumFrame();
         DrawBandwidthBar();
         ShowBandwidthBarValues();
@@ -114,7 +111,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
         }
 
         displayState = DISPLAY_T41;
-        tft.fillRect(1, SPECTRUM_TOP_Y + 1, 513, 379, RA8875_BLACK);          // Erase Menu box
+        EraseMenus();
         DrawSpectrumFrame();
         DrawBandwidthBar();
         ShowBandwidthBarValues();
@@ -201,16 +198,14 @@ FLASHMEM void ExecuteButtonPress(int val) {
   }
 }
 
+#ifdef DEBUG_SW
 /*****
   Purpose: Error message if Select button pressed with no Menu active
 *****/
 FLASHMEM void NoActiveMenu() {
-  tft.setFontScale((enum RA8875tsize)1);
-  tft.setTextColor(RA8875_RED);
-  tft.setCursor(PRIMARY_MENU_X + 1, MENUS_Y);
-  tft.print("No menu selected");
-
+  Serial.println("NAM BOGUS_PIN_READ");
   menuStatus = NO_MENUS_ACTIVE;
   mainMenuIndex = 0;
   secondaryMenuIndex = 0;
 }
+#endif

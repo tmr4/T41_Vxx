@@ -9,7 +9,6 @@
 #include "EEPROM.h"
 #include "Filter.h"
 #include "keyboard.h"
-#include "InfoBox.h"
 #include "MenuProc.h"
 #include "mouse.h"
 #include "Process.h"
@@ -25,9 +24,11 @@ extern USBSerial_BigBuffer usbHostSerial;
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+// *** this is display dependent, but also fundamental to much of how the DSP process works ***
+#define SPECTRUM_RES          512
+
 bool useKenwoodIF = false;
 bool controlDataFlag = false;
-uint8_t specData[518]; // xDyyy[up to 512 bytes of data];   x=A or F, yyy = 255 - max
 
 // calibration data
 bool signalStrengthReceived = false;
@@ -59,6 +60,34 @@ void T41ControlSendData(uint8_t *data, int len) {
     //SerialUSB1.send_now(); // we'll have a delay without this *** TODO: try with and without ***
   }
   //controlDataFlag = false;
+}
+
+// data[SPECTRUM_RES]
+void T41PrepareSpectrumData(int16_t *data, int16_t max) {
+  uint8_t specData[518]; // xDyyy[up to 512 bytes of data];   x=A or F, yyy = 255 - max
+  int tmp = 0;
+
+  // FDxxx[512]; where xxx = 255 - max and [512] = 512 bytes spectrum data
+  sprintf((char*)specData, "FD%03d", 255 - max);
+  specData[517] = ';';
+
+  // shift spectrum data and send it to PC
+  // we have to scale and apply noise floor in the control app
+  for(int i = 0; i < SPECTRUM_RES; i++) {
+    // shift data so max = 255
+    // *** TODO: consider scaling here fits data into a 0-255 range ***
+    tmp = data[i] + 255 - max;
+    // though unlikely, data can still be negative, limit it
+    if(tmp < 0) {
+      tmp = 0;
+    }
+    //if(tmp > 255) {
+    //  tmp = 255;
+    //}
+    specData[i + 5] = (uint8_t)tmp;
+  }
+
+  T41ControlSendData(specData, SPECTRUM_RES + 6);
 }
 
 void T41ControlSendCmd(char *cmd) {

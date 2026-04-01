@@ -9,7 +9,6 @@
 #include "EEPROM.h"
 #include "Filter.h"
 #include "FIR.h"
-#include "InfoBox.h"
 #include "pi.h"
 #include "Process.h"
 #include "Tune.h"
@@ -316,7 +315,7 @@ FLASHMEM void SetBand() {
   Return value:
     int               0 = SD not initialized, 1 = has data
 *****/
-FLASHMEM int SDPresentCheck() {
+FLASHMEM int CheckDataFileEEPROM() {
   int retVal = 0;
 
   if(SD.begin(BUILTIN_SDCARD)) {
@@ -330,69 +329,28 @@ FLASHMEM int SDPresentCheck() {
     dataFile.close();
   } else {
     Serial.print("No SD card or cannot be initialized.");
-    tft.setFontScale((enum RA8875tsize)1);
-    tft.setForegroundColor(RA8875_RED);
-    tft.setCursor(20, 300);
-    tft.print("No SD card or not initialized.");
-    tft.setForegroundColor(RA8875_WHITE);
   }
 
   return retVal;
 }
 
-double elapsed_micros_idx_t = 0;
-double elapsed_micros_sum;
-
 /*****
-  Purpose: Display the current temperature and load figures for T4.1
+  Purpose: Initialize the SD card
 
-  Parameter list:
-    int notchF        the notch to use
-    int MODE          the current MODE
+
+  Return value:
+    int                   0 if cannot initialize, 1 otherwise
 *****/
-void ShowTempAndLoad() {
-  char buff[10];
-  int valueColor = RA8875_GREEN;
-  double block_time;
-  double processor_load;
-  float CPU_temperature;
-  double elapsed_micros_mean;
-
-  elapsed_micros_mean = elapsed_micros_sum / elapsed_micros_idx_t;
-
-  block_time = 128.0 / sampleRate;  // one audio block is 128 samples and uses this in seconds
-  block_time = block_time * 16;
-
-  block_time *= 1000000.0;                                  // now in µseconds
-  processor_load = elapsed_micros_mean / block_time * 100;  // take audio processing time divide by block_time, convert to %
-
-  if(processor_load >= 100.0) {
-    processor_load = 100.0;
-    valueColor = RA8875_RED;
+FLASHMEM int InitializeSDCard() {
+  if(!SD.begin(BUILTIN_SDCARD)) {
+    return 0;
   }
 
-  tft.setFontScale((enum RA8875tsize)0);
-
-  CPU_temperature = TGetTemp();
-
-  tft.fillRect(TEMP_X_OFFSET, TEMP_Y_OFFSET, WATERFALL_W, tft.getFontHeight(), RA8875_BLACK);  // Erase current data
-  tft.setCursor(TEMP_X_OFFSET, TEMP_Y_OFFSET);
-  tft.setTextColor(RA8875_WHITE);
-  tft.print("Temp:");
-  tft.setCursor(TEMP_X_OFFSET + 120, TEMP_Y_OFFSET);
-  tft.print("Load:");
-
-  tft.setTextColor(valueColor);
-  MyDrawFloat(CPU_temperature, 1, TEMP_X_OFFSET + tft.getFontWidth() * 3, TEMP_Y_OFFSET, buff);
-
-  tft.drawCircle(TEMP_X_OFFSET + 80, TEMP_Y_OFFSET + 5, 3, RA8875_GREEN);
-  MyDrawFloat(processor_load, 1, TEMP_X_OFFSET + 150, TEMP_Y_OFFSET, buff);
-  tft.print("%");
-  elapsed_micros_idx_t = 0;
-  elapsed_micros_sum = 0;
-  elapsed_micros_mean = 0;
-  tft.setTextColor(RA8875_WHITE);
+  return 1;
 }
+
+double elapsed_micros_idx_t = 0;
+double elapsed_micros_sum;
 
 uint32_t roomCount;      // !< The value of TEMPMON_TEMPSENSE0[TEMP_VALUE] at the hot temperature
 uint32_t s_roomC_hotC;   // !< The value of s_roomCount minus s_hotCount

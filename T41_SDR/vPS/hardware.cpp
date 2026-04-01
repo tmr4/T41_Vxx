@@ -123,11 +123,9 @@ FLASHMEM void RFOptions() {
   Purpose: Present the Calibrate options available and return the selection
 *****/
 FLASHMEM void CalibrateOptions() {
-  static long long freqCorrectionFactorOld = freqCorrectionFactor;
-  int val;
-  int32_t increment = 100L;
-
-  tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 30, CHAR_HEIGHT, RA8875_BLACK);
+  //static long long freqCorrectionFactorOld = freqCorrectionFactor;
+  //int val;
+  //int32_t increment = 100L;
 
   if(calibrateItem < 0) {
     calibrateItem = secondaryMenuIndex;
@@ -135,85 +133,21 @@ FLASHMEM void CalibrateOptions() {
 
   switch(calibrateItem) {
     case 0:  // Frequency Cal - uses WWV
-      freqCorrectionFactor = GetEncoderValueLive(-200000, 200000, freqCorrectionFactor, increment, (char *)"Freq Cal: ");
-      if(freqCorrectionFactor != freqCorrectionFactorOld) {
-        //si5351.init(SI5351_CRYSTAL_LOAD_10PF, Si_5351_crystal, freqCorrectionFactor);
-        //si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA);
-        //si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
-        SetSI5351FreqCorFactor(freqCorrectionFactor);
-        SetFreq();
-        delay(10L);
-        freqCorrectionFactorOld = freqCorrectionFactor;
-      }
-      val = ReadSelectedPushButton();
-      if(val != BOGUS_PIN_READ) {        // Any button press??
-        val = ProcessButtonPress(val);    // Use ladder value to get menu choice
-        if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
-          tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMWrite();
-          calibrateItem = 5;
-        }
-      }
       break;
 
     case 1:  // CW PA Cal
-      if(keyPressedOn == 1 && radioMode == CW_MODE) {
-        //================  CW Transmit Mode Straight Key ===========
-        if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && keyType == 0) {  //Straight Key
-          powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
-          CW_ExciterIQData();
-          ShowTransmitReceiveStatus();
-          SetFreq();                 //  AFP 10-02-22
-          digitalWrite(MUTE, HIGH);  //   Mute Audio  (HIGH=Mute)
-          //modeSelectInR.gain(0, 0);
-          //modeSelectInL.gain(0, 0);
-          //modeSelectInExR.gain(0, 0);
-          //modeSelectOutL.gain(0, 0);
-          //modeSelectOutR.gain(0, 0);
-          //modeSelectOutExL.gain(0, 0);
-          //modeSelectOutExR.gain(0, 0);
-        }
-      }
-      CWPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, CWPowerCalibrationFactor[currentBand], 0.001, (char *)"CW PA Cal: ");
-      powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];  // AFP 10-21-22
-      val = ReadSelectedPushButton();
-      if(val != BOGUS_PIN_READ) {        // Any button press??
-        val = ProcessButtonPress(val);    // Use ladder value to get menu choice
-        if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
-          tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
-          EEPROMWrite();
-          calibrateItem = 5;
-        }
-      }
       break;
 
     case 2:  // SSB PA Cal
-      //SSBPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[currentBand], 0.001, (char *)"SSB PA Cal: ");
-      //powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // AFP 10-21-22
-      //val = ReadSelectedPushButton();
-      //if(val != BOGUS_PIN_READ) {        // Any button press??
-      //  val = ProcessButtonPress(val);    // Use ladder value to get menu choice
-      //  if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
-      //    tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-      //    EEPROMWrite();
-      //    calibrateItem = 5;
-      //  }
-      //}
-      calibrateItem = -1;
       break;
 
     case 3: // IQ Cal - Gain and Phase
-      CalibrateIQ();
-      calibrateItem = -1;
       break;
 
     case 4: // Two Tone
-      calibrateItem = -1;
       break;
 
     case 5: // cancel wrap up calibration
-      calibrateItem = -1;
       break;
 
     default:  // Cancelled choice

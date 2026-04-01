@@ -9,7 +9,6 @@
 #include "Encoders.h"
 #include "Filter.h"
 #include "ft8.h"
-#include "InfoBox.h"
 #include "Menu.h"
 #include "MenuProc.h"
 #include "Tune.h"
@@ -96,55 +95,6 @@ void SetBWFilters() {
   }
 
   CalcFilters();
-}
-
-/*****
-  Purpose: Use the encoder to change the value of a number in some other function
-
-  Parameter list:
-    int minValue                the lowest value allowed
-    int maxValue                the largest value allowed
-    int startValue              the numeric value to begin the count
-    int increment               the amount by which each increment changes the value
-    char prompt[]               the input prompt
-  Return value:
-    int                         the new value
-*****/
-float GetEncoderValueLive(float minValue, float maxValue, float startValue, float increment, char prompt[]) {
-  float currentValue = startValue;
-
-  getEncoderValueFlag = true;
-
-  tft.setFontScale((enum RA8875tsize)1);
-  tft.setTextColor(RA8875_WHITE);
-  tft.fillRect(250, 0, 285, CHAR_HEIGHT, RA8875_BLACK);  // Increased rectangle size to full erase value
-  tft.setCursor(257, 1);
-  tft.print(prompt);
-  tft.setCursor(440, 1);
-  if(abs(startValue) > 2) {
-    tft.print(startValue, 0);
-  } else {
-    tft.print(startValue, 3);
-  }
-
-  if(menuEncoderMove != 0) {
-    currentValue += menuEncoderMove * increment;  // Bump up or down...
-    if(currentValue < minValue)
-      currentValue = minValue;
-    else if(currentValue > maxValue)
-      currentValue = maxValue;
-
-    tft.setCursor(440, 1);
-    if(abs(startValue) > 2) {
-      tft.print(startValue, 0);
-    } else {
-      tft.print(startValue, 3);
-    }
-    menuEncoderMove = 0;
-  }
-
-  getEncoderValueFlag = false;
-  return currentValue;
 }
 
 void ProcessMenuEncoder() {

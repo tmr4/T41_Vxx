@@ -1,14 +1,15 @@
-// v11 specific hardware file
+
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern int calOnFlag;
-extern int calNFAdjust;
+#define PRIMARY_MENU_X                1
+#define SECONDARY_MENU_X              256
+#define MENUS_Y                       (480-32)
+#define EACH_MENU_WIDTH               255
+#define BOTH_MENU_WIDTHS             (EACH_MENU_WIDTH * 2)
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-inline float GetEncoderValueLive(float minValue, float maxValue, float startValue, float increment, char prompt[]) { return 0.0; }

@@ -33,8 +33,9 @@ float32_t AlphaBetaMag(float32_t  inphase, float32_t  quadrature);
 float ApproxAtan(float z);
 void SaveAnalogSwitchValues();
 void SetBand();
-int SDPresentCheck();
-void ShowTempAndLoad();
+
+int InitializeSDCard();
+int CheckDataFileEEPROM();
 
 void initTempMon(uint16_t freq, uint32_t lowAlarmTemp, uint32_t highAlarmTemp, uint32_t panicAlarmTemp);
 

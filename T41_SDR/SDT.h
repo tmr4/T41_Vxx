@@ -62,8 +62,38 @@ typedef __uint8_t uint8_t;
 #define BAND_12M                  5
 #define BAND_10M                  6
 
+// radio status
+#define IB_ITEM_VOL       0
+#define IB_ITEM_AGC       1
+#define IB_ITEM_TUNE      2
+#define IB_ITEM_FINE      3
+#define IB_ITEM_ZOOM      4
+#define IB_ITEM_FLOOR     5
+#define IB_ITEM_NOTCH     6
+#define IB_ITEM_COMPRESS  7
+#define IB_ITEM_FILTER    8
+#define IB_ITEM_RFGAIN    9
+#define IB_ITEM_EQUALIZER 10
+#define IB_ITEM_DECODER   11
+#define IB_ITEM_KEY       12
+#define IB_ITEM_KEYER     13
+#define IB_ITEM_FT8       14
+#define IB_ITEM_FT8_INT   15
+#define IB_ITEM_FT8_TX    16
+#define IB_ITEM_FT8_CQ    17
+#define IB_ITEM_FT8_TXF   18
+#define IB_ITEM_FT8_RXF   19
+#define IB_ITEM_STACK     20
+#define IB_ITEM_HEAP      21
+#define IB_ITEM_TEMP      22
+#define IB_ITEM_LOAD      23
+
 #define OFF                       0
 #define ON                        1
+
+#define VFO_A                 0
+#define VFO_B                 1
+#define VFO_SPLIT             2
 
 #define CLEAR_VAR(x) memset(x, 0, sizeof(x))
 #define SET_VAR(x,y) memset(x, y, sizeof(x))
@@ -105,3 +135,32 @@ extern band bands[];
 
 // *** TODO: move to appropriate front panel hardware ***
 extern int bandswitchPins[];
+
+// radio status
+// *** TODO: some display specific, needs generalized ***
+extern bool beaconFlag;
+extern bool infoBoxItemActive[];
+
+//-------------------------------------------------------------------------------------------------------------
+// Code
+//-------------------------------------------------------------------------------------------------------------
+
+// radio status update
+// *** TODO: display specific, needs generalized ***
+void UpdateInfoBox();
+void UpdateInfoBoxItem(uint8_t item);
+void UpdateClock();
+void UpdateDecodeLockIndicator();
+void UpdateIBWPM();
+void ClearInfoBoxKeyer();
+void SetFtActive(int flag);
+void HighlightIBItem(uint8_t item, int color);
+void MouseButtonInfoBox(int button, int cursorX, int cursorY);
+void MouseWheelInfoBox(int wheel, int x, int y);
+
+void BeaconInit();
+void BeaconExit();
+void BeaconLoop();
+
+void ButtonBearing();
+void BearingMaps();

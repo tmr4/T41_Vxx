@@ -1,4 +1,4 @@
-// v11 specific hardware file
+// vPS specific hardware file
 
 #include <si5351.h>                    // https://github.com/etherkit/Si5351Arduino
 
@@ -8,7 +8,6 @@
 #include "..\Display.h"
 #include "..\Encoders.h"
 #include "..\Filter.h"
-#include "..\InfoBox.h"
 #include "..\Menu.h"
 #include "..\Tune.h"
 #include "..\Utility.h"
@@ -267,12 +266,13 @@ void SetFreq(bool reset) {
   }
 }
 
+// *** TODO: display dependent ***
 FLASHMEM void SplitVFOFollowup() {
   // *** TODO: need to reestablish "Split Active" that didn't work in ver49.2k ***
-  tft.setTextColor(RA8875_RED);
-  tft.setCursor(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y + 6);
-  tft.print("Split Active");
-  splitVFO = true;
+  //tft.setTextColor(RA8875_RED);
+  //tft.setCursor(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y + 6);
+  //tft.print("Split Active");
+  //splitVFO = true;
 }
 
 /*****
@@ -282,5 +282,6 @@ FLASHMEM void DoSplitVFO() {
   currentFreqB = currentFreqA;
 
   // GetMenuValue(minValue, maxValue, startValue, increment, prompt, valueOffset)
-  GetMenuValue(-40, 30, &currentFreqB, SPLIT_INCREMENT, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
+  //GetMenuValue(-40, 30, &currentFreqB, SPLIT_INCREMENT, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
+  GetMenuValue(-40, 30, &currentFreqB, 500, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
 }

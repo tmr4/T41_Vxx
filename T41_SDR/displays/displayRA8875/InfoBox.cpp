@@ -3,22 +3,23 @@
 #include <Metro.h>
 #include <TimeLib.h>                   // Part of Teensy Time library
 
-#include "SDT.h"
+#include "..\..\SDT.h"
 
-#include "Button.h"
-#include "ButtonProc.h"
-#include "CWProcessing.h"
+#include "..\..\Button.h"
+#include "..\..\ButtonProc.h"
+#include "..\..\CWProcessing.h"
 #include "Display.h"
-#include "EEPROM.h"
-#include "Encoders.h"
-#include "ft8.h"
+#include "..\..\EEPROM.h"
+#include "..\..\Encoders.h"
+#include "..\..\ft8.h"
 #include "InfoBox.h"
-#include "keyer.h"
+#include "..\..\keyer.h"
 #include "Menu.h"
-#include "mouse.h"
-#include "Process.h"
-#include "Tune.h"
-#include "Utility.h"
+#include "..\..\Menu.h"
+#include "..\..\mouse.h"
+#include "..\..\Process.h"
+#include "..\..\Tune.h"
+#include "..\..\Utility.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards

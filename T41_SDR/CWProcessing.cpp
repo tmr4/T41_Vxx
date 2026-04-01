@@ -9,7 +9,6 @@
 #include "EEPROM.h"
 #include "Encoders.h"
 #include "FIR.h"
-#include "InfoBox.h"
 #include "keyer.h"
 #include "Menu.h"
 #include "MenuProc.h"
@@ -165,7 +164,7 @@ FLASHMEM void SelectCWFilterFollowup() {
   if(cwFilterIndex != getMenuInc) {
     ShowOperatingStats();
     if(radioMode == CW_MODE) {
-      UpdateCWFilter();
+      DrawCWFilter();
     }
   }
 }
@@ -318,8 +317,7 @@ void DoCWReceiveProcessing() {
 
     // *** TODO: should this be someplace else? ***
     // draw decoder guide lines
-    tft.drawFastVLine(AUDIO_SPEC_BOX_L + 29, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, ORANGE);  //CW lower freq indicator
-    tft.drawFastVLine(AUDIO_SPEC_BOX_L + 37, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, ORANGE);  //CW upper freq indicator
+    DrawCWDecoderLines(0xFD20); // ORANGE *** display dependent ***
 
     if(combinedCoeff > 50) {                                                                  // if  have a reasonable corr coeff, >50, then we have a keeper. // AFP 10-26-22
       audioTemp = 1;
@@ -364,12 +362,9 @@ void MorseCharacterDisplay(char currentLetter) {
     decodeBuffer[col - 1] = currentLetter;                          // Add to end
     decodeBuffer[col] = '\0';                                       // Make is a string
   }
-  tft.fillRect(CW_TEXT_START_X, CW_TEXT_START_Y, CW_MESSAGE_WIDTH, CW_MESSAGE_HEIGHT * 2, RA8875_BLACK);
-  tft.setFontScale((enum RA8875tsize)1);
 
-  tft.setTextColor(RA8875_WHITE);
-  tft.setCursor(CW_TEXT_START_X, CW_TEXT_START_Y);
-  tft.print(decodeBuffer);
+  ShowDecodedCW(decodeBuffer);
+
 }
 
 /*****
@@ -502,8 +497,6 @@ void DoCWDecoding(int audioValue) {
     case state6:                                                //  Blank printing state.
       MorseCharacterDisplay(' ');
       UpdateIBWPM();
-      //tft.setTextColor(RA8875_WHITE);
-      //tft.setFontScale((enum RA8875tsize)3);
       blankFlag = true;
       decodeStates = state0;  // Start process for next incoming character.
       break;
@@ -736,7 +729,7 @@ FLASHMEM void InitCWDecoder(void) {
     Debug("InitCWDecoder failed");
   } else {
     // reduce waterfall height if we're decoding CW
-    SetWaterfallHeight(CHAR_HEIGHT);
+    SetWaterfallHeight(32); // (CHAR_HEIGHT);
   }
 }
 
@@ -750,6 +743,5 @@ FLASHMEM void ExitCWDecoder(void) {
   ResetWaterfallHeight();
 
   // erase decoder guide lines
-  tft.drawFastVLine(AUDIO_SPEC_BOX_L + 29, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, RA8875_BLACK);  //CW lower freq indicator
-  tft.drawFastVLine(AUDIO_SPEC_BOX_L + 37, AUDIO_SPEC_BOX_T, AUDIO_SPEC_BOX_H, RA8875_BLACK);  //CW upper freq indicator
+  DrawCWDecoderLines(0); // RA8875_BLACK *** display dependent ***
 }

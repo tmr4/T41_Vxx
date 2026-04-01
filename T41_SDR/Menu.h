@@ -49,7 +49,12 @@ extern void (*ptrMenuFollowup)();
 //-------------------------------------------------------------------------------------------------------------
 
 void Cancel();
+
 void ShowMenu(const char *menu[], int where);
+void ShowMenuItem(const char *item);
+
+void ShowMenuItemValue(int value, int offset = 0, const char *prompt = NULL);
+
 void MenuBarChange(int change);
 void ShowMenuBar(int menu, int change);
 inline void ShowMenuBar() { ShowMenuBar(0,0); }

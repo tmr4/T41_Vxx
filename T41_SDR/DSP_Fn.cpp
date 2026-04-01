@@ -8,7 +8,6 @@
 #include "DSP_Fn.h"
 //#include "EEPROM.h"
 #include "Menu.h"
-#include "InfoBox.h"
 #include "Process.h"
 #include "Tune.h"
 #include "Utility.h"
