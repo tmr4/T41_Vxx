@@ -1,4 +1,4 @@
-// v11 specific hardware file
+// vPS specific hardware file
 
 #include <si5351.h>                    // https://github.com/etherkit/Si5351Arduino
 
@@ -8,7 +8,6 @@
 #include "..\Display.h"
 #include "..\Encoders.h"
 #include "..\Filter.h"
-#include "displayRA8875\InfoBox.h"
 #include "..\Menu.h"
 #include "..\Tune.h"
 #include "..\Utility.h"
@@ -122,6 +121,25 @@ void ResetTuning() {
 
   SetTxRxFreq(centerFreq);
 
+  switch(displayState) {
+    case DISPLAY_T41:
+      ShowFrequency();          // update frequency display
+      ShowOperatingStats();     // update center frequency in band info
+      ShowSpectrumFreqValues(); // update spectrum frequency values
+      break;
+
+    case DISPLAY_BEACON_MONITOR:
+      break;
+
+    case DISPLAY_FULL_MENU:
+      ShowFrequency();
+      ShowOperatingStats();
+      break;
+
+    default:
+    // no screen updates at all
+    break;
+  }
   DrawBandwidthBar();
 }
 
@@ -248,6 +266,7 @@ void SetFreq(bool reset) {
   }
 }
 
+// *** TODO: display dependent ***
 FLASHMEM void SplitVFOFollowup() {
   // *** TODO: need to reestablish "Split Active" that didn't work in ver49.2k ***
   //tft.setTextColor(RA8875_RED);

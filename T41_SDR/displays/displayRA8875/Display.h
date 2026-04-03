@@ -1,12 +1,8 @@
 
 #include "..\..\T41Config.h"
 
-#ifdef NO_DISPLAY
-#include "RA8875.h"
-#else
 #include <SPI.h>
 #include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
-#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -126,22 +122,6 @@
 //#define  RA8875_GREENYELLOW       0xAFE5      /* 173, 255,  47 */
 #define  PINK                     0xF81F
 #define  FILTER_WIN               0x10       // Color of SSB filter width
-
-//========================================= Display pins
-#define BACKLIGHT_PIN               6
-#define TFT_DC                      9
-#ifdef PROJECTSYSTEM
-#define TFT_CS                      5
-#define TFT_MOSI                    26
-#define TFT_MISO                    39
-#define TFT_SCLK                    27
-#else
-#define TFT_CS                      10
-#define TFT_MOSI                    11
-#define TFT_MISO                    12
-#define TFT_SCLK                    13
-#endif
-#define TFT_RST                     255
 
 extern int displayState;
 

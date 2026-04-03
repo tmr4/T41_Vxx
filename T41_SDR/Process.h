@@ -29,7 +29,7 @@ void InitAMDemodBiquadFilter();
 int ProcessReceiverData(bool updateSpectrumData = false);
 void ProcessControls();
 
-void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData, int16_t *pixelnew);
+void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 
 void YieldToProcess(bool updateSpectrum = false);
 void YieldForProcess(int ms);

@@ -274,7 +274,7 @@ FLASHMEM void ExitFT8() {
 // TX_TESTING only available on project system to prevent inadvertent transmissions
 // *** this won't compile on other systems ***
 // *** TODO: consider relaxing this w/ mock transmission mode on other versions ***
-#if defined(TX_TESTING) && defined(PROJECTSYSTEM)
+#if defined(TX_TESTING)
 
 void DisplayAllMessages();
 

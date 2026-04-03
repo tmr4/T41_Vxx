@@ -1,5 +1,8 @@
 // v11 specific calibration file
 
+#include <SPI.h>
+#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
+
 #include "..\SDT.h"
 
 #include <Wire.h>
@@ -10,6 +13,7 @@
 #include "..\ButtonProc.h"
 #include "..\CW_Excite.h"
 #include "..\Display.h"
+#include "displayRA8875\Display.h" // allow for display specific code here
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\Exciter.h"
@@ -103,6 +107,9 @@ float32_t cosBuffer3[256];
 
 // delete when ready
 int calTypeFlag = 0;
+
+// *** allow for v11 specific RA8875 code ***
+extern RA8875 tft;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -203,9 +210,7 @@ FLASHMEM void RestoreRadioState() {
   SetFreq();
 
   // reset frequency spectrum buffers
-  SET_VAR(pixelnew, SPECTRUM_BOTTOM);
   InitFFTArrays();
-  newSpectrumFlag = 0;
 
   digitalWrite(RXTX, LOW);  // Turn off the transmitter.
 
@@ -652,10 +657,8 @@ FLASHMEM void PlotSpectrum(int *calBins, int binSize) {
     //for(int x1 = 200; x1 < 300; x1++) {
 
       // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
-      //yPlot = minPointsY - pixelnew[x1]; // - currentNF;
-      //y1Plot = minPointsY - pixelnew[x1 + 1]; // - currentNF;
-      yPlot = minPointsY - 10 - pixelnew[x1] + nf;
-      y1Plot = minPointsY - 10 - pixelnew[x1 + 1] + nf;
+      //yPlot = minPointsY - 10 - pixelnew[x1] + nf;
+      //y1Plot = minPointsY - 10 - pixelnew[x1 + 1] + nf;
 
       // erase the old spectrum
       tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
@@ -1502,8 +1505,8 @@ FLASHMEM void GetSignalStrength(float *pSS, int passes = 0, bool getMeanSS = tru
     }
 
     // calculate adjacent sideband signal strength relative to reference sideband
-    arm_max_q15(&pixelnew[(binCenter[0] - fftBins)], fftBins * 2, &refAmplitude, &index_of_max);
-    arm_max_q15(&pixelnew[(binCenter[1] - fftBins)], fftBins * 2, &adjAmplitude, &index_of_max);
+    //arm_max_q15(&pixelnew[(binCenter[0] - fftBins)], fftBins * 2, &refAmplitude, &index_of_max);
+    //arm_max_q15(&pixelnew[(binCenter[1] - fftBins)], fftBins * 2, &adjAmplitude, &index_of_max);
 
     signalStrength = ((float)adjAmplitude - (float)refAmplitude) / 1.95;
 

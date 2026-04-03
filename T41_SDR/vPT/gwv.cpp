@@ -74,19 +74,8 @@ float pll_fmax = +4000.0;
 float32_t powerOutSSB[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
 float32_t powerOutCW[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
 
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.019, 0.06, .0190, .019, .019, .019, .019 };       // 0.019;
-//float SSBPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008 };  // 0.008
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 1.0, 1.5858, 1.0, 1.0, 1.0, 1.0, 1.0 };
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 1.0, 3.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-//                                                   80m     40m     20m     17m  15m     12m      10m
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 4.1732, 4.8860, 6.8056, 1.0, 9.9390, 12.2837, 1.0 };
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 3.6289, 4.2487, 5.2351, 1.0, 7.6453, 9.4490, 1.0 };
-//float CWPowerCalibrationFactor[NUMBER_OF_BANDS] =  { 0.7932, 0.9947, 1.6138, 1.0, 2.7056, 3.1022, 1.0 };
-float CWPowerCalibrationFactor[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-float SSBPowerCalibrationFactor[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-float FT8PowerCalibrationFactor[NUMBER_OF_BANDS] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-
-float CWPowerEqnCalFactor[NUMBER_OF_BANDS] = { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 };
+float CWPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.019, 0.06, .0190, .019, .019, .019, .019 };       // 0.019;
+float SSBPowerCalibrationFactor[NUMBER_OF_BANDS] = { 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008 };  // 0.008
 
 //float IQAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
 //float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
@@ -103,8 +92,6 @@ float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.027, 0.059, 0.035,
 //                                                   80m     40m     20m     17m     15m     12m    10m
 float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  1.010,  1.003,  0.965,  0.930,  0.900,  0.880, 1.000 };
 float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.010, -0.027, -0.055, -0.100, -0.090, 0.000 };
-//float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  1.010,  1.010,  0.965,  0.930,  0.900,  0.880, 1.000 };
-//float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.006, -0.027, -0.055, -0.100, -0.090, 0.000 };
 
 long favoriteFreqs[13] = { 3560000, 3690000, 7030000, 7200000, 14060000, 14200000, 21060000, 21285000, 28060000, 28365000, 5000000, 10000000, 15000000 };
 //int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7048000, 7030000 }, { 14048000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };

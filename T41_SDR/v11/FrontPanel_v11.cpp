@@ -1,5 +1,8 @@
 // v11 Front Panel
 
+#include <SPI.h>
+#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
+
 #include <Rotary.h>                    // https://github.com/brianlow/Rotary
 
 #include "..\SDT.h"
@@ -18,18 +21,6 @@
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
-
-// Encoders
-
-//---- Teensy 4.1 Pin assignments
-#define VOLUME_ENCODER_A         2
-#define VOLUME_ENCODER_B         3
-#define FILTER_ENCODER_A        16
-#define FILTER_ENCODER_B        15
-#define FINETUNE_ENCODER_A       4
-#define FINETUNE_ENCODER_B       5
-#define TUNE_ENCODER_A          14
-#define TUNE_ENCODER_B          17
 
 // Pin assignments
 // volumeEncoder      (2,  3)
@@ -121,6 +112,8 @@ const char *labels[] = { "Select", "Menu Up", "Band Up",
                          "Fine Tune", "Decoder", "Tune Increment",
                          "Reset Tuning", "Frequ Entry", "User 2" };
 
+// *** allow for v11 specific RA8875 code ***
+extern RA8875 tft;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards

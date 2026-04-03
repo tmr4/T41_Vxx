@@ -23,11 +23,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-// select display type
-#define RA8875_DISPLAY      1
-//#define ILI9488_DISPLAY     1
-//#define NO_DISPLAY          1
-
 #define Si_5351_crystal     25000000L
 
 // Audio chain configuration options

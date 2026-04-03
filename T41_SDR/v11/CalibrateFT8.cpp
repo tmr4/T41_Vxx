@@ -1,11 +1,15 @@
 // v11 specific calibration file
 
+#include <SPI.h>
+#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
+
 #include "..\SDT.h"
 
 #include "..\AudioConfig.h"
 #include "..\Button.h"
 #include "..\ButtonProc.h"
 #include "..\Display.h"
+#include "displayRA8875\Display.h" // allow for display specific code here
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\FIR.h"
@@ -30,6 +34,9 @@ static int IQCalType;
 
 static float32_t sinBuffer3[256];
 static float32_t cosBuffer3[256];
+
+// *** allow for v11 specific RA8875 code ***
+extern RA8875 tft;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -159,15 +166,15 @@ static void UpdateIQCorrection(bool xmit = true) {
   if(xmit) {
     //  Read encoder and update values.
     if(IQCalType == 0) {
-      IQXAmpCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQXAmpCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Gain X");
+      //IQXAmpCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQXAmpCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Gain X");
     } else {
-      IQXPhaseCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQXPhaseCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Phase X");
+      //IQXPhaseCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQXPhaseCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Phase X");
     }
   } else {
     if(IQCalType == 0) {
-      IQAmpCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQAmpCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Gain");
+      //IQAmpCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQAmpCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Gain");
     } else {
-      IQPhaseCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQPhaseCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Phase");
+      //IQPhaseCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQPhaseCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Phase");
     }
   }
 }
@@ -472,8 +479,8 @@ FLASHMEM void FT8ShowSpectrum2() {
   int capture_bins = 10;  // ets the number of bins to scan for signal peak
   static int currentNF = 0;
 
-  pixelnew[0] = 0;
-  pixelnew[1] = 0;
+  //pixelnew[0] = 0;
+  //pixelnew[1] = 0;
 
   if(liveNoiseFloorFlag != 1) {
     currentNF = currentNoiseFloor[currentBand];
@@ -579,8 +586,8 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
   }
 
   // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
-  yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF + 50;
-  y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF + 50;
+  //yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF + 50;
+  //y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF + 50;
 
   // create rough spectrum histogram if auto noise floor is active
   // the frequency spectrum is 150 pixels high, let's create
@@ -617,12 +624,12 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
 
   // Find the maximums of the desired and undesired signals.
   if(currentDemodMode == DEMOD_LSB) {
-    arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
-    arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
+    //arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
+    //arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
   }
   if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8) {
-    arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
-    arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
+    //arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
+    //arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
   }
 
   // prevent drawing spectrum outside of the spectrum area

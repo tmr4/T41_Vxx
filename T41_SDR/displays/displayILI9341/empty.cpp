@@ -7,9 +7,6 @@ bool infoBoxItemActive[24];
 bool beaconFlag;
 int cursorW, cursorH;
 
-int displayState = -1; // no display
-int centerLine;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -25,7 +22,7 @@ call the routine at the appropriate time.  The InitDisplay function must be defi
 //-------------------------------------------------------------------------------------------------------------
 
 // General
-void InitDisplay() {}
+//void InitDisplay() {}
 int GetDisplayWidth() { return 0; }
 int GetDisplayHeight() { return 0; }
 int GetCharWidth(int) { return 0; }
@@ -33,17 +30,17 @@ int GetCharHeight(int) { return 0; }
 
 // main T41 display
 void ShowSplash(char const*, char const*, char const*, char const*, char const*) {}
-void DrawStaticDisplayItems() {}
+//void DrawStaticDisplayItems() {}
 void EraseSpectrumWindow() {}
 void RedrawDisplayScreen() {}
-void ShowFrequency() {}
-void ShowOperatingStats() {}
+//void ShowFrequency() {}
+//void ShowOperatingStats() {}
 void ShowSAM(float) {}
-void ShowCurrentPowerSetting() {}
-void DrawSpectrumFrame() {}
+//void ShowCurrentPowerSetting() {}
+//void DrawSpectrumFrame() {}
 void EraseSpectrumDisplayContainer() {}
-void ShowSpectrumFreqValues() {}
-void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {}
+//void ShowSpectrumFreqValues() {}
+//void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {}
 void ShowSpectrumdBScale() {}
 void ShowBandwidthBarValues() {}
 void DrawBandwidthBar() {}

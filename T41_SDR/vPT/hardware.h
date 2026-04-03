@@ -14,9 +14,6 @@
 // radio specific display calibration factors
 #define FREQSPEC_OFFSET_10DB  80
 
-//------------
-// Encoders.h
-
 //---- Teensy 4.1 Pin assignments
 // All Teensy pin assignments are made here.  This makes it easier
 // when working up pin assignments for new hardware. The pins are
@@ -52,45 +49,36 @@
 #define ENCODER_3_SWITCH         30
 #endif
 
-#define PTT          37    // TX input
-#define KEYER_DAH_INPUT_RING        1 // 35    // Ring connection for keyer  -- default for righthanded user
-#define KEYER_DIT_INPUT_TIP         1 // 36    // Tip connection for keyer
-#define BUSY_ANALOG_PIN             40    // pin 39 is TFT_MISO on Project System (the pin assigned here is only meaningful when testing switch matrix on non-front panel systems)
-
-// *** conflicts here! ***
-// *** these need reassigned when using the MCP expander ***
-#ifdef PROJECTSYSTEM_EXPANDED_IO_40
-#define INT_PIN_2 40
-#endif
-#ifdef PROJECTSYSTEM_EXPANDED_IO_41
-#define INT_PIN_1 41
-#endif
-
+#define PTT                       0 // 37    // TX input
+#define KEYER_DAH_INPUT_RING      1 // 35    // Ring connection for keyer  -- default for righthanded user
+#define KEYER_DIT_INPUT_TIP       2 // 36    // Tip connection for keyer
+#define BUSY_ANALOG_PIN          30 // pin 39 is TFT_MISO on Project System (the pin assigned here is only meaningful when testing switch matrix on non-front panel systems)
+                                    // pin 40 is TFT_CS on Prototyping System
 
 // *** Output Pins ***
 
-#define RXTX         22    // TX/RX relay
-#define MUTE         38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
+#define RXTX                     22    // TX/RX relay
+#define MUTE                     29 // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
 
-// the Project System uses an RA8875 display
+// the Prototyping System uses an ILI9341 display
 #define BACKLIGHT_PIN               6
 #define TFT_DC                      9
-#define TFT_CS                      5
-#define TFT_MOSI                    26
-#define TFT_MISO                    39
-#define TFT_SCLK                    27
+#define TFT_CS                      40
+#define TFT_MOSI                    11
+#define TFT_MISO                    12
+#define TFT_SCLK                    13
 #define TFT_RST                     255
 
 // Filter Board pins
-#define FILTERPIN80M 1 // 30    // 80M filter relay
-#define FILTERPIN40M 1 // 31    // 40M filter relay
-#define FILTERPIN20M 1 // 28    // 20M filter relay
-#define FILTERPIN15M 1 // 29    // 15M filter relay
+#define FILTERPIN80M 3 // 30    // 80M filter relay
+#define FILTERPIN40M 4 // 31    // 40M filter relay
+#define FILTERPIN20M 5 // 28    // 20M filter relay
+#define FILTERPIN15M 28 // 29    // 15M filter relay
 
 #define PROFILER_MAINLOOP_PIN         33
 #define PROFILER_PROCESS_PIN          34
 #define PROFILER_DRAWFREQSPEC_PIN     41
-#define PROFILER_DRAWAUDIOSPEC_PIN    14
+#define PROFILER_DRAWAUDIOSPEC_PIN    27
 #define PROFILER_FT8PROCESSBLOCK_PIN  35
 #define PROFILER_FT8GETDATA_PIN       36
 #define PROFILER_FT8DECODE_PIN        38

@@ -16,9 +16,16 @@ The driver for this project was to leverage all of the work I put into adding fe
   * This effort cleans up the front panel code, retaining only a single front panel source in each version (in FrontPanel_vXX.cpp and FrontPanel.h).  The files should be interchangable between hardware versions as long as the actual front panel hardware exists for the hardware version it's applied to.  I haven't tested this.
   * More work is required for the display.  My plan is to define a common set of display functions that the hardware libraries must satisfy for a functional T41. I'm working on that effort now.
   * I've completed the RA8875 display module and tested against the Project System hardware.  This was the easiest hardware version as I haven't defined calibration code for it.  As a test, I also create two other display types: (1) no display and (2) an RA8875 version where only a smaller frequency spectrum and waterfall are drawn.
+  * As a proof of concept, I developed a basic display module a Teensy 4.1 Prototyping System from ProtoSupplies.  That system uses a 3.2" 320x240 ILI9341 display.
+  * Teensyduino supports this display, so modifying the RA8875 display module code for this display was straighforward.  Some display function used in the RA8875 module aren't supported by the ILI9341, font size functions for example.  The code needed reworked for those.
+  * This mock up for the ILI9341 display highlighted that much of the display code is customized for the RA8875, not just based on it's resolution, but the particular placement of elements on the display.  Many of those need reworked when moving to a new display.
 
-![displayFreqSpec](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_altDisplay.jpg)
+![displayILI9341](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_altDisplay_PrototypingSystem.jpg)
 
+  * Adding a small waterfall took more work as the display doesn't have a move function.  The entire waterfall needs to be written to the display line by line each processing loop.  A circular buffer works well for this.
+  * I have 2.4" and 2.8" versions of this display as well.  I thought the smaller displays would draw less current, but that's not the case.  The smallest display drew the most current and while it's a bit of an apple/oranges comparison, it drew almost as much as my v11 T41 main board with 5" RA8875 display.  Even the more efficient 3.2" version was less than 50 mamps less than that combination.  These displays aren't going to be much of a battery saver on a T41 Mini.
+  * The spectrum update on the ILI9341 is quite snappy.  As with all mockups on development boards, the trickiest thing is defining the Teensy pin assignments so they don't conflict with ones being used by the development board.  The switch matrix busy pin threw me for a while with the Prototyping System.  This has taught me to have all of the Teensy pin assignment located in one place and separated by input/output pins.  I put this in the version specific *hardware.h* files.
+  * With the simplified display and reduced frequency spectrum size, the processing loop on the Prototyping System only takes about 10ms, about 1/7 the time taken to complete processing a loop with the RA8875 display.  Adding the waterfall added another 10 ms, or 20ms total.
   * More work is needed to accomodate the calibration routines.  These are highly display specific as well as hardware specific to some extent.
 
 ## Recent Work
@@ -47,13 +54,17 @@ The standalone FT8 interface is limited due to the display size.  Currently thre
 
 ### Project Structure
 
-A handy Arduino feature makes maintaining the common project easy. The Arduino compiler will compile any source and header files in the sketch folder ***and*** the *src* subfolder. All other subfolders in the sketch folder are ignored. That makes the following folder structure possible:
+A handy Arduino feature makes maintaining the common project easy. The Arduino compiler will compile any source and header files in the sketch folder ***and*** fines and subfolders in the *src* subfolder. All other subfolders in the sketch folder are ignored. That makes the following folder structure possible:
 
-In anticipation of the T41 Mini, I've extracted the hardware specific routines from the Button and Encoder modules.  I've also added a hardware specific folder (vPS) for the [ProtoSupplies Project System](https://protosupplies.com/product/project-system-for-teensy-4-1/).  I use that board frequently in tests where I don't want to load the updated T41 software onto an actual radio.
+In anticipation of the T41 Mini, I've extracted the remaining hardware specific routines core code.  I've also added a few hardware specific folders (vPS and vPT) for the ProtoSupplies.com [Project System](https://protosupplies.com/product/project-system-for-teensy-4-1/) and [Prototyping System](https://protosupplies.com/product/prototyping-system-for-teensy-4-1//).  I use these boards frequently in tests where I don't want to load the updated T41 software onto an actual radio.
 
 ![Project folder structure](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/CommonCodeFolderStructure.png)
 
-The T41 sketch and common code files are placed in the *T41_SDR* folder. The hardware specific files are place in the *v11*, *v12*, *vMini*, or *vPS* folders respectively. Then, if you want to compile for a specific hardware version, you copy the files from the desired hardware version folder into the *src* folder, select the proper Teensy in the IDE and compile.
+The T41 sketch and common code files are placed in the *T41_SDR* folder. The hardware specific files are place in the *v11*, *v12*, *vMini*, *vPS*, or *vPT* folders respectively. Then, if you want to compile for a specific hardware version, you copy the files from the desired hardware version folder into the *src* folder, select the proper Teensy in the IDE and compile.  You can't copy the hardware specific folder as the common code in the sketch folder references commonly named hardware specific files in the src folder.
+
+I've also created display specific modules.  Select the display folder appropriate for your hardware and copy the entire folder into the src folder.  The *displayRA8875* folder contains the routines for rendering the T41 diplay on an RA8875 display.  The *displayILI9341* folder contains a few routines for simplified T41 diplay on an ILI9341 display. The *displayNone* folder contains empty versions all of the display functions needed for the T41 code to compile and run.  Unlike other versions of the code, my code doesn't rely on the display routines to regulate the T41 audio stream.  The *displayNone* folder is a good starting point for developing a new display module.  Just code the T41 display features you want to display and the core code will update the display at the appropriate time.  Of course, if you want some new feature, that can be coded from scratch.
+
+Generally, other files shouldn't refer to these files as the folder name changes with the display.  I may relax this in the future.  Currently, the calibration reoutine don't follow this rule.  There is a lot there to separate out to common, hardware and display specific code.  Note that the calibration routines are broken currently.
 
 When managing the project, it's best to keep the *src* folder free of hardware specific files when committing changes.  Just copy any changed hardware files back to the specific hardware version folder, delete the hardware files in the *src* folder and proceed as normal.  Note that the *ft8_lib* folder should remain in the *src* folder.
 

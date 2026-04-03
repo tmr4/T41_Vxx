@@ -294,9 +294,7 @@ FLASHMEM void setup() {
   //memCheck = true;
   PrimeMallInfo();
 
-#ifdef NO_DISPLAY
-  T41ControlSetup();
-#endif
+  //T41ControlSetup();
   //T41BeaconSetup();
   //WSJTControlSetup();
   //T41ControlSetup();
@@ -480,6 +478,7 @@ FASTRUN void loop() {
   ProcessControls();
 
   // process radio state
+  //Serial.print(radioState); Serial.print(", "); Serial.println(displayState);
   switch(radioState) {
     case SSB_RECEIVE_STATE:
     case CW_RECEIVE_STATE:
@@ -650,10 +649,8 @@ FASTRUN void loop() {
   }
 #endif
 
-#ifdef NO_DISPLAY
-  // need PC control without a display
+  // *** need PC control without a display ***
   //T41ControlLoop();
-#endif
 
 #ifndef HOST_CAT_CONTROL_SUPPORT
   //T41ControlLoop();
@@ -661,13 +658,6 @@ FASTRUN void loop() {
 
 #ifdef DEBUG_LOOP
   ExitLoop();
-#endif
-
-#ifdef NO_DISPLAY
-  // along with the delay in DrawFreqSpectrum this duplicates overall loop timing
-  // with a display.  These are needed to regulate the flow of messages to the
-  // PC control app.  These may not be needed if that app isn't used.
-  delay(12);
 #endif
 
   //RESETPROFILEPIN(PROFILER_MAINLOOP_PIN);

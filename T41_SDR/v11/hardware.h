@@ -7,17 +7,48 @@
 extern uint16_t GPAB_state;
 
 //---- Teensy 4.1 Pin assignments
-// *** Teensy pins are also defined in FrontPanel_v11.cpp
-#define PTT          37    // TX input
-#define RXTX         22    // TX/RX relay
-
-#define KEYER_DAH_INPUT_RING        35    // Ring connection for keyer  -- default for righthanded user
-#define KEYER_DIT_INPUT_TIP         36    // Tip connection for keyer
-
+// All Teensy pin assignments are made here.  This makes it easier
+// when working up pin assignments for new hardware. The pins are
+// divided into input and output to facilitate assignment on
+// development boards for testing where some pins may be assigned
+// for other purposes and some hardware may not be present.
+// Conflicts with normal T41 pin assignments can cause operational
+// problems.
 // Pins 0 and 1 are usually reserved for the USB COM port communications
 // On the Teensy 4.1 board, pins GND, 0-12, and pins 13-23, 3.3V, GND, and
 // Vin are "covered up" by the Audio board. However, not all of those pins are
 // actually used by the board. See: https://www.pjrc.com/store/teensy3_audio.html
+
+// *** Input Pins ***
+
+#define VOLUME_ENCODER_A         2
+#define VOLUME_ENCODER_B         3
+#define FILTER_ENCODER_A        16
+#define FILTER_ENCODER_B        15
+#define FINETUNE_ENCODER_A       4
+#define FINETUNE_ENCODER_B       5
+#define TUNE_ENCODER_A          14
+#define TUNE_ENCODER_B          17
+
+#define PTT          37    // TX input
+#define KEYER_DAH_INPUT_RING        35    // Ring connection for keyer  -- default for righthanded user
+#define KEYER_DIT_INPUT_TIP         36    // Tip connection for keyer
+#define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
+
+// *** Output Pins ***
+
+#define RXTX         22    // TX/RX relay
+#define MUTE                        38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
+
+// the v11 T41 uses an RA8875 display
+#define BACKLIGHT_PIN               6
+#define TFT_DC                      9
+#define TFT_CS                      10
+#define TFT_MOSI                    11
+#define TFT_MISO                    12
+#define TFT_SCLK                    13
+#define TFT_RST                     255
+
 // Filter Board pins
 #define FILTERPIN80M 30    // 80M filter relay
 #define FILTERPIN40M 31    // 40M filter relay
@@ -34,8 +65,7 @@ extern uint16_t GPAB_state;
 #define PROFILER_FT8DECODE_PIN        1
 #define PROFILER_FT8_TX_PIN           1
 
-#define MUTE                        38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
-#define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
+//---- end of Teensy 4.1 Pin assignments
 
 // v11 using v12 BPF
 #define BPF_BOARD_MCP23017_ADDR 0x20   // For BPF #0 Address
