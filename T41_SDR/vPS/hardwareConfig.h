@@ -12,24 +12,23 @@
 
 #define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
 
-#define PROJECTSYSTEM_EXPANDED_IO_40
-//#define PROJECTSYSTEM_EXPANDED_IO_41
-//#define PROJECTSYSTEM_FINETUNE_ENCODER // for testing w/ project system
-//#define PROJECTSYSTEM_VOLUME_ENCODER // for testing w/ project system
+#define PROJECTSYSTEM_VOLUME_ENCODER
+#define PROJECTSYSTEM_FILTER_ENCODER
+#define PROJECTSYSTEM_FINETUNE_ENCODER
+#define PROJECTSYSTEM_TUNE_ENCODER
 
+// other defines for testing v11/v12 type encoders w/ project system
 // *** currently Rotary and Rotary_V12 can't coexist so only ENCODER_1 or ENCODER_MCP be enabled ***
-// *** currently these are both controlling the volume encoder so only one should be enabled at a time ***
-#define PROJECTSYSTEM_ENCODER_1   // for testing v11 type encoder w/ project system
-#define PROJECTSYSTEM_ENCODER_2   // for testing v11 type encoder w/ project system
-//#define PROJECTSYSTEM_ENCODER_3   // for testing v11 type encoder w/ project system
-//#define PROJECTSYSTEM_ENCODER_MCP // for testing MCP23017 type encoder w/ project system
+//#define PROJECTSYSTEM_ENCODER_1
+//#define PROJECTSYSTEM_ENCODER_2
+//#define PROJECTSYSTEM_ENCODER_3
+//#define PROJECTSYSTEM_ENCODER_4
+//#define PROJECTSYSTEM_ENCODER_MCP
 
 #define VOLUME_REVERSED false
 #define FILTER_REVERSED false
 #define MAIN_TUNE_REVERSED false
 #define FINE_TUNE_REVERSED false
-
-#define PROJECTSYSTEM_MCP23017_ADDR 0x24
 
 // uncomment below for USB Host support
 #define USB_HOST_SUPPORT
@@ -57,7 +56,11 @@
 #define wsjtSerial Serial // Serial or SerialUSB1 or SerialUSB2
 
 // can also use Project System I/O Expanders
+//#define PROJECTSYSTEM_EXPANDED_IO_40
+//#define PROJECTSYSTEM_EXPANDED_IO_41
+
 #ifdef PROJECTSYSTEM_EXPANDED_IO_40
+#define PROJECTSYSTEM_MCP23017_ADDR 0x24
 // the Project System only has one MCP23017
 // can test other half of front panel by selecting address 0x24 (or 0x20) below
 // (consider coding for the sn74cbtlv3251 if fully functional front panel on Project System is needed)

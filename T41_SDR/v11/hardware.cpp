@@ -55,6 +55,7 @@ extern RA8875 tft;
 //-------------------------------------------------------------------------------------------------------------
 
 void EncodersInit();
+void EncoderCenterTune();
 
 void RFPowerFollowup();
 void RFGainFollowup();

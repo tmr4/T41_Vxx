@@ -26,12 +26,16 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#ifdef PROJECTSYSTEM_ENCODER_1
+#ifdef PROJECTSYSTEM_VOLUME_ENCODER
 extern Bounce encoderSwitch;
 #endif
-#ifdef PROJECTSYSTEM_ENCODER_2
+#ifdef PROJECTSYSTEM_FILTER_ENCODER
 extern Bounce encoder2Switch;
 static bool menuDone = false;
+#endif
+#ifdef PROJECTSYSTEM_FINETUNE_ENCODER
+#endif
+#ifdef PROJECTSYSTEM_TUNE_ENCODER
 #endif
 
 //------------
@@ -63,7 +67,7 @@ void InitFrontPanel();
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-#if defined(PROJECTSYSTEM_ENCODER_1) || defined(PROJECTSYSTEM_ENCODER_2)
+#if defined(PROJECTSYSTEM_VOLUME_ENCODER) || defined(PROJECTSYSTEM_FILTER_ENCODER)
 
 //------------
 // Button.cpp
@@ -78,14 +82,14 @@ void InitFrontPanel();
     int                   -1 if not valid push button, ADC value if valid
 *****/
 int ReadSelectedPushButton() {
-#ifdef PROJECTSYSTEM_ENCODER_2
+#ifdef PROJECTSYSTEM_FILTER_ENCODER
   if(menuDone) {
     return 0;
   } else {
     return -1;
   }
 #endif
-#ifdef PROJECTSYSTEM_ENCODER_1
+#ifdef PROJECTSYSTEM_VOLUME_ENCODER
   return -1;
 #endif
 }
@@ -199,7 +203,7 @@ void InitHardware() {
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
-#if defined(PROJECTSYSTEM_ENCODER_1) || defined(PROJECTSYSTEM_ENCODER_2)
+#if defined(PROJECTSYSTEM_VOLUME_ENCODER) || defined(PROJECTSYSTEM_FILTER_ENCODER)
   EncodersInit();
 #endif
 #ifdef PROJECTSYSTEM_ENCODER_MCP
@@ -245,14 +249,14 @@ void ConfigRadioStateHardware() {
 }
 
 void HardwareLoopStart() {
-#ifdef PROJECTSYSTEM_ENCODER_1
+#ifdef PROJECTSYSTEM_VOLUME_ENCODER
   // poll encoder switch
   if(encoderSwitch.update() && encoderSwitch.fallingEdge()) {
     // load wave file and begin decoding internally if successful
     ExecuteButtonPress(16);
   }
 #endif
-#ifdef PROJECTSYSTEM_ENCODER_2
+#ifdef PROJECTSYSTEM_FILTER_ENCODER
   // menu testing
   static bool menuActive = false;
   static int count = 0;

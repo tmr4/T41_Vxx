@@ -25,37 +25,47 @@
 // for other purposes and some hardware may not be present.
 // Conflicts with normal T41 pin assignments can cause operational
 // problems.
-// Pins 0 and 1 are usually reserved for the USB COM port communications
-// On the Teensy 4.1 board, pins GND, 0-12, and pins 13-23, 3.3V, GND, and
-// Vin are "covered up" by the Audio board. However, not all of those pins are
-// actually used by the board. See: https://www.pjrc.com/store/teensy3_audio.html
+
+// Project System free Teensy w/ Audio board pins:
+// Notes:
+//  pin 2 is touchscreen interrupt (this seems hardwired, thus a touch pulls this pin low))
+//  pins 6,10-13 are associated with Audio board SD card and memory chip and aren't available if these are used
+// (Teensy sides as Project System display is to right)
+// Left side: 13-17,22,33-38,40,41
+// Right side: 0,1,3,4,10-12,24,25,28-31
+
+// free project system pins after assignments below:
+// *** unused T41 inputs assigned to pin 13 ***
+// *** unused T41 outputs assigned to pin 15 ***
+// Left side: (13),(15),17
+// Right side: 28
 
 // *** Input Pins ***
-
+#ifdef PROJECTSYSTEM_VOLUME_ENCODER
+#define VOLUME_ENCODER_A        29
+#define VOLUME_ENCODER_B        30
+#define VOLUME_SWITCH           31
+#endif
+#ifdef PROJECTSYSTEM_FILTER_ENCODER
+#define FILTER_ENCODER_A        12  // these are wired in reverse on PS
+#define FILTER_ENCODER_B        24
+#define FILTER_SWITCH           25
+#endif
 #ifdef PROJECTSYSTEM_FINETUNE_ENCODER
-#define FINETUNE_ENCODER_A       4
-#define FINETUNE_ENCODER_B      24 // pin 5 is TFT_CS on Project System (the pin assigned here is only meaningful when testing fine tune encoder on non-front panel systems)
+#define FINETUNE_ENCODER_A      11  // these are wired in reverse on PS
+#define FINETUNE_ENCODER_B       4
+#define FINETUNE_SWITCH         10
 #endif
-#ifdef PROJECTSYSTEM_ENCODER_1
-#define VOLUME_ENCODER_A         4
-#define VOLUME_ENCODER_B         3
-#define ENCODER_1_SWITCH         2
-#endif
-#ifdef PROJECTSYSTEM_ENCODER_2
-#define FILTER_ENCODER_A         29 // switched to reverse direction
-#define FILTER_ENCODER_B         28
-#define ENCODER_2_SWITCH         30
-#endif
-#ifdef PROJECTSYSTEM_ENCODER_3
-#define FINETUNE_ENCODER_A       28
-#define FINETUNE_ENCODER_B       29
-#define ENCODER_3_SWITCH         30
+#ifdef PROJECTSYSTEM_TUNE_ENCODER
+#define TUNE_ENCODER_A           1
+#define TUNE_ENCODER_B           3
+#define TUNE_SWITCH              0
 #endif
 
-#define PTT          37    // TX input
-#define KEYER_DAH_INPUT_RING        1 // 35    // Ring connection for keyer  -- default for righthanded user
-#define KEYER_DIT_INPUT_TIP         1 // 36    // Tip connection for keyer
-#define BUSY_ANALOG_PIN             40    // pin 39 is TFT_MISO on Project System (the pin assigned here is only meaningful when testing switch matrix on non-front panel systems)
+#define PTT                     37    // TX input
+#define KEYER_DAH_INPUT_RING    13    // Ring connection for keyer  -- default for righthanded user
+#define KEYER_DIT_INPUT_TIP     13    // Tip connection for keyer
+#define BUSY_ANALOG_PIN         40    // pin 39 is TFT_MISO on Project System (the pin assigned here is only meaningful when testing switch matrix on non-front panel systems)
 
 // *** conflicts here! ***
 // *** these need reassigned when using the MCP expander ***
@@ -66,26 +76,24 @@
 #define INT_PIN_1 41
 #endif
 
-
 // *** Output Pins ***
 
 #define RXTX         22    // TX/RX relay
-#define MUTE         38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
+#define MUTE         15    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
 
 // the Project System uses an RA8875 display
-#define BACKLIGHT_PIN               6
-#define TFT_DC                      9
-#define TFT_CS                      5
-#define TFT_MOSI                    26
-#define TFT_MISO                    39
-#define TFT_SCLK                    27
-#define TFT_RST                     255
+#define TFT_DC                  9
+#define TFT_CS                  5
+#define TFT_MOSI                26
+#define TFT_MISO                39
+#define TFT_SCLK                27
+#define TFT_RST                 255
 
 // Filter Board pins
-#define FILTERPIN80M 1 // 30    // 80M filter relay
-#define FILTERPIN40M 1 // 31    // 40M filter relay
-#define FILTERPIN20M 1 // 28    // 20M filter relay
-#define FILTERPIN15M 1 // 29    // 15M filter relay
+#define FILTERPIN80M            15    // 80M filter relay
+#define FILTERPIN40M            15    // 40M filter relay
+#define FILTERPIN20M            15    // 20M filter relay
+#define FILTERPIN15M            15    // 15M filter relay
 
 #define PROFILER_MAINLOOP_PIN         33
 #define PROFILER_PROCESS_PIN          34
@@ -94,21 +102,37 @@
 #define PROFILER_FT8PROCESSBLOCK_PIN  35
 #define PROFILER_FT8GETDATA_PIN       36
 #define PROFILER_FT8DECODE_PIN        38
-#define PROFILER_FT8_TX_PIN           31
+#define PROFILER_FT8_TX_PIN           16
+
+// other
+
+#ifdef PROJECTSYSTEM_ENCODER_1
+#define ENCODER_1_SWITCH
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_2
+#define ENCODER_2_SWITCH
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_3
+#define ENCODER_3_SWITCH
+#endif
+#ifdef PROJECTSYSTEM_ENCODER_4
+#define ENCODER_4_SWITCH
+#endif
+
 
 //---- end of Teensy 4.1 Pin assignments
 
-#ifdef PROJECTSYSTEM_ENCODER_1
+#ifdef PROJECTSYSTEM_VOLUME_ENCODER
 #include <Rotary.h>                    // https://github.com/brianlow/Rotary
 
 extern Rotary volumeEncoder;
 #endif
-#ifdef PROJECTSYSTEM_ENCODER_2
+#ifdef PROJECTSYSTEM_FILTER_ENCODER
 #include <Rotary.h>                    // https://github.com/brianlow/Rotary
 
 extern Rotary menuChangeEncoder;
 #endif
-#ifdef PROJECTSYSTEM_ENCODER_3
+#ifdef PROJECTSYSTEM_FINETUNE_ENCODER
 //#include <Rotary.h>                    // https://github.com/brianlow/Rotary
 
 extern Rotary fineTuneEncoder;
@@ -167,14 +191,24 @@ void HardwareLoopStart();
 //------------
 // Encoders.h
 
-#ifdef PROJECTSYSTEM_ENCODER_1
+#ifdef PROJECTSYSTEM_VOLUME_ENCODER
 void EncodersInit();
 void EncoderVolumeISR();
 #endif
 
-#ifdef PROJECTSYSTEM_ENCODER_2
+#ifdef PROJECTSYSTEM_FILTER_ENCODER
 void EncodersInit();
 void EncoderMenuChangeFilterISR();
+#endif
+
+#ifdef PROJECTSYSTEM_FINETUNE_ENCODER
+void EncodersInit();
+void EncoderFineTuneISR();
+#endif
+
+#ifdef PROJECTSYSTEM_TUNE_ENCODER
+void EncodersInit();
+void EncoderCenterTune();
 #endif
 
 #ifdef PROJECTSYSTEM_ENCODER_MCP

@@ -29,4 +29,4 @@ extern int tuneChange;
 //-------------------------------------------------------------------------------------------------------------
 
 void SetBWFilters();
-void EncoderCenterTune();
+//void EncoderCenterTune();
