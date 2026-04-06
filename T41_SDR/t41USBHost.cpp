@@ -81,7 +81,9 @@ void check_for_usbhost_device_changes() {
 //-------------------------------------------------------------------------------------------------------------
 
 FLASHMEM void UsbHostSetup() {
+#ifdef USB_HOST_SUPPORT
   usbHost.begin();
+#endif
 
 #ifdef HOST_KEYBOARD_MOUSE_SUPPORT
   KeyboardSetup();
@@ -94,7 +96,9 @@ FLASHMEM void UsbHostSetup() {
 }
 
 void UsbHostLoop() {
+#ifdef USB_HOST_SUPPORT
   usbHost.Task();
+#endif
 
 #ifdef HOST_KEYBOARD_MOUSE_SUPPORT
   MouseLoop();
