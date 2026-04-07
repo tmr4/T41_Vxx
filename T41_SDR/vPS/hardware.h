@@ -208,7 +208,8 @@ void EncoderFineTuneISR();
 
 #ifdef PROJECTSYSTEM_TUNE_ENCODER
 void EncodersInit();
-void EncoderCenterTune();
+void EncoderCenterTuneISR();
+bool EncoderCenterTune();
 #endif
 
 #ifdef PROJECTSYSTEM_ENCODER_MCP

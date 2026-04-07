@@ -26,8 +26,8 @@ long filter_pos_BW, last_filter_pos_BW;
 int posFilterEncoder, lastFilterEncoder;
 
 float adjustVolEncoder = 0.0;
-int tuneChange = 0;
 
+volatile int tuneChange;
 volatile int menuEncoderMove;
 volatile long fineTuneEncoderMove;
 

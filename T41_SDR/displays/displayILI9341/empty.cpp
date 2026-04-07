@@ -7,6 +7,9 @@ bool infoBoxItemActive[24];
 bool beaconFlag;
 int cursorW, cursorH;
 
+//int displayState = -1; // no display
+//int centerLine;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -23,13 +26,19 @@ call the routine at the appropriate time.  The InitDisplay function must be defi
 
 // General
 //void InitDisplay() {}
+
+void ClearScreen() {}
+
 int GetDisplayWidth() { return 0; }
 int GetDisplayHeight() { return 0; }
 int GetCharWidth(int) { return 0; }
 int GetCharHeight(int) { return 0; }
 
-// main T41 display
 void ShowSplash(char const*, char const*, char const*, char const*, char const*) {}
+void ShowNoSD() {}
+void ShowDot() {}
+
+// main T41 display
 //void DrawStaticDisplayItems() {}
 void EraseSpectrumWindow() {}
 void RedrawDisplayScreen() {}
@@ -48,12 +57,16 @@ void SetZoom(int) {}
 void SetWaterfallHeight(int) {}
 void ResetWaterfallHeight() {}
 void ShowTransmitReceiveStatus() {}
+void DrawSmeterBar() {}
 void DrawAudioSpectContainer() {}
 void DrawAudioSpectrum() {}
 void DrawCWFilter() {}
 void DrawAudioFilterLines() {}
 void DrawCWDecoderLines(int) {}
 void ShowDecodedCW(char*) {}
+
+void MyDrawFloat(float val, int decimals, int x, int y, char *buff) {}
+void MyDrawFloatP(float val, int decimals, int x, int y, char *buff, int width) {}
 
 // info box
 void UpdateInfoBox() {}
@@ -67,6 +80,7 @@ void UpdateClock() {}
 // menu
 void ShowMenu(char const**, int) {}
 void EraseMenus() {}
+void ErasePrimaryMenu() {}
 void EraseSecondaryMenu() {}
 void ShowMenuItem(char const*) {}
 void ShowMenuItemValue(int, int, char const*) {}
@@ -113,3 +127,7 @@ void BeaconLoop() {}
 // Bearing Map
 void BearingMaps() {}
 void ButtonBearing() {}
+
+/*
+void PrintKeyboardBuffer() {}
+*/

@@ -77,6 +77,8 @@ void EncodersInit() {
 #endif
 #ifdef PROJECTSYSTEM_TUNE_ENCODER
   tuneEncoder.begin(true);
+  attachInterrupt(digitalPinToInterrupt(TUNE_ENCODER_A), EncoderCenterTuneISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(TUNE_ENCODER_B), EncoderCenterTuneISR, CHANGE);
 #endif
 }
 #endif
@@ -195,19 +197,21 @@ FASTRUN void EncoderFineTuneISR() {
 
 #ifdef PROJECTSYSTEM_TUNE_ENCODER
 /*****
-  Purpose: Set center tune frequency based on
+  Project System was missing center tune pulses with the polling setup
+  Capturing encoder movement with an interrupt and polling a global value
+  fixed that.
 *****/
-void EncoderCenterTune() {
-  unsigned char result;
 
-  result = tuneEncoder.process();  // Read the encoder
+/*****
+  Purpose: handle center tune interrupt
+  sets tuneChange to be handled as radio proccesses controls
+  this makes tune change happen from known location
+*****/
+void EncoderCenterTuneISR() {
+  unsigned char result = tuneEncoder.process();
 
-  if(result == 0)  // Nothing read
+  if(result == 0)
     return;
-
-  if(radioMode == CW_MODE && decoderFlag == ON) {  // No reason to reset if we're not doing decoded CW
-    ResetHistograms();
-  }
 
   switch(result) {
     case DIR_CW:  // Turned it clockwise, 16
@@ -218,15 +222,30 @@ void EncoderCenterTune() {
       tuneChange = -1;
       break;
   }
+}
+
+/*****
+  Purpose: Set center tune frequency based on changes to tuneChange
+*****/
+bool EncoderCenterTune() {
+  if(tuneChange == 0)
+    return false;
+
+  if(radioMode == CW_MODE && decoderFlag == ON) {
+    ResetHistograms();
+  }
 
   // *** TODO: from v12, validate v11 calibration routines
   // center tune used in calibration routines, return to process
   //   - receive calibrate adjusts noise floor
   //   - transmit calibrate adjusts image value
   //   - two tone adjusts tone 1
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
+  if((calibrateItem >= 1) && (calibrateItem <= 3)) return false; // *** TODO: validate required calibration return value ***
 
   SetCenterTune((long)freqIncrement * tuneChange);
+
+  tuneChange = 0;
+  return true;
 }
 #endif
 

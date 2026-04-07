@@ -151,6 +151,8 @@ void EncodersInit() {
 /*****
   Purpose: Set center tune frequency based on
 *****/
+// *** TODO: evaluate whether the ISR method use in vPS works better ***
+// *** TODO: why doesn't v11 have same center tune problems as vPS ***
 void EncoderCenterTune() {
   unsigned char result;
 

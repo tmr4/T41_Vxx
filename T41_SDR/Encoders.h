@@ -20,9 +20,9 @@ extern long last_filter_pos_BW;
 
 extern volatile int menuEncoderMove;
 extern volatile long fineTuneEncoderMove;
+extern volatile int tuneChange;
 
 extern float adjustVolEncoder;
-extern int tuneChange;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
