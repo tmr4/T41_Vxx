@@ -9,6 +9,7 @@
 #include "..\..\ButtonProc.h"
 #include "..\..\CWProcessing.h"
 #include "Display.h"
+#include "..\..\Display.h"
 #include "..\..\EEPROM.h"
 #include "..\..\Encoders.h"
 #include "..\..\ft8.h"

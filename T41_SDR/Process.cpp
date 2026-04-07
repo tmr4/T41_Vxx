@@ -916,11 +916,20 @@ FASTRUN void ProcessControls() {
     if(updateDisplay || (displayState == DISPLAY_FULL_MENU)) {
       UpdateInfoBoxItem(IB_ITEM_VOL);
     }
+
+    #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
+    SendVolume();
+    #endif
+
     volumeChangeFlag = false;
   }
 
   // update filters if changed
   if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
+    #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
+    SendFilter();
+    #endif
+
     SetBWFilters();
 
     if(updateDisplay) {
@@ -960,8 +969,19 @@ FASTRUN void ProcessControls() {
   // Handle tuning changes
   // There may seem some duplication of display updates here, but these tuning events
   // shouldn't occur on the same loop so little efficiency to be gained by changing
+  #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
+  if(EncoderCenterTune()) {
+    SendSetFreq(TxRxFreq);
+  };
+  #else
   EncoderCenterTune();
+  #endif
   if(fineTuneFlag) {
+    #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
+    //SendSetFineTune(TxRxFreq-NCOFreq);
+    SendSetFineTune();
+    #endif
+
     if(updateDisplay) {
       switch(displayState) {
         case DISPLAY_T41:

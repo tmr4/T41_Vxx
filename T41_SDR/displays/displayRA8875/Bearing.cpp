@@ -6,6 +6,7 @@
 #include "Bearing.h"
 #include "..\..\Button.h"
 #include "Display.h"
+#include "..\..\Display.h"
 #include "..\..\Encoders.h"
 #include "Menu.h"
 #include "..\..\Utility.h"

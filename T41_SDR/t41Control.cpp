@@ -91,7 +91,7 @@ void T41PrepareSpectrumData(int16_t *data, int16_t max) {
 }
 
 void T41ControlSendCmd(char *cmd) {
-  //SerialUSB1.print(cmd);
+  //Serial.print("Sending: ");Serial.println(cmd);
   int sizeBuf = controlSerial.availableForWrite();
   if(cmd[0] != 0 && sizeBuf > 0) {
     // the size of Teensy 4.1 serial transmit buffer is 8k and is used in 4 2k parts.
@@ -166,28 +166,6 @@ void SendSetMode(int mode) {
   T41ControlSendCmd(cmd);
 }
 
-void SendSignalStrengthRequest() {
-  char cmd[5];
-
-  sprintf(cmd,"SM;");
-  T41ControlSendCmd(cmd);
-}
-
-void SendSignalStrengthRequest(int index) {
-  char cmd[5];
-
-  sprintf(cmd,"SM%d;", index);
-  T41ControlSendCmd(cmd);
-}
-
-// sets 0.5kHz-1.5kHz audio filter
-void SendSetNarrowFilter() {
-  char cmd[4];
-
-  sprintf(cmd,"NW;");
-  T41ControlSendCmd(cmd);
-}
-
 void SendSetDisplayZoom(int zoom) {
   char cmd[5];
 
@@ -208,6 +186,49 @@ void SendSmeter(int smeterPad, float dbm) {
   // being read from the buffer.  Thus the two messages are in essence
   // combined.
   sprintf(cmd, "SM0%+05d;SM20%04d;", (int)(dbm * 10), smeterPad);
+  T41ControlSendCmd(cmd);
+}
+
+void SendVolume() {
+  char cmd[7];
+
+  sprintf(cmd,"VO%03d;", audioVolume);
+  T41ControlSendCmd(cmd);
+}
+
+void SendFilter() {
+  char cmd[6];
+
+  sprintf(cmd,"NS%+1d;", posFilterEncoder - lastFilterEncoder);
+  T41ControlSendCmd(cmd);
+}
+
+void SendSetFineTune() {
+  char cmd[20];
+
+  sprintf(cmd,"FF%011d;", NCOFreq-TxRxFreq);
+  T41ControlSendCmd(cmd);
+}
+
+void SendSignalStrengthRequest() {
+  char cmd[5];
+
+  sprintf(cmd,"SM;");
+  T41ControlSendCmd(cmd);
+}
+
+void SendSignalStrengthRequest(int index) {
+  char cmd[5];
+
+  sprintf(cmd,"SM%d;", index);
+  T41ControlSendCmd(cmd);
+}
+
+// sets 0.5kHz-1.5kHz audio filter
+void SendSetNarrowFilter() {
+  char cmd[4];
+
+  sprintf(cmd,"NW;");
   T41ControlSendCmd(cmd);
 }
 
@@ -288,7 +309,7 @@ void T41ControlLoop() {
     int mode = GetMode();
 
     T41ControlGetCommand(cmd, 256);
-    //Serial.print("Received ");  Serial.println(cmd);
+    //Serial.print("Received: ");  Serial.println(cmd);
     //int sizeBuf = SerialUSB1.availableForWrite();
     //Serial.println(sizeBuf);
     switch(cmd[0]) {
@@ -371,9 +392,21 @@ void T41ControlLoop() {
             }
             break;
 
+          case 'F':
+            if(cmd[13] == ';') {
+              // set VFO A frequency
+              f = atol(&cmd[2]);
+              SetFineTune(f);
+              return;
+            } else if(cmd[2] == ';') {
+              // read VFO A frequency offset
+              sprintf(cmd,"FF%011d;",NCOFreq-currentFreqA);
+            }
+            break;
+
           case 'I':
             if(cmd[4] == ';') {
-              // freq or fine tune increment change
+              // center or fine tune increment change
               if(cmd[2] == '0') {
                 ChangeFreqIncrement(atol(&cmd[3]) - tuneIndex);
               } else if(cmd[2] == '1') {
@@ -481,6 +514,18 @@ void T41ControlLoop() {
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
           return;
+        } else if(cmd[1] == 'S' && cmd[4] == ';') {
+          // inc/dec audio filter
+
+          posFilterEncoder += atoi(&cmd[2]);
+          SetBWFilters();
+
+          CalcFilters();
+          //updateDisplay = true;
+          ShowBandwidthBarValues();
+          DrawBandwidthBar();
+          DrawAudioFilterLines();
+          return;
         } else if(cmd[1] == 'W' && cmd[2] == ';') {
           // sets 0.5kHz-1.5kHz audio filter
           currentFilterLoCut = 500;
@@ -553,7 +598,9 @@ void T41ControlLoop() {
         if(cmd[1] == 'O' && cmd[5] == ';') {
           // set transmitter power level
           audioVolume = atoi(&cmd[2]);
-          volumeChangeFlag = true;  // flag needed for display update
+          UpdateInfoBoxItem(IB_ITEM_VOL);
+
+          //volumeChangeFlag = true;  // flag needed for display update
         }
         return;
         break;

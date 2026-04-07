@@ -3,6 +3,7 @@
 
 #include "..\..\Button.h"
 #include "Display.h"
+#include "..\..\Display.h"
 #include "..\..\EEPROM.h"
 #include "..\..\Encoders.h"
 #include "Menu.h"

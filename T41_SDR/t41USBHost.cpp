@@ -31,7 +31,7 @@ MouseController mouseController(usbHost);
 
 #ifdef HOST_SERIAL_SUPPORT
 // the T41 does not register when plugged into the USB host with this object defined
-// this is likely due to the Teensy defaulting to high speed serial vs full speed used by USBSerial
+// this is due to the Teensy defaulting to high speed serial vs full speed used by USBSerial
 //USBSerial usbHostSerial(usbHost);
 
 // support three host serial object corresponding to Serial, SerialUSB1 and SerialUSB2

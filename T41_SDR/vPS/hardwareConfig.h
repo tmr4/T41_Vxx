@@ -34,9 +34,10 @@
 #define USB_HOST_SUPPORT
 
 // uncomment below for specific USB Host device support
-#define HOST_KEYBOARD_MOUSE_SUPPORT // uses about 44k of stack
-#define HOST_SERIAL_SUPPORT
-//#define HOST_CAT_CONTROL_SUPPORT // enables CAT control over USB host
+//#define HOST_KEYBOARD_MOUSE_SUPPORT // uses about 44k of stack
+#define HOST_SERIAL_SUPPORT 1 // uses USBSerial_BigBuffer
+#define HOST_CAT_CONTROL_SUPPORT 1 // enables CAT control over USB host (CAT commands expected on USB host)
+//#define CAT_CONTROL_SUPPORT        // enables CAT control over Serial   (CAT commands expected on serial)
 
 //#define T41_REMOTE_DISPLAY
 
@@ -51,7 +52,7 @@
 // Set disabled services to Serial. Any messages from these services are sent to Arduino serial monitor.
 // *** note: debug messages go out over Serial and will be transmitted if controlSerial
 // is set to Serial and the unit is connected to the USB host of another unit ***
-#define controlSerial Serial // Serial or SerialUSB1 for USB port or usbHostSerial for USB Host port
+#define controlSerial usbHostSerial // Serial or SerialUSB1 for USB port or usbHostSerial for USB Host port (this unit receives/sends CAT cmds over USB Host)
 #define beaconSerial Serial // Serial or SerialUSB2
 #define wsjtSerial Serial // Serial or SerialUSB1 or SerialUSB2
 

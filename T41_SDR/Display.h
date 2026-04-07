@@ -62,6 +62,8 @@ extern int centerLine;
 // *** TODO: make this generic with pin assignments (currently tft is global object, but could make it a pointer) ***
 void InitDisplay();
 
+void ShowNoSD();
+void ShowDot();
 void ShowSplash(const char*line1Txt, const char*line2Txt, const char*line3Txt, const char*line4Txt, const char*line5Txt);
 
 void RedrawDisplayScreen();

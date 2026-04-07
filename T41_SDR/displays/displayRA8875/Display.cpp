@@ -286,6 +286,22 @@ FLASHMEM void ClearScreen() {
   tft.clearMemory();
 }
 
+FLASHMEM void ShowNoSD() {
+  int centerTxt;
+  const char line1Txt[] = "Error: waiting for SD card!";
+
+  ClearScreen();
+  tft.setFontScale(2);
+  tft.setTextColor(RA8875_RED);
+  centerTxt = (XPIXELS - strlen(line1Txt) * tft.getFontWidth()) / 2;
+  tft.setCursor(centerTxt, YPIXELS / 10);
+  tft.println(line1Txt);
+}
+
+FLASHMEM void ShowDot() {
+  tft.print(".");
+}
+
 // *** TODO: accomodate NULL pointers ***
 FLASHMEM void ShowSplash(const char*line1Txt, const char*line2Txt, const char*line3Txt, const char*line4Txt, const char*line5Txt) {
   int centerTxt;
@@ -464,8 +480,6 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     // calculate the freq spectrum plot value
     yPlot = spectrumNoiseFloor - pixelnew - currentNF;
     y1Plot = spectrumNoiseFloor - pixelnew1 - currentNF;
-
-    Serial.print(yPlot); Serial.print(", "); Serial.println(y1Plot);
 
     // create rough spectrum histogram if auto noise floor is active
     // the frequency spectrum is 150 pixels high, let's create

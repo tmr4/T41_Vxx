@@ -258,12 +258,17 @@ FLASHMEM void setup() {
   // SD card is required for normal T41 operations
   // *** TODO: reconsider this ***
   //if(CheckDataFileEEPROM() == 0) { // *** requires SDEEPROMData.txt on SD card ***
-  if(InitializeSDCard() == 0) {
+  while(InitializeSDCard() == 0) {
     Debug("No SD card");
-    return;
-  } else {
-    sdCardPresent = 1;
+    //Serial.println("no sd");
+    ShowNoSD();
+    for(int i = 0; i < 10; i++) {
+      ShowDot();
+      delay(500L);
+    }
   }
+  ClearScreen();
+  sdCardPresent = 1;
   EEPROMStartup();
 
 #ifdef DEBUG
@@ -652,8 +657,8 @@ FASTRUN void loop() {
   // *** need PC control without a display ***
   //T41ControlLoop();
 
-#ifndef HOST_CAT_CONTROL_SUPPORT
-  //T41ControlLoop();
+#ifdef CAT_CONTROL_SUPPORT
+  T41ControlLoop();
 #endif
 
 #ifdef DEBUG_LOOP

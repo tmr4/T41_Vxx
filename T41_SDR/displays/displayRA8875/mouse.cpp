@@ -4,6 +4,7 @@
 #include "..\..\ButtonProc.h"
 #include "..\..\CWProcessing.h"
 #include "Display.h"
+#include "..\..\Display.h"
 #include "Menu.h"
 #include "..\..\MenuProc.h"
 #include "..\..\Tune.h"
