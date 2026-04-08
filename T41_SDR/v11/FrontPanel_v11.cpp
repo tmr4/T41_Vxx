@@ -123,8 +123,6 @@ void EncoderFineTuneISR();
 void EncoderMenuChangeFilterISR();
 void EncoderVolumeISR();
 
-void ProcessMenuEncoder();
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -146,43 +144,6 @@ void EncodersInit() {
   fineTuneEncoder.begin(true);
   attachInterrupt(digitalPinToInterrupt(FINETUNE_ENCODER_A), EncoderFineTuneISR, CHANGE);
   attachInterrupt(digitalPinToInterrupt(FINETUNE_ENCODER_B), EncoderFineTuneISR, CHANGE);
-}
-
-/*****
-  Purpose: Set center tune frequency based on
-*****/
-// *** TODO: evaluate whether the ISR method use in vPS works better ***
-// *** TODO: why doesn't v11 have same center tune problems as vPS ***
-void EncoderCenterTune() {
-  unsigned char result;
-
-  result = tuneEncoder.process();  // Read the encoder
-
-  if(result == 0)  // Nothing read
-    return;
-
-  if(radioMode == CW_MODE && decoderFlag == ON) {  // No reason to reset if we're not doing decoded CW
-    ResetHistograms();
-  }
-
-  switch(result) {
-    case DIR_CW:  // Turned it clockwise, 16
-      tuneChange = 1;
-      break;
-
-    case DIR_CCW:  // Turned it counter-clockwise
-      tuneChange = -1;
-      break;
-  }
-
-  // *** TODO: from v12, validate v11 calibration routines
-  // center tune used in calibration routines, return to process
-  //   - receive calibrate adjusts noise floor
-  //   - transmit calibrate adjusts image value
-  //   - two tone adjusts tone 1
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
-
-  SetCenterTune((long)freqIncrement * tuneChange);
 }
 
 /*****
@@ -288,6 +249,10 @@ FASTRUN void EncoderMenuChangeFilterISR() {
   }
 
   ProcessMenuEncoder();
+}
+
+int ReadTuneEncoder() {
+  return tuneEncoder.process();
 }
 
 // Switch Matrix

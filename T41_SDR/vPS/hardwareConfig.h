@@ -10,6 +10,9 @@
 //#define DISPLAY_LANDSCAPE
 #define DISPLAY_FLIPPED
 
+// *** needs to be true if using center tune encoder on MCP23017
+#define READ_CENTERTUNE_ENCODER false // set to false if interrupt driven
+
 #define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
 
 #define PROJECTSYSTEM_VOLUME_ENCODER

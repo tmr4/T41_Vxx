@@ -175,20 +175,6 @@ extern Rotary fineTuneEncoder;
 //-------------------------------------------------------------------------------------------------------------
 
 //------------
-// Process.h
-
-void RemoveDCBias();
-float CalcSignalStrength();
-
-//------------
-// T41_SDR.ino
-
-void InitHardware();
-void SoftResetHardware();
-void ConfigRadioStateHardware();
-void HardwareLoopStart();
-
-//------------
 // Encoders.h
 
 #ifdef PROJECTSYSTEM_VOLUME_ENCODER
@@ -209,7 +195,6 @@ void EncoderFineTuneISR();
 #ifdef PROJECTSYSTEM_TUNE_ENCODER
 void EncodersInit();
 void EncoderCenterTuneISR();
-bool EncoderCenterTune();
 #endif
 
 #ifdef PROJECTSYSTEM_ENCODER_MCP

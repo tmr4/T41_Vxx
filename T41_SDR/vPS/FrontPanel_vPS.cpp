@@ -39,8 +39,6 @@ Bounce encoder4Switch = Bounce(TUNE_SWITCH, 10);  // 10 ms debounce
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-void ProcessMenuEncoder();
-
 void EncoderVolumeISR();
 
 //-------------------------------------------------------------------------------------------------------------
@@ -224,29 +222,8 @@ void EncoderCenterTuneISR() {
   }
 }
 
-/*****
-  Purpose: Set center tune frequency based on changes to tuneChange
-*****/
-bool EncoderCenterTune() {
-  if(tuneChange == 0)
-    return false;
+int ReadTuneEncoder() { return 0; }
 
-  if(radioMode == CW_MODE && decoderFlag == ON) {
-    ResetHistograms();
-  }
-
-  // *** TODO: from v12, validate v11 calibration routines
-  // center tune used in calibration routines, return to process
-  //   - receive calibrate adjusts noise floor
-  //   - transmit calibrate adjusts image value
-  //   - two tone adjusts tone 1
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) return false; // *** TODO: validate required calibration return value ***
-
-  SetCenterTune((long)freqIncrement * tuneChange);
-
-  tuneChange = 0;
-  return true;
-}
 #endif
 
 #else
@@ -378,33 +355,6 @@ int ReadSelectedPushButton() {
 }
 
 // Encoders
-
-/*****
-  Purpose: Set center tune frequency based on
-*****/
-void EncoderCenterTune() {
-  int result;
-
-  result = tuneEncoder.process();  // Read the encoder
-
-  if(result == 0)  // Nothing read
-    return;
-
-  if(radioMode == CW_MODE && decoderFlag == ON) {  // No reason to reset if we're not doing decoded CW
-    ResetHistograms();
-  }
-
-  tuneChange = result;
-
-  // *** TODO: from v12, validate v11 calibration routines
-  // center tune used in calibration routines, return to process
-  //   - receive calibrate adjusts noise floor
-  //   - transmit calibrate adjusts image value
-  //   - two tone adjusts tone 1
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
-
-  SetCenterTune((long)freqIncrement * tuneChange);
-}
 
 /*****
   Purpose: Encoder volume control

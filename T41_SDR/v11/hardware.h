@@ -118,17 +118,3 @@ extern uint16_t GPAB_state;
 //-------------------------------------------------------------------------------------------------------------
 
 void SetupBPF();
-
-//------------
-// Process.h
-
-void RemoveDCBias();
-float CalcSignalStrength();
-
-//------------
-// T41_SDR.ino
-
-void InitHardware();
-void SoftResetHardware();
-void ConfigRadioStateHardware();
-void HardwareLoopStart();

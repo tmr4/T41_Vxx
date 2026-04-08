@@ -19,3 +19,4 @@ void DoExciterEQ();
 void CalcFilters();
 
 void SetupDemodFilterBW();
+void SetBWFilters(int filterChange);

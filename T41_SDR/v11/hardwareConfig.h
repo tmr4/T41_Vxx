@@ -10,6 +10,8 @@
 #define DISPLAY_LANDSCAPE
 //#define DISPLAY_FLIPPED
 
+#define READ_CENTERTUNE_ENCODER true // set to false if interrupt driven
+
 //#define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
 
 #define USE_BPF_BOARD

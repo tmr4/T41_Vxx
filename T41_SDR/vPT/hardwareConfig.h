@@ -10,6 +10,8 @@
 //#define DISPLAY_LANDSCAPE
 #define DISPLAY_FLIPPED
 
+#define READ_CENTERTUNE_ENCODER false // set to false if interrupt driven
+
 #define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
 
 // *** currently Rotary and Rotary_V12 can't coexist so only ENCODER_1 or ENCODER_MCP be enabled ***

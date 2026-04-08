@@ -549,7 +549,7 @@ FLASHMEM void AdjustCalFactors() {
   AdjustIQFactors();
   AdjustRxTxAtten();
 
-  EncoderCenterTune();
+  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
   if(tuneChange != 0) {
     if(0) {
       // adjust image value
@@ -2106,7 +2106,7 @@ FLASHMEM void ChangeCalMode(int mode) {
 float twoToneScaler = 1.0;
 
 FLASHMEM void AdjustTwoToneScaler() {
-  EncoderCenterTune();
+  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
   if(tuneChange != 0) {
     twoToneScaler += tuneChange * adjIncrement;
     tuneChange = 0;

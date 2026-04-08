@@ -11,6 +11,8 @@
 //#define DISPLAY_LANDSCAPE
 #define DISPLAY_FLIPPED
 
+#define READ_CENTERTUNE_ENCODER true // set to false if interrupt driven
+
 // uncomment below for USB Host support
 #define USB_HOST_SUPPORT
 

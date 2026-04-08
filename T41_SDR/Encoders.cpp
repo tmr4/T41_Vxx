@@ -9,6 +9,7 @@
 #include "Encoders.h"
 #include "Filter.h"
 #include "ft8.h"
+#include "hardware.h"
 #include "Menu.h"
 #include "MenuProc.h"
 #include "Tune.h"
@@ -18,9 +19,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define MENU_F_LO_CUT            40
+#define ENCODER_FACTOR            0.4  // gives 100 Hz change with standard Borne encoders
 
-//------------------------- Global Variables ----------
 bool volumeChangeFlag, resetTuningFlag, fineTuneFlag, getEncoderValueFlag;
 long filter_pos_BW, last_filter_pos_BW;
 int posFilterEncoder, lastFilterEncoder;
@@ -31,70 +31,18 @@ volatile int tuneChange;
 volatile int menuEncoderMove;
 volatile long fineTuneEncoderMove;
 
-//------------------------- Local Variables ----------
-
-
-extern int calNFAdjust;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void AdjustFilterBW(int filterChange) {
-  if(lowerAudioFilterActive) { // false - high, true - low filter
-    currentFilterLoCut = currentFilterLoCut - filterChange * 50 * ENCODER_FACTOR;
+void ProcessFilterEncoder() {
+  int filterChange = (posFilterEncoder - lastFilterEncoder) * 50 * ENCODER_FACTOR;
 
-    // restrain filter
-    if(currentFilterLoCut < 0.0) currentFilterLoCut = 0.0;
-    if(currentFilterLoCut > currentFilterHiCut) currentFilterLoCut = currentFilterHiCut;
-  } else {
-    currentFilterHiCut = currentFilterHiCut - filterChange * 50 * ENCODER_FACTOR;
-
-    // restrain filter
-    if(currentFilterHiCut < currentFilterLoCut) currentFilterHiCut = currentFilterLoCut;
-  }
-}
-
-/*****
-  Purpose: Set bandwidth filters based on accumulated filter encoder changes, update BW values on display
-
-  Parameter list:
-    int FW - filter width
-*****/
-void SetBWFilters() {
-  int filterChange = posFilterEncoder - lastFilterEncoder;
+  if(filterChange == 0) return;
 
   lastFilterEncoder = posFilterEncoder;
 
-  switch(currentDemodMode) {
-    case DEMOD_USB:
-    case DEMOD_LSB:
-    case DEMOD_PSK31:
-    case DEMOD_FT8:
-    case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_INTERNAL:
-    case DEMOD_FT8_WAV:
-      AdjustFilterBW(filterChange);
-      break;
-
-    case DEMOD_AM:
-    case DEMOD_SAM:
-      currentFilterHiCut = currentFilterHiCut - filterChange * 50 * ENCODER_FACTOR;
-      currentFilterLoCut = -currentFilterHiCut;
-      break;
-
-    case DEMOD_NFM:
-      if(nfmBWFilterActive) {
-        filterChange = filter_pos_BW - last_filter_pos_BW;
-        last_filter_pos_BW = filter_pos_BW;
-        nfmFilterBW = (nfmFilterBW / 2.0 - filterChange * 50 * ENCODER_FACTOR) * 2;
-      } else {
-        AdjustFilterBW(filterChange);
-      }
-      break;
-  }
-
-  CalcFilters();
+  SetBWFilters(filterChange);
 }
 
 void ProcessMenuEncoder() {
@@ -117,4 +65,33 @@ void ProcessMenuEncoder() {
       posFilterEncoder = lastFilterEncoder - 5 * menuEncoderMove;
     }
   }
+}
+
+/*****
+  Purpose: set center tune frequency based on changes to tuneChange
+*****/
+bool ProcessCenterTuneEncoder(bool readEncoder /* = false */) {
+  // read encoder if requested
+  // *** some hardware versions have interrupt driven tuning encoder
+  // eliminating the need to read it here ***
+  if(readEncoder) tuneChange = ReadTuneEncoder();
+
+  if(tuneChange == 0)
+    return false;
+
+  if(radioMode == CW_MODE && decoderFlag == ON) {
+    ResetHistograms();
+  }
+
+  // *** TODO: from v12, validate v11 calibration routines
+  // center tune used in calibration routines, return to process
+  //   - receive calibrate adjusts noise floor
+  //   - transmit calibrate adjusts image value
+  //   - two tone adjusts tone 1
+  if((calibrateItem >= 1) && (calibrateItem <= 3)) return false; // *** TODO: validate required calibration return value ***
+
+  SetCenterTune((long)freqIncrement * tuneChange);
+
+  tuneChange = 0;
+  return true;
 }

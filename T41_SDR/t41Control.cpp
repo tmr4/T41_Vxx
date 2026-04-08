@@ -8,6 +8,7 @@
 #include "Encoders.h"
 #include "EEPROM.h"
 #include "Filter.h"
+#include "hardware.h"
 #include "keyboard.h"
 #include "MenuProc.h"
 #include "mouse.h"
@@ -518,7 +519,7 @@ void T41ControlLoop() {
           // inc/dec audio filter
 
           posFilterEncoder += atoi(&cmd[2]);
-          SetBWFilters();
+          ProcessFilterEncoder();
 
           CalcFilters();
           //updateDisplay = true;

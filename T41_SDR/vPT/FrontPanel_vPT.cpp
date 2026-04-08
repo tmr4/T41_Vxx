@@ -9,6 +9,7 @@
 #include <Bounce.h>
 
 #include "..\CWProcessing.h"
+#include "..\Encoders.h"
 #include "..\MenuProc.h"
 #include "..\Tune.h"
 
@@ -28,8 +29,6 @@ Bounce encoder2Switch = Bounce(ENCODER_2_SWITCH, 10);  // 10 ms debounce
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
-
-void ProcessMenuEncoder();
 
 void EncoderVolumeISR();
 
@@ -129,7 +128,4 @@ FASTRUN void EncoderMenuChangeFilterISR() {
 }
 #endif
 
-#if defined(PROJECTSYSTEM_ENCODER_1) || defined(PROJECTSYSTEM_ENCODER_2)
-void EncoderCenterTune() {
-}
-#endif
+int ReadTuneEncoder() { return 0; }

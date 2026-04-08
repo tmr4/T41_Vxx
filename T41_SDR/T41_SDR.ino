@@ -29,6 +29,7 @@
 #include "Exciter.h"
 #include "Filter.h"
 #include "FIR.h"
+#include "hardware.h"
 #include "Menu.h"
 #include "Noise.h"
 #include "Process.h"

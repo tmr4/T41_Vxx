@@ -14,6 +14,7 @@
 #include "..\..\Exciter.h"
 #include "..\..\Filter.h"
 #include "..\..\ft8.h"
+#include "..\..\hardware.h"
 #include "InfoBox.h"
 //#include "keyboard.h"
 #include "..\..\Menu.h"

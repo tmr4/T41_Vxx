@@ -3,6 +3,7 @@
 
 #include "ButtonProc.h"
 #include "EEPROM.h"
+#include "Encoders.h"
 #include "Filter.h"
 #include "FIR.h"
 #include "pi.h"
@@ -438,6 +439,59 @@ FLASHMEM void SetupDemodFilterBW() {
     default:
       currentFilterLoCut = 200;
       currentFilterHiCut = 3000;
+      break;
+  }
+
+  CalcFilters();
+}
+
+void AdjustFilterBW(int filterChange) {
+  if(lowerAudioFilterActive) { // false - high, true - low filter
+    currentFilterLoCut = currentFilterLoCut - filterChange;
+
+    // restrain filter
+    if(currentFilterLoCut < 0.0) currentFilterLoCut = 0.0;
+    if(currentFilterLoCut > currentFilterHiCut) currentFilterLoCut = currentFilterHiCut;
+  } else {
+    currentFilterHiCut = currentFilterHiCut - filterChange;
+
+    // restrain filter
+    if(currentFilterHiCut < currentFilterLoCut) currentFilterHiCut = currentFilterLoCut;
+  }
+}
+
+/*****
+  Purpose: Set bandwidth filters based on accumulated filter encoder changes, update BW values on display
+
+  Parameter list:
+    int FW - filter width
+*****/
+void SetBWFilters(int filterChange) {
+  switch(currentDemodMode) {
+    case DEMOD_USB:
+    case DEMOD_LSB:
+    case DEMOD_PSK31:
+    case DEMOD_FT8:
+    case DEMOD_PSK31_WAV:
+    case DEMOD_FT8_INTERNAL:
+    case DEMOD_FT8_WAV:
+      AdjustFilterBW(filterChange);
+      break;
+
+    case DEMOD_AM:
+    case DEMOD_SAM:
+      currentFilterHiCut = currentFilterHiCut - filterChange;
+      currentFilterLoCut = -currentFilterHiCut;
+      break;
+
+    case DEMOD_NFM:
+      if(nfmBWFilterActive) {
+        filterChange = filter_pos_BW - last_filter_pos_BW;
+        last_filter_pos_BW = filter_pos_BW;
+        nfmFilterBW = (nfmFilterBW / 2.0 - filterChange) * 2;
+      } else {
+        AdjustFilterBW(filterChange);
+      }
       break;
   }
 

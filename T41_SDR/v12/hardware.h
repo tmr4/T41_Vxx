@@ -116,24 +116,6 @@ extern I2C bit_results;
 
 void ShowAnalogGain();
 
-//------------
-// Encoders.h
-
-
-//------------
-// Process.h
-
-void RemoveDCBias();
-float CalcSignalStrength();
-
-//------------
-// T41_SDR.ino
-
-void InitHardware();
-void SoftResetHardware();
-void ConfigRadioStateHardware();
-void HardwareLoopStart();
-
 //----------
 // Utility.h
 

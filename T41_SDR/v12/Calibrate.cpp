@@ -1130,7 +1130,7 @@ FLASHMEM void AdjustReceiveCalFactors() {
   rxtxFlag = AdjustRxTxAtten();
 
   // adjust noise floor
-  EncoderCenterTune();
+  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
   if(tuneChange != 0) {
     recCalNFAdjust -= tuneChange;
     tuneChange = 0;
@@ -1649,7 +1649,7 @@ FLASHMEM void AdjustTransmitCalFactors() {
   AdjustRxTxAtten();
 
   // adjust image value
-  EncoderCenterTune();
+  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
   if(tuneChange != 0) {
     plotValue += tuneChange * (plotValueInc ? 1.0 : 0.1);
     tuneChange = 0;
@@ -2670,7 +2670,7 @@ FLASHMEM void AdjustTwoToneFactors() {
   }
 
   // tone 1 change
-  EncoderCenterTune();
+  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
   if(tuneChange != 0) {
     IncTone(1, tuneChange);
     tuneChange = 0;

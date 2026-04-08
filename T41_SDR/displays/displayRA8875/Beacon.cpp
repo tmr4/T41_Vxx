@@ -8,6 +8,7 @@
 #include "..\..\ButtonProc.h"
 #include "Display.h"
 #include "..\..\Display.h"
+#include "..\..\hardware.h"
 #include "..\..\Process.h"
 #include "..\..\t41Beacon.h"
 #include "..\..\Tune.h"
