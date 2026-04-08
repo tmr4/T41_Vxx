@@ -7,6 +7,7 @@
 #include "Display.h"
 #include "EEPROM.h"
 #include "Encoders.h"
+#include "hardware.h"
 #include "Menu.h"
 #include "MenuProc.h"
 #include "mouse.h"

@@ -38,6 +38,9 @@ The InitDisplay function is required at a minimum for an operating display.
 // General
 float CalcSignalStrength();
 
+// Button.cpp
+int ReadSelectedPushButton();
+
 // Encoder.cpp
 int ReadTuneEncoder();
 

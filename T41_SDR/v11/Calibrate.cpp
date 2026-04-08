@@ -9,7 +9,7 @@
 #include <Adafruit_MCP23X17.h>
 
 #include "..\AudioConfig.h"
-#include "..\Button.h"
+//#include "..\Button.h"
 #include "..\ButtonProc.h"
 #include "..\CW_Excite.h"
 #include "..\Display.h"
@@ -18,6 +18,7 @@
 #include "..\Encoders.h"
 #include "..\Exciter.h"
 #include "..\FIR.h"
+#include "..\hardware.h"
 #include "..\keyer.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"

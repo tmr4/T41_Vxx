@@ -6,7 +6,7 @@
 #include <Timer.h>
 
 #include "..\AudioConfig.h"
-#include "..\Button.h"
+//#include "..\Button.h"
 #include "..\ButtonProc.h"
 #include "..\debugSerial.h"
 #include "..\Demod.h"
@@ -17,6 +17,7 @@
 #include "..\Filter.h"
 #include "..\FIR.h"
 #include "..\gwv.h"
+#include "..\hardware.h"
 #include "displayRA8875\InfoBox.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"

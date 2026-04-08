@@ -2,13 +2,14 @@
 
 #include "..\SDT.h"
 
-#include "..\Button.h"
+//#include "..\Button.h"
 #include "Calibrate.h"
 #include "..\CW_Excite.h"
 #include "..\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "FrontPanel.h"
+#include "..\hardware.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"

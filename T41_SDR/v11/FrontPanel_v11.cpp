@@ -7,12 +7,13 @@
 
 #include "..\SDT.h"
 
-#include "..\Button.h"
+//#include "..\Button.h"
 #include "Calibrate.h"
 #include "..\CWProcessing.h"
 #include "..\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
+#include "..\hardware.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Tune.h"

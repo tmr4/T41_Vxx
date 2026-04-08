@@ -33,5 +33,4 @@ extern bool buttonInterruptsEnabled;
 
 void EnableButtonInterrupts();
 int ProcessButtonPress(int valPin);
-int ReadSelectedPushButton();
 void ExecuteButtonPress(int val);

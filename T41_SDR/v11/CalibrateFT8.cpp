@@ -6,13 +6,14 @@
 #include "..\SDT.h"
 
 #include "..\AudioConfig.h"
-#include "..\Button.h"
+//#include "..\Button.h"
 #include "..\ButtonProc.h"
 #include "..\Display.h"
 #include "displayRA8875\Display.h" // allow for display specific code here
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\FIR.h"
+#include "..\hardware.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"

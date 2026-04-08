@@ -10,7 +10,7 @@
 #include <Adafruit_MCP23X17.h>
 #endif
 
-#include "..\Button.h"
+//#include "..\Button.h"
 #include "Calibrate.h"
 #include "..\CW_Excite.h"
 #include "..\CWProcessing.h"
@@ -18,8 +18,9 @@
 #include "displayRA8875\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
-#include "FrontPanel.h"
 #include "..\Exciter.h"
+#include "FrontPanel.h"
+#include "..\hardware.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"

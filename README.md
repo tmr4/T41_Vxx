@@ -68,6 +68,8 @@ Generally, other files shouldn't refer to these files as the folder name changes
 
 When managing the project, it's best to keep the *src* folder free of hardware specific files when committing changes.  Just copy any changed hardware files back to the specific hardware version folder, delete the hardware files in the *src* folder and proceed as normal.  Note that the *ft8_lib* folder should remain in the *src* folder.
 
+A minimum hardware version is available in the *minHardware* folder.  This allows testing of the receive function on the main board with appropriate IQ signal input.  An appropriate display or *displayNone* should be used.
+
 ### Caution
 
 I've disabled saving operating parameter in EEPROM to facilitate changing versions.
