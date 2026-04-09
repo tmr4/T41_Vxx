@@ -3,7 +3,6 @@
 
 #include "AudioConfig.h"
 #include "ButtonProc.h"
-//#include "src\Calibrate.h"
 #include "CW_Excite.h"
 #include "CWProcessing.h"
 #include "Demod.h"
@@ -13,7 +12,6 @@
 #include "Exciter.h"
 #include "Filter.h"
 #include "FIR.h"
-#include "src\FrontPanel.h"
 #include "ft8.h"
 #include "hardware.h"
 #include "keyer.h"

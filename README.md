@@ -8,67 +8,21 @@ The driver for this project was to leverage all of the work I put into adding fe
 * new modes (NFM demodulation and some data modes)
 * new features (beacon monitor, CW message keyer, CAT control, remote display, USB host connection to another T41)
 
-## Ongoing Work
-
-* Hardware version specific front panel and display
-  * I've extracted most of the T41 hardware specific code into separate version specific hardware *libraries*.  The front panel and display are two areas I haven't previously attempted, for different reasons.  My original thought was to make the front panel code applicable to all versions with a group of defines activating the correct code depending on the selected front panel. This created confusing code and while seemingly practical, was never used in practice as my radios all have a version specific front panel.
-  * I've also consolidated a lot of the display code into a single file, but calls to RA8875 display functions are still sprinkled throughout the code.
-  * This effort cleans up the front panel code, retaining only a single front panel source in each version (in FrontPanel_vXX.cpp and FrontPanel.h).  The files should be interchangable between hardware versions as long as the actual front panel hardware exists for the hardware version it's applied to.  I haven't tested this.
-  * More work is required for the display.  My plan is to define a common set of display functions that the hardware libraries must satisfy for a functional T41. I'm working on that effort now.
-  * I've completed the RA8875 display module and tested against the Project System hardware.  This was the easiest hardware version as I haven't defined calibration code for it.  As a test, I also create two other display types: (1) no display and (2) an RA8875 version where only a smaller frequency spectrum and waterfall are drawn.
-  * As a proof of concept, I developed a basic display module a Teensy 4.1 Prototyping System from ProtoSupplies.  That system uses a 3.2" 320x240 ILI9341 display.
-  * Teensyduino supports this display, so modifying the RA8875 display module code for this display was straighforward.  Some display function used in the RA8875 module aren't supported by the ILI9341, font size functions for example.  The code needed reworked for those.
-  * This mock up for the ILI9341 display highlighted that much of the display code is customized for the RA8875, not just based on it's resolution, but the particular placement of elements on the display.  Many of those need reworked when moving to a new display.
-
-![displayILI9341](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_altDisplay_PrototypingSystem.jpg)
-
-  * Adding a small waterfall took more work as the display doesn't have a move function.  The entire waterfall needs to be written to the display line by line each processing loop.  A circular buffer works well for this.
-  * I have 2.4" and 2.8" versions of this display as well.  I thought the smaller displays would draw less current, but that's not the case.  The smallest display drew the most current and while it's a bit of an apple/oranges comparison, it drew almost as much as my v11 T41 main board with 5" RA8875 display.  Even the more efficient 3.2" version was less than 50 mamps less than that combination.  These displays aren't going to be much of a battery saver on a T41 Mini.
-  * The spectrum update on the ILI9341 is quite snappy.  As with all mockups on development boards, the trickiest thing is defining the Teensy pin assignments so they don't conflict with ones being used by the development board.  The switch matrix busy pin threw me for a while with the Prototyping System.  This has taught me to have all of the Teensy pin assignment located in one place and separated by input/output pins.  I put this in the version specific *hardware.h* files.
-  * With the simplified display and reduced frequency spectrum size, the processing loop on the Prototyping System only takes about 10ms, about 1/7 the time taken to complete processing a loop with the RA8875 display.  Adding the waterfall added another 10 ms, or 20ms total.
-  * More work is needed to accomodate the calibration routines.  These are highly display specific as well as hardware specific to some extent.
-
-## Recent Work
-
-* WSJT-X working over T41 USB connection
-  * Modified the FT8 Data mode to pass audio back and forth with a PC over USB at a 44.1kHz sample rate
-  * Modified the wsjt module CAT controls for transmit
-  * T41 switches to FT8 Data mode upon receipt of *ID;* command
-  * Calibration of FT8 Data mode still in progress
-* Standalone FT8 based on [ft8_lib](https://github.com/kgoba/ft8_lib)
-  * a modified version of the library for the T41 is in the *ft8_lib* folder within *src* folder and available to all hardware versions
-  * This mode is available with a special data mode, internal FT8 mode
-  * The mode can also play wav files.
-  * FT8 UI is mouse driven at present and requires PSRAM.
-
-![T41 Internal FT8 contact](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_ft8.jpg)
-
-The standalone FT8 interface is limited due to the display size.  Currently three message lists are available, all scrollable with a mouse wheel.  To the left is a list of all recent FT8 messages.  In the middle is a list of all recent CQ messages.  To the right is a list of all messages around the selected FT8 receive frequency as entered at the bottom of the infomation box.  The bottom lines of the display show the current/most recent QSO.  The next FT8 message to be transmitted is shown in green in the last line.  Yellow messages are completed.  The line above the message lists shows the details of the selected FT8 message, which can be changed by clicking on a message in any of the lists.
-
-* New display layout
-  * captures some unused space, expanding the area for FT8 messages and more info box items
-
 ![T41 new display layout](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_newDisplayLayout.jpg)
+
+## Ongoing and Recent Work
+
+See [Ongoing and Recent Work](https://github.com/tmr4/T41_Vxx/RecentWork.md).
 
 ## Use
 
-### Project Structure
+This software supports several versions of T41 hardware. To customize the software for specific hardware version, copy the files from the desired hardware subfolder (in the *T41_SDR/hardware* folder) and paste them into the *T41_SDR/src* folder.
 
-A handy Arduino feature makes maintaining the common project easy. The Arduino compiler will compile any source and header files in the sketch folder ***and*** fines and subfolders in the *src* subfolder. All other subfolders in the sketch folder are ignored. That makes the following folder structure possible:
+Support for the T41 display is handled differently. To add support for a specific display, copy the folder for the desired display (in the *T41_SDR/hardware/diplays* folder) and paste the folder into the *T41_SDR/src* folder.
 
-In anticipation of the T41 Mini, I've extracted the remaining hardware specific routines core code.  I've also added a few hardware specific folders (vPS and vPT) for the ProtoSupplies.com [Project System](https://protosupplies.com/product/project-system-for-teensy-4-1/) and [Prototyping System](https://protosupplies.com/product/prototyping-system-for-teensy-4-1//).  I use these boards frequently in tests where I don't want to load the updated T41 software onto an actual radio.
+When managing the project, it's best to keep the *src* folder free of hardware specific files when committing changes.  Just copy any changed hardware files back to their specific hardware version folders, delete the hardware files in the *src* folder and proceed as normal.  Note that the *ft8_lib* folder should remain in the *src* folder.
 
-![Project folder structure](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/CommonCodeFolderStructure.png)
-
-The T41 sketch and common code files are placed in the *T41_SDR* folder. The hardware specific files are place in the *v11*, *v12*, *vMini*, *vPS*, or *vPT* folders respectively. Then, if you want to compile for a specific hardware version, you copy the files from the desired hardware version folder into the *src* folder, select the proper Teensy in the IDE and compile.  You can't copy the hardware specific folder as the common code in the sketch folder references commonly named hardware specific files in the src folder.
-
-I've also created display specific modules.  Select the display folder appropriate for your hardware and copy the entire folder into the src folder.  The *displayRA8875* folder contains the routines for rendering the T41 diplay on an RA8875 display.  The *displayILI9341* folder contains a few routines for simplified T41 diplay on an ILI9341 display. The *displayNone* folder contains empty versions all of the display functions needed for the T41 code to compile and run.  Unlike other versions of the code, my code doesn't rely on the display routines to regulate the T41 audio stream.  The *displayNone* folder is a good starting point for developing a new display module.  Just code the T41 display features you want to display and the core code will update the display at the appropriate time.  Of course, if you want some new feature, that can be coded from scratch.
-
-Generally, other files shouldn't refer to these files as the folder name changes with the display.  I may relax this in the future.  Currently, the calibration reoutine don't follow this rule.  There is a lot there to separate out to common, hardware and display specific code.  Note that the calibration routines are broken currently.
-
-When managing the project, it's best to keep the *src* folder free of hardware specific files when committing changes.  Just copy any changed hardware files back to the specific hardware version folder, delete the hardware files in the *src* folder and proceed as normal.  Note that the *ft8_lib* folder should remain in the *src* folder.
-
-A minimum hardware version is available in the *minHardware* folder.  This allows testing of the receive function on the main board with appropriate IQ signal input.  An appropriate display or *displayNone* should be used.
+For more detail see [Accomodating Hardware Differences](https://github.com/tmr4/T41_Vxx/hardware.md).
 
 ### Caution
 
@@ -78,17 +32,7 @@ This is a work in progress.  Some functions may be broken and will likely remain
 
 ## Pin Usage
 
-### v11 (4SQRP version)
-
-![v11 pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/4SQRP_Teensy_Pin_Usage.png)
-
-### v12
-
-![v12 pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/V12_Teensy_Pin_Usage.jpg)
-
-### Project System
-
-![ps pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/ProjectSystem_Teensy_Pin_Usage.png)
+See [pinout](https://github.com/tmr4/T41_Vxx/Pinout.md).
 
 ## Features Available to All Hardware Versions
 
@@ -151,6 +95,14 @@ Adds a keyboard/memory CW keyer.  It currently requires the keyboard feature but
 * CW signals (dit/dah) are shaped with a 5 ms raised cosine at the start/end to reduce bandwidth and minimize key clicks.
 * Note: I scaled the keyer sidetone volume to give a comfortable volume over the entire RF power range at a setting of 20.  This isn't consistent with the current T41 sidetone volume, so if you've increased that you'll want to reduce it before you try the keyer.
 
+### Live noise floor
+
+The noise floor button toggles between Off, Auto and On.  When set to On you can adjust the noise floor with the Filter/Menu/Change encoder live while the radio is operating.  This noise floor setting for each band is preserved to the EEPROM when the noise floor button is toggled back to Off.  When set to Auto, the T41 will maintain the noise floor at the bottom of the frequency display.  This auto noise floor setting is not preserved.  Requires configuration setting USE_LIVE_NOISE_FLOOR set to 1.
+
+### Narrow-band FM
+
+Adds narrow-band FM demodulation. Adds separate, adjustable demodulation filter in addition to adjustable filter for audio output.  Filter button toggles between NFM demod filter and the high and low audio spectrum filters.  The active filter line is highlighted in green.
+
 ### T41 beacon monitor
 
 ![Beacon Monitor](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/beacon_monitor.jpg)
@@ -172,58 +124,13 @@ Adds a keyboard/memory CW keyer.  It currently requires the keyboard feature but
 
 ![Beacon Monitor with random SNR](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/bm_random_snr.jpg)
 
-* See also [Beacon Monitor](https://github.com/tmr4/BeaconMonitor) for a PC app version.
+## Other T41 Related Apps
 
-### Live noise floor
+See [Other apps](https://github.com/tmr4/OtherT41Apps.md)
 
-The noise floor button toggles between Off, Auto and On.  When set to On you can adjust the noise floor with the Filter/Menu/Change encoder live while the radio is operating.  This noise floor setting for each band is preserved to the EEPROM when the noise floor button is toggled back to Off.  When set to Auto, the T41 will maintain the noise floor at the bottom of the frequency display.  This auto noise floor setting is not preserved.  Requires configuration setting USE_LIVE_NOISE_FLOOR set to 1.
-
-### Narrow-band FM
-
-Adds narrow-band FM demodulation. Adds separate, adjustable demodulation filter in addition to adjustable filter for audio output.  Filter button toggles between NFM demod filter and the high and low audio spectrum filters.  The active filter line is highlighted in green.
-
-### PC control app
-
-![PC Control App](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_pcControlApp.png)
-
-Adds communications with PC control app over SerialUSB1 (must select `Dual` or `Triple` USB Type when compiling).  A separate control app running on your PC is required [T41_Views](https://github.com/tmr4/T41_Views).  The control app has the following features:
-
-* Live view of frequency and audio spectrums, S-meter, waterfall, and filter bandwidth
-* Live updates can be paused or started with the button at the lower left of the waterfall
-* T41 clock set to PC time upon connection
-* Change frequency of active VFO by the active increment with the mouse wheel
-* Change the active increment with a mouse click (center or fine tune indicated by the green highlight in the info box)
-* Zero out the 1000s portion of the active VFO with a right-mouse click
-* Reset tuning of the active VFO with a mouse click on the Center Frequency
-* Switch to the inactive VFO with a mouse click on the inactive VFO
-* Set the noise floor with a mouse click on NF Set and a mouse wheel in the frequency spectrum (this occurs live unlike the base T41 software which stops operation while the noise floor is adjusted)
-* Change the following up or down with the mouse wheel (on the corresponding indicator):
-  * Band
-  * Operating mode
-  * Demodulation mode
-  * Transmit power
-  * Volume
-  * AGC
-  * Center and fine tune increment
-
-### PC debug windows
-
-Windows console apps designed to facilitate communication between the T41 and multiple PC applications over a single USB serial connection.  Multiple debug windows can be open at the same time.
-
-![T41Server](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41Server.png)
-
-![T41Debug](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/t41Server_Debug.png)
-
- See [T41Server](https://github.com/tmr4/T41Server) and [T41Debug](https://github.com/tmr4/T41Debug).
-
-### Set T41 Clock
-
-To lazy to install a battery to maintain your T41 clock.  Try this PC app [SetT41Clock](https://github.com/tmr4/SetT41Clock).
-
-### Interconnect T41 radios
-
-USB host connection to another T41.  Mainly used in v12 calibration. More to come.
-
-### Remote
-
-Adds code to enable connection to a remote display over Bluetooth.  See this [Reddit post](https://www.reddit.com/r/T41_EP/comments/1etxkq8/t41_wireless_remote_display/) for a demo and discussion.  The code for the remote head is in this [repository](https://github.com/tmr4/T41_Remote_Head).
+  * PC beacon monitor
+  * PC control
+  * PC debug window
+  * Set T41 clock
+  * Interconnect T41 radios
+  * Remote display

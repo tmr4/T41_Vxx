@@ -2,7 +2,6 @@
 
 #include "Button.h"
 #include "ButtonProc.h"
-//#include "src\Calibrate.h"
 #include "Display.h"
 #include "EEPROM.h"
 #include "ft8.h"
