@@ -109,3 +109,5 @@ int CopySDToEEPROM();
 int CopyEEPROMToSD();
 void SDEEPROMDump();
 void EEPROMStartup();
+
+void LoadOpVarsFromEEPROM(bool load = false);

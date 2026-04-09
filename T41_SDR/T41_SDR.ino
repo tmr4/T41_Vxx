@@ -180,9 +180,7 @@ FLASHMEM void Splash() {
               This resets the user modifiable radio settings to the startup state
 *****/
 FLASHMEM void SoftReset() {
-  // can't use any working variables until after this, we can get rid of this when we use EEPROMData
-  // skip for now to facilitate testing/dev, don't need to reset when shifting between v66-9 and this version
-  //LoadOpVars();
+  LoadOpVarsFromEEPROM(LOAD_VARS_FROM_EEPROM);
 
   // reset sample rate and IF
   sampleRate = 192000.0;

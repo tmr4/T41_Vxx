@@ -64,7 +64,9 @@
 
 #define USE_FULL_MENU             0               // 0 - use top line menus; 1 - use full screen menus
 
-#define SDCARD_MESSAGE_LENGTH     3000L  // The number of milliseconds to leave error message on screen
+#define LOAD_VARS_FROM_EEPROM     false           // skipping load facilitates testing/dev as don't need to reset when shifting between different versions
+
+#define SDCARD_MESSAGE_LENGTH     3000L           // The number of milliseconds to leave error message on screen
 
 #define BEACON_FILE_NAME          "beacon.bmp"
 
