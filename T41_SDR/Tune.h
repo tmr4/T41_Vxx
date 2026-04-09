@@ -20,5 +20,7 @@ void SetFineTune(int tuneChange);
 void SetTxRxFreq(int freq);
 
 void ResetTuning();
-void SetFreq(bool reset = false);
 void DoSplitVFO();
+
+// *** hardware specific ***
+void SetFreq(bool reset = false);
