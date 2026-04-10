@@ -10,11 +10,23 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern Si5351 si5351;
+Si5351 si5351;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+
+FLASHMEM void InitSI5351() {
+  si5351.reset();
+  si5351.init(SI5351_CRYSTAL_LOAD_10PF, Si_5351_crystal, freqCorrectionFactor);
+  si5351.set_ms_source(SI5351_CLK2, SI5351_PLLB); //  Allows CLK1 and CLK2 to exceed 100 MHz simultaneously.
+  si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA);
+  si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
+}
+
+void SetSI5351FreqCorFactor(int factor) {
+  si5351.init(SI5351_CRYSTAL_LOAD_10PF, Si_5351_crystal, factor);
+}
 
 int EvenDivisor(long freq2) {
   int divisor = 126;

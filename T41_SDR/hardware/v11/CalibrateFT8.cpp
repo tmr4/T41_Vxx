@@ -6,7 +6,7 @@
 #include "..\SDT.h"
 
 #include "..\AudioConfig.h"
-//#include "..\Button.h"
+#include "..\Button.h"
 #include "..\ButtonProc.h"
 #include "..\Display.h"
 #include "displayRA8875\Display.h" // allow for display specific code here
@@ -29,8 +29,8 @@ static int corrChange;
 static float correctionIncrement;
 static int userScale, userZoomIndex, userXmtMode;
 static int transmitPowerLevelTemp;
-static int calTypeFlag = 0;
 static int calOnFlag = 0;
+static int calTypeFlag = 0;
 static int IQCalType;
 
 static float32_t sinBuffer3[256];
@@ -567,8 +567,8 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
   float adjdB = 0.0;
   int16_t adjAmplitude = 0;
   int16_t refAmplitude = 0;
-  uint32_t index_of_max;     // This variable is not currently used, but it is required by the ARM max function.  KF5N
-  int16_t yPlot, y1Plot;
+  //uint32_t index_of_max;     // This variable is not currently used, but it is required by the ARM max function.  KF5N
+  int16_t yPlot = 0, y1Plot = 0;
   static int yOldPlot[SPECTRUM_RES];
   bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
   bool updateSpectrumData = x1 == 0 ? true : false;

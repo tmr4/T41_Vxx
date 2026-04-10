@@ -126,7 +126,6 @@ extern uint16_t GPAB_state;
 
 //------------
 // Calibrate.h
-extern int calOnFlag;
 extern int calNFAdjust;
 
 //-------------------------------------------------------------------------------------------------------------

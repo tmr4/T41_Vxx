@@ -1,6 +1,6 @@
 // vPS specific hardware file
 
-#include <si5351.h> // https://github.com/tmr4/Si5351_T41
+//#include <si5351.h> // https://github.com/tmr4/Si5351_T41
 
 #include "..\SDT.h"
 
@@ -10,11 +10,15 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern Si5351 si5351;
+//extern Si5351 si5351;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
+
+FLASHMEM void InitSI5351() {}
+
+void SetSI5351FreqCorFactor(int factor) {}
 
 /*****
   Purpose: Set si5351 frequency
@@ -22,10 +26,10 @@ extern Si5351 si5351;
   CAUTION: SI5351_FREQ_MULT is set in the si5253.h header file and is 100UL
 *****/
 void SetFreq(bool reset) {
-  unsigned long long Clk1SetFreq, Clk2SetFreq;
+  //unsigned long long Clk1SetFreq, Clk2SetFreq;
 
   if(reset) return; // *** TODO: v11 isn't designed to reset.  Consider fix. ***
-
+/*
   // NEVER USE AUDIONOINTERRUPTS HERE: that introduces annoying clicking noise with every frequency change
   // SI5351_FREQ_MULT is 100ULL, MASTER_CLK_MULT is 4;
 
@@ -57,4 +61,5 @@ void SetFreq(bool reset) {
     si5351.output_enable(SI5351_CLK2, 0);  // CLK2 (receive) off during transmit to prevent spurious outputs
     si5351.output_enable(SI5351_CLK1, 1);
   }
+*/
 }

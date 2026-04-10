@@ -2,6 +2,7 @@
 
 #include <SPI.h>
 #include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
+#include <si5351.h> // https://github.com/tmr4/Si5351_T41
 
 #include "..\SDT.h"
 
@@ -9,7 +10,7 @@
 #include <Adafruit_MCP23X17.h>
 
 #include "..\AudioConfig.h"
-//#include "..\Button.h"
+#include "..\Button.h"
 #include "..\ButtonProc.h"
 #include "..\CW_Excite.h"
 #include "..\Display.h"
@@ -33,6 +34,8 @@
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+extern Si5351 si5351;
 
 #define GAIN_COARSE_MAX 1.2
 #define GAIN_COARSE_MIN 0.8
@@ -630,10 +633,10 @@ FLASHMEM void PrepareSpectrumArea() {
 }
 
 FLASHMEM void PlotSpectrum(int *calBins, int binSize) {
-  int yPlot, y1Plot = 0;
+  int yPlot = 0, y1Plot = 0;
   static int yOldPlot[SPECTRUM_RES];
   int x, y;
-  int nf = calNFAdjust;
+  //int nf = calNFAdjust;
 
   YieldToProcess(true);
 
@@ -1419,7 +1422,7 @@ FLASHMEM void GetSignalStrength(float *pSS, int passes = 0, bool getMeanSS = tru
   int binCenter[2] = {0, 0}; // center FFT bin of [desired, undesired] signal
   int16_t adjAmplitude = 0;
   int16_t refAmplitude = 0;
-  uint32_t index_of_max;
+  //uint32_t index_of_max;
   int ssIndex = 0;
   int numSamples = 3;
   const int samplesMax = 20;

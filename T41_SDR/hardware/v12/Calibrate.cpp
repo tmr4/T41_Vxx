@@ -6,7 +6,7 @@
 #include <Timer.h>
 
 #include "..\AudioConfig.h"
-//#include "..\Button.h"
+#include "..\Button.h"
 #include "..\ButtonProc.h"
 #include "..\debugSerial.h"
 #include "..\Demod.h"

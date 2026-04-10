@@ -10,7 +10,7 @@
 #include <Adafruit_MCP23X17.h>
 #endif
 
-//#include "..\Button.h"
+#include "..\Button.h"
 #include "..\CW_Excite.h"
 #include "..\CWProcessing.h"
 #include "..\Display.h"
@@ -117,7 +117,7 @@ FLASHMEM void RFOptions() {
 FLASHMEM void CalibrateOptions() {
   static long long freqCorrectionFactorOld = freqCorrectionFactor;
   int val;
-  int32_t increment = 100L;
+  //int32_t increment = 100L;
 
   tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 30, CHAR_HEIGHT, RA8875_BLACK);
 

@@ -10,7 +10,6 @@
 
 //------------
 // Calibrate.h
-extern int calOnFlag;
 extern int calNFAdjust;
 
 //------------

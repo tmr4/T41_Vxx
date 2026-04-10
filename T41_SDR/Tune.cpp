@@ -1,6 +1,4 @@
 
-#include <si5351.h> // https://github.com/tmr4/Si5351_T41
-
 #include "SDT.h"
 
 #include "Display.h"
@@ -21,23 +19,9 @@ bool splitVFO;
 int CWFreqShift = 750;
 //int CWFreqShift = 0;
 
-Si5351 si5351;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-FLASHMEM void InitSI5351() {
-  si5351.reset();
-  si5351.init(SI5351_CRYSTAL_LOAD_10PF, Si_5351_crystal, freqCorrectionFactor);
-  si5351.set_ms_source(SI5351_CLK2, SI5351_PLLB); //  Allows CLK1 and CLK2 to exceed 100 MHz simultaneously.
-  si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA);
-  si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
-}
-
-void SetSI5351FreqCorFactor(int factor) {
-  si5351.init(SI5351_CRYSTAL_LOAD_10PF, Si_5351_crystal, factor);
-}
 
 /*****
   Purpose: Set center tuning frequency

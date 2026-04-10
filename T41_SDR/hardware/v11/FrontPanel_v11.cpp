@@ -7,7 +7,7 @@
 
 #include "..\SDT.h"
 
-//#include "..\Button.h"
+#include "..\Button.h"
 #include "..\CWProcessing.h"
 #include "..\Display.h"
 #include "..\EEPROM.h"

@@ -2,7 +2,7 @@
 
 #include "..\SDT.h"
 
-//#include "..\Button.h"
+#include "..\Button.h"
 #include "..\CW_Excite.h"
 #include "..\Display.h"
 #include "..\EEPROM.h"
