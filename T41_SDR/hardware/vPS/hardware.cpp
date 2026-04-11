@@ -63,41 +63,6 @@ void InitFrontPanel();
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-#if defined(PROJECTSYSTEM_VOLUME_ENCODER) || defined(PROJECTSYSTEM_FILTER_ENCODER)
-
-//------------
-// Button.cpp
-
-/*****
-  Purpose: Check for UI button press. If pressed, return the ADC value
-
-  Parameter list:
-    none
-
-  Return value:
-    int                   -1 if not valid push button, ADC value if valid
-*****/
-int ReadSelectedPushButton() {
-#ifdef PROJECTSYSTEM_FILTER_ENCODER
-  if(menuDone) {
-    return 0;
-  } else {
-    return -1;
-  }
-#endif
-#ifdef PROJECTSYSTEM_VOLUME_ENCODER
-  return -1;
-#endif
-}
-
-int ProcessButtonPress(int valPin) {
-  return 0;
-}
-#endif
-
-//------------
-// Encoders.cpp
-
 //------------
 // MenuProc.cpp
 
