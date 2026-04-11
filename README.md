@@ -12,7 +12,7 @@ The driver for this project was to leverage all of the work I put into adding fe
 
 ## Ongoing and Recent Work
 
-See [Ongoing and Recent Work](https://github.com/tmr4/T41_Vxx/RecentWork.md).
+See [Ongoing and Recent Work](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/RecentWork.md).
 
 ## Use
 
@@ -22,7 +22,7 @@ Support for the T41 display is handled differently. To add support for a specifi
 
 When managing the project, it's best to keep the *src* folder free of hardware specific files when committing changes.  Just copy any changed hardware files back to their specific hardware version folders, delete the hardware files in the *src* folder and proceed as normal.  Note that the *ft8_lib* folder should remain in the *src* folder.
 
-For more detail see [Accomodating Hardware Differences](https://github.com/tmr4/T41_Vxx/hardware.md).
+For more detail see [Accomodating Hardware Differences](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/hardware.md).
 
 ### Caution
 
@@ -32,7 +32,7 @@ This is a work in progress.  Some functions may be broken and will likely remain
 
 ## Pin Usage
 
-See [pinout](https://github.com/tmr4/T41_Vxx/Pinout.md).
+See [pinout](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/Pinout.md).
 
 ## Features Available to All Hardware Versions
 
@@ -126,7 +126,7 @@ Adds narrow-band FM demodulation. Adds separate, adjustable demodulation filter 
 
 ## Other T41 Related Apps
 
-See [Other apps](https://github.com/tmr4/OtherT41Apps.md)
+See [Other apps](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/OtherT41Apps.md)
 
   * PC beacon monitor
   * PC control

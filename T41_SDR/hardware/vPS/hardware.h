@@ -46,24 +46,24 @@ extern int calNFAdjust;
 
 // *** Input Pins ***
 #ifdef PROJECTSYSTEM_VOLUME_ENCODER
-#define VOLUME_ENCODER_A        29
-#define VOLUME_ENCODER_B        30
-#define VOLUME_SWITCH           31
+#define VOLUME_ENCODER_A         3
+#define VOLUME_ENCODER_B         1
+#define VOLUME_SWITCH            0
 #endif
 #ifdef PROJECTSYSTEM_FILTER_ENCODER
-#define FILTER_ENCODER_A        12  // these are wired in reverse on PS
-#define FILTER_ENCODER_B        24
-#define FILTER_SWITCH           25
+#define FILTER_ENCODER_A        11
+#define FILTER_ENCODER_B         4
+#define FILTER_SWITCH           10
 #endif
 #ifdef PROJECTSYSTEM_FINETUNE_ENCODER
-#define FINETUNE_ENCODER_A      11  // these are wired in reverse on PS
-#define FINETUNE_ENCODER_B       4
-#define FINETUNE_SWITCH         10
+#define FINETUNE_ENCODER_A      12
+#define FINETUNE_ENCODER_B      24
+#define FINETUNE_SWITCH         25
 #endif
 #ifdef PROJECTSYSTEM_TUNE_ENCODER
-#define TUNE_ENCODER_A           1
-#define TUNE_ENCODER_B           3
-#define TUNE_SWITCH              0
+#define TUNE_ENCODER_A          30
+#define TUNE_ENCODER_B          29
+#define TUNE_SWITCH             31
 #endif
 
 #define PTT                     37    // TX input

@@ -167,6 +167,9 @@ void InitHardware() {
 #if defined(PROJECTSYSTEM_VOLUME_ENCODER) || defined(PROJECTSYSTEM_FILTER_ENCODER)
   EncodersInit();
 #endif
+#ifdef PROJECTSYSTEM_SWITCH_MATRIX
+  EnableButtonInterrupts();
+#endif
 #ifdef PROJECTSYSTEM_ENCODER_MCP
   InitFrontPanel();
 #endif

@@ -49,3 +49,13 @@ The standalone FT8 interface is limited due to the display size.  Currently thre
   * captures some unused space, expanding the area for FT8 messages and more info box items
 
 ![T41 new display layout](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_newDisplayLayout.jpg)
+
+### New front panel box for Project System
+
+  * organizes encoders and switch matrix making it easier to add these to development boards for testing
+
+![T41 new display layout](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_FrontPanelBox.jpg)
+
+  * The Project system now sports two audio adapters, a microphone, two sets of earbuds to listen to RX/TX signals, four encoders and a switch matrix
+  * An AD3 is connected to provide IQ input signals and examine TX output signals
+  * A Digital Discovery is connected to examine process loop timing

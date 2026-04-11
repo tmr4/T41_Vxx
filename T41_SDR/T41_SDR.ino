@@ -266,6 +266,9 @@ FLASHMEM void setup() {
       delay(500L);
     }
   }
+
+  //SaveAnalogSwitchValues();
+
   ClearScreen();
   sdCardPresent = 1;
   EEPROMStartup();
@@ -331,7 +334,6 @@ FLASHMEM void setup() {
   pinMode(PROFILER_FT8_TX_PIN, OUTPUT);
   digitalWrite(PROFILER_FT8_TX_PIN, LOW);
 #endif
-
 }
 
 #ifdef DEBUG

@@ -19,6 +19,7 @@
 #define PROJECTSYSTEM_FILTER_ENCODER
 #define PROJECTSYSTEM_FINETUNE_ENCODER
 #define PROJECTSYSTEM_TUNE_ENCODER
+#define PROJECTSYSTEM_SWITCH_MATRIX
 
 // other defines for testing v11/v12 type encoders w/ project system
 // *** currently Rotary and Rotary_V12 can't coexist so only ENCODER_1 or ENCODER_MCP be enabled ***

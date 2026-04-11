@@ -59,7 +59,8 @@ float currentMicAttack = 0.1;
 float currentMicRelease = 2.0;
 int currentMicGain = -10;
 
-int switchValues[NUMBER_OF_SWITCHES] = { 905, 853, 802, 752, 705, 653, 604, 556, 502, 451, 399, 344, 291, 237, 181, 124, 65, 4 };
+//int switchValues[NUMBER_OF_SWITCHES] = { 905, 853, 802, 752, 705, 653, 604, 556, 502, 451, 399, 344, 291, 237, 181, 124, 65, 4 };
+int switchValues[NUMBER_OF_SWITCHES] = { 922, 871, 818, 768, 716, 669, 612, 566, 515, 462, 406, 355, 300, 241, 187, 127, 67, 5 };
 
 float LPFcoeff = 0.0;
 float NR_PSI = 0.0;
