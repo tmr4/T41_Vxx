@@ -25,7 +25,7 @@
 
   * I got the T41 software running on the ProtoSupplies Mini Platform with a 3.5", 480x320 resolution ST7796 display.  The display is an upgrade to the ILI9341 and draws only about 0.2 amps, about 0.1 amps less than the RA8875 display on the Project System, though that system also sports more hardware.
 
-![displayST7796](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_MiniPlatform.jpg)
+![displayST7796](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41MiniPlatform.jpg)
 
 * This display is a better candidate for the T41 mini than the ILI9341.  It's not clear yet though if the reduced current draw compensates for the reduced resolution.
 * I've added a basic hardware version for the Mini Platform.  This version doesn't support a front panel, but that could be added.  There is a single audio circuit on the baseboard and the pins needed to add a second audio board like I did on the Project System aren't readily available.
@@ -34,6 +34,9 @@
 ### The Audio Platform
 
 * With the help of Ken from ProtoSupplies and Tim, another Teensy enthusiast, we got the Audio Platform working consistently.  Some boards require compiling to run at 600MHz rather than the normal 528MHz used by most T41 users.  This could reduce the longevity of the Teensy processor, but for use in the Audio Platform the risk shouldn't be significant and a board replacement is easy.
+
+![AudioPlatform](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41AudioPlatform.jpg)
+
 * The Audio Platform also only has a single audio circuit on the baseboard.  Adding a second doesn't look possible.
 * I plan to alter the T41 audio configuration routines to accommodate a single audio board.  This will be useful in receiver only T41 designs.
 * With that, I'll be able to add the Audio Platform as a version in T41_Vxx.
