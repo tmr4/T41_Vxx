@@ -22,4 +22,12 @@ Here are the Teensy 4.1 pinout digrams for the various T41 hardware versions sup
 
 ### Prototyping System
 
-![ps pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/PrototypingSystem_Teensy_Pin_Usage.png)
+![pt pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/PrototypingSystem_Teensy_Pin_Usage.png)
+
+### Mini Platform
+
+![mp pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/Mini_Platform_Pin_Usage.png)
+
+### Audio Platform
+
+![ap pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/AudioPlatformPinUsage.png)

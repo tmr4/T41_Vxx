@@ -50,6 +50,7 @@ int wfHeight = WATERFALL_H;
 // *** TODO: consider defining spectrumNoiseFloor here as well ***
 int audioSpectrumOffset;
 
+// Current draw for T41 mock up on Mini Platform, 0.2 amps (ST7796 480x320)
 ST7796_t3 tft = ST7796_t3(TFT_CS, TFT_DC);
 
 typedef struct {
