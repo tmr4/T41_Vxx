@@ -4,9 +4,11 @@
 
 ### Refined hardware and new display drivers
 
-* I've extracted most of the T41 hardware specific code into separate version specific hardware *libraries*.  The front panel and display are two areas I haven't previously attempted, for different reasons.  My original thought was to make the front panel code applicable to all versions with a group of defines activating the correct code depending on the selected front panel. This created confusing code and while seemingly practical, was never used in practice as my radios all have a version specific front panel.  It also made it more difficult to develop code for the various development boards I've been working with.
+* I've extracted much of the T41 hardware specific code into separate version specific hardware *libraries*.  The front panel and display are two areas I haven't previously attempted, for different reasons.  My original thought was to make the front panel code applicable to all versions with a group of defines activating the correct code depending on the selected front panel. This created confusing code and while seemingly practical, was never used in practice as my radios all have a version specific front panel.  It also made it more difficult to develop code for the various development boards I've been working with.
 * I've completed the basic RA8875 display module and tested against the v11 and Project System hardware.  The Project System was the easiest hardware version to develop for as I haven't defined calibration code for it.  I also createda no display version that removes the body of required display functions.
 * More work is needed to accomodate the calibration routines.  These are highly display specific as well as hardware specific to some extent.
+* I've tackled the audio hardware to accommodate different hardware, both the hardwired ADC/DAC in v11/v12 and other audio adapter setups.
+* I want to make most hardware drop in modules similar to the display modules, including keyboard abd mouse.  These will come over time.
 
 ### A new display driver for ILI9341
 
@@ -38,8 +40,9 @@
 ![AudioPlatform](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41AudioPlatform.jpg)
 
 * The Audio Platform also only has a single audio circuit on the baseboard.  Adding a second doesn't look possible.
-* I plan to alter the T41 audio configuration routines to accommodate a single audio board.  This will be useful in receiver only T41 designs.
-* With that, I'll be able to add the Audio Platform as a version in T41_Vxx.
+* I've altered the T41 audio configuration routines to accommodate a single audio board.  This will be useful in receiver only T41 designs.
+* The Audio Platform is now included as a hardware version in T41_Vxx.
+* Unfortunately, the Arduino IDE/Windows is a bit fussy when trying to compile for different hardware versions successively. The system seems to lose one or the other connection and the Teensy must be reset. I've resolved this by only connecting one hardware version at a time and deleting the previous sketch.  You'd think this would be automatic with changing cpu speeds, but perhaps the IDE isn't tracking that.  Needs more testing.
 
 ## Recent Work
 

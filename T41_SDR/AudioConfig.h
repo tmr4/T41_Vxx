@@ -5,18 +5,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern AudioControlSGTL5000 sgtl5000_1; // controller for the Teensy Audio Board microphone
-
-//extern AudioMixer4 modeSelectInR;
-//extern AudioMixer4 modeSelectInL;
-//extern AudioMixer4 modeSelectInExR;
-//extern AudioMixer4 modeSelectInExL;
-
-//extern AudioMixer4 modeSelectOutL;
-//extern AudioMixer4 modeSelectOutR;
-//extern AudioMixer4 modeSelectOutExL;
-//extern AudioMixer4 modeSelectOutExR;
-
 extern AudioRecordQueue Q_in_L;
 extern AudioRecordQueue Q_in_R;
 extern AudioRecordQueue Q_in_L_Ex;
@@ -31,7 +19,7 @@ extern AudioPlayQueue Q_out_R_Ex;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void AudioSetup();
+void AudioSetup(bool supportsTX = true);
 void ConfigAudioState(int audioState);
 
 void SetupMicCompressors(boolean use_HP_filter, float knee_dBFS, float comp_ratio, float attack_sec, float release_sec);

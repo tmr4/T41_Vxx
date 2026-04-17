@@ -282,9 +282,6 @@ FLASHMEM void setup() {
   sampleRate = 192000.0;
   intermediateFreq = 48000.0;
 
-  InitSI5351();
-  AudioSetup();
-
   InitializeDataArrays();
 
   InitHardware();
@@ -345,6 +342,7 @@ int freeram() {
 }
 #endif
 
+/*
 void ConfigRadioState() {
   ConfigRadioStateHardware();
 
@@ -353,14 +351,6 @@ void ConfigRadioState() {
       break;
 
     case SSB_TRANSMIT_STATE:
-#ifdef USE_MIC_COMPRESSION
-      if(compressorFlag == 1) {
-        SetupMicCompressors((float)currentMicThreshold, .1, 2.0);
-      } else if(compressorFlag == 0) {
-        SetupMicCompressors(0.0, 0.01, 0.01);
-      }
-#endif
-      sgtl5000_1.micGain(10);
       break;
 
     case CW_RECEIVE_STATE:
@@ -377,6 +367,7 @@ void ConfigRadioState() {
       break;
   }
 }
+*/
 
 FASTRUN void loop() {
   int pushButtonSwitchIndex = -1;
@@ -475,7 +466,7 @@ FASTRUN void loop() {
     }
 
     ConfigAudioState(radioState);
-    ConfigRadioState();
+    ConfigRadioStateHardware();
     SetFreq();  // Update frequencies if the radio state has changed
     ShowTransmitReceiveStatus();
   }

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "..\AudioConfig.h"
 #include "..\Encoders.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -35,7 +36,7 @@ FLASHMEM void CalibrateOptions() {}
 void RemoveDCBias() {}
 
 // T41_SDR.ino
-void InitHardware() {}
+void InitHardware() { AudioSetup(); }
 
 //void SoftResetHardware() {}
 void SoftResetHardware() {

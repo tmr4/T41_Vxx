@@ -1,25 +1,18 @@
-// v11 specific hardware source file
+// Audio Platform specific hardware source file
+
+#include <Bounce.h>
 
 #include "..\SDT.h"
 
-#include <SPI.h>
-#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
-
-#ifdef USE_BPF_BOARD
-#include <Wire.h>
-#include <Adafruit_MCP23X17.h>
-#endif
-
 #include "..\AudioConfig.h"
 #include "..\Button.h"
+#include "..\ButtonProc.h"
 #include "..\CW_Excite.h"
 #include "..\CWProcessing.h"
 #include "..\Display.h"
-#include "displayRA8875\Display.h"
 #include "..\EEPROM.h"
 #include "..\Encoders.h"
-#include "..\Exciter.h"
-#include "..\hardware.h"
+#include "..\ft8.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"
@@ -31,8 +24,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-uint16_t GPAB_state;
-static Adafruit_MCP23X17 mcpBPF;
+extern Bounce encoderSwitch;
+extern Bounce encoder2Switch;
 
 //------------
 // Process.h
@@ -47,14 +40,9 @@ arm_biquad_cascade_df2T_instance_f32 s1_Receive2 = { 1, HP_DC_Butter_state2, HP_
 
 extern long long oldCenterFreq;
 
-// *** allow for v11 specific RA8875 code ***
-extern RA8875 tft;
-
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
-
-void EncodersInit();
 
 void RFPowerFollowup();
 void RFGainFollowup();
@@ -64,32 +52,28 @@ void FT8DoXmitCalibrate();
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-#ifdef USE_BPF_BOARD
-FLASHMEM void SetupBPF() {
-  // Set Wire2 I2C bus to 100KHz and start
-  Wire2.setClock(100000UL);
-  Wire2.begin();
+//------------
+// Button.cpp
 
-  while (!mcpBPF.begin_I2C(BPF_BOARD_MCP23017_ADDR,&Wire2)){
-    Serial.println("BPF MCP23017 not found at 0x"+String(BPF_BOARD_MCP23017_ADDR,HEX));
-    delay(5000);
-  }
+/*****
+  Purpose: Check for UI button press. If pressed, return the ADC value
 
-  Serial.println("BPF connected");
+  Parameter list:
+    none
 
-  // Enable the address pins A0, A1, and A2.
-  mcpBPF.enableAddrPins();
-  // Set all chip pins to be outputs
-  for (int i=0;i<16;i++){
-    mcpBPF.pinMode(i, OUTPUT);
-  }
-
-  // Set to 40m band
-  GPAB_state = BPF_BAND_40M;
-  //GPAB_state = BPF_BAND_BYPASS;
-  mcpBPF.writeGPIOAB(GPAB_state);
+  Return value:
+    int                   -1 if not valid push button, ADC value if valid
+*****/
+int ReadSelectedPushButton() {
+  return -1;
 }
-#endif
+
+int ProcessButtonPress(int valPin) {
+  return 0;
+}
+
+//------------
+// Encoders.cpp
 
 //------------
 // MenuProc.cpp
@@ -116,11 +100,9 @@ FLASHMEM void RFOptions() {
   Purpose: Present the Calibrate options available and return the selection
 *****/
 FLASHMEM void CalibrateOptions() {
-  static long long freqCorrectionFactorOld = freqCorrectionFactor;
-  int val;
+  //static long long freqCorrectionFactorOld = freqCorrectionFactor;
+  //int val;
   //int32_t increment = 100L;
-
-  tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 30, CHAR_HEIGHT, RA8875_BLACK);
 
   if(calibrateItem < 0) {
     calibrateItem = secondaryMenuIndex;
@@ -128,85 +110,21 @@ FLASHMEM void CalibrateOptions() {
 
   switch(calibrateItem) {
     case 0:  // Frequency Cal - uses WWV
-      //freqCorrectionFactor = GetEncoderValueLive(-200000, 200000, freqCorrectionFactor, increment, (char *)"Freq Cal: ");
-      if(freqCorrectionFactor != freqCorrectionFactorOld) {
-        //si5351.init(SI5351_CRYSTAL_LOAD_10PF, Si_5351_crystal, freqCorrectionFactor);
-        //si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA);
-        //si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
-        SetSI5351FreqCorFactor(freqCorrectionFactor);
-        SetFreq();
-        delay(10L);
-        freqCorrectionFactorOld = freqCorrectionFactor;
-      }
-      val = ReadSelectedPushButton();
-      if(val != BOGUS_PIN_READ) {        // Any button press??
-        val = ProcessButtonPress(val);    // Use ladder value to get menu choice
-        if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
-          tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMWrite();
-          calibrateItem = 5;
-        }
-      }
       break;
 
     case 1:  // CW PA Cal
-      if(keyPressedOn == 1 && radioMode == CW_MODE) {
-        //================  CW Transmit Mode Straight Key ===========
-        if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && keyType == 0) {  //Straight Key
-          powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
-          CW_ExciterIQData();
-          ShowTransmitReceiveStatus();
-          SetFreq();                 //  AFP 10-02-22
-          digitalWrite(MUTE, HIGH);  //   Mute Audio  (HIGH=Mute)
-          //modeSelectInR.gain(0, 0);
-          //modeSelectInL.gain(0, 0);
-          //modeSelectInExR.gain(0, 0);
-          //modeSelectOutL.gain(0, 0);
-          //modeSelectOutR.gain(0, 0);
-          //modeSelectOutExL.gain(0, 0);
-          //modeSelectOutExR.gain(0, 0);
-        }
-      }
-      //CWPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, CWPowerCalibrationFactor[currentBand], 0.001, (char *)"CW PA Cal: ");
-      powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];  // AFP 10-21-22
-      val = ReadSelectedPushButton();
-      if(val != BOGUS_PIN_READ) {        // Any button press??
-        val = ProcessButtonPress(val);    // Use ladder value to get menu choice
-        if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
-          tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
-          EEPROMWrite();
-          calibrateItem = 5;
-        }
-      }
       break;
 
     case 2:  // SSB PA Cal
-      //SSBPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[currentBand], 0.001, (char *)"SSB PA Cal: ");
-      //powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // AFP 10-21-22
-      //val = ReadSelectedPushButton();
-      //if(val != BOGUS_PIN_READ) {        // Any button press??
-      //  val = ProcessButtonPress(val);    // Use ladder value to get menu choice
-      //  if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
-      //    tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-      //    EEPROMWrite();
-      //    calibrateItem = 5;
-      //  }
-      //}
-      calibrateItem = -1;
       break;
 
     case 3: // IQ Cal - Gain and Phase
-      CalibrateIQ();
-      calibrateItem = -1;
       break;
 
     case 4: // Two Tone
-      calibrateItem = -1;
       break;
 
     case 5: // cancel wrap up calibration
-      calibrateItem = -1;
       break;
 
     default:  // Cancelled choice
@@ -253,25 +171,13 @@ float CalcSignalStrength() {
 
 void InitHardware() {
   // set up hardware specific Teensy pins that aren't handled elsewhere
-  pinMode(FILTERPIN15M, OUTPUT);
-  pinMode(FILTERPIN20M, OUTPUT);
-  pinMode(FILTERPIN40M, OUTPUT);
-  pinMode(FILTERPIN80M, OUTPUT);
-  SetBandRelay(HIGH);
-
   pinMode(MUTE, OUTPUT);
   digitalWrite(MUTE, LOW);
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
-  InitSI5351();
-  AudioSetup();
-
-  InitFrontPanel();
-
-#ifdef USE_BPF_BOARD
-  SetupBPF();
-#endif
+  AudioSetup(false);
+  EncodersInit();
 }
 
 void SoftResetHardware() {

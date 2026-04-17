@@ -4,6 +4,7 @@
 
 #include "..\SDT.h"
 
+#include "..\AudioConfig.h"
 #include "..\Button.h"
 #include "..\ButtonProc.h"
 #include "..\CW_Excite.h"
@@ -174,6 +175,8 @@ void InitHardware() {
   digitalWrite(MUTE, LOW);
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
+
+  AudioSetup();
 
   EncodersInit();
 }

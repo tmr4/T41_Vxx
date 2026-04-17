@@ -10,18 +10,45 @@
 #include "AudioConfig.h"
 
 /**************************************************************
-T41 audio chain
-  Receive path:
-    PCM1808 ADC -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut -> PCM5102 DAC
+T41 audio chain:
+  Software supports both RX/TX and RX only versions. RX support is alway assumed. But because v11/v12 hardware
+  versions do not communicate with their ADC/DAC chips, it isn't possible to automatically determining if TX
+  is supported.  To accomodate this, AudioSetup accepts a boolean indicating if TX is supported.
 
-  Transmit path:
-    Audio adapter mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
-    Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> PCM5102 DAC
+  v11/v12 radios:
+    audioControl_1 control object associated w/ audio adapter (set to I2C address 0x0A address, low)
+    audioControl_2 control object associated w/ PCM1808 ADC.  Control object set to I2C address 0x2A address, high,
+    but there is no actual I2C communication with the PCM1808. Chip is hardwired for I2S operation (as is PCM5102).
+
+    Receive path:
+      PCM1808 ADC -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> PCM5102 DAC
+
+    Transmit path:
+      Audio adapter mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
+      Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> PCM5102 DAC
+
+  Hardware w/ two audio adapter boards:
+    audioControl_1 control object on low address associated w/ audio adapter #1 (set to I2C address 0x0A address, low)
+    audioControl_2 control object on high address associated w/ audio adapter #2 (set to I2C address 0x2A address, high)
+
+    Receive path:
+      Audio adapter #2 line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone
+
+    Transmit path:
+      Audio adapter #1 mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
+      Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone (*** check ***)
+
+  Hardware w/ one audio adapter board (*** Receive only ***):
+    audioControl_1 control object on low address
+
+    Receive path:
+      Audio adapter line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter line out (or headphone)
+
 ***************************************************************/
 
 /*
 See https://www.reddit.com/r/T41_EP/comments/1jnkhud/restructuring_the_t41_audio_chain/
-for a discussion on reconfiguring the T41 audio chain.abort.
+for a discussion on reconfiguring the T41 audio chain.
 
 The use of mixers to control audio chain flow is inefficient:
 
@@ -51,17 +78,21 @@ The use of mixers to control audio chain flow is inefficient:
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+static bool supportsTX = false;
+
 #ifdef AUDIO_STATS
 elapsedMicros usecAudio;
 #endif
 
-//AudioControlSGTL5000_Extended sgtl5000_1; // controller for the Teensy Audio Board microphone https://www.janbob.com/electron/OpenAudio_Design_Tool/index.html?info=AudioControlSGTL5000
+//AudioControlSGTL5000_Extended audioControl_1; // controller for the Teensy Audio Board microphone https://www.janbob.com/electron/OpenAudio_Design_Tool/index.html?info=AudioControlSGTL5000
 // https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
-AudioControlSGTL5000 sgtl5000_1; // controller for the Teensy Audio Board microphone
-AudioControlSGTL5000 sgtl5000_2; // control object PCM1808 ADC (doesn't actually control ADC) https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
+AudioControlSGTL5000 audioControl_1; // controller for the Teensy Audio Board microphone
+AudioControlSGTL5000 audioControl_2; // control object PCM1808 ADC (doesn't actually control ADC) https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
 
 // Audio inputs
-AudioInputI2SQuad i2s_quadIn; // Microphone on ch 1&2 and ADC on ch 3&4.  See https://www.pjrc.com/teensy/gui/?info=AudioOutputI2SQuad
+// I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
+// See https://www.pjrc.com/teensy/gui/?info=AudioInputI2SQuad
+AudioInputI2SQuad i2s_quadIn;
 
 // Microphone input (pin 8)
 // *** TODO: in orginal software compressor objects are always active
@@ -74,51 +105,41 @@ AudioConvert_F32toI16 float2Int1, float2Int2;  // https://www.janbob.com/electro
 #endif
 
 AudioRecordQueue Q_in_L_Ex;
-AudioRecordQueue Q_in_R_Ex;
-
-#ifdef USE_MIC_COMPRESSION
-AudioConnection patchCord1(i2s_quadIn, 0, int2Float1, 0);
-AudioConnection patchCord2(i2s_quadIn, 1, int2Float2, 0);
-AudioConnection_F32 patchCord3(int2Float1, 0, comp1, 0);
-AudioConnection_F32 patchCord4(int2Float2, 0, comp2, 0);
-AudioConnection_F32 patchCord5(comp1, 0, float2Int1, 0);
-AudioConnection_F32 patchCord6(comp2, 0, float2Int2, 0);
-AudioConnection patchCord7(float2Int1, 0, Q_in_L_Ex, 0);
-AudioConnection patchCord8(float2Int2, 0, Q_in_R_Ex, 0);
-#else
-AudioConnection pc_Q_in_L_Ex(i2s_quadIn, 0, Q_in_L_Ex, 0);
-AudioConnection pc_Q_in_R_Ex(i2s_quadIn, 1, Q_in_R_Ex, 0);
-#endif
+//AudioRecordQueue Q_in_R_Ex; // *** TODO: this will be used in calibration routines, but not needed for microphone ***
 
 // Receive I/Q input (pin 6)
 AudioRecordQueue Q_in_L; // https://www.pjrc.com/teensy/gui/?info=AudioRecordQueue
 AudioRecordQueue Q_in_R;
-AudioConnection pc_Q_in_L(i2s_quadIn, 2, Q_in_L, 0);
-AudioConnection pc_Q_in_R(i2s_quadIn, 3, Q_in_R, 0);
 
 // Audio outputs
-AudioOutputI2SQuad i2s_quadOut; // configures pins 7 (Audio adapter line out on ch 1&2) and 32 (DAC on ch 3&4) as output. https://www.pjrc.com/teensy/gui/?info=AudioOutputI2SQuad
+// I2S quad output: ch 1&2 on pin 7, ch 3&4 on pin 32
+// See https://www.pjrc.com/teensy/gui/?info=AudioOutputI2SQuad
+AudioOutputI2SQuad i2s_quadOut;
 
 // Exciter I/Q (pin 7)
 AudioPlayQueue Q_out_L_Ex; // https://www.pjrc.com/teensy/gui/?info=AudioPlayQueue
 AudioPlayQueue Q_out_R_Ex;
 
-AudioConnection pc_Q_out_L_Ex(Q_out_L_Ex, 0, i2s_quadOut, 0);
-AudioConnection pc_Q_out_R_Ex(Q_out_R_Ex, 0, i2s_quadOut, 1);
-
 // Receiver audio and Sidetone (pin 32)
 AudioPlayQueue Q_out_L;
 
-// *** TODO: consider adding a volume control ***
 /*
-AudioAmplifier outputAmp; // gain of 0 or 1 handled efficiently. https://www.pjrc.com/teensy/gui/?info=AudioAmplifier
-AudioConnection pc_Q_out_L(Q_out_L, 0, outputAmp, 0);
-AudioConnection pc_OutputAmp(outputAmp, 0, i2s_quadOut, 2);
+// audio connections are created empty
+// source/destination set in AudioSetup
+// see audio connection guidelines at: https://www.pjrc.com/teensy/td_libs_AudioConnection.html
+AudioConnection pc_Q_in_L_Ex();
+//AudioConnection pc_Q_in_R_Ex(); // no need for stereo microphone
+AudioConnection pc_Q_in_L();
+AudioConnection pc_Q_in_R();
+AudioConnection pc_Q_out_L_Ex();
+AudioConnection pc_Q_out_R_Ex();
+AudioConnection pc_Q_out_L();
 */
 
-AudioConnection pc_Q_out_L(Q_out_L, 0, i2s_quadOut, 2);
+AudioConnection pc_Q_in_L, pc_Q_in_R, pc_Q_in_L_Ex, pc_Q_out_L, pc_Q_out_L_Ex, pc_Q_out_R_Ex;
 
 // currently USB Audio only used with WSJT-X FT8
+// *** TODO: put these in the proper place for setup ***
 #ifdef T41_USB_AUDIO
 AudioOutputUSB usbOut;
 AudioAmplifier amp1; // WSJT-X needs some amplification to detect signal *** TODO: this needs refined with PC input volume adjustment ***
@@ -128,6 +149,25 @@ AudioConnection pc_usb1(amp1, 0, usbOut, 0);
 AudioInputUSB usbIn;
 AudioConnection pc_usb2(usbIn, Q_in_L_Ex);
 #endif
+
+#ifdef USE_MIC_COMPRESSION
+// *** TODO: this hasn't been implimented ***
+AudioConnection patchCord1(i2s_quadIn, 0, int2Float1, 0);
+AudioConnection patchCord2(i2s_quadIn, 1, int2Float2, 0);
+AudioConnection_F32 patchCord3(int2Float1, 0, comp1, 0);
+AudioConnection_F32 patchCord4(int2Float2, 0, comp2, 0);
+AudioConnection_F32 patchCord5(comp1, 0, float2Int1, 0);
+AudioConnection_F32 patchCord6(comp2, 0, float2Int2, 0);
+AudioConnection patchCord7(float2Int1, 0, Q_in_L_Ex, 0);
+AudioConnection patchCord8(float2Int2, 0, Q_in_R_Ex, 0);
+#endif
+
+// *** TODO: consider adding a volume control ***
+/*
+AudioAmplifier outputAmp; // gain of 0 or 1 handled efficiently. https://www.pjrc.com/teensy/gui/?info=AudioAmplifier
+AudioConnection pc_Q_out_L(Q_out_L, 0, outputAmp, 0);
+AudioConnection pc_OutputAmp(outputAmp, 0, i2s_quadOut, 2);
+*/
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -202,33 +242,106 @@ FLASHMEM int SetI2SFreq(int freq) {
   return freq;
 }
 
-void AudioSetup() {
+/*****
+  Set up audio objects
+
+  Supported hardware configurations:
+    - Single audio adapter for TX and hardwired receive chain ADC/DAC (v11/v12)
+    - Dual audio adapters for TX and RX
+    - Single audio adapter for RX
+
+  Audio adapter assumed at I2C address 0x0A if TX is supported.  Second audio
+  adapter, if present, is assumed at I2C address 0x2A.  If TX is not supported,
+  audio adapter assumed at I2C address 0x0A for RX.
+
+  w/ I2C address 0x0A: I2S input on Teensy pin 8, I2S output on Teensy pin 7
+  w/ I2C address 0x2A: I2S input on Teensy pin 6, I2S output on Teensy pin 32
+
+  *** TODO: examine TX and RX on a single audio adapter ***
+
+  *** see audio connection guidelines at: https://www.pjrc.com/teensy/td_libs_AudioConnection.html ***
+  Connections are most efficient when made from an earlier object (in the order they are created) to a later one.
+  Connections from a later object back to an earlier object can be made, but they add a 1-block delay and consume
+  more memory to implement that delay.
+
+*****/
+void AudioSetup(bool _supportsTX /* = true */) {
+  supportsTX = _supportsTX;
+
   // set I2S freq to sample rate
   SetI2SFreq(sampleRate);
 
-  // configure an SGTL5000 control object for input from the audio adapter microphone
-  sgtl5000_1.setAddress(LOW); // Teensy pin 8
-  sgtl5000_1.enable();
-
+  // allocate audio library memory
   // about 26k increase in DMAMEM for each 100 block increase in audio memory
   AudioMemory(500);
-  //AudioMemory(1000);  // about 130k increase in DMAMEM over 500
-  //AudioMemory_F32(10);
-  sgtl5000_1.inputSelect(AUDIO_INPUT_MIC);
-  //sgtl5000_1.micGain(20);
-  sgtl5000_1.micGain(10);
-  sgtl5000_1.lineInLevel(0);
-  //sgtl5000_1.lineOutLevel(20);
-  sgtl5000_1.lineOutLevel(13);
-  sgtl5000_1.adcHighPassFilterDisable();  //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+  //AudioMemory(1000); // about 130k increase in DMAMEM over 500
 
-  // configure a second SGTL5000 control object for input from the Main board ADC
-  // this is a PCM1808 not an SGTL5000 so any I2C related configuration functions aren't usable
-  sgtl5000_2.setAddress(HIGH); // Teensy pin 6
-  sgtl5000_2.enable();
-  sgtl5000_2.inputSelect(AUDIO_INPUT_LINEIN);
-  sgtl5000_2.volume(0.5);
+  // setup control object for the SGTL5000 at address 0x0A
+  // this will control the SGTL5000 for TX or RX depending on supportsTX
+  // the SGTL5000 is assumed, though a minimal hardware setup without it should still work
+  audioControl_1.setAddress(LOW);
+  audioControl_1.enable();
 
+  if(supportsTX) {
+    // setup input from audio adapter microphone for TX
+    audioControl_1.inputSelect(AUDIO_INPUT_MIC);
+    //audioControl_1.micGain(20);
+    audioControl_1.micGain(10);
+    audioControl_1.lineInLevel(0);
+    //audioControl_1.lineOutLevel(20);
+    audioControl_1.lineOutLevel(13);
+    audioControl_1.adcHighPassFilterDisable();  //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+
+    // configure the SGTL5000 control object at address 0x0A for input from the Main board ADC
+    // this is a PCM1808 not an SGTL5000 so any I2C related configuration functions aren't usable
+    audioControl_2.setAddress(HIGH); // Teensy pin 6
+    audioControl_2.enable();
+    audioControl_2.inputSelect(AUDIO_INPUT_LINEIN);
+
+    // set headphone audio out volume
+    // *** legacy code sets the volume with the control object, but this should fail
+    // on v11/12 as there isn't an actual chip at I2C address 0x2A ***
+    // *** TODO: check that this returns false on v11/v12 ***
+    // with a second audio adapter (as on my modified vPS this gives a reasonable sound level at volume 30)
+    audioControl_2.volume(0.5);
+  } else {
+    // setup input from audio adapter line in for RX
+    // *** TODO: examine USB audio ***
+    audioControl_1.inputSelect(AUDIO_INPUT_LINEIN);
+
+    // set headphone audio out volume
+    // this gives a reasonable sound level at volume 30
+    // *** Note that the AudioPlatform has a line out jack not a headphone jack ***
+    // *** the following doesn't change the line out level ***
+    audioControl_1.volume(0.5);
+  }
+
+  // establish audio connections
+  if(supportsTX) {
+    // input from microphone on I2S channel 1 (pin 8)
+    pc_Q_in_L_Ex.connect(i2s_quadIn, 0, Q_in_L_Ex, 0);
+    //pc_Q_in_R_Ex.connect(i2s_quadIn, 1, Q_in_R_Ex, 0);
+
+    // output to exciter I/Q on I2S channel 1, 2 (pin 7)
+    pc_Q_out_L_Ex.connect(Q_out_L_Ex, 0, i2s_quadOut, 0);
+    pc_Q_out_R_Ex.connect(Q_out_R_Ex, 0, i2s_quadOut, 1);
+
+    // RX input on I2S channels 3, 4 (pin 6)
+    pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
+    pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
+
+    // RX output and sidetone on I2S channel 3(left) (pin 32)
+    pc_Q_out_L.connect(Q_out_L, 0, i2s_quadOut, 2);
+  } else {
+    // RX input on I2S channels 1, 2 (pin 8)
+    pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
+    pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
+
+    // RX output on I2S channel 1(left) (headphone or pin 7 *** verify ***)
+    pc_Q_out_L.connect(Q_out_L, 0, i2s_quadOut, 0);
+  }
+
+  // set behavior of audio play queues
   // *** TODO: examine need for these with regards to audio memory ***
   // enabling these causes unstable CW behavior *** TODO: examine this and provide details ***
   // *** TODO: consider activating these only when needed, like FT8 for Q_out_L
@@ -244,18 +357,17 @@ void AudioSetup() {
   //Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
   //Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
 
+  // *** TODO: put these in the appropriate places above ***
 #ifdef USE_MIC_COMPRESSION
   comp1.setPreGain_dB(-10);
   comp2.setPreGain_dB(-10);
 #endif
 
 #ifdef T41_USB_AUDIO
+  // *** TODO: revisit gain needed for WSJT-X ***
   amp1.gain(100);
   pc_usb2.disconnect(); // USB
 #endif
-
-  Q_in_R_Ex.end();
-  pc_Q_in_R_Ex.disconnect();
 }
 
 inline void Q_in_Ex_Stop() {
@@ -311,16 +423,21 @@ inline void Q_out_Start() {
 void ConfigAudioState(int audioState) {
   // stop and clear receive and transmit queues
   Q_in_Stop();
-  Q_in_Ex_Stop();
   Q_out_Stop();
-  Q_out_Ex_Stop();
+
+  if(supportsTX) {
+    Q_in_Ex_Stop();
+    Q_out_Ex_Stop();
+  }
 
   // Some modes change AudioPlayQueue objects to NON_STALLING behavior as required for best performance.
   // Return AudioPlayQueue objects to default ORIGINAL behavior (enum behaviour_e {ORIGINAL, NON_STALLING}).
   // *** TODO: determine which modes require NON_STALLING behavior and code below ***
   Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL);
-  Q_out_L_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
-  Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
+  if(supportsTX) {
+    Q_out_L_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
+    Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
+  }
 
   switch(audioState) {
     case SSB_RECEIVE_STATE:
@@ -334,6 +451,15 @@ void ConfigAudioState(int audioState) {
 
     case SSB_TRANSMIT_STATE:
       //digitalWrite(MUTE, HIGH);  // mute audio
+
+#ifdef USE_MIC_COMPRESSION
+      if(compressorFlag == 1) {
+        SetupMicCompressors((float)currentMicThreshold, .1, 2.0);
+      } else if(compressorFlag == 0) {
+        SetupMicCompressors(0.0, 0.01, 0.01);
+      }
+#endif
+      audioControl_1.micGain(10);
 
       // start transmit audio chain
       Q_in_Ex_Start();
@@ -422,8 +548,8 @@ void ConfigAudioState(int audioState) {
       Q_in_Ex_Start();
       Q_out_Ex_Start();
 
-      pc_Q_in_R_Ex.connect();
-      Q_in_R_Ex.begin();
+      //pc_Q_in_R_Ex.connect();
+      //Q_in_R_Ex.begin();
       break;
 
     case CALIBRATE_DONE_STATE:

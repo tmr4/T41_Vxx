@@ -207,7 +207,7 @@ void SendFilter() {
 void SendSetFineTune() {
   char cmd[20];
 
-  sprintf(cmd,"FF%011d;", NCOFreq-TxRxFreq);
+  sprintf(cmd,"FF%011d;", currentFreqA);
   T41ControlSendCmd(cmd);
 }
 
@@ -397,7 +397,7 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set VFO A frequency
               f = atol(&cmd[2]);
-              SetFineTune(f);
+              SetFineTune(f-centerFreq);
               return;
             } else if(cmd[2] == ';') {
               // read VFO A frequency offset

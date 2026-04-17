@@ -2922,7 +2922,8 @@ FLASHMEM void TwoToneTest() {
   GenTwoToneBuffer(20, 2); // 1875 Hz
   ShowTwoToneDisplay();
 
-  sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
+  // *** TODO: move to AudioConfig
+  //sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
 
   while(1) {
     if(testFlag == 0) {

@@ -2,6 +2,7 @@
 
 #include "..\SDT.h"
 
+#include "..\AudioConfig.h"
 #include "..\Button.h"
 #include "..\CW_Excite.h"
 #include "..\Display.h"
@@ -341,6 +342,9 @@ void InitHardware() {
   digitalWrite(RF_CW_SIGNAL, OFF);
   pinMode(RF_CAL_RELAY, OUTPUT);
   digitalWrite(RF_CAL_RELAY, OFF);
+
+  InitSI5351();
+  AudioSetup();
 
   InitRFControl();
 
