@@ -5,10 +5,9 @@
 ### Refined hardware and new display drivers
 
 * I've extracted much of the T41 hardware specific code into separate version specific hardware *libraries*.  The front panel and display are two areas I haven't previously attempted, for different reasons.  My original thought was to make the front panel code applicable to all versions with a group of defines activating the correct code depending on the selected front panel. This created confusing code and while seemingly practical, was never used in practice as my radios all have a version specific front panel.  It also made it more difficult to develop code for the various development boards I've been working with.
-* I've completed the basic RA8875 display module and tested against the v11 and Project System hardware.  The Project System was the easiest hardware version to develop for as I haven't defined calibration code for it.  I also createda no display version that removes the body of required display functions.
+* I've completed the basic RA8875 display module and tested against the v11 and Project System hardware.  The Project System was the easiest hardware version to develop for as I haven't defined calibration code for it.  I also created a no display version that removes the body of required display functions.
 * More work is needed to accomodate the calibration routines.  These are highly display specific as well as hardware specific to some extent.
-* I've tackled the audio hardware to accommodate different hardware, both the hardwired ADC/DAC in v11/v12 and other audio adapter setups.
-* I want to make most hardware drop in modules similar to the display modules, including keyboard abd mouse.  These will come over time.
+* I've tackled the audio hardware to accommodate different hardware, both the hardwired ADC/DAC in v11/v12 and other audio adapter setups including an RX only version.
 
 ### A new display driver for ILI9341
 
@@ -35,16 +34,17 @@
 
 ### The Audio Platform
 
-* With the help of Ken from ProtoSupplies and Tim, another Teensy enthusiast, we got the Audio Platform working consistently.  Some boards require compiling to run at 600MHz rather than the normal 528MHz used by most T41 users.  This could reduce the longevity of the Teensy processor, but for use in the Audio Platform the risk shouldn't be significant and a board replacement is easy.
+* With the help of Ken from ProtoSupplies and Tim, another Teensy enthusiast, we got the Audio Platform working consistently with the T41 software.  Some boards require compiling to run at 600MHz rather than the normal 528MHz used by most T41 users.  This could reduce the longevity of the Teensy processor, but for use in the Audio Platform the risk shouldn't be significant and a board replacement is easy in that unit.
 
 ![AudioPlatform](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41AudioPlatform.jpg)
 
-* The Audio Platform also only has a single audio circuit on the baseboard.  Adding a second doesn't look possible.
+* The Audio Platform only has a single audio circuit on the baseboard.  Adding a second doesn't look possible.
 * I've altered the T41 audio configuration routines to accommodate a single audio board.  This will be useful in receiver only T41 designs.
 * The Audio Platform is now included as a hardware version in T41_Vxx.
-* Unfortunately, the Arduino IDE/Windows is a bit fussy when trying to compile for different hardware versions successively. The system seems to lose one or the other connection and the Teensy must be reset. I've resolved this by only connecting one hardware version at a time and deleting the previous sketch.  You'd think this would be automatic with changing cpu speeds, but perhaps the IDE isn't tracking that.  Needs more testing.
+* Unfortunately, the Arduino IDE and/or Windows is a bit fussy when trying to successively compile for different hardware versions. You can't simply replace the hardware files in the *src* folder, change the Teensy in the IDE and compile. The system seems to lose one or the other Teensy connection and you have to disconnect the Teensy.  Sometimes, the Teensy also must be reset before you can continue. I've resolved this by only connecting one hardware version at a time and deleting the previous IDE working folder for the sketch.  Needs more testing. I think part of the problem is that the IDE is reusing object files from the previous compile even though cpu speed is changed. You'd think that these problems wouldn't exist when changing cpu speeds, like when working with an AP/PS combo, as a full recompile should be needed. But perhaps the IDE isn't tracking that.
+* I'm seeing an occasional slowdown in the AP display. I've never noticed this with any of the other hardware versions.  This could be platform specific or for the particular Teensy board being used (the one in the system now requires 600MHz to operate properly).
 
-## Recent Work
+## Other Recent Work
 
 ### WSJT-X Support
 
