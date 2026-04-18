@@ -34,10 +34,12 @@
 
 ### The Audio Platform
 
-* With the help of Ken from ProtoSupplies and Tim, another Teensy enthusiast, we got the Audio Platform working consistently with the T41 software.  Some boards require compiling to run at 600MHz rather than the normal 528MHz used by most T41 users.  This could reduce the longevity of the Teensy processor, but for use in the Audio Platform the risk shouldn't be significant and a board replacement is easy in that unit.
+* I am developing the ProtoSupplies Audio Platform as a desktop companion for the T41.  The platform sports 4 encoders, a 7" RA8875 display with touchscreen and breaks out about a dozen unused Teensy pins.  It's just about perfect for this role.
 
 ![AudioPlatform](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41AudioPlatform.jpg)
 
+* My plan is for this to be a user interface for the T41 with I/O sent back and forth with the T41 over USB.  Currently this works with the 4 encoders (from left to right: volume, filter, fine tune, center tune).  I'm working on passing other I/O.
+* With the help of Ken from ProtoSupplies and Tim, another Teensy enthusiast, we got the Audio Platform working consistently with the T41 software.  Some boards require compiling to run at 600MHz rather than the normal 528MHz used by most T41 users.  This could reduce the longevity of the Teensy processor, but for use in the Audio Platform the risk shouldn't be significant and a board replacement is easy in that unit.
 * The Audio Platform only has a single audio circuit on the baseboard.  Adding a second doesn't look possible.
 * I've altered the T41 audio configuration routines to accommodate a single audio board.  This will be useful in receiver only T41 designs.
 * The Audio Platform is now included as a hardware version in T41_Vxx.
