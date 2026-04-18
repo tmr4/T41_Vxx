@@ -196,7 +196,7 @@ void InitHardware() {
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
-  AudioSetup();
+  AudioSetup(false);
 
 #if defined(PROJECTSYSTEM_ENCODER_1) || defined(PROJECTSYSTEM_ENCODER_2)
   EncodersInit();

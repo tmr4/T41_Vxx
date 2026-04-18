@@ -176,7 +176,7 @@ void InitHardware() {
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
-  AudioSetup();
+  AudioSetup(false);
 
   EncodersInit();
 }

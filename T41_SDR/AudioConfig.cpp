@@ -42,7 +42,7 @@ T41 audio chain:
     audioControl_1 control object on low address
 
     Receive path:
-      Audio adapter line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter line out (or headphone)
+      Audio adapter line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter headphone (or line out)
 
 ***************************************************************/
 
@@ -123,19 +123,9 @@ AudioPlayQueue Q_out_R_Ex;
 // Receiver audio and Sidetone (pin 32)
 AudioPlayQueue Q_out_L;
 
-/*
 // audio connections are created empty
 // source/destination set in AudioSetup
 // see audio connection guidelines at: https://www.pjrc.com/teensy/td_libs_AudioConnection.html
-AudioConnection pc_Q_in_L_Ex();
-//AudioConnection pc_Q_in_R_Ex(); // no need for stereo microphone
-AudioConnection pc_Q_in_L();
-AudioConnection pc_Q_in_R();
-AudioConnection pc_Q_out_L_Ex();
-AudioConnection pc_Q_out_R_Ex();
-AudioConnection pc_Q_out_L();
-*/
-
 AudioConnection pc_Q_in_L, pc_Q_in_R, pc_Q_in_L_Ex, pc_Q_out_L, pc_Q_out_L_Ex, pc_Q_out_R_Ex;
 
 // currently USB Audio only used with WSJT-X FT8
@@ -299,25 +289,14 @@ void AudioSetup(bool _supportsTX /* = true */) {
     audioControl_2.inputSelect(AUDIO_INPUT_LINEIN);
 
     // set headphone audio out volume
+    // *** the following doesn't change the line out level ***
     // *** legacy code sets the volume with the control object, but this should fail
     // on v11/12 as there isn't an actual chip at I2C address 0x2A ***
     // *** TODO: check that this returns false on v11/v12 ***
     // with a second audio adapter (as on my modified vPS this gives a reasonable sound level at volume 30)
     audioControl_2.volume(0.5);
-  } else {
-    // setup input from audio adapter line in for RX
-    // *** TODO: examine USB audio ***
-    audioControl_1.inputSelect(AUDIO_INPUT_LINEIN);
 
-    // set headphone audio out volume
-    // this gives a reasonable sound level at volume 30
-    // *** Note that the AudioPlatform has a line out jack not a headphone jack ***
-    // *** the following doesn't change the line out level ***
-    audioControl_1.volume(0.5);
-  }
-
-  // establish audio connections
-  if(supportsTX) {
+    // establish audio connections
     // input from microphone on I2S channel 1 (pin 8)
     pc_Q_in_L_Ex.connect(i2s_quadIn, 0, Q_in_L_Ex, 0);
     //pc_Q_in_R_Ex.connect(i2s_quadIn, 1, Q_in_R_Ex, 0);
@@ -330,14 +309,26 @@ void AudioSetup(bool _supportsTX /* = true */) {
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
 
-    // RX output and sidetone on I2S channel 3(left) (pin 32)
+    // RX output and sidetone on I2S channel 3(left)
+    // I2S on pin 32 (also headphone and line out w/ 2nd audio adapter)
     pc_Q_out_L.connect(Q_out_L, 0, i2s_quadOut, 2);
   } else {
+    // setup input from audio adapter line in for RX
+    // *** TODO: examine USB audio ***
+    audioControl_1.inputSelect(AUDIO_INPUT_LINEIN);
+
+    // set headphone audio out volume
+    // *** the following doesn't change the line out level ***
+    // this gives a reasonable sound level at volume 30
+    audioControl_1.volume(0.5);
+
+    // establish audio connections
     // RX input on I2S channels 1, 2 (pin 8)
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
 
-    // RX output on I2S channel 1(left) (headphone or pin 7 *** verify ***)
+    // RX output on I2S channel 1(left)
+    // I2S on pin 7 (also headphone and line out)
     pc_Q_out_L.connect(Q_out_L, 0, i2s_quadOut, 0);
   }
 

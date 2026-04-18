@@ -36,7 +36,7 @@ FLASHMEM void CalibrateOptions() {}
 void RemoveDCBias() {}
 
 // T41_SDR.ino
-void InitHardware() { AudioSetup(); }
+void InitHardware() { AudioSetup(false); }
 
 //void SoftResetHardware() {}
 void SoftResetHardware() {

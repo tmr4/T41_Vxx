@@ -36,6 +36,8 @@ See [pinout](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/Pinout.md).
 
 ## Features Available to All Hardware Versions
 
+These features are display dependent and are fully supported with the RA8875 display.  They haven't been implimented for the other displays.
+
 ### Mouse
 
 Adds mouse support to models with a USB host connection.   Currently the mouse can be used as follows:
