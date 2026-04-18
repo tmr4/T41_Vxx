@@ -25,6 +25,9 @@ extern USBSerial_BigBuffer usbHostSerial;
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+// flag changes made via CAT control that could cause a circular response (fine tune for example)
+bool catControlChange = false;
+
 // *** this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
 
@@ -207,7 +210,7 @@ void SendFilter() {
 void SendSetFineTune() {
   char cmd[20];
 
-  sprintf(cmd,"FF%011d;", currentFreqA);
+  sprintf(cmd,"FF%011d;", TxRxFreq);
   T41ControlSendCmd(cmd);
 }
 
@@ -397,7 +400,8 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set VFO A frequency
               f = atol(&cmd[2]);
-              SetFineTune(f-centerFreq);
+              SetFineTune(f-centerFreq-NCOFreq);
+              catControlChange = true;
               return;
             } else if(cmd[2] == ';') {
               // read VFO A frequency offset

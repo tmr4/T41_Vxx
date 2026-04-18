@@ -42,17 +42,18 @@
 
 // *** Input Pins ***
 // Audio Platform encoders 1-4, left to right: volume, filter, fine tune, center tune
+// *** I've set the pin assignments to give the proper movement ***
 #define VOLUME_ENCODER_A         3
 #define VOLUME_ENCODER_B         4
 #define VOLUME_SWITCH           24
-#define FILTER_ENCODER_A        25  // these are wired in reverse on PS
-#define FILTER_ENCODER_B        30
+#define FILTER_ENCODER_A        30
+#define FILTER_ENCODER_B        25
 #define FILTER_SWITCH           31
-#define FINETUNE_ENCODER_A      33  // these are wired in reverse on PS
-#define FINETUNE_ENCODER_B      34
+#define FINETUNE_ENCODER_A      34
+#define FINETUNE_ENCODER_B      33
 #define FINETUNE_SWITCH         35
-#define TUNE_ENCODER_A          36
-#define TUNE_ENCODER_B          37
+#define TUNE_ENCODER_A          37
+#define TUNE_ENCODER_B          36
 #define TUNE_SWITCH             38
 
 #define PTT                     28    // TX input

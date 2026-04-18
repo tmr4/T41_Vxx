@@ -175,6 +175,8 @@ void SetNCOFreq(int newNCOFreq) {
 
 /*****
   Purpose: Set fine tuning frequency
+
+  int tuneChange: the amount to increment/decrement the tuned frequency
 *****/
 void SetFineTune(int tuneChange) {
   SetNCOFreq(NCOFreq + tuneChange);

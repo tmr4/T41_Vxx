@@ -3,6 +3,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern bool catControlChange;
+
 extern bool controlDataFlag;
 
 extern bool signalStrengthReceived;
