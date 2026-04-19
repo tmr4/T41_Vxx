@@ -25,5 +25,4 @@ void SetFtActive(int flag);
 
 void ClearInfoBoxKeyer();
 
-void DisplayClock();
 void UpdateClock();

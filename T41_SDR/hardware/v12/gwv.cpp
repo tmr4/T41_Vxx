@@ -15,7 +15,7 @@
 // Configuration working global variables; to be deleted in favor of using the EEPROMData version, but that's a lot of work
 // commented lines have no corresponding global extern.  These need to be initialized, not sure exactly why but audioVolume is critical.  Set them equal to EEPROMData for now.
 
-char versionSettings[10] = VERSION;
+//char versionSettings[10] = VERSION;
 int AGCMode = 1;
 int audioVolume = 30;
 int rfGainAllBands = 0;

@@ -1,6 +1,6 @@
-// vPS specific hardware config file for running on Project System
+// vPT specific hardware config file for running on Project System
 
-#define VERSION "vPS_dev.1" // Change this for updates. If you make this longer than 9 characters, brace yourself for surprises
+#define VERSION "vPT_dev/v0.01" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 
 #define PROFILER_ACTIVE
 

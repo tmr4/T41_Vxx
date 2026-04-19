@@ -26,8 +26,10 @@
 #define EEPROM_VERSION  "V049"
 static char version_size[10];
 
+// *** TODO: review need for each item ***
 config_t EEPROMData {
-  VERSION,                      // char versionSettings[10]
+  //VERSION,                      // char versionSettings[10]
+  "",                      // char versionSettings[10]
   1,                            // int AGCMode
   30,                           // int audioVolume
   0,                            // int rfGainAllBands

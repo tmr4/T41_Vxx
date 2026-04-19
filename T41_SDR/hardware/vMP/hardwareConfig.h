@@ -1,6 +1,6 @@
 // vMP Mini Platform specific hardware config file for running on Audio Platform
 
-#define VERSION "vMP_dev.1"
+#define VERSION "vMP_dev/v0.01" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 
 #define PROFILER_ACTIVE
 

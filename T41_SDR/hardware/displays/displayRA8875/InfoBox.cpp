@@ -226,11 +226,20 @@ void UpdateInfoBoxItem(uint8_t item) {
   }
 }
 
+// *** assumes blank region ***
+void ShowVersion() {
+  tft.setFontScale((enum RA8875tsize) 0);
+  tft.setCursor(TIME_X + 18 * tft.getFontWidth(), TIME_Y);
+  tft.setTextColor(YELLOW);
+  tft.print(VERSION);
+}
+
 /*****
   Purpose: Updates the information box
 *****/
 void UpdateInfoBox() {
   ClearInfoBox();
+  ShowVersion();
 
   // you can update each item individually if they need done in a particular order ...
   //UpdateInfoBoxItem(IB_ITEM_VOL);
@@ -913,10 +922,6 @@ void DisplayClock() {
   //tft.setTextColor(RA8875_WHITE);
   tft.setTextColor(YELLOW);
   tft.print(timeBuffer);
-
-
-  tft.print("     ");
-  tft.print(VERSION);
 }
 
 void UpdateClock() {

@@ -6,7 +6,7 @@
 // Configuration working global variables; to be deleted in favor of using the EEPROMData version, but that's a lot of work
 // commented lines have no corresponding global extern
 
-extern char versionSettings[];
+//extern char versionSettings[];
 extern int AGCMode;
 extern int audioVolume;
 extern int rfGainAllBands;
