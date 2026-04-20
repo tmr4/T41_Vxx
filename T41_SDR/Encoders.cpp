@@ -21,7 +21,7 @@
 
 #define ENCODER_FACTOR            0.4  // gives 100 Hz change with standard Borne encoders
 
-bool volumeChangeFlag, resetTuningFlag, fineTuneFlag, getEncoderValueFlag;
+bool resetTuningFlag, fineTuneFlag, getEncoderValueFlag;
 long filter_pos_BW, last_filter_pos_BW;
 int posFilterEncoder, lastFilterEncoder;
 

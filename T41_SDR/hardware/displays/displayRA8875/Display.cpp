@@ -776,7 +776,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
   char txt[16];
   int pos_help, tickX;
   int tunedInx = 0;
-  float cFreq = (float)centerFreq;
+  float cFreq = (float)t41.CenterFreq;
   float tunedFreq, lFreq;
   float fInc =  sampleRate / (float)(1 << spectrumZoom) / 4.0;
   // positions for graticules: first for spectrumZoom < 3, then for spectrumZoom > 2
@@ -867,10 +867,9 @@ FLASHMEM void ShowOperatingStats() {
   tft.setCursor(OPERATION_STATS_CF, OPERATION_STATS_T);
   tft.setTextColor(RA8875_LIGHT_ORANGE);
   if(spectrumZoom == 0) {
-    //tft.print(centerFreq + 48000);
-    tft.print(centerFreq + (long)intermediateFreq);
+    tft.print(t41.CenterFreq + (long)intermediateFreq);
   } else {
-    tft.print(centerFreq);
+    tft.print(t41.CenterFreq);
   }
 
   // print band for the active VFO
@@ -989,6 +988,7 @@ void ShowSAM(float offset) {
 *****/
 FASTRUN void ShowFrequency() {
   char freqBuffer[15];
+  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
 
   // *** do this in the proper place if this is needed ***
   //if(activeVFO == VFO_A) {  // Needed for edge checking
@@ -1161,8 +1161,8 @@ FASTRUN void DrawBandwidthBar() {
     //zoomOffset = 44100.0 / 8.0 * pixel_per_hz / ((float)(1 << spectrumZoom)) * 2.0;
   }
 
-  //NCOFreqX = (int)(NCOFreq * pixel_per_hz * ((float)(1 << spectrumZoom)) / 2.0 - zoomOffset);
-  NCOFreqX = (int)(NCOFreq * pixel_per_hz - zoomOffset);
+  //NCOFreqX = (int)(t41.NCOFreq * pixel_per_hz * ((float)(1 << spectrumZoom)) / 2.0 - zoomOffset);
+  NCOFreqX = (int)(t41.NCOFreq * pixel_per_hz - zoomOffset);
   newFilterWidth = (int)(((float)(currentFilterHiCut - currentFilterLoCut)) * pixel_per_hz * 1.06);
 
   // make sure bandwidth is within zoom range

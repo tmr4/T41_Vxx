@@ -191,7 +191,7 @@ FLASHMEM void SetIIRCoeffs(float32_t *coefficient_set, float32_t f0, float32_t Q
 *****/
 void DoReceiveEQ() {
   for(int i = 0; i < 14; i++) {
-    recEQ_LevelScale[i] = (float)EEPROMData.equalizerRec[i] / 100.0;
+    recEQ_LevelScale[i] = (float)equalizerRec[i] / 100.0;
   }
   arm_biquad_cascade_df2T_f32(&S1_Rec, audioBufferL, EQ1_AudioBufferL, 256);
   arm_biquad_cascade_df2T_f32(&S2_Rec, audioBufferL, EQ2_AudioBufferL, 256);
@@ -244,7 +244,7 @@ void DoReceiveEQ() {
 *****/
 void DoExciterEQ() {
   for(int i = 0; i < 14; i++) {
-    equalizerXmt[i] = (float)EEPROMData.equalizerXmt[i] / 100.0;
+    equalizerXmt[i] = (float)equalizerXmt[i] / 100.0;
   }
   arm_biquad_cascade_df2T_f32(&S1_Xmt,  audioBufferL_EX, EQ1_AudioBufferL, 256);
   arm_biquad_cascade_df2T_f32(&S2_Xmt,  audioBufferL_EX, EQ2_AudioBufferL, 256);

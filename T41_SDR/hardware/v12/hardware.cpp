@@ -32,7 +32,7 @@ int attenuator = 0;
 //------------
 // T41_SDR.ino
 
-extern long long oldCenterFreq;
+extern int oldCenterFreq;
 
 //------------
 // Utility.cpp
@@ -121,7 +121,7 @@ FLASHMEM void RFInAttenFollowup() {
 
   // *** TODO: set to EEPROM ***
   //EEPROMData.rfGainAllBands = rfGainAllBands;
-  //EEPROMWrite();
+  EEPROMWrite();
 }
 
 FLASHMEM void SetRFInAttenValue() {
@@ -135,7 +135,7 @@ FLASHMEM void SSBRFOutAttenFollowup() {
 
   // *** TODO: set to EEPROM ***
   //EEPROMData.rfGainAllBands = rfGainAllBands;
-  //EEPROMWrite();
+  EEPROMWrite();
 }
 
 FLASHMEM void CWRFOutAttenFollowup() {
@@ -144,7 +144,7 @@ FLASHMEM void CWRFOutAttenFollowup() {
 
   // *** TODO: set to EEPROM ***
   //EEPROMData.rfGainAllBands = rfGainAllBands;
-  //EEPROMWrite();
+  EEPROMWrite();
 }
 
 /*****
@@ -222,7 +222,7 @@ FLASHMEM void CalibrateOptions() {
           powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
           CW_ExciterIQData();
           ShowTransmitReceiveStatus();
-          SetFreq();                 //  AFP 10-02-22
+          SetFreq(t41.CenterFreq);
           //digitalWrite(MUTE, HIGH);  //   Mute Audio  (HIGH=Mute)
           //modeSelectInR.gain(0, 0);
           //modeSelectInL.gain(0, 0);
@@ -240,7 +240,7 @@ FLASHMEM void CalibrateOptions() {
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
+          //EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
           EEPROMWrite();
           calibrateItem = 5;
         }
@@ -264,7 +264,6 @@ FLASHMEM void CalibrateOptions() {
     case 6: // wrap up calibration
       //EraseMenus();
       //RedrawDisplayScreen();
-      TxRxFreq = centerFreq + NCOFreq;
       //DrawBandwidthBar();
       //ShowFrequency();
       //ShowOperatingStats();
@@ -373,8 +372,8 @@ void ConfigRadioStateHardware() {
       //SetRF_OutAtten(powerOutSSB[currentBand]);
       SetRF_OutAtten(currentRF_OutAtten);
 
-      oldCenterFreq = centerFreq;
-      centerFreq = centerFreq - intermediateFreq + NCOFreq;
+      oldCenterFreq = t41.CenterFreq;
+      t41.CenterFreq = t41.CenterFreq - intermediateFreq + t41.NCOFreq;
       break;
 
     case CW_RECEIVE_STATE:

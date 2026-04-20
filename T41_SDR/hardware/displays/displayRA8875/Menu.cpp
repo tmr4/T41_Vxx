@@ -122,10 +122,10 @@ FLASHMEM void ProcessEqualizerChoices(int EQType, char *title) {
 
   for(iFreq = 0; iFreq < EQUALIZER_CELL_COUNT; iFreq++) {
     if(EQType == 0) {
-      yLevel[iFreq] = EEPROMData.equalizerRec[iFreq];
+      yLevel[iFreq] = equalizerRec[iFreq];
     } else {
       if(EQType == 1) {
-        yLevel[iFreq] = EEPROMData.equalizerXmt[iFreq];
+        yLevel[iFreq] = equalizerXmt[iFreq];
       }
     }
   }
@@ -221,11 +221,11 @@ FLASHMEM void ProcessEqualizerChoices(int EQType, char *title) {
 
         if(EQType == 0) {
           equalizerRec[columnIndex] = newValue;
-          EEPROMData.equalizerRec[columnIndex] = equalizerRec[columnIndex];
+          equalizerRec[columnIndex] = equalizerRec[columnIndex];
         } else {
           if(EQType == 1) {
             equalizerXmt[columnIndex] = newValue;
-            EEPROMData.equalizerXmt[columnIndex] = equalizerXmt[columnIndex];
+            equalizerXmt[columnIndex] = equalizerXmt[columnIndex];
           }
         }
 

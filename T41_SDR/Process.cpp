@@ -836,10 +836,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       arm_scale_f32(audioBufferL, 0.0, audioBufferL, blocks * 128);
     } else if(mute == 0) {
       // this includes a factor of 8x to compensate for the interpolation above
-      arm_scale_f32(audioBufferL, 8.0 * VolumeToAmplification(audioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
+      arm_scale_f32(audioBufferL, 8.0 * VolumeToAmplification(t41.AudioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
     }
     */
-    arm_scale_f32(audioBufferL, intScaler * VolumeToAmplification(audioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
+    arm_scale_f32(audioBufferL, intScaler * VolumeToAmplification(t41.AudioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
 
     /**********************************************************************************
       CONVERT TO INTEGER AND PLAY AUDIO
@@ -910,17 +910,13 @@ FASTRUN void ProcessControls() {
   PollFrontPanel(); // *** inline function to poll front panel if needed, empty function if not ***
 
   // update volume if changed
-  if(volumeChangeFlag) {
-    if(updateDisplay || (displayState == DISPLAY_FULL_MENU)) {
-      UpdateInfoBoxItem(IB_ITEM_VOL);
-    }
-
-    #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
-    SendVolume();
-    #endif
-
-    volumeChangeFlag = false;
+  if(updateDisplay || (displayState == DISPLAY_FULL_MENU)) {
+    t41.AudioVolume.Poll();
   }
+
+  #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
+  SendVolume();
+  #endif
 
   // update filters if changed
   if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
@@ -969,7 +965,7 @@ FASTRUN void ProcessControls() {
   // shouldn't occur on the same loop so little efficiency to be gained by changing
   #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
   if(ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER)) {
-    SendSetFreq(TxRxFreq);
+    SendSetFreq(t41.CenterFreq + t41.NCOFreq);
   };
   #else
   ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
@@ -1138,6 +1134,7 @@ void FreqShift2() {
   double Osc_Q = 0.0;
   double Osc_I = 0.0;
 
+  // *** TODO: why is this here? ***
   //if(fineTuneEncoderMove != 0L) {
   //  if(NCOFreq > 40000L) {
   //    NCOFreq = 40000L;
@@ -1145,8 +1142,6 @@ void FreqShift2() {
   //
   //  currentFreqA = centerFreq + NCOFreq;
   //}
-
-  TxRxFreq = centerFreq + NCOFreq;
 
   if(radioMode == SSB_MODE || radioMode == DATA_MODE) {
     sideToneShift = 0;
@@ -1162,7 +1157,7 @@ void FreqShift2() {
     }
   }
 
-  NCO_INC = 2.0 * PI * (NCOFreq + sideToneShift) / sampleRate;
+  NCO_INC = 2.0 * PI * (t41.NCOFreq + sideToneShift) / sampleRate;
 
   OSC_COS = cos(NCO_INC);
   OSC_SIN = sin(NCO_INC);

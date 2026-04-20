@@ -114,7 +114,7 @@ float goertzel_mag(int numSamples, int TARGET_FREQUENCY, int SAMPLING_RATE, floa
 *****/
 FLASHMEM void SetWPMFollowup() {
   SetTransmitDitLength();
-  EEPROMData.currentWPM = currentWPM;
+  //.currentWPM = currentWPM;
   EEPROMWrite();
   UpdateInfoBoxItem(IB_ITEM_KEY);
 }
@@ -208,8 +208,8 @@ FLASHMEM void DoPaddleFlipFollowup() {
     paddleFlip = 0;
   }
 
-  EEPROMData.paddleDit = paddleDit;
-  EEPROMData.paddleDah = paddleDah;
+  //EEPROMData.paddleDit = paddleDit;
+  //EEPROMData.paddleDah = paddleDah;
   UpdateInfoBoxItem(IB_ITEM_KEY);
 }
 
@@ -254,7 +254,7 @@ void SetSideToneVolumeValue() {
 }
 
 FLASHMEM void SetSideToneVolumeFollowup() {
-  EEPROMData.sidetoneVolume = sidetoneVolume;
+  //EEPROMData.sidetoneVolume = sidetoneVolume;
   EEPROMWrite();
   //lastState = -1;  // This is required due to the function deactivating the receiver.  This forces a pass through the receiver set-up code.  KF5N October 7, 2023
 }
@@ -263,7 +263,7 @@ FLASHMEM void SetSideToneVolumeFollowup() {
   Purpose: Determines how long the transmit relay remains on after last CW atom is sent.
 *****/
 FLASHMEM void SetTransmitDelayFollowup() {
-  EEPROMData.cwTransmitDelay = cwTransmitDelay;
+  //EEPROMData.cwTransmitDelay = cwTransmitDelay;
   EEPROMWrite();
 }
 

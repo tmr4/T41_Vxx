@@ -1,4 +1,5 @@
 
+#include <cstdint>
 /*
 
 A T41 display driver must define the display specific functions listed in the Forwards
@@ -92,7 +93,7 @@ void MyDrawFloatP(float val, int decimals, int x, int y, char *buff, int width);
 
 // info box
 void UpdateInfoBox();
-void UpdateInfoBoxItem(unsigned char);
+void UpdateInfoBoxItem(int);
 void HighlightIBItem(unsigned char, int);
 void UpdateIBWPM();
 void ClearInfoBoxKeyer();

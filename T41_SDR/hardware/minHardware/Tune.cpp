@@ -16,6 +16,6 @@
 
 void SetSI5351FreqCorFactor(int factor) {}
 
-void SetFreq(bool reset) {
+void SetFreq(int freq, bool reset) {
   if(reset) return;
 }

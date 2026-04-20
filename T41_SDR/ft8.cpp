@@ -1235,9 +1235,9 @@ FLASHMEM void FT8DecoderLoop() {
   // currently, the only way to exit testing is to restart the T41
   // draw spectrum frame in response to volume change
   if(testingState != 0) {
-    if((audioVolume != vol) || (testingState == 1)) {
-      //int tmp = audioVolume;
-      frame += audioVolume - vol;
+    if((t41.AudioVolume != vol) || (testingState == 1)) {
+      //int tmp = t41.AudioVolume;
+      frame += t41.AudioVolume - vol;
 
       if(frame >= 79) frame = 0;
       if(frame < 0) {
@@ -1255,8 +1255,8 @@ FLASHMEM void FT8DecoderLoop() {
       if(testingState == 1) testingState = 2;
 
       // reset volume flag
-      audioVolume = vol;
-      UpdateInfoBoxItem(IB_ITEM_VOL);
+      t41.AudioVolume = vol;
+      //UpdateInfoBoxItem(IB_ITEM_VOL);
     }
   }
 
@@ -1361,7 +1361,7 @@ FLASHMEM void FT8DecoderLoop() {
           #ifdef SPECTRUM_TESTING
           if(testingState == 0) {
             testingState = 1;
-            vol = audioVolume;
+            vol = t41.AudioVolume;
           }
           #endif
           ft8DecoderState = STATE_DECODING;

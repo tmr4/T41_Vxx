@@ -45,7 +45,7 @@ arm_biquad_cascade_df2T_instance_f32 s1_Receive2 = { 1, HP_DC_Butter_state2, HP_
 //------------
 // T41_SDR.ino
 
-extern long long oldCenterFreq;
+extern int oldCenterFreq;
 
 // *** allow for v11 specific RA8875 code ***
 extern RA8875 tft;
@@ -134,7 +134,7 @@ FLASHMEM void CalibrateOptions() {
         //si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA);
         //si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
         SetSI5351FreqCorFactor(freqCorrectionFactor);
-        SetFreq();
+        SetFreq(t41.CenterFreq);
         delay(10L);
         freqCorrectionFactorOld = freqCorrectionFactor;
       }
@@ -156,7 +156,7 @@ FLASHMEM void CalibrateOptions() {
           powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
           CW_ExciterIQData();
           ShowTransmitReceiveStatus();
-          SetFreq();                 //  AFP 10-02-22
+          SetFreq(t41.CenterFreq);                 //  AFP 10-02-22
           digitalWrite(MUTE, HIGH);  //   Mute Audio  (HIGH=Mute)
           //modeSelectInR.gain(0, 0);
           //modeSelectInL.gain(0, 0);
@@ -174,7 +174,7 @@ FLASHMEM void CalibrateOptions() {
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
+          //EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
           EEPROMWrite();
           calibrateItem = 5;
         }
@@ -293,7 +293,7 @@ void ConfigRadioStateHardware() {
 
     case SSB_TRANSMIT_STATE:
     case DATA_TRANSMIT_STATE:
-      oldCenterFreq = centerFreq;
+      oldCenterFreq = t41.CenterFreq;
       break;
 
     case CW_RECEIVE_STATE:

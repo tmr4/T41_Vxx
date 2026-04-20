@@ -101,8 +101,7 @@ FLASHMEM void FT8CalibratePreamble(int setZoom) {
   //ConfigAudioState(radioState);
   ConfigAudioState(CALIBRATE_TRANSMIT_STATE);
 
-  centerFreq = TxRxFreq;
-  NCOFreq = 0L;
+  t41.NCOFreq = 0L;
   //digitalWrite(MUTE, HIGH);  //  Mute Audio  (HIGH=Mute)
   digitalWrite(RXTX, HIGH);  // Turn on transmitter.
   ShowTransmitReceiveStatus();
@@ -137,8 +136,7 @@ FLASHMEM void FT8CalibratePrologue() {
   // Clear queues to reduce transient.
   Q_in_L.clear();
   Q_in_R.clear();
-  centerFreq = TxRxFreq;
-  NCOFreq = 0L;
+  t41.NCOFreq = 0L;
   currentScale = userScale;                     //  Restore vertical scale to user preference.  KF5N
   ShowSpectrumdBScale();
   radioMode = userXmtMode;   // Restore the user's floor setting.  KF5N July 27, 2023
@@ -222,8 +220,8 @@ FLASHMEM void FT8DoReceiveCalibrate() {
         break;
       case MENU_OPTION_SELECT:
         tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        EEPROMData.IQAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
-        EEPROMData.IQPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
+        //EEPROMData.IQAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
+        //EEPROMData.IQPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
         IQChoice = 6;
         break;
       default:
@@ -285,8 +283,8 @@ FLASHMEM void FT8DoXmitCalibrate() {
 
       case (MENU_OPTION_SELECT):  // Save values and exit calibration.
         tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        EEPROMData.IQXAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
-        EEPROMData.IQXPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
+        //EEPROMData.IQXAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
+        //EEPROMData.IQXPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
         IQChoice = 6;
         break;
 

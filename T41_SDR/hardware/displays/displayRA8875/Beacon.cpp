@@ -156,8 +156,7 @@ void BeaconExit() {
       ChangeBand(beaconBands[i] - currentBand);
 
       // save band frequency and set it to the beacon's frequency for this band
-      TxRxFreq = priorBeaconBandFreq[i];
-      SetTxRxFreq(TxRxFreq);
+      SetTxRxFreq(priorBeaconBandFreq[i]);
 
       // save and set filters for the beacon bands as well
       bands[currentBand].fHiCut = priorFilterHi[i];
@@ -168,7 +167,6 @@ void BeaconExit() {
   ChangeDemodMode(priorDemod);
   ChangeMode(priorMode);
   ChangeBand(priorBand - currentBand);
-  TxRxFreq = priorFreq;
 
   RedrawDisplayScreen();
   beaconInit = false;
@@ -394,14 +392,14 @@ void DisplayBeaconsSNR(int beacon) {
     tft.print(beacons[beacon].region);
     tft.setCursor(10, 450);
     tft.print("Volume: ");
-    tft.print(audioVolume);
+    tft.print(t41.AudioVolume);
 
     if(beaconDataFlag) {
       beaconData[0] = 'B';
       beaconData[1] = 'M';
       beaconData[2] = (uint8_t)beaconBand;
       beaconData[3] = (uint8_t)beacon;
-      beaconData[4] = (uint8_t)audioVolume;
+      beaconData[4] = (uint8_t)t41.AudioVolume;
       beaconData[95] = ';';
 
       T41BeaconSendData(beaconData, 96);
@@ -435,6 +433,7 @@ void BeaconLoop() {
   static int currentBeacon = 0;
   int beacon;
   float32_t dbm;
+  static int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
 
   if(beaconSyncFlag) {
     if(count == 0 && changeBandFlag) {

@@ -140,9 +140,8 @@ FLASHMEM int getPowerLevelAdjustmentDB() {
  *****/
 FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   // Save the current operating state to restore later
-  userTxRxFreq = TxRxFreq;
-  userCenterFreq = centerFreq;
-  userNCOFreq = NCOFreq;
+  userCenterFreq = t41.CenterFreq;
+  userNCOFreq = t41.NCOFreq;
   userRadioState = radioState;
   userMode = radioMode;
   userDemodMode = currentDemodMode;
@@ -177,7 +176,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
 
       // set clock 2 to calibration frequency
       si5351.output_enable(SI5351_CLK2, 1);
-      si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+      si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
 
       // set RF board configuration:
       //   - transmit mode relay to CW
@@ -240,17 +239,16 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   if(calType == 2 || calType == 3) {
     // remove the IF offset
     // *** why? ***
-    TxRxFreq = centerFreq = centerFreq - intermediateFreq + NCOFreq;
-    //TxRxFreq = centerFreq = centerFreq + NCOFreq;
+    t41.CenterFreq = t41.CenterFreq - intermediateFreq + t41.NCOFreq;
 
   } else {
-    TxRxFreq = centerFreq = centerFreq + NCOFreq;
+    t41.CenterFreq = t41.CenterFreq + t41.NCOFreq;
   }
-  NCOFreq = 0;
+  t41.NCOFreq = 0;
 
   radioState = rState;
   ConfigAudioState(aState);
-  SetFreq();
+  SetFreq(t41.CenterFreq);
 }
 
 /*****
@@ -261,9 +259,8 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
  *****/
 FLASHMEM void CalibratePost(int calType) {
   // restore radio operating state
-  TxRxFreq = userTxRxFreq;
-  NCOFreq = userNCOFreq;
-  centerFreq = userCenterFreq;
+  t41.NCOFreq = userNCOFreq;
+  t41.CenterFreq = userCenterFreq;
   radioState = userRadioState;
   currentDemodMode = userDemodMode;
   spectrumZoom = userZoomIndex;
@@ -471,7 +468,7 @@ FLASHMEM void SetClocks(int adder) {
   si5351.set_ms_source(SI5351_CLK0, SI5351_PLLA);
   si5351.set_ms_source(SI5351_CLK1, SI5351_PLLA);
   //si5351.output_enable(SI5351_CLK2, 0);
-  SetFreq(true);
+  SetFreq(t41.CenterFreq, true);
 
   // allow clocks to stabilize
   delay(10);
@@ -1022,7 +1019,7 @@ FLASHMEM void CalibrateFrequency() {
       switch(val) {
         case MENU_OPTION_SELECT: // 0
           // Save frequency calibration factor and exit
-          //EEPROMWrite();
+          EEPROMWrite();
           freqCalFlag = 0;
           break;
 
@@ -1264,14 +1261,14 @@ FLASHMEM float ShowSpectrum2() {
              = 512 / 2 / 128 * 8
              = 16
   Therefore the bin width of each FFT bin is SAMPLE_RATE / FFT_LEN = 192000 / 512 = 375 Hz.
-  The frequency of the middle bin is centerFreq + intermediateFreq and our spectrum spans
-  (centerFreq + intermediateFreq - SAMPLE_RATE/2) to (centerFreq + intermediateFreq + SAMPLE_RATE/2).
+  The frequency of the middle bin is t41.CenterFreq + intermediateFreq and our spectrum spans
+  (t41.CenterFreq + intermediateFreq - SAMPLE_RATE/2) to (t41.CenterFreq + intermediateFreq + SAMPLE_RATE/2).
 
   So the equation for bin number n given frequency Clk2SetFreq is:
     n = (Clk2SetFreq - Clk1SetFreq)/375 + 256
-      = (Clk2SetFreq - (centerFreq + intermediateFreq))/375 + 256
+      = (Clk2SetFreq - (t41.CenterFreq + intermediateFreq))/375 + 256
 
-  In receive cal mode, we set Clk2SetFreq to centerFreq + 2*intermediateFreq
+  In receive cal mode, we set Clk2SetFreq to t41.CenterFreq + 2*intermediateFreq
   So we expect the desired tone to appear in bin
     n_tone = intermediateFreq/375 + 256
   while the undesired image product will be at
@@ -1564,23 +1561,23 @@ FLASHMEM void CalibrateReceiveIQ() {
     switch(val) {
       case MENU_OPTION_SELECT: // 0
         // save and exit
-        //EEPROMWrite();
+        EEPROMWrite();
         recCalFlag = 0;
         break;
 
       case BAND_UP: // 2
         ChangeBand(1);
-        centerFreq = bands[currentBand].calFreq;
-        SetTxRxFreq(centerFreq);
-        si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+        t41.CenterFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(t41.CenterFreq);
+        si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
         UpdateIQDisplay();
         break;
 
       case BAND_DN: // 3
         ChangeBand(-1);
-        centerFreq = bands[currentBand].calFreq;
-        SetTxRxFreq(centerFreq);
-        si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+        t41.CenterFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(t41.CenterFreq);
+        si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
         UpdateIQDisplay();
         break;
 
@@ -1599,9 +1596,9 @@ FLASHMEM void CalibrateReceiveIQ() {
         ChangeBand(BAND_80M - currentBand);
         for(int i = BAND_80M; i < NUMBER_OF_BANDS; i++) {
           if(bands[currentBand].calFreq > 0) {
-            centerFreq = bands[currentBand].calFreq;
-            SetTxRxFreq(centerFreq);
-            si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+            t41.CenterFreq = bands[currentBand].calFreq;
+            SetTxRxFreq(t41.CenterFreq);
+            si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
             UpdateIQDisplay();
             delay(1000); // allow frequency to stabilize
             AutoReceiveCal();
@@ -1610,9 +1607,9 @@ FLASHMEM void CalibrateReceiveIQ() {
         }
         // return to original band
         ChangeBand(bandCalBand - currentBand);
-        centerFreq = bands[currentBand].calFreq;
-        SetTxRxFreq(centerFreq);
-        si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+        t41.CenterFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(t41.CenterFreq);
+        si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
         UpdateIQDisplay();
         break;
 
@@ -2312,7 +2309,7 @@ void SetupSignalStrengthSource(int source) {
       // set up this and external unit for calibration
       minSignalStrength = 0;
       signalStrengthSource = 1;
-      SendSetFreq(centerFreq + intermediateFreq);
+      SendSetFreq(t41.CenterFreq + intermediateFreq);
       if(currentDemodMode == DEMOD_LSB) {
         SendSetMode(DEMOD_USB);
       } else {
@@ -2430,23 +2427,23 @@ FLASHMEM void CalibrateTransmitIQ() {
     switch(val) {
       case MENU_OPTION_SELECT: // 0
         // save and exit
-        //EEPROMWrite();
+        EEPROMWrite();
         tranCalFlag = 0;
         break;
 
       case BAND_UP: // 2
         ChangeBand(1);
-        centerFreq = bands[currentBand].calFreq;
-        SetTxRxFreq(centerFreq);
-        si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+        t41.CenterFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(t41.CenterFreq);
+        si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
         UpdateIQDisplay();
         break;
 
       case BAND_DN: // 3
         ChangeBand(-1);
-        centerFreq = bands[currentBand].calFreq;
-        SetTxRxFreq(centerFreq);
-        si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+        t41.CenterFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(t41.CenterFreq);
+        si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
         UpdateIQDisplay();
         break;
 
@@ -2553,9 +2550,9 @@ FLASHMEM void CalibrateTransmitIQ() {
           DrawIQGainPlot();
 
           if(bands[currentBand].calFreq > 0) {
-            centerFreq = bands[currentBand].calFreq;
-            SetTxRxFreq(centerFreq);
-            si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+            t41.CenterFreq = bands[currentBand].calFreq;
+            SetTxRxFreq(t41.CenterFreq);
+            si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
             UpdateIQDisplay();
 
             // set up signal strength source
@@ -2581,9 +2578,9 @@ FLASHMEM void CalibrateTransmitIQ() {
 
         // return to original band
         ChangeBand(bandCalBand - currentBand);
-        centerFreq = bands[currentBand].calFreq;
-        SetTxRxFreq(centerFreq);
-        si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+        t41.CenterFreq = bands[currentBand].calFreq;
+        SetTxRxFreq(t41.CenterFreq);
+        si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
         UpdateIQDisplay();
         break;
 

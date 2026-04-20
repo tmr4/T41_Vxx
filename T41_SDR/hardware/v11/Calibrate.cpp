@@ -146,16 +146,15 @@ void CalibrateIQAllBands();
  *****/
 FLASHMEM void SaveRadioState() {
   // Save the current operating state to restore later
-  userTxRxFreq = TxRxFreq;
-  userNCOFreq = NCOFreq;
-  userCenterFreq = centerFreq;
+  userNCOFreq = t41.NCOFreq;
+  userCenterFreq = t41.CenterFreq;
   userRadioState = radioState;
   userMode = radioMode;
   userDemodMode = currentDemodMode;
   userZoomIndex = spectrumZoom;
   userBand = currentBand;
   userScale = currentScale;
-  userVol = audioVolume;
+  userVol = t41.AudioVolume;
   userTransmitPowerLevel = transmitPowerLevel;
 }
 
@@ -168,10 +167,10 @@ FLASHMEM void CalibrationInit() {
 
   displayState = DISPLAY_CALIBRATION;
 
-  TxRxFreq = centerFreq = centerFreq + NCOFreq;
-  NCOFreq = 0;
+  t41.CenterFreq = t41.CenterFreq + t41.NCOFreq;
+  t41.NCOFreq = 0;
 
-  audioVolume = 2;
+  t41.AudioVolume = 2;
   //transmitPowerLevel = 5;
   transmitPowerLevel = 1;
   //powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
@@ -193,9 +192,8 @@ FLASHMEM void CalibrationInit() {
  *****/
 FLASHMEM void RestoreRadioState() {
   // restore radio operating state
-  TxRxFreq = userTxRxFreq;
-  NCOFreq = userNCOFreq;
-  centerFreq = userCenterFreq;
+  t41.NCOFreq = userNCOFreq;
+  t41.CenterFreq = userCenterFreq;
   radioState = userRadioState;
   radioMode = userMode;
   currentDemodMode = userDemodMode;
@@ -211,7 +209,7 @@ FLASHMEM void RestoreRadioState() {
   // Restore the user's zoom setting
   SetZoom(userZoomIndex); // ... and zoom display
 
-  SetFreq();
+  SetFreq(t41.CenterFreq);
 
   // reset frequency spectrum buffers
   InitFFTArrays();
@@ -277,8 +275,8 @@ FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
       break;
 
     case 3: // pwr cal
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
-      SetFreq();  // Update frequencies if the radio state has changed
+      t41.CenterFreq = bands[currentBand].calFreq;
+      SetFreq(t41.CenterFreq);  // Update frequencies if the radio state has changed
       break;
 
     case 4: // two tone test
@@ -1039,7 +1037,7 @@ FLASHMEM bool ProcessIQMenu() {
   switch(val) {
     case MENU_OPTION_SELECT: // 0
       // save and exit
-      //EEPROMWrite();
+      EEPROMWrite();
       calFlag = 0;
       break;
 
@@ -1055,10 +1053,10 @@ FLASHMEM bool ProcessIQMenu() {
     case BAND_UP: // 2
       ChangeBand(1);
       if(currentBand == BAND_10M) ChangeBand(1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
-      //SetTxRxFreq(centerFreq);
+      t41.CenterFreq = bands[currentBand].calFreq;
+      //SetTxRxFreq(t41.CenterFreq);
       SetFreqCal(0);
-      //si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+      //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
       UpdateIQDisplay();
 
       PrepareSpectrumArea();
@@ -1084,10 +1082,10 @@ FLASHMEM bool ProcessIQMenu() {
     case BAND_DN: // 5
       ChangeBand(-1);
       if(currentBand == BAND_10M) ChangeBand(-1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
-      //SetTxRxFreq(centerFreq);
+      t41.CenterFreq = bands[currentBand].calFreq;
+      //SetTxRxFreq(t41.CenterFreq);
       SetFreqCal(0);
-      //si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
+      //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
       UpdateIQDisplay();
 
       PrepareSpectrumArea();
@@ -1286,7 +1284,7 @@ FLASHMEM bool ProcessPwrMenu() {
   switch(val) {
     case MENU_OPTION_SELECT: // 0
       // save and exit
-      //EEPROMWrite();
+      EEPROMWrite();
       Serial.println("select received");
       //calFlag = 0;
       break;
@@ -1301,7 +1299,7 @@ FLASHMEM bool ProcessPwrMenu() {
     case BAND_UP: // 2
       ChangeBand(1);
       if(currentBand == BAND_10M) ChangeBand(1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
+      t41.CenterFreq = bands[currentBand].calFreq;
       SetFreqCal(0);
       ShowBand();
       break;
@@ -1330,7 +1328,7 @@ FLASHMEM bool ProcessPwrMenu() {
     case BAND_DN: // 5
       ChangeBand(-1);
       if(currentBand == BAND_10M) ChangeBand(-1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
+      t41.CenterFreq = bands[currentBand].calFreq;
       SetFreqCal(0);
       ShowBand();
       break;
@@ -1578,7 +1576,7 @@ FLASHMEM void SetupSignalStrengthSource(int source) {
       // set up this and external unit for calibration
       minSignalStrength = 0;
       signalStrengthSource = 1;
-      SendSetFreq(centerFreq + intermediateFreq);
+      SendSetFreq(t41.CenterFreq + intermediateFreq);
       if(currentDemodMode == DEMOD_LSB) {
         SendSetMode(DEMOD_USB);
       } else {
@@ -1914,10 +1912,10 @@ FLASHMEM void CalibrateIQAllBands() {
     DrawIQGainPlot();
 
     if(bands[currentBand].calFreq > 0) {
-      TxRxFreq = centerFreq = bands[currentBand].calFreq;
-      //SetTxRxFreq(centerFreq);
+      t41.CenterFreq = bands[currentBand].calFreq;
+      //SetTxRxFreq(t41.CenterFreq);
       SetFreqCal(0);
-      //si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
+      //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
       UpdateIQDisplay();
 
       // set up signal strength source
@@ -1954,9 +1952,9 @@ FLASHMEM void CalibrateIQAllBands() {
 
   // return to original band
   ChangeBand(bandCalBand - currentBand);
-  centerFreq = bands[currentBand].calFreq;
-  SetTxRxFreq(centerFreq);
-  //si5351.set_freq((centerFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
+  t41.CenterFreq = bands[currentBand].calFreq;
+  SetTxRxFreq(t41.CenterFreq);
+  //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
   UpdateIQDisplay();
 */
 }
@@ -2283,7 +2281,7 @@ FLASHMEM void CalibratePwr() {
       }
 
       ConfigAudioState(audioState);
-      SetFreq();  // Update frequencies if the radio state has changed
+      SetFreq(t41.CenterFreq);  // Update frequencies if the radio state has changed
       ShowTransmitReceiveStatus();
 
       // play signal
@@ -2317,6 +2315,8 @@ FLASHMEM void CalibratePwr() {
   CAUTION: SI5351_FREQ_MULT is set in the si5253.h header file and is 100UL
 *****/
 FLASHMEM void SetFreqCal(long calFreqShift) {
+  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+
   unsigned long long Clk1SetFreq = (TxRxFreq * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
   unsigned long long Clk2SetFreq;
 
@@ -2335,7 +2335,7 @@ FLASHMEM void SetFreqCal(long calFreqShift) {
   }
 
   //  The receive LO frequency is not dependent on mode or sideband.  CW frequency shift is done in DSP code.
-  Clk2SetFreq = (centerFreq  + intermediateFreq) * SI5351_FREQ_MULT * MASTER_CLK_MULT;
+  Clk2SetFreq = (t41.CenterFreq  + intermediateFreq) * SI5351_FREQ_MULT * MASTER_CLK_MULT;
 
   //  Set and enable both RX and TX local oscillator outputs.
   si5351.set_freq(Clk2SetFreq, SI5351_CLK2);

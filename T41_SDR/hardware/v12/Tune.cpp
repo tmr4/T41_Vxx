@@ -102,9 +102,8 @@ int EvenDivisor(long freq2) {
 
   CAUTION: SI5351_FREQ_MULT is set in the si5253.h header file and is 100UL
 *****/
-void SetFreq(bool reset) {
+void SetFreq(int f, bool reset) {
   unsigned long long Clk1SetFreq;
-  long long f = centerFreq;
   long long freq, pll_freq;
   static int multiple = 126;
   static int oldMultiple = 0;

@@ -12,8 +12,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-int TxRxFreq, NCOFreq;
-
 bool splitVFO;
 
 int CWFreqShift = 750;
@@ -28,9 +26,7 @@ int CWFreqShift = 750;
            NCOFreq is unchanged
 *****/
 void SetTxRxFreq(int freq) {
-  TxRxFreq = freq;
-
-  SetFreq();
+  SetFreq(freq);
 
   switch(displayState) {
     case DISPLAY_T41:
@@ -73,10 +69,10 @@ void SetTxRxFreq(int freq) {
   void
 *****/
 void ResetTuning() {
-  centerFreq += NCOFreq;
-  NCOFreq = 0L;
+  t41.CenterFreq += t41.NCOFreq;
+  t41.NCOFreq = 0L;
 
-  SetTxRxFreq(centerFreq);
+  SetTxRxFreq(t41.CenterFreq);
 
   switch(displayState) {
     case DISPLAY_T41:
@@ -108,9 +104,9 @@ void ResetTuning() {
     long tuneChange - amound to change center freq
 *****/
 void SetCenterTune(int tuneChange) {
-  centerFreq += tuneChange;  // tune the master vfo
+  t41.CenterFreq += tuneChange;  // tune the master vfo
 
-  SetTxRxFreq(centerFreq + NCOFreq);
+  SetTxRxFreq(t41.CenterFreq + t41.NCOFreq);
 }
 
 /*****
@@ -142,35 +138,33 @@ void SetNCOFreq(int newNCOFreq) {
       break;
   }
 
-  NCOFreq = newNCOFreq;
+  t41.NCOFreq = newNCOFreq;
   fineTuneFlag = true;
   if(activeVFO == VFO_A) {
-    currentFreqA = centerFreq + NCOFreq;
+    currentFreqA = t41.CenterFreq + t41.NCOFreq;
   } else {
-    currentFreqB = centerFreq + NCOFreq;
+    currentFreqB = t41.CenterFreq + t41.NCOFreq;
   }
 
   // recenter at band edges
   if(spectrumZoom != 0) {
-    if((NCOFreq + highSideAdj) >= (sampleRate / 2.0 / (1 << spectrumZoom))) {
-      NCOFreq += highSideAdj;
+    if((t41.NCOFreq + highSideAdj) >= (sampleRate / 2.0 / (1 << spectrumZoom))) {
+      t41.NCOFreq += highSideAdj;
       fineTuneFlag = false;
       resetTuningFlag = true;
       return;
     }
-    if((NCOFreq - lowSideAdj) <= (-sampleRate / 2.0 / (1 << spectrumZoom))) {
-      NCOFreq -= lowSideAdj;
+    if((t41.NCOFreq - lowSideAdj) <= (-sampleRate / 2.0 / (1 << spectrumZoom))) {
+      t41.NCOFreq -= lowSideAdj;
       fineTuneFlag = false;
       resetTuningFlag = true;
       return;
     }
-  } else if(NCOFreq > 142000 || NCOFreq < -43000) {  // Offset tuning window in zoom 1x
+  } else if(t41.NCOFreq > 142000 || t41.NCOFreq < -43000) {  // Offset tuning window in zoom 1x
     fineTuneFlag = false;
     resetTuningFlag = true;
     return;
   }
-
-  TxRxFreq = centerFreq + NCOFreq;
 }
 
 /*****
@@ -179,7 +173,7 @@ void SetNCOFreq(int newNCOFreq) {
   int tuneChange: the amount to increment/decrement the tuned frequency
 *****/
 void SetFineTune(int tuneChange) {
-  SetNCOFreq(NCOFreq + tuneChange);
+  SetNCOFreq(t41.NCOFreq + tuneChange);
 }
 
 

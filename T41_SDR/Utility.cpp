@@ -272,8 +272,8 @@ float ApproxAtan(float z) {
 /*****
   Purpose: sets frequancy for selected band and update filters accordingly
 *****/
-FLASHMEM void SetBand() {
-  SetFreq();
+FLASHMEM void SetBand(int freq) {
+  SetFreq(freq);
 
   SetupDemodFilterBW();
 

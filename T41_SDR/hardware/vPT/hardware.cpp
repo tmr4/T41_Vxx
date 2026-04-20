@@ -44,7 +44,7 @@ arm_biquad_cascade_df2T_instance_f32 s1_Receive2 = { 1, HP_DC_Butter_state2, HP_
 //------------
 // T41_SDR.ino
 
-extern long long oldCenterFreq;
+extern int oldCenterFreq;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -222,7 +222,7 @@ void ConfigRadioStateHardware() {
 
     case SSB_TRANSMIT_STATE:
     case DATA_TRANSMIT_STATE:
-      oldCenterFreq = centerFreq;
+      oldCenterFreq = t41.CenterFreq;
       break;
 
     case CW_RECEIVE_STATE:

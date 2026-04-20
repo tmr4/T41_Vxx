@@ -88,16 +88,8 @@ void EncoderVolumeISR() {
 
   if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
 
-  audioVolume += adjustVolEncoder;
+  t41.AudioVolume += adjustVolEncoder;
   adjustVolEncoder = 0;
-
-  if(audioVolume > MAX_AUDIO_VOLUME) {
-    audioVolume = MAX_AUDIO_VOLUME;
-  } else if(audioVolume < MIN_AUDIO_VOLUME) {
-    audioVolume = MIN_AUDIO_VOLUME;
-  }
-
-  volumeChangeFlag = true; // flag needed for display update
 }
 
 /*****

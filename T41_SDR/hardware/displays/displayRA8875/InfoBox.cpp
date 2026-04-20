@@ -138,7 +138,7 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
 /* PROGMEM */ const infoBoxItem infoBox[] =
 { //                                                     font    # chars
   // label         options      option                   size    to erase  flag  col            row,           follow-up function
-  { "Vol:",        NULL,        &audioVolume,             1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
+  { "Vol:",        NULL,        (int*)&t41.AudioVolume,             1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
   { "AGC",         agcOpts,     &AGCMode,                 1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
   { "CT Inc:",     tuneValues,  &tuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
   { "FT Inc:",     ftValues,    &ftIndex,                 0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
@@ -158,7 +158,7 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "Decoder:",    onOff,       &decoderFlag,             0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
 
   // Key type takes two columns
-  { "Key Type:",   optionsWPM,  &EEPROMData.keyType,      0,       12,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
+  { "Key Type:",   optionsWPM,  &keyType,      0,       12,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
 
   // Memory keyer requires 3 rows
   { "Keyer     ",  keyerOpts,   &keyerState,              0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer
@@ -186,7 +186,8 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   Parameter list:
     infoBoxItem *item   Pointer to the info box item to update
 *****/
-void UpdateInfoBoxItem(uint8_t item) {
+//void UpdateInfoBoxItem(uint8_t item) {
+void UpdateInfoBoxItem(int item) {
   int label_x;
 //  int xOffset = infoBox[item].col == 1 ? IB_COL_1_X : IB_COL_2_X;
 //  int yOffset = IB_ROW_1_Y + (infoBox[item].row - 1) * 20;
@@ -296,14 +297,14 @@ void IBCompressionFollowup(int row, int col) {
     int row, col  Row and column of info box item
 *****/
 void IBWPMFollowup(int row, int col) {
-  if(EEPROMData.keyType == 1) { // 1 = paddles
+  if(keyType == 1) { // 1 = paddles
     if(paddleFlip == 0) {
       tft.print("R");
     } else {
       tft.print("L");
     }
     tft.print(" ");
-    tft.print(EEPROMData.currentWPM);
+    tft.print(currentWPM);
   }
 }
 
@@ -318,7 +319,7 @@ void IBVolFollowup(int row, int col) {
   tft.setFontScale((enum RA8875tsize)1);
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(col, row);
-  tft.print(audioVolume);
+  tft.print(t41.AudioVolume);
 }
 
 /*****
@@ -795,16 +796,7 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
 
       switch(item) {
         case IB_ITEM_VOL:
-          audioVolume += wheel;
-
-          if(audioVolume > MAX_AUDIO_VOLUME) {
-            audioVolume = MAX_AUDIO_VOLUME;
-          } else {
-            if(audioVolume < MIN_AUDIO_VOLUME)
-              audioVolume = MIN_AUDIO_VOLUME;
-          }
-
-          volumeChangeFlag = true;  // flag needed for display update
+          t41.AudioVolume += wheel;
           break;
 
           case IB_ITEM_TUNE:

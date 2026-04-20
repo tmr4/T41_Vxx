@@ -10,7 +10,6 @@ extern int liveNoiseFloorFlag;
 
 extern bool nfmBWFilterActive;
 
-extern long TxRxFreqOld;
 extern bool save_last_frequency;
 extern bool directFreqFlag;
 

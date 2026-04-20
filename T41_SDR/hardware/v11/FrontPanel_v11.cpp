@@ -59,7 +59,6 @@ Filter bandwidth is dependent on the sample rate and the "k" parameter, as follo
 Thus, the default values below create a filter with 10000 * 0.0217 = 217 Hz bandwidth
 */
 
-#ifndef ALT_ISR
 #define BUTTON_FILTER_SAMPLERATE 10000  // Hz
 #define BUTTON_FILTER_SHIFT 3           // Filter parameter k
 #define BUTTON_DEBOUNCE_DELAY 5000      // uSec
@@ -79,30 +78,6 @@ bool buttonInterruptsEnabled = false;
 static unsigned long buttonFilterRegister;
 static int buttonState, buttonADCPressed, buttonElapsed;
 static volatile int buttonADCOut;
-#else
-#define BUTTON_FILTER_SAMPLERATE 10000  // Hz
-#define BUTTON_FILTER_SHIFT 3           // Filter parameter k
-//#define BUTTON_DEBOUNCE_DELAY 5000      // uSec
-#define BUTTON_DEBOUNCE_DELAY 2500      // uSec
-#define BUTTON_DEBOUNCE_RELEASE_DELAY 2500      // uSec
-
-#define BUTTON_STATE_UP 0
-#define BUTTON_STATE_DEBOUNCE 1
-#define BUTTON_STATE_PRESSED 2
-#define BUTTON_STATE_RELEASE_DEBOUNCE 3
-
-#define BUTTON_USEC_PER_ISR (1000000 / BUTTON_FILTER_SAMPLERATE)
-
-#define BUTTON_OUTPUT_UP 1023  // Value to be output when in the UP state
-
-IntervalTimer buttonInterrupts;
-bool buttonInterruptsEnabled = false;
-static unsigned long buttonFilterRegister;
-//static int buttonState, buttonADCPressed, buttonElapsed;
-static int buttonADCPressed, buttonElapsed;
-int buttonState = BUTTON_STATE_UP;
-static volatile int buttonADCOut;
-#endif
 
 // T41 Switch Labels
 const char *labels[] = { "Select", "Menu Up", "Band Up",
@@ -171,16 +146,8 @@ void EncoderVolumeISR() {
 
   if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
 
-  audioVolume += adjustVolEncoder;
+  t41.AudioVolume += adjustVolEncoder;
   adjustVolEncoder = 0;
-
-  if(audioVolume > MAX_AUDIO_VOLUME) {
-    audioVolume = MAX_AUDIO_VOLUME;
-  } else if(audioVolume < MIN_AUDIO_VOLUME) {
-    audioVolume = MIN_AUDIO_VOLUME;
-  }
-
-  volumeChangeFlag = true; // flag needed for display update
 }
 
 /*****
@@ -263,7 +230,6 @@ int ReadTuneEncoder() {
   Parameter list:
     none*****/
 void ButtonISR() {
-#ifndef ALT_ISR
   int filteredADCValue;
 
   buttonFilterRegister = buttonFilterRegister - (buttonFilterRegister >> BUTTON_FILTER_SHIFT) + analogRead(BUSY_ANALOG_PIN);
@@ -300,58 +266,6 @@ void ButtonISR() {
         }
       break;
   }
-#else
-  int filteredADCValue;
-
-  buttonFilterRegister = buttonFilterRegister - (buttonFilterRegister >> BUTTON_FILTER_SHIFT) + analogRead(BUSY_ANALOG_PIN);
-  filteredADCValue = (int)(buttonFilterRegister >> BUTTON_FILTER_SHIFT);
-
-  switch(buttonState) {
-    case BUTTON_STATE_UP:
-      if(filteredADCValue <= buttonThresholdPressed) {
-        buttonElapsed = 0;
-        buttonState = BUTTON_STATE_DEBOUNCE;
-      }
-      break;
-
-    case BUTTON_STATE_DEBOUNCE:
-      if(buttonElapsed < BUTTON_DEBOUNCE_DELAY) {
-        buttonElapsed += BUTTON_USEC_PER_ISR;
-      } else {
-        buttonADCOut = buttonADCPressed = filteredADCValue;
-        //buttonADCPressed = filteredADCValue;
-        buttonElapsed = 0;
-        buttonState = BUTTON_STATE_PRESSED;
-      }
-      break;
-
-    case BUTTON_STATE_PRESSED:
-      if(filteredADCValue >= buttonThresholdReleased) {
-        buttonState = BUTTON_STATE_UP;
-        //buttonState = BUTTON_STATE_RELEASE_DEBOUNCE;
-      } else {
-        if(buttonRepeatDelay != 0) {  // buttonRepeatDelay of 0 disables repeat
-          if(buttonElapsed < buttonRepeatDelay) {
-            buttonElapsed += BUTTON_USEC_PER_ISR;
-          } else {
-            buttonADCOut = buttonADCPressed;
-            buttonElapsed = 0;
-          }
-        }
-      }
-      break;
-
-    case BUTTON_STATE_RELEASE_DEBOUNCE:
-      if(buttonElapsed < BUTTON_DEBOUNCE_RELEASE_DELAY) {
-        buttonElapsed += BUTTON_USEC_PER_ISR;
-      } else {
-        buttonADCOut = buttonADCPressed;
-        buttonElapsed = 0;
-        buttonState = BUTTON_STATE_UP;
-      }
-      break;
-  }
-#endif
 }
 
 /*****
@@ -397,7 +311,7 @@ int ProcessButtonPress(int valPin) {
   }
 
   for(switchIndex = 0; switchIndex < NUMBER_OF_SWITCHES; switchIndex++) {
-    if(abs(valPin - EEPROMData.switchValues[switchIndex]) < WIGGLE_ROOM)  // ...because ADC does return exact values every time
+    if(abs(valPin - switchValues[switchIndex]) < WIGGLE_ROOM)  // ...because ADC does return exact values every time
     {
       return switchIndex;
     }
@@ -440,7 +354,7 @@ int ReadSelectedPushButton() {
     }
   }
 
-  if(buttonRead > EEPROMData.switchValues[0] + WIGGLE_ROOM) {
+  if(buttonRead > switchValues[0] + WIGGLE_ROOM) {
     return -1;
   }
   minPinRead = buttonRead;
@@ -475,8 +389,8 @@ FLASHMEM void SaveAnalogSwitchValues() {
   tft.print("the switch shown.");
 
   // Disable button repeat for interrupt driven buttons
-  origRepeatDelay = EEPROMData.buttonRepeatDelay;
-  EEPROMData.buttonRepeatDelay = 0;
+  origRepeatDelay = buttonRepeatDelay;
+  buttonRepeatDelay = 0;
 
   for(index = 0; index < NUMBER_OF_SWITCHES;) {
     tft.setCursor(20, 100);
@@ -512,12 +426,12 @@ FLASHMEM void SaveAnalogSwitchValues() {
     tft.print(labels[index]);
     tft.setCursor(660, 20 + index * 25);
     tft.print(value);
-    EEPROMData.switchValues[index] = value;
+    switchValues[index] = value;
 
     // Set interrupt press/release thresholds based on the Select button, which has the highest ADC value
     if(index == 0) {
-      EEPROMData.buttonThresholdPressed = EEPROMData.switchValues[0] + WIGGLE_ROOM;
-      EEPROMData.buttonThresholdReleased = EEPROMData.buttonThresholdPressed + WIGGLE_ROOM;
+      buttonThresholdPressed = switchValues[0] + WIGGLE_ROOM;
+      buttonThresholdReleased = buttonThresholdPressed + WIGGLE_ROOM;
     }
 
     index++;
@@ -526,7 +440,7 @@ FLASHMEM void SaveAnalogSwitchValues() {
     }
   }
 
-  EEPROMData.buttonRepeatDelay = origRepeatDelay;  // Restore original repeat delay
+  buttonRepeatDelay = origRepeatDelay;  // Restore original repeat delay
 }
 
 // General Front Panel Stuff

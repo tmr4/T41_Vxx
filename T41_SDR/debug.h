@@ -5,9 +5,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-//#define DEBUG_LOOP
-//#define ALT_ISR
-
 #ifdef PROFILER_ACTIVE
 #define SETPROFILEPIN(pin) digitalWriteFast(pin, HIGH)
 #define RESETPROFILEPIN(pin) digitalWriteFast(pin, LOW)
@@ -25,10 +22,6 @@ extern bool memCheck;
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-void EnterLoop();
-void ExitLoop();
-void ButtonInfoOut(int valPin, int pushButtonSwitchIndex);
 
 void memInfo();
 void getFreeITCM();

@@ -196,7 +196,7 @@ void SendSmeter(int smeterPad, float dbm) {
 void SendVolume() {
   char cmd[7];
 
-  sprintf(cmd,"VO%03d;", audioVolume);
+  sprintf(cmd,"VO%03d;", (int)t41.AudioVolume);
   T41ControlSendCmd(cmd);
 }
 
@@ -210,7 +210,7 @@ void SendFilter() {
 void SendSetFineTune() {
   char cmd[20];
 
-  sprintf(cmd,"FF%011d;", TxRxFreq);
+  sprintf(cmd,"FF%011d;", t41.CenterFreq + t41.NCOFreq);
   T41ControlSendCmd(cmd);
 }
 
@@ -240,7 +240,7 @@ void SendAS() {
   char cmd[19];
 
   sprintf(cmd, "AS%011d%d%d%d;",
-    TxRxFreq,                       // freq in Hz (%011d) at index 2
+    (int)(t41.CenterFreq + t41.NCOFreq), // freq in Hz (%011d) at index 2
     currentBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
     currentDemodMode         // demodulation mode (%d)  at index 15
@@ -253,14 +253,14 @@ void SendIF() {
 
   // *** Warning: this is not the Kenwood implimentation ***
   sprintf(cmd, "IF%011d%d%d%d%03d%+06d%04d%d%d%d%d%d%d%d%d%011d;",
-    // active VFO Freq = TxRxFreq, centerFreq = TxRxFreq - NCOFreq
+    // active VFO Freq = TxRxFreq, t41.CenterFreq = TxRxFreq - NCOFreq
     //  *** TODO: we only need 8 digits for first field for T41, consider using other 3 for something ***
-    TxRxFreq,                       // freq in Hz (%011d) at index 2
+    (int)(t41.CenterFreq + t41.NCOFreq), // freq in Hz (%011d) at index 2
     currentBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
     currentDemodMode,        // demodulation mode (%d)  at index 15
-    audioVolume,                    // audio volume (%03d) at index 16
-    NCOFreq,                        // NCO freq (%+06d) at index 19
+    (int)t41.AudioVolume,                    // audio volume (%03d) at index 16
+    (int)t41.NCOFreq,                        // NCO freq (%+06d) at index 19
     currentNoiseFloor[currentBand], // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
     liveNoiseFloorFlag,             // set noise floor active/inactive 1/0 (%d) at index 29
     !GetXRState(),                       // RX/TX (1/0) (%d) at index 30
@@ -349,7 +349,7 @@ void T41ControlLoop() {
               // set VFO A frequency
               f = atol(&cmd[2]);
               if(mouseCenterTuneActive) {
-                SetCenterTune(f - centerFreq);
+                SetCenterTune(f - t41.CenterFreq);
                 currentFreqA = f;
               } else {
                 SetFineTune(f - currentFreqA);
@@ -367,7 +367,7 @@ void T41ControlLoop() {
               // set VFO B frequency
               f = atol(&cmd[2]);
               if(mouseCenterTuneActive) {
-                SetCenterTune(f - centerFreq);
+                SetCenterTune(f - t41.CenterFreq);
                 currentFreqB = f;
               } else {
                 SetFineTune(f - currentFreqB);
@@ -384,15 +384,15 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set center frequency
               f = atol(&cmd[2]);
-              centerFreq = f;
-              NCOFreq = 0L;
+              t41.CenterFreq = f;
+              t41.NCOFreq = 0L;
               SetTxRxFreq(f);
               DrawBandwidthBar();
               //Serial.print("Center freq set to "); Serial.println(f);
               return;
             } else if(cmd[2] == ';') {
               // read center frequency
-              sprintf(cmd,"FC%011d;",centerFreq);
+              sprintf(cmd,"FC%011d;", (int)t41.CenterFreq);
             }
             break;
 
@@ -400,12 +400,12 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set VFO A frequency
               f = atol(&cmd[2]);
-              SetFineTune(f-centerFreq-NCOFreq);
+              SetFineTune(f-t41.CenterFreq-t41.NCOFreq);
               catControlChange = true;
               return;
             } else if(cmd[2] == ';') {
               // read VFO A frequency offset
-              sprintf(cmd,"FF%011d;",NCOFreq-currentFreqA);
+              sprintf(cmd,"FF%011d;",(int)t41.NCOFreq-currentFreqA);
             }
             break;
 
@@ -461,7 +461,7 @@ void T41ControlLoop() {
           if(useKenwoodIF) {
             // *** TODO: not set up, just for testing ***
             sprintf(cmd, "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
-              TxRxFreq,     // freq in Hz
+              (int)(t41.CenterFreq + t41.NCOFreq),     // freq in Hz
               0,            // freq step size
               0,            // RIT/XIT freq in Hz, +-99999, this isn't preserved in the T41 but would be VFO A - VFO B if split
               0,            // RIT on/off
@@ -514,7 +514,7 @@ void T41ControlLoop() {
 
           // save final noise floor setting if toggling flag off
           if(liveNoiseFloorFlag == 0) {
-            EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
+            //EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
             EEPROMWrite();
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
@@ -602,10 +602,7 @@ void T41ControlLoop() {
       case 'V': // VOxxx;
         if(cmd[1] == 'O' && cmd[5] == ';') {
           // set transmitter power level
-          audioVolume = atoi(&cmd[2]);
-          UpdateInfoBoxItem(IB_ITEM_VOL);
-
-          //volumeChangeFlag = true;  // flag needed for display update
+          t41.AudioVolume = atoi(&cmd[2]);
         }
         return;
         break;

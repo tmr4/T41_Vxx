@@ -33,7 +33,7 @@ bool nfmBWFilterActive = false; // false - audio filters active, true - NFM BW d
 //------------------------- Local Variables ----------
 bool save_last_frequency = false;
 bool directFreqFlag = false;
-long TxRxFreqOld;
+int TxRxFreqOld;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -51,6 +51,8 @@ int ValidateDemodMode(int demod);
   *** radio mode and DSB/data demolation mode are unchanged across band changes ***
 *****/
 FLASHMEM void ChangeBand(int change) {
+  int TxRxFreq;
+
   // Added if so unused GPOs will not be touched
   if(currentBand < BAND_12M) {
     digitalWrite(bandswitchPins[currentBand], LOW);
@@ -69,7 +71,8 @@ FLASHMEM void ChangeBand(int change) {
     currentDemodMode = ValidateDemodMode(-1);
   }
 
-  NCOFreq = 0L;
+  t41.NCOFreq = 0L;
+  TxRxFreq = t41.CenterFreq + t41.NCOFreq;
 
   switch(activeVFO) {
     case VFO_A:
@@ -85,7 +88,7 @@ FLASHMEM void ChangeBand(int change) {
         TxRxFreqOld = TxRxFreq;
       }
       currentBandA = currentBand;
-      centerFreq = TxRxFreq = currentFreqA = lastFrequencies[currentBandA][VFO_A];
+      t41.CenterFreq = currentFreqA = lastFrequencies[currentBandA][VFO_A];
       break;
 
     case VFO_B:
@@ -101,7 +104,7 @@ FLASHMEM void ChangeBand(int change) {
         TxRxFreqOld = TxRxFreq;
       }
       currentBandB = currentBand;
-      centerFreq = TxRxFreq = currentFreqB = lastFrequencies[currentBandB][VFO_B];
+      t41.CenterFreq = currentFreqB = lastFrequencies[currentBandB][VFO_B];
       break;
 
     case VFO_SPLIT:
@@ -135,7 +138,7 @@ FLASHMEM void ChangeBand(int change) {
     }
   }
 
-  SetBand();
+  SetBand(TxRxFreq);
 
   if(currentBand < BAND_12M) {
     digitalWrite(bandswitchPins[currentBand], HIGH);
@@ -491,7 +494,7 @@ FLASHMEM void ButtonNotchFilter() {
 FLASHMEM void ToggleLiveNoiseFloorFlag() {
   // save final noise floor setting if toggling from ON
   if(liveNoiseFloorFlag == 2) {
-    EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
+    //EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
     EEPROMWrite();
   }
 

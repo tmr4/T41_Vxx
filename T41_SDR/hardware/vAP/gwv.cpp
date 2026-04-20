@@ -12,12 +12,10 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-// Configuration working global variables; to be deleted in favor of using the EEPROMData version, but that's a lot of work
-// commented lines have no corresponding global extern.  These need to be initialized, not sure exactly why but audioVolume is critical.  Set them equal to EEPROMData for now.
+// Configuration working global variables
 
 //char versionSettings[10] = VERSION;
 int AGCMode = 1;
-int audioVolume = 30;
 int rfGainAllBands = 0;
 int spectrumNoiseFloor = 0; // SPECTRUM_NOISE_FLOOR; *** display dependent ***
 int tuneIndex = DEFAULTFREQINDEX;
@@ -97,8 +95,6 @@ long favoriteFreqs[13] = { 3560000, 3690000, 7030000, 7200000, 14060000, 1420000
 //int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7048000, 7030000 }, { 14048000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };
 int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7074000, 7030000 }, { 14074000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };
 
-//int centerFreq = 7048000;
-int centerFreq = 7074000;
 char mapFileName[50];
 char myCall[10];
 char myTimeZone[10];
@@ -113,116 +109,10 @@ float myLong = MY_LON;
 int currentNoiseFloor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 int compressorFlag = 0;
 
-#ifndef ALT_ISR
 int buttonThresholdPressed = 944;   // switchValues[0] + WIGGLE_ROOM
 int buttonThresholdReleased = 964;  // buttonThresholdPressed + WIGGLE_ROOM
 int buttonRepeatDelay = 300000;     // Increased to 300000 from 200000 to better handle cheap, wornout buttons.
-#else
-int buttonThresholdPressed = switchValues[0] + WIGGLE_ROOM;   // switchValues[0] + WIGGLE_ROOM
-int buttonThresholdReleased = buttonThresholdPressed + WIGGLE_ROOM;  // buttonThresholdPressed + WIGGLE_ROOM
-int buttonRepeatDelay = 0;     // Increased to 300000 from 200000 to better handle cheap, wornout buttons.
-#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-// temp function to load EEPROM data into operating variables
-void LoadOpVars() {
-  AGCMode = EEPROMData.AGCMode;
-  audioVolume = EEPROMData.audioVolume;
-  rfGainAllBands = EEPROMData.rfGainAllBands;
-  spectrumNoiseFloor = EEPROMData.spectrumNoiseFloor;
-  tuneIndex = EEPROMData.tuneIndex;
-  ftIndex = EEPROMData.ftIndex;
-  transmitPowerLevel = EEPROMData.transmitPowerLevel;
-  radioMode = EEPROMData.radioMode;
-  nrOptionSelect = EEPROMData.nrOptionSelect;
-  currentScale = EEPROMData.currentScale;
-  spectrumZoom = EEPROMData.spectrumZoom;
-  spectrum_display_scale = EEPROMData.spectrum_display_scale;
-
-  cwFilterIndex = EEPROMData.cwFilterIndex;
-  paddleDit = EEPROMData.paddleDit;
-  paddleDah = EEPROMData.paddleDah;
-  decoderFlag = EEPROMData.decoderFlag;
-  keyType = EEPROMData.keyType;
-  currentWPM = EEPROMData.currentWPM;
-  sidetoneVolume = EEPROMData.sidetoneVolume;
-  cwTransmitDelay = (unsigned long) EEPROMData.cwTransmitDelay;
-
-  activeVFO = EEPROMData.activeVFO;
-  freqIncrement = EEPROMData.freqIncrement; // *** this isn't needed if tuneIndex is used to set initial value ***
-
-  currentBand = EEPROMData.currentBand;
-  currentBandA = EEPROMData.currentBandA;
-  currentBandB = EEPROMData.currentBandB;
-//  currentFreqA = EEPROMData.lastFrequencies[currentBandA][0];
-//  currentFreqB = EEPROMData.lastFrequencies[currentBandB][1];
-  currentFreqA = EEPROMData.currentFreqA;
-  currentFreqB = EEPROMData.currentFreqB;
-  freqCorrectionFactor = EEPROMData.freqCorrectionFactor;
-
-  for(int i = 0; i < EQUALIZER_CELL_COUNT; i++) {
-    equalizerRec[i] = EEPROMData.equalizerRec[i];
-    equalizerXmt[i] = EEPROMData.equalizerXmt[i];
-  }
-
-  currentMicThreshold = EEPROMData.currentMicThreshold;
-  currentMicCompRatio = EEPROMData.currentMicCompRatio;
-  currentMicAttack = EEPROMData.currentMicAttack;
-  currentMicRelease = EEPROMData.currentMicRelease;
-  currentMicGain = EEPROMData.currentMicGain;
-
-  for(int i = 0; i < NUMBER_OF_SWITCHES; i++) {
-    switchValues[0] = EEPROMData.switchValues[0];
-  }
-
-  LPFcoeff = EEPROMData.LPFcoeff;
-  NR_PSI = EEPROMData.NR_PSI;
-  NR_alpha = EEPROMData.NR_alpha;
-  NR_beta = EEPROMData.NR_beta;
-  omegaN = EEPROMData.omegaN;
-  pll_fmax = EEPROMData.pll_fmax;
-
-  for(int i = 0; i < NUMBER_OF_BANDS; i++) {
-    powerOutCW[i] = EEPROMData.powerOutCW[i];
-    powerOutSSB[i] = EEPROMData.powerOutSSB[i];
-    CWPowerCalibrationFactor[i] = EEPROMData.CWPowerCalibrationFactor[i];
-    SSBPowerCalibrationFactor[i] = EEPROMData.SSBPowerCalibrationFactor[i];
-    IQAmpCorrectionFactor[i] = EEPROMData.IQAmpCorrectionFactor[i];
-    IQPhaseCorrectionFactor[i] = EEPROMData.IQPhaseCorrectionFactor[i];
-    IQXAmpCorrectionFactor[i] = EEPROMData.IQXAmpCorrectionFactor[i];
-    IQXPhaseCorrectionFactor[i] = EEPROMData.IQXPhaseCorrectionFactor[i];
-  }
-
-  for(int i = 0; i < 13; i++) {
-    favoriteFreqs[i] = EEPROMData.favoriteFreqs[i];
-  }
-
-  for(int i = 0; i < NUMBER_OF_BANDS; i++) {
-    lastFrequencies[i][0] = EEPROMData.lastFrequencies[i][0];
-    lastFrequencies[i][1] = EEPROMData.lastFrequencies[i][1];
-  }
-
-//  centerFreq = EEPROMData.lastFrequencies[currentBand][activeVFO];
-  centerFreq = EEPROMData.centerFreq;
-
-  strncpy(mapFileName, EEPROMData.mapFileName, 50);
-  strncpy(myCall, EEPROMData.myCall, 10);
-  strncpy(myTimeZone, EEPROMData.myTimeZone, 10);
-
-  paddleFlip = EEPROMData.paddleFlip;
-  sdCardPresent = EEPROMData.sdCardPresent;
-
-  myLat = EEPROMData.myLat;
-  myLong = EEPROMData.myLong;
-  for(int i = 0; i < NUMBER_OF_BANDS; i++) {
-    currentNoiseFloor[i] = EEPROMData.currentNoiseFloor[i];
-  }
-  compressorFlag = EEPROMData.compressorFlag;
-
-  buttonThresholdPressed = EEPROMData.buttonThresholdPressed;
-  buttonThresholdReleased = EEPROMData.buttonThresholdReleased;
-  buttonRepeatDelay = EEPROMData.buttonRepeatDelay;
-}

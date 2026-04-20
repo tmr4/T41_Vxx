@@ -4,6 +4,8 @@
 
 #include <Arduino.h>
 
+#include "t41Property.h"
+
 #ifndef float32_t
 typedef float float32_t;
 #endif

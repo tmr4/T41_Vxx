@@ -3,12 +3,11 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-// Configuration working global variables; to be deleted in favor of using the EEPROMData version, but that's a lot of work
+// Configuration working global variables
 // commented lines have no corresponding global extern
 
 //extern char versionSettings[];
 extern int AGCMode;
-extern int audioVolume;
 extern int rfGainAllBands;
 extern int spectrumNoiseFloor;
 extern int tuneIndex;
@@ -73,7 +72,6 @@ extern float CWPowerEqnCalFactor[];
 extern long favoriteFreqs[13];
 extern int lastFrequencies[][2];
 
-extern int centerFreq;
 extern char mapFileName[];
 extern char myCall[];
 extern char myTimeZone[];

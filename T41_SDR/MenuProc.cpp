@@ -86,20 +86,20 @@ FLASHMEM void RFPowerFollowup() {
   if(radioMode == CW_MODE) {                                                                                                                                      //AFP 10-13-22
     powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];  //  afp 10-21-22
 
-    EEPROMData.powerOutCW[currentBand] = powerOutCW[currentBand];
+    //EEPROMData.powerOutCW[currentBand] = powerOutCW[currentBand];
   } else {
     if(radioMode == SSB_MODE) {
       powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // afp 10-21-22
-      EEPROMData.powerOutSSB[currentBand] = powerOutSSB[currentBand];                                                                                                //AFP 10-21-22
+      //EEPROMData.powerOutSSB[currentBand] = powerOutSSB[currentBand];                                                                                                //AFP 10-21-22
     }
   }
-  EEPROMData.transmitPowerLevel = transmitPowerLevel;
+  //EEPROMData.transmitPowerLevel = transmitPowerLevel;
   EEPROMWrite();
   ShowCurrentPowerSetting();
 }
 
 FLASHMEM void RFGainFollowup() {
-  EEPROMData.rfGainAllBands = rfGainAllBands;
+  //EEPROMData.rfGainAllBands = rfGainAllBands;
   EEPROMWrite();
   UpdateInfoBoxItem(IB_ITEM_RFGAIN);
 }
@@ -109,18 +109,18 @@ FLASHMEM void RFGainFollowup() {
 *****/
 FLASHMEM void VFOSelect(int32_t index) {
   splitVFO = false;
-  NCOFreq = 0L;
+  t41.NCOFreq = 0L;
 
   switch(index) {
     case VFO_A:
-      centerFreq = TxRxFreq = currentFreqA;
+      t41.CenterFreq = currentFreqA;
       activeVFO = VFO_A;
       currentBand = currentBandA;
       //fillRect(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y, 150, 20, RA8875_BLACK);  // Erase split message
       break;
 
     case VFO_B:
-      centerFreq = TxRxFreq = currentFreqB;
+      t41.CenterFreq = currentFreqB;
       activeVFO = VFO_B;
       currentBand = currentBandB;
       //fillRect(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y, 150, 20, RA8875_BLACK);  // Erase split message
@@ -156,11 +156,12 @@ FLASHMEM void VFOSelect(int32_t index) {
   }
   */
 
-  bands[currentBand].freq = TxRxFreq;
-  SetBand();                            // SetBand updates the display
+  bands[currentBand].freq = t41.CenterFreq;
+
+  SetBand(t41.CenterFreq);              // SetBand updates the display
   SetBandRelay(HIGH);                   // Required when switching VFOs
 
-  EEPROMData.activeVFO = activeVFO;
+  //EEPROMData.activeVFO = activeVFO;
   EEPROMWrite();
 
   if(radioMode == CW_MODE) {
@@ -184,7 +185,7 @@ FLASHMEM void EEPROMOptions() {
       break;
 
     case 1:
-      EEPROMSaveDefaults2();  // Restore defaults
+      EEPROMSaveDefaults();  // Restore defaults
       break;
 
     case 2:
@@ -223,7 +224,7 @@ FLASHMEM void AGCOptions() {
   AGCMode = secondaryMenuIndex;
   AGCLoadValues();
 
-  EEPROMData.AGCMode = AGCMode; // Store in EEPROM and...
+  //EEPROMData.AGCMode = AGCMode; // Store in EEPROM and...
   EEPROMWrite();  // ...save it
   UpdateInfoBoxItem(IB_ITEM_AGC);
 }
@@ -233,15 +234,14 @@ FLASHMEM void AGCOptions() {
 *****/
 FLASHMEM void SpectrumOptions() {
   //const char *spectrumChoices[] = { "20 dB/unit", "10 dB/unit", "5 dB/unit", "2 dB/unit", "1 dB/unit", "Cancel" };
-  int spectrumSet = EEPROMData.currentScale;
+  int spectrumSet = secondaryMenuIndex;
 
-  spectrumSet = secondaryMenuIndex;
   //if(strcmp(spectrumChoices[spectrumSet], "Cancel") == 0) {
   if(spectrumSet == 5) {
     return;
   }
   currentScale = spectrumSet;  // Yep...
-  EEPROMData.currentScale = currentScale;
+  //EEPROMData.currentScale = currentScale;
   EEPROMWrite();
   ShowSpectrumdBScale();
 }
@@ -293,7 +293,7 @@ FLASHMEM void EqualizerXmtOptions() {
 }
 
 FLASHMEM void MicGainFollowup() {
-  EEPROMData.currentMicGain = currentMicGain;
+  //EEPROMData.currentMicGain = currentMicGain;
   EEPROMWrite();
 }
 
@@ -314,7 +314,7 @@ FLASHMEM void MicGainSet() {
 }
 
 FLASHMEM void SetCompressionLevelFollowup() {
-  EEPROMData.currentMicThreshold = currentMicThreshold;
+  //EEPROMData.currentMicThreshold = currentMicThreshold;
   EEPROMWrite();
   UpdateInfoBoxItem(IB_ITEM_COMPRESS);
 }

@@ -156,16 +156,8 @@ void EncoderVolumeISR() {
 
   if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
 
-  audioVolume += adjustVolEncoder;
+  t41.AudioVolume += adjustVolEncoder;
   adjustVolEncoder = 0;
-
-  if(audioVolume > MAX_AUDIO_VOLUME) {
-    audioVolume = MAX_AUDIO_VOLUME;
-  } else if(audioVolume < MIN_AUDIO_VOLUME) {
-    audioVolume = MIN_AUDIO_VOLUME;
-  }
-
-  volumeChangeFlag = true; // flag needed for display update
 }
 #endif
 
@@ -370,7 +362,7 @@ int ProcessButtonPress(int valPin) {
   }
 
   for(switchIndex = 0; switchIndex < NUMBER_OF_SWITCHES; switchIndex++) {
-    if(abs(valPin - EEPROMData.switchValues[switchIndex]) < WIGGLE_ROOM)  // ...because ADC does return exact values every time
+    if(abs(valPin - switchValues[switchIndex]) < WIGGLE_ROOM)  // ...because ADC does return exact values every time
     {
       return switchIndex;
     }
@@ -413,7 +405,7 @@ int ReadSelectedPushButton() {
     }
   }
 
-  if(buttonRead > EEPROMData.switchValues[0] + WIGGLE_ROOM) {
+  if(buttonRead > switchValues[0] + WIGGLE_ROOM) {
     return -1;
   }
   minPinRead = buttonRead;
@@ -450,8 +442,8 @@ FLASHMEM void SaveAnalogSwitchValues() {
   Serial.println("Press button you have assigned to the switch shown:");
 
   // Disable button repeat for interrupt driven buttons
-  origRepeatDelay = EEPROMData.buttonRepeatDelay;
-  EEPROMData.buttonRepeatDelay = 0;
+  origRepeatDelay = buttonRepeatDelay;
+  buttonRepeatDelay = 0;
 
   for(index = 0; index < NUMBER_OF_SWITCHES;) {
     /*
@@ -492,12 +484,12 @@ FLASHMEM void SaveAnalogSwitchValues() {
     tft.print(value);
     */
     Serial.println(value);
-    EEPROMData.switchValues[index] = value;
+    switchValues[index] = value;
 
     // Set interrupt press/release thresholds based on the Select button, which has the highest ADC value
     if(index == 0) {
-      EEPROMData.buttonThresholdPressed = EEPROMData.switchValues[0] + WIGGLE_ROOM;
-      EEPROMData.buttonThresholdReleased = EEPROMData.buttonThresholdPressed + WIGGLE_ROOM;
+      buttonThresholdPressed = switchValues[0] + WIGGLE_ROOM;
+      buttonThresholdReleased = buttonThresholdPressed + WIGGLE_ROOM;
     }
 
     index++;
@@ -506,7 +498,7 @@ FLASHMEM void SaveAnalogSwitchValues() {
     }
   }
 
-  EEPROMData.buttonRepeatDelay = origRepeatDelay;  // Restore original repeat delay
+  buttonRepeatDelay = origRepeatDelay;  // Restore original repeat delay
 }
 #else
 // *** TODO: need empty functions back for hardwareless Project System ***
@@ -661,16 +653,8 @@ void EncoderVolume() {
 
   if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
 
-  audioVolume += adjustVolEncoder;
+  t41.AudioVolume += adjustVolEncoder;
   adjustVolEncoder = 0;
-
-  if(audioVolume > MAX_AUDIO_VOLUME) {
-    audioVolume = MAX_AUDIO_VOLUME;
-  } else if(audioVolume < MIN_AUDIO_VOLUME) {
-    audioVolume = MIN_AUDIO_VOLUME;
-  }
-
-  volumeChangeFlag = true; // flag needed for display update
 }
 
 /*****

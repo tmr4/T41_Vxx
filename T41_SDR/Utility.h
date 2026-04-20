@@ -32,7 +32,7 @@ float32_t log10f_fast(float32_t X);
 float32_t AlphaBetaMag(float32_t  inphase, float32_t  quadrature);
 float ApproxAtan(float z);
 void SaveAnalogSwitchValues();
-void SetBand();
+void SetBand(int freq);
 
 int InitializeSDCard();
 int CheckDataFileEEPROM();

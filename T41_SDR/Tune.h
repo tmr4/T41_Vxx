@@ -3,7 +3,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern int CWFreqShift, TxRxFreq, NCOFreq;
+extern int CWFreqShift;
 extern bool splitVFO;
 
 //-------------------------------------------------------------------------------------------------------------
@@ -23,4 +23,4 @@ void ResetTuning();
 void DoSplitVFO();
 
 // *** hardware specific ***
-void SetFreq(bool reset = false);
+void SetFreq(int freq, bool reset = false);

@@ -12,12 +12,10 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-// Configuration working global variables; to be deleted in favor of using the EEPROMData version, but that's a lot of work
-// commented lines have no corresponding global extern.  These need to be initialized, not sure exactly why but audioVolume is critical.  Set them equal to EEPROMData for now.
+// Configuration working global variables
 
 //char versionSettings[10] = VERSION;
 int AGCMode = 1;
-int audioVolume = 30;
 int rfGainAllBands = 0;
 int spectrumNoiseFloor = SPECTRUM_NOISE_FLOOR;
 int tuneIndex = DEFAULTFREQINDEX;
@@ -90,8 +88,6 @@ long favoriteFreqs[13] = { 3560000, 3690000, 7030000, 7200000, 14060000, 1420000
 //int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7048000, 7030000 }, { 14048000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };
 int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7074000, 7030000 }, { 14074000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };
 
-//int centerFreq = 7048000;
-int centerFreq = 7074000;
 char mapFileName[50];
 char myCall[10];
 char myTimeZone[10];
@@ -106,15 +102,9 @@ float myLong = MY_LON;
 int currentNoiseFloor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 int compressorFlag = 0;
 
-#ifndef ALT_ISR
 int buttonThresholdPressed = 944;   // switchValues[0] + WIGGLE_ROOM
 int buttonThresholdReleased = 964;  // buttonThresholdPressed + WIGGLE_ROOM
 int buttonRepeatDelay = 300000;     // Increased to 300000 from 200000 to better handle cheap, wornout buttons.
-#else
-int buttonThresholdPressed = switchValues[0] + WIGGLE_ROOM;   // switchValues[0] + WIGGLE_ROOM
-int buttonThresholdReleased = buttonThresholdPressed + WIGGLE_ROOM;  // buttonThresholdPressed + WIGGLE_ROOM
-int buttonRepeatDelay = 0;     // Increased to 300000 from 200000 to better handle cheap, wornout buttons.
-#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

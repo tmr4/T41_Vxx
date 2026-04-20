@@ -111,8 +111,7 @@ int bandswitchPins[] = {
   0    // 10M
 };
 
-// local variables
-long long oldCenterFreq = centerFreq; // simplifies v12 transmit recovery
+int oldCenterFreq;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -216,7 +215,7 @@ FLASHMEM void SoftReset() {
 
   AGCPrep(); // no audio without this unless AGC is off
 
-  NCOFreq = 0;
+  t41.NCOFreq = 0;
   ResetTuning();
 }
 
@@ -403,20 +402,12 @@ FASTRUN void loop() {
     BeaconLoop();
   }
 
-#ifdef DEBUG_LOOP
-  EnterLoop();
-#endif
-
   // check for UI button press and process accordingly
   valPin = ReadSelectedPushButton();
   if(valPin != BOGUS_PIN_READ) {
     pushButtonSwitchIndex = ProcessButtonPress(valPin);
     ExecuteButtonPress(pushButtonSwitchIndex);
   }
-
-#ifdef DEBUG_LOOP
-  ButtonInfoOut(valPin, pushButtonSwitchIndex);
-#endif
 
   //  State detection
   if(radioMode == SSB_MODE && digitalRead(PTT) == HIGH) {
@@ -467,7 +458,7 @@ FASTRUN void loop() {
 
     ConfigAudioState(radioState);
     ConfigRadioStateHardware();
-    SetFreq();  // Update frequencies if the radio state has changed
+    SetFreq(t41.CenterFreq);  // Update frequencies if the radio state has changed
     ShowTransmitReceiveStatus();
   }
 
@@ -520,7 +511,7 @@ FASTRUN void loop() {
         UpdateClock();
       }
 
-      centerFreq = oldCenterFreq;
+      t41.CenterFreq = oldCenterFreq;
       digitalWrite(RXTX, LOW);
       break;
 
@@ -595,7 +586,7 @@ FASTRUN void loop() {
         UpdateClock();
       }
 
-      centerFreq = oldCenterFreq;
+      t41.CenterFreq = oldCenterFreq;
       digitalWrite(RXTX, LOW);
 
       // delay a bit to allow play buffer to empty, otherwise
@@ -623,9 +614,8 @@ FASTRUN void loop() {
 
   // slowly raise volume to avoid artifacts
   if(volSetting > 0) {
-    if(audioVolume < volSetting) {
-      audioVolume++;
-      volumeChangeFlag = true;
+    if(t41.AudioVolume < volSetting) {
+      t41.AudioVolume++;
     } else {
       volSetting = 0;
     }
@@ -652,10 +642,4 @@ FASTRUN void loop() {
 #ifdef CAT_CONTROL_SUPPORT
   T41ControlLoop();
 #endif
-
-#ifdef DEBUG_LOOP
-  ExitLoop();
-#endif
-
-  //RESETPROFILEPIN(PROFILER_MAINLOOP_PIN);
 }

@@ -20,6 +20,8 @@
 
 #define MAX_FAVORITES        13     // Max number of favorite frequencies stored in EEPROM
 
+extern int TxRxFreqOld;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -29,9 +31,8 @@
     Base Code courtesy of Harry  GM3RVL
 *****/
 FLASHMEM void ButtonFrequencyEntry() {
-  TxRxFreqOld = TxRxFreq;
-
 #define show_FEHelp
+  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
   bool doneFE = false;                         // set to true when a valid frequency is entered
   long enteredF = 0L;                          // desired frequency
   char strF[6] = { ' ', ' ', ' ', ' ', ' ' };  // container for frequency string during entry
@@ -40,7 +41,6 @@ FLASHMEM void ButtonFrequencyEntry() {
   int key;
   int numdigits = 0;  // number of digits entered
   int pushButtonSwitchIndex;
-  lastFrequencies[currentBand][activeVFO] = TxRxFreq;
   //save_last_frequency = false;                    // prevents crazy frequencies when you change bands/save_last_frequency = true;
   // Arrays for allocating values associated with keys and switches - choose whether USB keypad or analogue switch matrix
   // USB keypad and analogue switch matrix
@@ -82,6 +82,9 @@ FLASHMEM void ButtonFrequencyEntry() {
 #define BUTTONS_SPACE 45
 #define BUTTONS_RADIUS 15
 #define TEXT_OFFSET -8
+
+  TxRxFreqOld = TxRxFreq;
+  lastFrequencies[currentBand][activeVFO] = TxRxFreq;
 
   tft.writeTo(L1);
   tft.fillRect(WATERFALL_L, SPECTRUM_TOP_Y + 1, WATERFALL_W, WATERFALL_BOTTOM - SPECTRUM_TOP_Y, RA8875_BLACK);  // Make space for FEInfo
@@ -219,14 +222,13 @@ FLASHMEM void ButtonFrequencyEntry() {
   }
 
   if(key != 0x58) {
-    TxRxFreq = enteredF;
+    t41.CenterFreq = enteredF;
   }
 
-  NCOFreq = 0L;
+  t41.NCOFreq = 0L;
   directFreqFlag = true;
-  centerFreq = TxRxFreq;
   fineTuneFlag = true;  // Put back in so tuning bar is refreshed
-  SetFreq();  // Used here instead of fineTuneFlag
+  SetFreq(t41.CenterFreq);  // Used here instead of fineTuneFlag
 
   if(save_last_frequency) {
     lastFrequencies[currentBand][activeVFO] = enteredF;
@@ -238,7 +240,7 @@ FLASHMEM void ButtonFrequencyEntry() {
 
   EEPROMWrite();
 
-  SetBand();
+  SetBand(t41.CenterFreq);
   RedrawDisplayScreen(); // *** we can get rid of this by adjusting above to not write to right portion of screen ***
 }
 
@@ -256,6 +258,7 @@ FLASHMEM void ButtonFrequencyEntry() {
 FLASHMEM void SetFavoriteFrequency() {
   int index;
   int val;
+  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
 
   tft.setFontScale((enum RA8875tsize)1);
 
@@ -263,7 +266,7 @@ FLASHMEM void SetFavoriteFrequency() {
   tft.setTextColor(RA8875_WHITE);
   tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
   tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
-  tft.print(EEPROMData.favoriteFreqs[index]);
+  tft.print(favoriteFreqs[index]);
   while(true) {
     if(menuEncoderMove != 0) {  // Changed encoder?
       index += menuEncoderMove;  // Yep
@@ -275,7 +278,7 @@ FLASHMEM void SetFavoriteFrequency() {
       }
       tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
       tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
-      tft.print(EEPROMData.favoriteFreqs[index]);
+      tft.print(favoriteFreqs[index]);
       menuEncoderMove = 0;
     }
 
@@ -284,7 +287,7 @@ FLASHMEM void SetFavoriteFrequency() {
     delay(150L);
     if(val == MENU_OPTION_SELECT) {  // Make a choice??
       EraseMenus();
-      EEPROMData.favoriteFreqs[index] = TxRxFreq;
+      favoriteFreqs[index] = TxRxFreq;
 
       if(activeVFO == VFO_A) {
         currentFreqA = TxRxFreq;
@@ -292,7 +295,7 @@ FLASHMEM void SetFavoriteFrequency() {
         currentFreqB = TxRxFreq;
       }
 
-      SetFreq();
+      SetFreq(TxRxFreq);
       ShowOperatingStats();
       ShowBandwidthBarValues();
       CalcFilters();
@@ -312,12 +315,15 @@ FLASHMEM void GetFavoriteFrequency() {
   int index = 0;
   int val;
   int currentBand2 = 0;
+  int centerFreq;
+  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+
   tft.setFontScale((enum RA8875tsize)1);
 
   tft.setTextColor(RA8875_WHITE);
   tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
   tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
-  tft.print(EEPROMData.favoriteFreqs[index]);
+  tft.print(favoriteFreqs[index]);
   while(true) {
     if(menuEncoderMove != 0) {  // Changed encoder?
       index += menuEncoderMove;  // Yep
@@ -329,7 +335,7 @@ FLASHMEM void GetFavoriteFrequency() {
       }
       tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
       tft.setCursor(SECONDARY_MENU_X, MENUS_Y);
-      tft.print(EEPROMData.favoriteFreqs[index]);
+      tft.print(favoriteFreqs[index]);
       menuEncoderMove = 0;
     }
 
@@ -337,7 +343,7 @@ FLASHMEM void GetFavoriteFrequency() {
     val = ProcessButtonPress(val);
     delay(150L);
 
-    centerFreq = EEPROMData.favoriteFreqs[index];  // current frequency  AFP 09-27-22
+    centerFreq = favoriteFreqs[index];  // current frequency
     if(centerFreq >= bands[BAND_80M].fBandLow && centerFreq <= bands[BAND_80M].fBandHigh) {
       currentBand2 = BAND_80M;
     } else if(centerFreq >= bands[BAND_80M].fBandHigh && centerFreq <= 7000000L) {  // covers 5MHz WWV AFP 11-03-22
@@ -363,13 +369,13 @@ FLASHMEM void GetFavoriteFrequency() {
 
 
     if(val == MENU_OPTION_SELECT) {  // Make a choice??
+      t41.CenterFreq = centerFreq;
       switch(activeVFO) {
         case VFO_A:
           if(currentBandA == NUMBER_OF_BANDS) {  // Incremented too far?
             currentBandA = 0;                     // Yep. Roll to list front.
           }
           currentBandA = currentBand2;
-          TxRxFreq = centerFreq + NCOFreq;
           lastFrequencies[currentBand][VFO_A] = TxRxFreq;
           break;
 
@@ -378,7 +384,6 @@ FLASHMEM void GetFavoriteFrequency() {
             currentBandB = 0;                     // Yep. Roll to list front.
           }                                       // Same for VFO B
           currentBandB = currentBand2;
-          TxRxFreq = centerFreq + NCOFreq;
           lastFrequencies[currentBand][VFO_B] = TxRxFreq;
           break;
       }
@@ -393,7 +398,7 @@ FLASHMEM void GetFavoriteFrequency() {
       //EraseMenus();
       //ResetTuning();
       //ShowOperatingStats();
-      //NCOFreq = 0L;
+      //t41.NCOFreq = 0L;
       //DrawBandwidthBar();  // AFP 10-20-22
       //digitalWrite(bandswitchPins[currentBand], LOW);
       //ShowSpectrumdBScale();

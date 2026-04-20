@@ -140,6 +140,7 @@ void MouseButtonFreqArea(int cursorX, int button) {
   int inc = 0;
   int vfoOffset = activeVFO == VFO_A ? 0 : VFO_B_ACTIVE_OFFSET;
   int x = cursorX - vfoOffset; // adjust cursor position for active VFO
+  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
 
   switch(button) {
     case 1:
@@ -189,7 +190,7 @@ void MouseButtonFreqArea(int cursorX, int button) {
         }
       }
       if(inc < sampleRate / (1 << spectrumZoom)) {
-        SetNCOFreq(NCOFreq - inc);
+        SetNCOFreq(t41.NCOFreq - inc);
       } else {
         SetCenterTune(-inc);
       }
@@ -204,6 +205,7 @@ void MouseWheelFreqArea(int cursorX, int wheel) {
   int inc = 0;
   int vfoOffset = activeVFO == VFO_A ? 0 : VFO_B_ACTIVE_OFFSET;
   int x = cursorX - vfoOffset; // adjust cursor position for active VFO
+  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
 
   //Serial.println(wheel);
 
@@ -246,7 +248,7 @@ void MouseWheelFreqArea(int cursorX, int wheel) {
   //Serial.println(inc);
 
   if(inc < sampleRate / (1 << spectrumZoom)) {
-    SetNCOFreq(NCOFreq + inc * wheel);
+    SetNCOFreq(t41.NCOFreq + inc * wheel);
   } else {
     SetCenterTune(inc * wheel);
   }

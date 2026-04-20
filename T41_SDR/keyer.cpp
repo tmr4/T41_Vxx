@@ -332,7 +332,7 @@ void SendMessage(char *msg) {
   // configure radio for CW transmission
   radioState = CW_TRANSMIT_KEYER_STATE;
   ConfigAudioState(radioState);
-  SetFreq();
+  SetFreq(t41.CenterFreq);
   ShowTransmitReceiveStatus();
 
   digitalWrite(RXTX, HIGH);  // turn on xmit relay

@@ -320,7 +320,7 @@ void WSJTLoop()
               // set VFO A frequency
               f = atol(&cmd[2]);
               ChangeBand(f);
-              SetCenterTune(f - centerFreq);
+              SetCenterTune(f - t41.CenterFreq);
               currentFreqA = f;
               return;
             } else if(cmd[2] == ';') {
@@ -334,7 +334,7 @@ void WSJTLoop()
               // set VFO B frequency
               f = atol(&cmd[2]);
               ChangeBand(f);
-              SetCenterTune(f - centerFreq);
+              SetCenterTune(f - t41.CenterFreq);
               currentFreqB = f;
               return;
             } else if(cmd[2] == ';') {
@@ -347,14 +347,14 @@ void WSJTLoop()
             if(cmd[13] == ';') {
               // set center frequency
               f = atol(&cmd[2]);
-              centerFreq = f;
-              NCOFreq = 0L;
+              t41.CenterFreq = f;
+              t41.NCOFreq = 0L;
               SetTxRxFreq(f);
               DrawBandwidthBar();
               return;
             } else if(cmd[2] == ';') {
               // read center frequency
-              sprintf(cmd,"FC%011d;",centerFreq);
+              sprintf(cmd,"FC%011d;", (int)t41.CenterFreq);
             }
             break;
 
@@ -456,7 +456,7 @@ void WSJTLoop()
           // ;                                                     ;
           //                  IF000070480005000+00000000001xx000000;
           sprintf(cmd, "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
-            TxRxFreq,     // freq in Hz
+            t41.CenterFreq + t41.NCOFreq,     // freq in Hz
             5000,         // freq step size
             0,            // RIT/XIT freq in Hz, +-99999, this isn't preserved in the T41 but would be VFO A - VFO B if split
             0,            // RIT on/off
@@ -514,7 +514,7 @@ void WSJTLoop()
 
           // save final noise floor setting if toggling flag off
           if(liveNoiseFloorFlag == 0) {
-            EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
+            //EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
             EEPROMWrite();
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);

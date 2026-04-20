@@ -382,7 +382,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
   char txt[16];
   int pos_help, tickX;
   int tunedInx = 0;
-  float cFreq = (float)centerFreq;
+  float cFreq = (float)t41.CenterFreq;
   float tunedFreq, lFreq;
   float fInc =  sampleRate / (float)(1 << spectrumZoom) / 4.0;
   // positions for graticules: first for spectrumZoom < 3, then for spectrumZoom > 2
@@ -474,6 +474,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
 *****/
 FASTRUN void ShowFrequency() {
   char freqBuffer[15];
+  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
 
   // *** do this in the proper place if this is needed ***
   //if(activeVFO == VFO_A) {  // Needed for edge checking
@@ -543,10 +544,9 @@ FLASHMEM void ShowOperatingStats() {
   //tft.setTextColor(ST7735_ORANGE);
   tft.setTextColor(ST7735_RED);
   if(spectrumZoom == 0) {
-    //tft.print(centerFreq + 48000);
-    tft.print(centerFreq + (long)intermediateFreq);
+    tft.print(t41.CenterFreq + (long)intermediateFreq);
   } else {
-    tft.print(centerFreq);
+    tft.print(t41.CenterFreq);
   }
 
   // print band for the active VFO
