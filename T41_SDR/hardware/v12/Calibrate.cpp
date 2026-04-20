@@ -242,7 +242,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
     t41.CenterFreq = t41.CenterFreq - intermediateFreq + t41.NCOFreq;
 
   } else {
-    t41.CenterFreq = t41.CenterFreq + t41.NCOFreq;
+    t41.CenterFreq = t41.TXRXFreq();
   }
   t41.NCOFreq = 0;
 

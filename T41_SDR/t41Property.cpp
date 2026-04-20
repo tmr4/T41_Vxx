@@ -6,16 +6,18 @@
 
 /*
 
-this class gathers T41 properties that require a property change event
+This class replaces many old T41 global variables with properties and helper functions.
+  Properties: provide notification of change events
+  Helper: simple function returning a value
 
-Properties:
+Properties that replaced old global variables:
   CenterFreq
   AudioVolume
   NCOFreq
 
 
-
-
+Helper functions that do the job of old global variables:
+TXRXFreq
 
 
 

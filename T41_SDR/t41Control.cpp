@@ -210,7 +210,7 @@ void SendFilter() {
 void SendSetFineTune() {
   char cmd[20];
 
-  sprintf(cmd,"FF%011d;", t41.CenterFreq + t41.NCOFreq);
+  sprintf(cmd,"FF%011d;", t41.TXRXFreq());
   T41ControlSendCmd(cmd);
 }
 
@@ -240,7 +240,7 @@ void SendAS() {
   char cmd[19];
 
   sprintf(cmd, "AS%011d%d%d%d;",
-    (int)(t41.CenterFreq + t41.NCOFreq), // freq in Hz (%011d) at index 2
+    t41.TXRXFreq(), // freq in Hz (%011d) at index 2
     currentBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
     currentDemodMode         // demodulation mode (%d)  at index 15
@@ -255,7 +255,7 @@ void SendIF() {
   sprintf(cmd, "IF%011d%d%d%d%03d%+06d%04d%d%d%d%d%d%d%d%d%011d;",
     // active VFO Freq = TxRxFreq, t41.CenterFreq = TxRxFreq - NCOFreq
     //  *** TODO: we only need 8 digits for first field for T41, consider using other 3 for something ***
-    (int)(t41.CenterFreq + t41.NCOFreq), // freq in Hz (%011d) at index 2
+    t41.TXRXFreq(), // freq in Hz (%011d) at index 2
     currentBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
     currentDemodMode,        // demodulation mode (%d)  at index 15
@@ -461,7 +461,7 @@ void T41ControlLoop() {
           if(useKenwoodIF) {
             // *** TODO: not set up, just for testing ***
             sprintf(cmd, "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
-              (int)(t41.CenterFreq + t41.NCOFreq),     // freq in Hz
+              t41.TXRXFreq(),     // freq in Hz
               0,            // freq step size
               0,            // RIT/XIT freq in Hz, +-99999, this isn't preserved in the T41 but would be VFO A - VFO B if split
               0,            // RIT on/off

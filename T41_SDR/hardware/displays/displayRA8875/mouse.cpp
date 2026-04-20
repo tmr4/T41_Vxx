@@ -140,7 +140,7 @@ void MouseButtonFreqArea(int cursorX, int button) {
   int inc = 0;
   int vfoOffset = activeVFO == VFO_A ? 0 : VFO_B_ACTIVE_OFFSET;
   int x = cursorX - vfoOffset; // adjust cursor position for active VFO
-  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  int TxRxFreq = t41.TXRXFreq();
 
   switch(button) {
     case 1:
@@ -205,7 +205,7 @@ void MouseWheelFreqArea(int cursorX, int wheel) {
   int inc = 0;
   int vfoOffset = activeVFO == VFO_A ? 0 : VFO_B_ACTIVE_OFFSET;
   int x = cursorX - vfoOffset; // adjust cursor position for active VFO
-  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  int TxRxFreq = t41.TXRXFreq();
 
   //Serial.println(wheel);
 

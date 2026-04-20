@@ -965,7 +965,7 @@ FASTRUN void ProcessControls() {
   // shouldn't occur on the same loop so little efficiency to be gained by changing
   #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
   if(ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER)) {
-    SendSetFreq(t41.CenterFreq + t41.NCOFreq);
+    SendSetFreq(t41.TXRXFreq());
   };
   #else
   ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);

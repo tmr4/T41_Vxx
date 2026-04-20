@@ -167,7 +167,7 @@ FLASHMEM void CalibrationInit() {
 
   displayState = DISPLAY_CALIBRATION;
 
-  t41.CenterFreq = t41.CenterFreq + t41.NCOFreq;
+  t41.CenterFreq = t41.TXRXFreq();
   t41.NCOFreq = 0;
 
   t41.AudioVolume = 2;
@@ -2315,7 +2315,7 @@ FLASHMEM void CalibratePwr() {
   CAUTION: SI5351_FREQ_MULT is set in the si5253.h header file and is 100UL
 *****/
 FLASHMEM void SetFreqCal(long calFreqShift) {
-  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  int TxRxFreq = t41.TXRXFreq();
 
   unsigned long long Clk1SetFreq = (TxRxFreq * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
   unsigned long long Clk2SetFreq;

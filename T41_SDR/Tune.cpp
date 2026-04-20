@@ -106,7 +106,7 @@ void ResetTuning() {
 void SetCenterTune(int tuneChange) {
   t41.CenterFreq += tuneChange;  // tune the master vfo
 
-  SetTxRxFreq(t41.CenterFreq + t41.NCOFreq);
+  SetTxRxFreq(t41.TXRXFreq());
 }
 
 /*****
@@ -141,9 +141,9 @@ void SetNCOFreq(int newNCOFreq) {
   t41.NCOFreq = newNCOFreq;
   fineTuneFlag = true;
   if(activeVFO == VFO_A) {
-    currentFreqA = t41.CenterFreq + t41.NCOFreq;
+    currentFreqA = t41.TXRXFreq();
   } else {
-    currentFreqB = t41.CenterFreq + t41.NCOFreq;
+    currentFreqB = t41.TXRXFreq();
   }
 
   // recenter at band edges

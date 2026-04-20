@@ -15,6 +15,9 @@ public:
   // *** template doesn't decrement this with unsigned int ***
   Property<int> AudioVolume; // audioVolume
 
+  // helper functions
+  int TXRXFreq() { return CenterFreq + NCOFreq; }
+
 protected:
 
 private:

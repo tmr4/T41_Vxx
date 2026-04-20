@@ -433,7 +433,7 @@ void BeaconLoop() {
   static int currentBeacon = 0;
   int beacon;
   float32_t dbm;
-  static int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  static int TxRxFreq = t41.TXRXFreq();
 
   if(beaconSyncFlag) {
     if(count == 0 && changeBandFlag) {

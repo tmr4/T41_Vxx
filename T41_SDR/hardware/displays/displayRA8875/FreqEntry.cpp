@@ -32,7 +32,7 @@ extern int TxRxFreqOld;
 *****/
 FLASHMEM void ButtonFrequencyEntry() {
 #define show_FEHelp
-  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  int TxRxFreq = t41.TXRXFreq();
   bool doneFE = false;                         // set to true when a valid frequency is entered
   long enteredF = 0L;                          // desired frequency
   char strF[6] = { ' ', ' ', ' ', ' ', ' ' };  // container for frequency string during entry
@@ -258,7 +258,7 @@ FLASHMEM void ButtonFrequencyEntry() {
 FLASHMEM void SetFavoriteFrequency() {
   int index;
   int val;
-  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  int TxRxFreq = t41.TXRXFreq();
 
   tft.setFontScale((enum RA8875tsize)1);
 
@@ -316,7 +316,7 @@ FLASHMEM void GetFavoriteFrequency() {
   int val;
   int currentBand2 = 0;
   int centerFreq;
-  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  int TxRxFreq = t41.TXRXFreq();
 
   tft.setFontScale((enum RA8875tsize)1);
 

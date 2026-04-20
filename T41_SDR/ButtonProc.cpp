@@ -72,7 +72,7 @@ FLASHMEM void ChangeBand(int change) {
   }
 
   t41.NCOFreq = 0L;
-  TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  TxRxFreq = t41.TXRXFreq();
 
   switch(activeVFO) {
     case VFO_A:

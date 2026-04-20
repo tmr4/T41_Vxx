@@ -474,7 +474,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
 *****/
 FASTRUN void ShowFrequency() {
   char freqBuffer[15];
-  int TxRxFreq = t41.CenterFreq + t41.NCOFreq;
+  int TxRxFreq = t41.TXRXFreq();
 
   // *** do this in the proper place if this is needed ***
   //if(activeVFO == VFO_A) {  // Needed for edge checking

@@ -456,7 +456,7 @@ void WSJTLoop()
           // ;                                                     ;
           //                  IF000070480005000+00000000001xx000000;
           sprintf(cmd, "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
-            t41.CenterFreq + t41.NCOFreq,     // freq in Hz
+            t41.TXRXFreq(),     // freq in Hz
             5000,         // freq step size
             0,            // RIT/XIT freq in Hz, +-99999, this isn't preserved in the T41 but would be VFO A - VFO B if split
             0,            // RIT on/off
