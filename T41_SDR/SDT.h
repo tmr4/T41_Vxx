@@ -90,6 +90,12 @@ typedef __uint8_t uint8_t;
 #define IB_ITEM_TEMP      22
 #define IB_ITEM_LOAD      23
 
+// remote modes
+#define REMOTE_NOT_AVAIL      0
+#define REMOTE_NOT_CONNECTED  1
+#define REMOTE_CONNECTED      2
+#define REMOTE_LOST           3
+
 #define OFF                       0
 #define ON                        1
 

@@ -13,46 +13,64 @@ public:
     id = -1;
   }
 
-  FLASHMEM void Init(T val, FuncPtr npc = NULL) {
+  FLASHMEM void Init(T val) {
     value = val;
-    for(int i = 0; i < 5; i++) {
-      NotifyPropertyChanged[i] = NULL;
-    }
-    notify = 0;
-    if(npc != NULL) {
-      NotifyPropertyChanged[notify++] = npc;
-    }
   }
 
-  FLASHMEM void InitID(T val, int _min, int _max, FuncPtrID npc, int _id, bool polled = true) {
+  //FLASHMEM void Init(T val, FuncPtr npc = NULL) {
+  //  value = val;
+  //  for(int i = 0; i < 5; i++) {
+  //    NotifyChanged[i] = NULL;
+  //  }
+  //  notify = 0;
+  //  if(npc != NULL) {
+  //    NotifyChanged[notify++] = npc;
+  //  }
+  //}
+
+  FLASHMEM void Init(T val, T _min, T _max, FuncPtr nr, FuncPtrID nd, int _id, bool polled = true) {
     value = val;
     min = _min;
     max = _max;
-    NotifyPropertyChangedID = npc;
+    NotifyRemote = nr;
+    NotifyDisplay = nd;
     id = _id;
     notifyOnPoll = polled;
   }
 
-  FLASHMEM void AddNotify(FuncPtr npc = NULL) {
-    if(++notify >= 5) notify = 0; // just overwrite starting with oldest
-    if(npc != NULL) {
-      NotifyPropertyChanged[notify++] = npc;
-    }
-  }
+  //FLASHMEM void AddNotify(FuncPtr npc = NULL) {
+  //  if(++notify >= 5) notify = 0; // just overwrite starting with oldest
+  //  if(npc != NULL) {
+  //    NotifyChanged[notify++] = npc;
+  //  }
+  //}
 
-  FLASHMEM void NotifyOnPoll(bool val) {
-    notifyOnPoll = val;
-    hasChanged = false;
-  }
+  //FLASHMEM void NotifyOnPoll(bool val) {
+  //  notifyOnPoll = val;
+  //  hasChanged = false;
+  //}
 
-  FLASHMEM bool Poll(bool override = false) {
+  FLASHMEM bool Poll(bool updateDisplay, bool updateRemote, bool override = false) {
     bool tmp = hasChanged;
 
-    if((hasChanged && notifyOnPoll) || override) {
+    if(override) {
       Notify();
+    } else if((hasChanged && notifyOnPoll)) {
+      if(updateDisplay) (*NotifyDisplay)(id);
+      if(updateRemote) (*NotifyRemote)(value);
+    } else if(updated) {
+      if(updateDisplay) (*NotifyDisplay)(id);
     }
+
+    updated = false;
     hasChanged = false;
     return tmp;
+  }
+
+  // update property value and display, skip notifications
+  FLASHMEM void Update(T val) {
+    value = val;
+    updated = true;
   }
 
   operator T() { return get(); }
@@ -68,26 +86,27 @@ public:
 
 protected:
   FLASHMEM void Notify() {
-    for(int i = 0; i < notify; i++) {
-      // *** shouldn't need this check ***
-      if(NotifyPropertyChanged[i] != NULL) {
-        (*NotifyPropertyChanged[i])(value);
-      }
-    }
-    if(NotifyPropertyChangedID != NULL && id >= 0) {
-      (*NotifyPropertyChangedID)(id);
+    //for(int i = 0; i < notify; i++) {
+    //  // *** shouldn't need this check ***
+    //  if(NotifyChanged[i] != NULL) {
+    //    (*NotifyChanged[i])(value);
+    //  }
+    //}
+    if(NotifyDisplay != NULL && id >= 0) {
+      (*NotifyDisplay)(id);
     }
   }
 
 private:
   T value;
-  int min, max;
-
-  int notify = 0;
+  T min, max;
   bool hasChanged = false;
+  bool updated = false;
+
+  //int notify = 0;
   bool notifyOnPoll = false;
 
-  int id;
+  int id = -1;
 
   T get() { return value; }
 
@@ -107,6 +126,7 @@ private:
     return value;
   }
 
-  FuncPtr NotifyPropertyChanged[5] = { NULL };
-  FuncPtrID NotifyPropertyChangedID = NULL;
+  //FuncPtr NotifyChanged[5] = { NULL };
+  FuncPtr NotifyRemote = NULL;
+  FuncPtrID NotifyDisplay = NULL;
 };

@@ -3,6 +3,7 @@
 
 #include "Display.h"
 #include "Encoders.h"
+#include "t41Control.h"
 
 /*
 
@@ -120,9 +121,12 @@ void T41Properties::begin() {
 }
 
 void T41Properties::SetPropertyDefaults() {
+  int remoteMode = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
+
+  RemoteMode.Init(remoteMode);
   CenterFreq.Init(7074000);
   NCOFreq.Init(0);
-  AudioVolume.InitID(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &UpdateInfoBoxItem, IB_ITEM_VOL);
+  AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
 
     /*
     AGCMode = EEPROMData.AGCMode;

@@ -24,8 +24,12 @@
 // uncomment below for specific USB Host device support
 #define HOST_KEYBOARD_MOUSE_SUPPORT // uses about 44k of stack
 #define HOST_SERIAL_SUPPORT 1 // uses USBSerial_BigBuffer
-//#define HOST_CAT_CONTROL_SUPPORT 1 // enables CAT control over USB host (CAT commands expected on USB host)
-#define CAT_CONTROL_SUPPORT 1       // enables CAT control over Serial   (CAT commands expected on serial)
+
+// Remote control
+// set one line below to true to enable remote control
+#define CAT_CONTROL_HOST  false  // cable from USB host on this unit to serial on remote
+#define CAT_CONTROL       true   // cable from serial on this unit to USB host on remote
+#define T41_USB_AUDIO     false  // *** for passing audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
 
 // Select one of the noted serial objects according to compile options for enabled services.
 // For use with PC apps and connecting to other CAT controlled units over USB serial or the USB host connector.

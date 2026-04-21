@@ -1,12 +1,14 @@
 
 #include <USBHost_t36.h> // https://github.com/PaulStoffregen/USBHost_t36
 
+#include "SDT.h"
+
 #include "keyboard.h"
 #include "mouse.h"
 #include "t41Control.h"
 
-#include "T41Config.h"
-#include "src\hardwareConfig.h"
+//#include "T41Config.h"
+//#include "src\hardwareConfig.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -104,10 +106,20 @@ void UsbHostLoop() {
   MouseLoop();
 #endif
 
-#ifdef HOST_CAT_CONTROL_SUPPORT
+#if CAT_CONTROL_HOST
   // this forces set frequency commands to set the center freq vs fine tune
   mouseCenterTuneActive = true;
   T41ControlLoop();
+  if(t41.RemoteMode != REMOTE_CONNECTED) {
+    static int count = 0;
+
+    // a loop takes about 100ms
+    // send a connection request every ~5s
+    if(++count == 500) {
+      SendID(true);
+      count = 0;
+    }
+  }
 #endif
 
 /*

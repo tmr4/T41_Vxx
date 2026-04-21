@@ -16,7 +16,7 @@
 #include "Tune.h"
 #include "Utility.h"
 
-#ifdef HOST_CAT_CONTROL_SUPPORT
+#if CAT_CONTROL_HOST
 #include <USBHost_t36.h>
 extern USBSerial_BigBuffer usbHostSerial;
 #endif
@@ -142,13 +142,25 @@ void T41ControlGetCommand(char * cmd, int max) {
 }
 
 // Dual T41 master commands
+void SendID(bool request) {
+  char cmd[7];
+
+  if(request) {
+    sprintf(cmd, "ID;");
+  } else {
+    sprintf(cmd, "IDxxx;");
+  }
+
+  T41ControlSendCmd(cmd);
+}
+
 void SendSetFreq(int freq) {
   char cmd[20];
 
   // set center frequency
   // *** note FA/FB set frequency based on mouseCenterTuneActive
   // and by default adjust fine tune, not center tune ***
-  sprintf(cmd,"FC%011d;", freq);
+  sprintf(cmd, "FC%011d;", freq);
   T41ControlSendCmd(cmd);
 }
 
@@ -156,9 +168,9 @@ void SendSetBandChange(int upDown) {
   char cmd[5];
 
   if(upDown > 0) {
-    sprintf(cmd,"BU;");
+    sprintf(cmd, "BU;");
   } else {
-    sprintf(cmd,"BD;");
+    sprintf(cmd, "BD;");
   }
 
   T41ControlSendCmd(cmd);
@@ -166,14 +178,14 @@ void SendSetBandChange(int upDown) {
 
 void SendSetMode(int mode) {
   char cmd[5];
-  sprintf(cmd,"MD%d;", mode);
+  sprintf(cmd, "MD%d;", mode);
   T41ControlSendCmd(cmd);
 }
 
 void SendSetDisplayZoom(int zoom) {
   char cmd[5];
 
-  sprintf(cmd,"ZM%d;", zoom);
+  sprintf(cmd, "ZM%d;", zoom);
   T41ControlSendCmd(cmd);
 }
 
@@ -193,38 +205,38 @@ void SendSmeter(int smeterPad, float dbm) {
   T41ControlSendCmd(cmd);
 }
 
-void SendVolume() {
+void SendVolume(int volume) {
   char cmd[7];
 
-  sprintf(cmd,"VO%03d;", (int)t41.AudioVolume);
+  sprintf(cmd, "VO%03d;", volume);
   T41ControlSendCmd(cmd);
 }
 
 void SendFilter() {
   char cmd[6];
 
-  sprintf(cmd,"NS%+1d;", posFilterEncoder - lastFilterEncoder);
+  sprintf(cmd, "NS%+1d;", posFilterEncoder - lastFilterEncoder);
   T41ControlSendCmd(cmd);
 }
 
 void SendSetFineTune() {
   char cmd[20];
 
-  sprintf(cmd,"FF%011d;", t41.TXRXFreq());
+  sprintf(cmd, "FF%011d;", t41.TXRXFreq());
   T41ControlSendCmd(cmd);
 }
 
 void SendSignalStrengthRequest() {
   char cmd[5];
 
-  sprintf(cmd,"SM;");
+  sprintf(cmd, "SM;");
   T41ControlSendCmd(cmd);
 }
 
 void SendSignalStrengthRequest(int index) {
   char cmd[5];
 
-  sprintf(cmd,"SM%d;", index);
+  sprintf(cmd, "SM%d;", index);
   T41ControlSendCmd(cmd);
 }
 
@@ -232,7 +244,7 @@ void SendSignalStrengthRequest(int index) {
 void SendSetNarrowFilter() {
   char cmd[4];
 
-  sprintf(cmd,"NW;");
+  sprintf(cmd, "NW;");
   T41ControlSendCmd(cmd);
 }
 
@@ -456,7 +468,14 @@ void T41ControlLoop() {
         break;
 
       case 'I':
-        if(cmd[1] == 'F' && cmd[2] == ';') {
+        if(cmd[1] == 'D' && cmd[2] == ';') { // ID;
+          // reply with the TS-890S id
+          sprintf(cmd,"ID024;");
+          //sprintf(cmd,"ID019;"); // TS-2000
+        } else if(cmd[1] == 'D' && cmd[5] == ';') { // IDxxx;
+          t41.RemoteMode = REMOTE_CONNECTED;
+          return;
+        } else if(cmd[1] == 'F' && cmd[2] == ';') {
           // retrieves transceiver status
           if(useKenwoodIF) {
             // *** TODO: not set up, just for testing ***
@@ -601,8 +620,8 @@ void T41ControlLoop() {
 
       case 'V': // VOxxx;
         if(cmd[1] == 'O' && cmd[5] == ';') {
-          // set transmitter power level
-          t41.AudioVolume = atoi(&cmd[2]);
+          // set volume (without notify chain)
+          t41.AudioVolume.Update(atoi(&cmd[2]));
         }
         return;
         break;

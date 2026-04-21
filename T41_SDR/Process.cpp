@@ -893,6 +893,7 @@ float VolumeToAmplification(int volume) {
 // *** TODO: consider what controls are proper in various radio and display states and if to control them here ***
 FASTRUN void ProcessControls() {
   bool updateDisplay = false;
+  bool updateDisplayVolume;
 
   switch(displayState) {
     case DISPLAY_T41:
@@ -910,17 +911,12 @@ FASTRUN void ProcessControls() {
   PollFrontPanel(); // *** inline function to poll front panel if needed, empty function if not ***
 
   // update volume if changed
-  if(updateDisplay || (displayState == DISPLAY_FULL_MENU)) {
-    t41.AudioVolume.Poll();
-  }
-
-  #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
-  SendVolume();
-  #endif
+  updateDisplayVolume = updateDisplay || (displayState == DISPLAY_FULL_MENU);
+  t41.AudioVolume.Poll(updateDisplayVolume, t41.RemoteMode == REMOTE_CONNECTED);
 
   // update filters if changed
   if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
-    #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
+    #if CAT_CONTROL_HOST || CAT_CONTROL
     SendFilter();
     #endif
 
@@ -963,7 +959,7 @@ FASTRUN void ProcessControls() {
   // Handle tuning changes
   // There may seem some duplication of display updates here, but these tuning events
   // shouldn't occur on the same loop so little efficiency to be gained by changing
-  #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
+  #if CAT_CONTROL_HOST || CAT_CONTROL
   if(ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER)) {
     SendSetFreq(t41.TXRXFreq());
   };
@@ -971,7 +967,7 @@ FASTRUN void ProcessControls() {
   ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
   #endif
   if(fineTuneFlag) {
-    #if defined(HOST_CAT_CONTROL_SUPPORT) || defined(CAT_CONTROL_SUPPORT)
+    #if CAT_CONTROL_HOST || CAT_CONTROL
     // prevent circular response
     if(!catControlChange) {
       SendSetFineTune();

@@ -13,7 +13,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#ifdef T41_USB_AUDIO
+#if T41_USB_AUDIO
 extern AudioInputUSB usbIn;
 #endif
 
@@ -217,7 +217,7 @@ void PrepareMicExciterData() {
       // *** higher wsjt-x transmit levels (~-20dB) is too loud here ***
       // *** TODO: higher wsjt-x transmit levels  do not increase power out ***
       // *** TODO: add volume adjustment here ***
-      #ifdef T41_USB_AUDIO
+      #if T41_USB_AUDIO
         arm_scale_f32(audioBufferL_EX, usbIn.volume() / 0.01, tmp, blocks * 128);
       #else
         arm_scale_f32(audioBufferL_EX, 1.0, tmp, blocks * 128);

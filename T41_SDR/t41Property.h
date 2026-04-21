@@ -8,12 +8,13 @@ public:
   void begin();
   void SetPropertyDefaults();
 
-  // T41 properties (w/ old T41 working variable)
+  // T41 properties
   // *** interestingly CenterFreq is not updated when the center tune encoder is moved; examine need for this property ***
-  Property<int> CenterFreq; // centerFreq
-  Property<int> NCOFreq; // NCOFreq
-  // *** template doesn't decrement this with unsigned int ***
-  Property<int> AudioVolume; // audioVolume
+  // *** template doesn't decrement with unsigned int ***
+  Property<int> RemoteMode;
+  Property<int> CenterFreq;
+  Property<int> NCOFreq;
+  Property<int> AudioVolume;
 
   // helper functions
   int TXRXFreq() { return CenterFreq + NCOFreq; }
@@ -31,6 +32,10 @@ extern T41Properties t41;
 from T41_Views (this is private data, first letter capitalized if property):
 
 next:
+  int remoteMode -1: not avail, 0: not connected (white), 1: connected (green), 2: connection lost (red)
+  private int activeVFO = 0; // VFO A
+  private long currentFreqA = 7048000;
+  private long currentFreqB = 7030000;
   private int radioMode = 0;        // SSB_MODE;
   private int currentDemodMode = 1; // DEMOD_LSB
   private int currentBand = 1;      // BAND_40M;
@@ -39,17 +44,14 @@ next:
   private int ftIndex = 3;
 
 done:
-  private long centerFreq = 7048000;
-  private int audioVolume = 30;
-  private int ncoFreq = 0;
+  int centerFreq = 7048000;
+  int audioVolume = 30;
+  int ncoFreq = 0;
 
 list:
-  private int activeVFO = 0; // VFO A
   private bool centerTuneActive = false;
   //private int freqIncrement = 100000; *** maybe helper? ***
   //private int ftIncrement = 500;
-  private long currentFreqA = 7048000;
-  private long currentFreqB = 7030000;
   //private int currentBandA = 1; //BAND_40M; *** not property or data ***
   //private int currentBandB = 1; //BAND_40M;
   private int currentNF = 0;
