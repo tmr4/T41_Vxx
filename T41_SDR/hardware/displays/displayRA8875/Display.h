@@ -31,6 +31,7 @@
 #define OPERATION_STATS_CWF   245 // CW filter
 #define OPERATION_STATS_DMD   310 // demod mode
 #define OPERATION_STATS_PWR   405 // power level
+#define OPERATION_STATS_REM   480 // remote status
 
 #define SPECTRUM_RES          512
 #define SPECTRUM_HEIGHT       150 // This is the pixel height of spectrum plot area without disturbing the axes

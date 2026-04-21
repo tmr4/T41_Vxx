@@ -35,6 +35,10 @@ Project System:
   Input: T41 vPS IQ waveforms, NF: Auto
   Timing: T41 timing profile
 
+4/21/2026
+Working volume property callbacks and remote status
+Set T41_USB_AUDIO to false, excluding some code and data though still compiling w/ Serial+MIDI+Audio
+
 4/20/2026
 TXRXFreq eliminated (8 byte FLASH code reduction only! obviously the compiler already optimized this away)
   FLASH: code:206876, data:78244, headers:8760   free for files:7832584
@@ -123,7 +127,7 @@ void T41Properties::begin() {
 void T41Properties::SetPropertyDefaults() {
   int remoteMode = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
-  RemoteMode.Init(remoteMode);
+  RemoteMode.Init(remoteMode, &ShowRemoteStatus);
   CenterFreq.Init(7074000);
   NCOFreq.Init(0);
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);

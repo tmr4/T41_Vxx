@@ -851,6 +851,31 @@ FLASHMEM void ShowSpectrumFreqValues() {
   }
 }
 
+FLASHMEM void ShowRemoteStatus(int status) {
+  tft.setFontScale((enum RA8875tsize)0);
+
+  tft.setCursor(OPERATION_STATS_REM, OPERATION_STATS_T);
+
+  switch(status) {
+    case REMOTE_NOT_AVAIL:
+      return;
+      break;
+
+    case REMOTE_NOT_CONNECTED:
+      tft.setTextColor(RA8875_WHITE);
+      break;
+
+    case REMOTE_CONNECTED:
+      tft.setTextColor(RA8875_GREEN);
+      break;
+
+    case REMOTE_LOST:
+      tft.setTextColor(RA8875_RED);
+      break;
+  }
+  tft.print("CAT");
+}
+
 /*****
   Purpose: To display the current transmission frequency, band, mode, and sideband above the spectrum display
 *****/

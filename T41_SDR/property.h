@@ -5,11 +5,12 @@
 // *** FLASHMEM made no difference in code placement, couldn't verify placement in listing file  ***
 template<typename T>
 class Property {
-  typedef void (*FuncPtr)(T);
-  typedef void (*FuncPtrID)(int);
+  typedef void (*FuncPtr)();
+  typedef void (*FuncPtrT)(T);
+  typedef void (*FuncPtrInt)(int);
 
 public:
-  FLASHMEM Property(FuncPtr npc = NULL) {
+  FLASHMEM Property(FuncPtrT npc = NULL) {
     id = -1;
   }
 
@@ -17,7 +18,7 @@ public:
     value = val;
   }
 
-  //FLASHMEM void Init(T val, FuncPtr npc = NULL) {
+  //FLASHMEM void Init(T val, FuncPtrT npc = NULL) {
   //  value = val;
   //  for(int i = 0; i < 5; i++) {
   //    NotifyChanged[i] = NULL;
@@ -28,8 +29,14 @@ public:
   //  }
   //}
 
-  FLASHMEM void Init(T val, T _min, T _max, FuncPtr nr, FuncPtrID nd, int _id, bool polled = true) {
+  FLASHMEM void Init(T val, FuncPtrInt nd) {
     value = val;
+    NotifyDisplay = nd;
+  }
+
+  FLASHMEM void Init(T val, T _min, T _max, FuncPtrT nr, FuncPtrInt nd, int _id, bool polled = true) {
+    value = val;
+    hasMinMax = true;
     min = _min;
     max = _max;
     NotifyRemote = nr;
@@ -38,7 +45,7 @@ public:
     notifyOnPoll = polled;
   }
 
-  //FLASHMEM void AddNotify(FuncPtr npc = NULL) {
+  //FLASHMEM void AddNotify(FuncPtrT npc = NULL) {
   //  if(++notify >= 5) notify = 0; // just overwrite starting with oldest
   //  if(npc != NULL) {
   //    NotifyChanged[notify++] = npc;
@@ -56,10 +63,10 @@ public:
     if(override) {
       Notify();
     } else if((hasChanged && notifyOnPoll)) {
-      if(updateDisplay) (*NotifyDisplay)(id);
-      if(updateRemote) (*NotifyRemote)(value);
+      if(updateDisplay) UpdateDisplay();
+      if(updateRemote && NotifyRemote != NULL) (*NotifyRemote)(value);
     } else if(updated) {
-      if(updateDisplay) (*NotifyDisplay)(id);
+      if(updateDisplay) UpdateDisplay();
     }
 
     updated = false;
@@ -86,19 +93,22 @@ public:
 
 protected:
   FLASHMEM void Notify() {
-    //for(int i = 0; i < notify; i++) {
-    //  // *** shouldn't need this check ***
-    //  if(NotifyChanged[i] != NULL) {
-    //    (*NotifyChanged[i])(value);
-    //  }
-    //}
-    if(NotifyDisplay != NULL && id >= 0) {
-      (*NotifyDisplay)(id);
+    UpdateDisplay();
+  }
+
+  FLASHMEM void UpdateDisplay() {
+    if(NotifyDisplay != NULL) {
+      if(id < 0) {
+        (*NotifyDisplay)((int)value);
+      } else {
+        (*NotifyDisplay)(id);
+      }
     }
   }
 
 private:
   T value;
+  bool hasMinMax = false;
   T min, max;
   bool hasChanged = false;
   bool updated = false;
@@ -113,7 +123,7 @@ private:
   const T &set(const T &val) {
     T tmp = value;
     value = val;
-    if(id >= 0) {
+    if(hasMinMax) {
       if(value > max) value = max;
       if(value < min) value = min;
     }
@@ -126,7 +136,7 @@ private:
     return value;
   }
 
-  //FuncPtr NotifyChanged[5] = { NULL };
-  FuncPtr NotifyRemote = NULL;
-  FuncPtrID NotifyDisplay = NULL;
+  //FuncPtrT NotifyChanged[5] = { NULL };
+  FuncPtrT NotifyRemote = NULL;
+  FuncPtrInt NotifyDisplay = NULL;
 };
