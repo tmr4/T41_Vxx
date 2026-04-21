@@ -30,6 +30,14 @@ extern T41Properties t41;
 /*
 from T41_Views (this is private data, first letter capitalized if property):
 
+next:
+  private int radioMode = 0;        // SSB_MODE;
+  private int currentDemodMode = 1; // DEMOD_LSB
+  private int currentBand = 1;      // BAND_40M;
+  private int transmitPowerLevel = 1;
+  private int tuneIndex = 6;
+  private int ftIndex = 3;
+
 done:
   private long centerFreq = 7048000;
   private int audioVolume = 30;
@@ -38,21 +46,15 @@ done:
 list:
   private int activeVFO = 0; // VFO A
   private bool centerTuneActive = false;
-  private int freqIndex = 6;
-  private int ftIndex = 3;
-  private int freqIncrement = 100000;
-  private int ftIncrement = 500;
+  //private int freqIncrement = 100000; *** maybe helper? ***
+  //private int ftIncrement = 500;
   private long currentFreqA = 7048000;
   private long currentFreqB = 7030000;
-  private int currentDemod = 1; // DEMOD_LSB
-  private int xmtMode = 0; // SSB_MODE;
-  private int currentBand = 1; // BAND_40M;
   //private int currentBandA = 1; //BAND_40M; *** not property or data ***
   //private int currentBandB = 1; //BAND_40M;
   private int currentNF = 0;
   private int agcMode = 1;
   private int liveNoiseFloorFlag = 0;
-  private int transmitPowerLevel = 1;
   //private int fLoCut = -200; *** these were simple properties and didn't need an private value ***
   //private int fHiCut = -3000;
   private bool dataFlag = false;
