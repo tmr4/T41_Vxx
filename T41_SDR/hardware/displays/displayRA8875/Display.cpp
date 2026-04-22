@@ -625,12 +625,17 @@ FASTRUN void DrawAudioSpectrum() {
   int audioYPixel;
   static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
 
-  // *** TODO: verify need for this ***
+  // yielding here avoids delaying next loop
   YieldToProcess();
 
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
     TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
+
+    // *** normally this loop is very fast if data is 0 as drawing is skipped ***
+    // *** this line can sometimes shorten loop time slightly by skipping data
+    //     past high filter if some data is small but not nessesarily 0 ***
+    if(i > filterHiPosition) break;
 
     // don't overwrite audio filter lines
     if((i != filterLoPosition) && (i != filterHiPosition)) {
@@ -646,26 +651,30 @@ FASTRUN void DrawAudioSpectrum() {
       } else {
         audioYPixel = audioSpectrumOffset + map(15 * log10f((audioSpectBuffer[1021 - i] + audioSpectBuffer[1022 - i] + audioSpectBuffer[1023 - i]) / 3), 0, 100, 0, AUDIO_SPEC_H);
       }
-      if(audioYPixel < 0) {
-        audioYPixel = 0;
-      }
 
       // draw current audio spectrum line at this position
-      if(audioYPixel != 0) {
+      if(audioYPixel > 0) {
         // maintain spectrum within box
         if(audioYPixel > CLIP_AUDIO_PEAK)
         {
           audioYPixel = CLIP_AUDIO_PEAK;
         }
         tft.drawFastVLine(AUDIO_SPEC_L + i, AUDIO_SPEC_BOTTOM - audioYPixel, audioYPixel, RA8875_MAGENTA);  // draw new AUDIO spectrum line
+
+        // *** yielding here or below delays start of next frequency spectrum update, increasing loop time by about 10ms ***
+        //YieldToProcess();
+      } else {
+        audioYPixel = 0;
       }
 
       // save data to erase next loop
       yOldAudioPlot[i] = audioYPixel;
     }
 
-    // *** TODO: verify need for this ***
+    // *** see above ***
     //YieldToProcess();
+    // *** some timely placed yields smooths audio processing, but doesn't reduce loop time
+    if(i == 75 || i == 150) YieldToProcess();
   }
 
   RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
