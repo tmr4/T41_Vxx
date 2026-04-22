@@ -37,7 +37,6 @@ extern float32_t EQ_Band14Coeffs[];
 // see: https://www.reddit.com/r/T41_EP/comments/1bddhj5/the_t41_does_narrow_band_fm/
 // and https://github.com/tmr4/T41_SDR/tree/feature/NFMDemod
 int nfmFilterBW = 12000;
-int currentFilterLoCut, currentFilterHiCut;
 
 float32_t recEQ_LevelScale[14];
 
@@ -343,7 +342,7 @@ void UpdateAudioFilterMask(float *coeffs_I, float *coeffs_Q, int numCoeffs, floa
     int decFilterBW - desired decimate bandwidth (default 0)
 *****/
 void SetDecIntFIRFilters(int decFilterBW = 0) {
-  float limit = currentFilterHiCut;
+  float limit = t41.FilterHiCut;
 
   if(limit > 10000.0) {
     limit = 10000.0;
@@ -380,13 +379,13 @@ void CalcFilters() {
     case DEMOD_PSK31_WAV:
     case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
-      loCut = currentFilterLoCut;
-      hiCut = currentFilterHiCut;
+      loCut = t41.FilterLoCut;
+      hiCut = t41.FilterHiCut;
       break;
 
     case DEMOD_LSB:
-      loCut = -currentFilterHiCut;
-      hiCut = -currentFilterLoCut;
+      loCut = -t41.FilterHiCut;
+      hiCut = -t41.FilterLoCut;
       break;
 
     default:
@@ -426,19 +425,19 @@ FLASHMEM void SetupDemodFilterBW() {
     case DEMOD_PSK31_WAV:
     case DEMOD_FT8_INTERNAL:
     case DEMOD_FT8_WAV:
-      currentFilterLoCut = bands[currentBand].fLoCut;
-      currentFilterHiCut = bands[currentBand].fHiCut;
+      t41.FilterLoCut = bands[currentBand].fLoCut;
+      t41.FilterHiCut = bands[currentBand].fHiCut;
       break;
 
     case DEMOD_AM:
     case DEMOD_SAM:
-      currentFilterLoCut = -bands[currentBand].fHiCut;
-      currentFilterHiCut = bands[currentBand].fHiCut;
+      t41.FilterLoCut = -bands[currentBand].fHiCut;
+      t41.FilterHiCut = bands[currentBand].fHiCut;
       break;
 
     default:
-      currentFilterLoCut = 200;
-      currentFilterHiCut = 3000;
+      t41.FilterLoCut = 200;
+      t41.FilterHiCut = 3000;
       break;
   }
 
@@ -447,16 +446,16 @@ FLASHMEM void SetupDemodFilterBW() {
 
 void AdjustFilterBW(int filterChange) {
   if(lowerAudioFilterActive) { // false - high, true - low filter
-    currentFilterLoCut = currentFilterLoCut - filterChange;
+    t41.FilterLoCut = t41.FilterLoCut - filterChange;
 
     // restrain filter
-    if(currentFilterLoCut < 0.0) currentFilterLoCut = 0.0;
-    if(currentFilterLoCut > currentFilterHiCut) currentFilterLoCut = currentFilterHiCut;
+    if(t41.FilterLoCut < 0.0) t41.FilterLoCut = 0.0;
+    if(t41.FilterLoCut > t41.FilterHiCut) t41.FilterLoCut = t41.FilterHiCut;
   } else {
-    currentFilterHiCut = currentFilterHiCut - filterChange;
+    t41.FilterHiCut = t41.FilterHiCut - filterChange;
 
     // restrain filter
-    if(currentFilterHiCut < currentFilterLoCut) currentFilterHiCut = currentFilterLoCut;
+    if(t41.FilterHiCut < t41.FilterLoCut) t41.FilterHiCut = t41.FilterLoCut;
   }
 }
 
@@ -480,8 +479,8 @@ void SetBWFilters(int filterChange) {
 
     case DEMOD_AM:
     case DEMOD_SAM:
-      currentFilterHiCut = currentFilterHiCut - filterChange;
-      currentFilterLoCut = -currentFilterHiCut;
+      t41.FilterHiCut = t41.FilterHiCut - filterChange;
+      t41.FilterLoCut = -t41.FilterHiCut;
       break;
 
     case DEMOD_NFM:

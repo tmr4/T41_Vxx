@@ -15,6 +15,8 @@ public:
   Property<int> CenterFreq;
   Property<int> NCOFreq;
   Property<int> AudioVolume;
+  Property<int> FilterHiCut;
+  Property<int> FilterLoCut;
 
   // helper functions
   int TXRXFreq() { return CenterFreq + NCOFreq; }
@@ -32,21 +34,23 @@ extern T41Properties t41;
 from T41_Views (this is private data, first letter capitalized if property):
 
 next:
-  int remoteMode -1: not avail, 0: not connected (white), 1: connected (green), 2: connection lost (red)
-  private int activeVFO = 0; // VFO A
-  private long currentFreqA = 7048000;
-  private long currentFreqB = 7030000;
-  private int radioMode = 0;        // SSB_MODE;
-  private int currentDemodMode = 1; // DEMOD_LSB
-  private int currentBand = 1;      // BAND_40M;
-  private int transmitPowerLevel = 1;
-  private int tuneIndex = 6;
-  private int ftIndex = 3;
+  int activeVFO = 0; // VFO A
+  long currentFreqA = 7048000;
+  long currentFreqB = 7030000;
+  int radioMode = 0;        // SSB_MODE;
+  int currentDemodMode = 1; // DEMOD_LSB
+  int currentBand = 1;      // BAND_40M;
+  int transmitPowerLevel = 1;
+  int tuneIndex = 6;
+  int ftIndex = 3;
 
 done:
   int centerFreq = 7048000;
   int audioVolume = 30;
   int ncoFreq = 0;
+  int remoteStatus -1: not avail, 0: not connected (white), 1: connected (green), 2: connection lost (red)
+  int fLoCut = -200; *** these were simple properties and didn't need an private value ***
+  int fHiCut = -3000;
 
 list:
   private bool centerTuneActive = false;
@@ -57,8 +61,6 @@ list:
   private int currentNF = 0;
   private int agcMode = 1;
   private int liveNoiseFloorFlag = 0;
-  //private int fLoCut = -200; *** these were simple properties and didn't need an private value ***
-  //private int fHiCut = -3000;
   private bool dataFlag = false;
 
 */

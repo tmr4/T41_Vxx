@@ -122,11 +122,11 @@ void SetNCOFreq(int newNCOFreq) {
     case DEMOD_FT8:
     case DEMOD_FT8_WAV:
       lowSideAdj = 0;
-      highSideAdj = currentFilterHiCut;
+      highSideAdj = t41.FilterHiCut;
       break;
 
     case DEMOD_LSB:
-      lowSideAdj = currentFilterHiCut;
+      lowSideAdj = t41.FilterHiCut;
       highSideAdj = 0;
       break;
 

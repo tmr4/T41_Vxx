@@ -106,7 +106,7 @@ FLASHMEM void InitAMDemodBiquadFilter() {
 
   SetIIRCoeffs(biquad_lowpass1_coeffs, (float32_t)LP_F_help, 1.3, sampleRate / 8.0, 0);  // 1st stage
 */
-  SetIIRCoeffs(biquad_lowpass1_coeffs, currentFilterHiCut, 1.3, sampleRate / 8.0, 0);  // 1st stage
+  SetIIRCoeffs(biquad_lowpass1_coeffs, t41.FilterHiCut, 1.3, sampleRate / 8.0, 0);  // 1st stage
 
   biquad_lowpass1.numStages = 1;  // set number of stages
   biquad_lowpass1.pCoeffs = biquad_lowpass1_coeffs;      // set pointer to coefficients file
@@ -893,55 +893,38 @@ float VolumeToAmplification(int volume) {
 // *** TODO: consider what controls are proper in various radio and display states and if to control them here ***
 FASTRUN void ProcessControls() {
   bool updateDisplay = false;
-  bool updateDisplayVolume;
+  bool updateDisplayVolume = false;
 
   switch(displayState) {
     case DISPLAY_T41:
     case DISPLAY_T41_FT8_DECODE:
       updateDisplay = true;
+      updateDisplayVolume = true;
+      break;
+
+    case DISPLAY_FULL_MENU:
+      updateDisplayVolume = true;
       break;
 
     case DISPLAY_BEACON_MONITOR:
-    case DISPLAY_FULL_MENU:
     default:
     // no screen updates at all
-    break;
+      break;
   }
 
-  PollFrontPanel(); // *** inline function to poll front panel if needed, empty function if not ***
+  // poll front pannel
+  // *** inline function to poll front panel, empty function if not used ***
+  PollFrontPanel();
 
   // update volume if changed
-  updateDisplayVolume = updateDisplay || (displayState == DISPLAY_FULL_MENU);
   t41.AudioVolume.Poll(updateDisplayVolume, t41.RemoteStatus == REMOTE_CONNECTED);
 
   // update filters if changed
   if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
-    #if CAT_CONTROL_HOST || CAT_CONTROL
-    SendFilter();
-    #endif
-
     ProcessFilterEncoder();
 
-    if(updateDisplay) {
-      switch(displayState) {
-        case DISPLAY_T41:
-          ShowBandwidthBarValues();
-          DrawBandwidthBar();
-          DrawAudioFilterLines();
-          break;
-
-        case DISPLAY_T41_FT8_DECODE:
-          DrawAudioFilterLines();
-          break;
-
-        case DISPLAY_BEACON_MONITOR:
-          break;
-
-        default:
-        // no screen updates at all
-        break;
-      }
-    }
+    t41.FilterHiCut.Poll(updateDisplay, t41.RemoteStatus == REMOTE_CONNECTED);
+    t41.FilterHiCut.Poll(updateDisplay, t41.RemoteStatus == REMOTE_CONNECTED);
   }
 
   // handle USB Host

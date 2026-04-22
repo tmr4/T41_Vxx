@@ -6,7 +6,6 @@
 extern float32_t audioFIRFilterMask[1024];
 
 extern int nfmFilterBW;
-extern int currentFilterLoCut, currentFilterHiCut;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

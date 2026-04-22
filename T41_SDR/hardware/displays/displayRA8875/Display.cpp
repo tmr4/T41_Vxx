@@ -364,8 +364,8 @@ int filterHiPosition;
 void CalcAudioFilterLinePositions() {
   float span = AUDIO_SPEC_SPAN * (sampleRate < 45000.0 ? 44.1 / 24.0 : 1.0);
   // map filter position to audio spectrum box
-  filterLoPosition = map(currentFilterLoCut, 0, span, 0, AUDIO_SPEC_RES);
-  filterHiPosition = map(currentFilterHiCut, 0, span, 0, AUDIO_SPEC_RES);
+  filterLoPosition = map((int)t41.FilterLoCut, 0, span, 0, AUDIO_SPEC_RES);
+  filterHiPosition = map((int)t41.FilterHiCut, 0, span, 0, AUDIO_SPEC_RES);
 }
 
 // *** pulling this out of DrawFreqSpectrum allows the screen to update about 35% faster
@@ -635,7 +635,8 @@ FASTRUN void DrawAudioSpectrum() {
     // *** normally this loop is very fast if data is 0 as drawing is skipped ***
     // *** this line can sometimes shorten loop time slightly by skipping data
     //     past high filter if some data is small but not nessesarily 0 ***
-    if(i > filterHiPosition) break;
+    // *** however, this fails to completely erase spectrum left after filter movement ***
+    //if(i > filterHiPosition) break;
 
     // don't overwrite audio filter lines
     if((i != filterLoPosition) && (i != filterHiPosition)) {
@@ -689,8 +690,8 @@ FLASHMEM void ShowBandwidthBarValues() {
   int posLeft, posRight;
   int loColor = RA8875_LIGHT_GREY;
   int hiColor = RA8875_LIGHT_GREY;
-  float loValue = (float)currentFilterLoCut * 0.001;
-  float hiValue = (float)currentFilterHiCut * 0.001;
+  float loValue = (float)t41.FilterLoCut * 0.001;
+  float hiValue = (float)t41.FilterHiCut * 0.001;
   float tmp;
 
   tft.writeTo(L2); // switch to layer 2
@@ -860,12 +861,32 @@ FLASHMEM void ShowSpectrumFreqValues() {
   }
 }
 
-FLASHMEM void ShowRemoteStatus(int status) {
+FLASHMEM void UpdateFilters() {
+  switch(displayState) {
+    case DISPLAY_T41:
+      ShowBandwidthBarValues();
+      DrawBandwidthBar();
+      DrawAudioFilterLines();
+      break;
+
+    case DISPLAY_T41_FT8_DECODE:
+      DrawAudioFilterLines();
+      break;
+
+    case DISPLAY_BEACON_MONITOR:
+    case DISPLAY_FULL_MENU:
+    default:
+    // no screen updates at all
+    break;
+  }
+}
+
+FLASHMEM void ShowRemoteStatus() {
   tft.setFontScale((enum RA8875tsize)0);
 
   tft.setCursor(OPERATION_STATS_REM, OPERATION_STATS_T);
 
-  switch(status) {
+  switch(t41.RemoteStatus) {
     case REMOTE_NOT_AVAIL:
       return;
       break;
@@ -948,7 +969,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.print(DEMOD[currentDemodMode].text);
 
   ShowCurrentPowerSetting();
-  ShowRemoteStatus(t41.RemoteStatus);
+  ShowRemoteStatus();
 }
 
 /*****
@@ -1202,7 +1223,7 @@ FASTRUN void DrawBandwidthBar() {
 
   //NCOFreqX = (int)(t41.NCOFreq * pixel_per_hz * ((float)(1 << spectrumZoom)) / 2.0 - zoomOffset);
   NCOFreqX = (int)(t41.NCOFreq * pixel_per_hz - zoomOffset);
-  newFilterWidth = (int)(((float)(currentFilterHiCut - currentFilterLoCut)) * pixel_per_hz * 1.06);
+  newFilterWidth = (int)(((float)(t41.FilterHiCut - t41.FilterLoCut)) * pixel_per_hz * 1.06);
 
   // make sure bandwidth is within zoom range
   switch(currentDemodMode) {
@@ -1249,11 +1270,11 @@ FASTRUN void DrawBandwidthBar() {
       case DEMOD_PSK31_WAV:
       case DEMOD_FT8_INTERNAL:
       case DEMOD_FT8_WAV:
-        newFilterX = centerLine + NCOFreqX + (float)currentFilterLoCut * pixel_per_hz;
+        newFilterX = centerLine + NCOFreqX + (float)t41.FilterLoCut * pixel_per_hz;
         break;
 
       case DEMOD_LSB:
-        newFilterX = centerLine - newFilterWidth + NCOFreqX - (float)currentFilterLoCut * pixel_per_hz;
+        newFilterX = centerLine - newFilterWidth + NCOFreqX - (float)t41.FilterLoCut * pixel_per_hz;
         break;
 
       case DEMOD_NFM:

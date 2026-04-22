@@ -261,6 +261,20 @@ void SendFilter() {
   T41ControlSendCmd(cmd);
 }
 
+void SendFilterHi(int filter) {
+  char cmd[20];
+
+  sprintf(cmd, "NH%011d;", filter);
+  T41ControlSendCmd(cmd);
+}
+
+void SendFilterLo(int filter) {
+  char cmd[20];
+
+  sprintf(cmd, "NL%011d;", filter);
+  T41ControlSendCmd(cmd);
+}
+
 void SendSetFineTune() {
   char cmd[20];
 
@@ -585,28 +599,33 @@ void T41ControlLoop() {
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
           return;
+        } else if(cmd[1] == 'H' && cmd[13] == ';') {
+          t41.FilterHiCut = atol(&cmd[2]);
+
+          CalcFilters();
+          UpdateFilters();
+          return;
+        } else if(cmd[1] == 'L' && cmd[13] == ';') {
+          t41.FilterLoCut = atol(&cmd[2]);
+
+          CalcFilters();
+          UpdateFilters();
+          return;
         } else if(cmd[1] == 'S' && cmd[4] == ';') {
           // inc/dec audio filter
-
           posFilterEncoder += atoi(&cmd[2]);
           ProcessFilterEncoder();
 
           CalcFilters();
-          //updateDisplay = true;
-          ShowBandwidthBarValues();
-          DrawBandwidthBar();
-          DrawAudioFilterLines();
+          UpdateFilters();
           return;
         } else if(cmd[1] == 'W' && cmd[2] == ';') {
           // sets 0.5kHz-1.5kHz audio filter
-          currentFilterLoCut = 500;
-          currentFilterHiCut = 1500;
+          t41.FilterLoCut = 500;
+          t41.FilterHiCut = 1500;
 
           CalcFilters();
-          //updateDisplay = true;
-          ShowBandwidthBarValues();
-          DrawBandwidthBar();
-          DrawAudioFilterLines();
+          UpdateFilters();
           return;
         }
         break;

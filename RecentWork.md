@@ -2,6 +2,10 @@
 
 ## Ongoing Work
 
+### Global Working Variables to Properties
+
+* I've been slowly converting the T41 global working variables to C# style properties.  These can notify remote to take action or cause the display to be updated.  This should eliminate having such things spread throughout the code.
+
 ### Refined hardware and new display drivers
 
 * I've extracted much of the T41 hardware specific code into separate version specific hardware *libraries*.  The front panel and display are two areas I haven't previously attempted, for different reasons.  My original thought was to make the front panel code applicable to all versions with a group of defines activating the correct code depending on the selected front panel. This created confusing code and while seemingly practical, was never used in practice as my radios all have a version specific front panel.  It also made it more difficult to develop code for the various development boards I've been working with.
@@ -45,6 +49,7 @@
 * The Audio Platform is now included as a hardware version in T41_Vxx.
 * Unfortunately, the Arduino IDE and/or Windows is a bit fussy when trying to successively compile for different hardware versions. You can't simply replace the hardware files in the *src* folder, change the Teensy in the IDE and compile. The system seems to lose one or the other Teensy connection and you have to disconnect the Teensy.  Sometimes, the Teensy also must be reset before you can continue. I've resolved this by only connecting one hardware setup to the PC at a time and deleting the previous IDE working folder for the sketch.  Needs more testing. What seems to work best when switching between systems is to connect the system of interest while the other system is still connected and then disconnecting the second system.  This might just be a Windows thing.  I think part of the problem is that the IDE is reusing object files from the previous compile even though cpu speed is changed. You'd think that these problems wouldn't exist when changing cpu speeds, like when working with an AP/PS combo, as a full recompile should be needed. But perhaps the IDE isn't tracking that.
 * More research/testing with the above issue. Seems as if Windows doesn't stay sync'd with Arduino and/or Teensyduino and excessive port reservations are made. These seem hard to delete in regedit so I successively attached the various Teensy boards I've used and unintalled the device in Device Manage/Ports. Then I was able to switch back and forth between connected hardware within the IDE.  To be safe I've been disconnecting the serial monitor and deleting the sketch folder.
+* Keeping the IDE serial monitor disconnected appears to prevent the compilation problem noted above.  I am occassionally seeing other apps close (VSCode) or have problems (Waveforms) on compile.
 * I'm seeing an occasional slowdown in the AP display. I've never noticed this with any of the other hardware versions.  This could be platform specific or for the particular Teensy board being used (the one in the system now requires 600MHz to operate properly).
 
 ## Other Recent Work

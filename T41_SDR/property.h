@@ -29,9 +29,16 @@ public:
   //  }
   //}
 
-  FLASHMEM void Init(T val, FuncPtrInt nd) {
+  FLASHMEM void Init(T val, FuncPtr nd) {
     value = val;
     NotifyDisplay = nd;
+  }
+
+  FLASHMEM void Init(T val, FuncPtrT nr, FuncPtr nd, bool polled = true) {
+    value = val;
+    NotifyRemote = nr;
+    NotifyDisplay = nd;
+    notifyOnPoll = polled;
   }
 
   FLASHMEM void Init(T val, T _min, T _max, FuncPtrT nr, FuncPtrInt nd, int _id, bool polled = true) {
@@ -40,7 +47,7 @@ public:
     min = _min;
     max = _max;
     NotifyRemote = nr;
-    NotifyDisplay = nd;
+    NotifyInfoBox = nd;
     id = _id;
     notifyOnPoll = polled;
   }
@@ -98,11 +105,10 @@ protected:
 
   FLASHMEM void UpdateDisplay() {
     if(NotifyDisplay != NULL) {
-      if(id < 0) {
-        (*NotifyDisplay)((int)value);
-      } else {
-        (*NotifyDisplay)(id);
-      }
+      (*NotifyDisplay)();
+    }
+    if((NotifyInfoBox != NULL) && (id >= 0)) {
+      (*NotifyInfoBox)(id);
     }
   }
 
@@ -136,7 +142,7 @@ private:
     return value;
   }
 
-  //FuncPtrT NotifyChanged[5] = { NULL };
+  FuncPtr NotifyDisplay = NULL;
   FuncPtrT NotifyRemote = NULL;
-  FuncPtrInt NotifyDisplay = NULL;
+  FuncPtrInt NotifyInfoBox = NULL;
 };

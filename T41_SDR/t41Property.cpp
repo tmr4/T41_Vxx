@@ -35,6 +35,14 @@ Project System:
   Input: T41 vPS IQ waveforms, NF: Auto
   Timing: T41 timing profile
 
+Size on Audio Platform small as PS has to accommodate USB Host
+4/22/2026
+Added hi/lo filter properties
+  FLASH: code:206500, data:78244, headers:9136   free for files:7832584
+   RAM1: variables:147040, code:170792, padding:25816   free for local variables:180640
+   RAM2: variables:334048  free for malloc/new:190240
+ EXTRAM: variables:1200320
+
 4/21/2026
 Working volume property callbacks and remote status
 Set T41_USB_AUDIO to false, excluding some code and data though still compiling w/ Serial+MIDI+Audio
@@ -131,6 +139,8 @@ void T41Properties::SetPropertyDefaults() {
   CenterFreq.Init(7074000);
   NCOFreq.Init(0);
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
+  FilterHiCut.Init(200, &SendFilterHi, &UpdateFilters);
+  FilterLoCut.Init(3000, &SendFilterLo, &UpdateFilters);
 
     /*
     AGCMode = EEPROMData.AGCMode;

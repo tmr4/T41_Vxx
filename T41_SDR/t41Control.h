@@ -28,6 +28,8 @@ void SendSetDisplayZoom(int zoom);
 void SendSmeter(int smeterPad, float dbm);
 void SendVolume(int volume);
 void SendFilter();
+void SendFilterHi(int filter);
+void SendFilterLo(int filter);
 void SendSetFineTune();
 
 void SendSignalStrengthRequest();

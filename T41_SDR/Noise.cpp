@@ -145,16 +145,16 @@ void Kim1_NR() {
     float32_t NR_onemtwobeta = (1.0 - (2.0 * NR_beta));
     float32_t NR_T;
 
-    if(currentFilterLoCut <= 0 && currentFilterHiCut >= 0) {
+    if(t41.FilterLoCut <= 0 && t41.FilterHiCut >= 0) {
       lf_freq = 0.0;
-      uf_freq = fmax(-(float32_t)currentFilterLoCut, (float32_t)currentFilterHiCut);
+      uf_freq = fmax(-(float32_t)t41.FilterLoCut, (float32_t)t41.FilterHiCut);
     } else {
-      if(currentFilterLoCut > 0) {
-        lf_freq = (float32_t)currentFilterLoCut;
-        uf_freq = (float32_t)currentFilterHiCut;
+      if(t41.FilterLoCut > 0) {
+        lf_freq = (float32_t)t41.FilterLoCut;
+        uf_freq = (float32_t)t41.FilterHiCut;
       } else {
-        uf_freq = -(float32_t)currentFilterLoCut;
-        lf_freq = -(float32_t)currentFilterHiCut;
+        uf_freq = -(float32_t)t41.FilterLoCut;
+        lf_freq = -(float32_t)t41.FilterHiCut;
       }
     }
     lf_freq /= (sampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
@@ -414,16 +414,16 @@ void SpectralNoiseReduction() {
   float32_t ph1y[NR_FFT_L / 2];
   static int NR_first_time_2 = 1;
 
-  if(currentFilterLoCut <= 0 && currentFilterHiCut >= 0) {
+  if(t41.FilterLoCut <= 0 && t41.FilterHiCut >= 0) {
     lf_freq = 0.0;
-    uf_freq = fmax(-(float32_t)currentFilterLoCut, (float32_t)currentFilterHiCut);
+    uf_freq = fmax(-(float32_t)t41.FilterLoCut, (float32_t)t41.FilterHiCut);
   } else {
-    if(currentFilterLoCut > 0) {
-      lf_freq = (float32_t)currentFilterLoCut;
-      uf_freq = (float32_t)currentFilterHiCut;
+    if(t41.FilterLoCut > 0) {
+      lf_freq = (float32_t)t41.FilterLoCut;
+      uf_freq = (float32_t)t41.FilterHiCut;
     } else {
-      uf_freq = -(float32_t)currentFilterLoCut;
-      lf_freq = -(float32_t)currentFilterHiCut;
+      uf_freq = -(float32_t)t41.FilterLoCut;
+      lf_freq = -(float32_t)t41.FilterHiCut;
     }
   }
 

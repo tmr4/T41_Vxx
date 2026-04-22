@@ -150,11 +150,11 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   // calibration specific configuration
   switch(calType) {
     case 0: // frequency cal
-      userFilterLowCut = currentFilterLoCut;
-      userFilterHiCut = currentFilterHiCut;
+      userFilterLowCut = t41.FilterLoCut;
+      userFilterHiCut = t41.FilterHiCut;
 
-      currentFilterHiCut = 1000;
-      currentFilterLoCut = -1000;
+      t41.FilterHiCut = 1000;
+      t41.FilterLoCut = -1000;
       currentDemodMode = DEMOD_SAM;
       CalcFilters();
 
@@ -269,8 +269,8 @@ FLASHMEM void CalibratePost(int calType) {
   switch(calType) {
     case 0: // frequency cal
       currentDemodMode = userDemodMode;
-      currentFilterLoCut = userFilterLowCut;
-      currentFilterHiCut = userFilterHiCut;
+      t41.FilterLoCut = userFilterLowCut;
+      t41.FilterHiCut = userFilterHiCut;
       CalcFilters();
       break;
 
