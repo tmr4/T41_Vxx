@@ -23,6 +23,8 @@ void T41ControlSendData(uint8_t *data, int len);
 
 void SendSetBandChange(int upDown);
 void SendSetFreq(int freq);
+void SendSetFreqA(int freq);
+void SendSetFreqB(int freq);
 void SendSetMode(int mode);
 void SendSetDisplayZoom(int zoom);
 void SendSmeter(int smeterPad, float dbm);

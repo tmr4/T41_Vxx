@@ -29,25 +29,33 @@ public:
   //  }
   //}
 
-  FLASHMEM void Init(T val, FuncPtr nd) {
+  // initialize property with 1 notification (set to NULL if not needed):
+  // not polled
+  // notify: void (*FuncPtr)()
+  FLASHMEM void Init(T val, FuncPtr _funcPtr) {
     value = val;
-    NotifyDisplay = nd;
+    funcPtr = _funcPtr;
   }
 
-  FLASHMEM void Init(T val, FuncPtrT nr, FuncPtr nd, bool polled = true) {
+  // initialize property with 2 notifications (set either to NULL if not needed):
+  // both polled unless specified otherwise
+  //   notify: void (*FuncPtrT)(T) with copy of property
+  //   notify: void (*FuncPtr)()
+  FLASHMEM void Init(T val, FuncPtrT _funcPtrT, FuncPtr _funcPtr, bool polled = true) {
     value = val;
-    NotifyRemote = nr;
-    NotifyDisplay = nd;
+    funcPtrT = _funcPtrT;
+    funcPtr = _funcPtr;
     notifyOnPoll = polled;
   }
 
-  FLASHMEM void Init(T val, T _min, T _max, FuncPtrT nr, FuncPtrInt nd, int _id, bool polled = true) {
+  // same as above with max, min
+  FLASHMEM void Init(T val, T _min, T _max, FuncPtrT _funcPtrT, FuncPtrInt _funcPtr, int _id, bool polled = true) {
     value = val;
     hasMinMax = true;
     min = _min;
     max = _max;
-    NotifyRemote = nr;
-    NotifyInfoBox = nd;
+    funcPtrT = _funcPtrT;
+    NotifyInfoBox = _funcPtr;
     id = _id;
     notifyOnPoll = polled;
   }
@@ -71,7 +79,7 @@ public:
       Notify();
     } else if((hasChanged && notifyOnPoll)) {
       if(updateDisplay) UpdateDisplay();
-      if(updateRemote && NotifyRemote != NULL) (*NotifyRemote)(value);
+      if(updateRemote && funcPtrT != NULL) (*funcPtrT)(value);
     } else if(updated) {
       if(updateDisplay) UpdateDisplay();
     }
@@ -104,8 +112,8 @@ protected:
   }
 
   FLASHMEM void UpdateDisplay() {
-    if(NotifyDisplay != NULL) {
-      (*NotifyDisplay)();
+    if(funcPtr != NULL) {
+      (*funcPtr)();
     }
     if((NotifyInfoBox != NULL) && (id >= 0)) {
       (*NotifyInfoBox)(id);
@@ -142,7 +150,7 @@ private:
     return value;
   }
 
-  FuncPtr NotifyDisplay = NULL;
-  FuncPtrT NotifyRemote = NULL;
+  FuncPtr funcPtr = NULL;
+  FuncPtrT funcPtrT = NULL;
   FuncPtrInt NotifyInfoBox = NULL;
 };

@@ -35,8 +35,6 @@ extern int ftIncrement;
 extern int currentBand;
 extern int currentBandA;
 extern int currentBandB;
-extern int currentFreqA;
-extern int currentFreqB;
 extern int freqCorrectionFactor;
 
 extern int equalizerRec[];

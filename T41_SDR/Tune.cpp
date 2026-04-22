@@ -22,43 +22,6 @@ int CWFreqShift = 750;
 //-------------------------------------------------------------------------------------------------------------
 
 /*****
-  Purpose: Set center tuning frequency
-           NCOFreq is unchanged
-*****/
-void SetTxRxFreq(int freq) {
-  SetFreq(freq);
-
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowFrequency();          // update frequency display
-      ShowOperatingStats();     // update center frequency in band info
-      ShowSpectrumFreqValues(); // update spectrum frequency values
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-      break;
-
-    case DISPLAY_CALIBRATION:
-      ShowOperatingStats();
-
-      if(calibrateItem == 1) {
-        // receive IQ calibration
-        ShowSpectrumFreqValues();
-      }
-      break;
-
-    case DISPLAY_FULL_MENU:
-      ShowFrequency();
-      ShowOperatingStats();
-      break;
-
-    default:
-    // no screen updates at all
-    break;
-  }
-}
-
-/*****
   Purpose: Reset tuning to center
            NCOFreq is set to zero
 
@@ -72,7 +35,7 @@ void ResetTuning() {
   t41.CenterFreq += t41.NCOFreq;
   t41.NCOFreq = 0L;
 
-  SetTxRxFreq(t41.CenterFreq);
+  SetFreq(t41.CenterFreq);
 
   switch(displayState) {
     case DISPLAY_T41:
@@ -106,7 +69,7 @@ void ResetTuning() {
 void SetCenterTune(int tuneChange) {
   t41.CenterFreq += tuneChange;  // tune the master vfo
 
-  SetTxRxFreq(t41.TXRXFreq());
+  SetFreq(t41.TXRXFreq());
 }
 
 /*****
@@ -141,9 +104,9 @@ void SetNCOFreq(int newNCOFreq) {
   t41.NCOFreq = newNCOFreq;
   fineTuneFlag = true;
   if(activeVFO == VFO_A) {
-    currentFreqA = t41.TXRXFreq();
+    t41.CurrentFreqA = t41.TXRXFreq();
   } else {
-    currentFreqB = t41.TXRXFreq();
+    t41.CurrentFreqB = t41.TXRXFreq();
   }
 
   // recenter at band edges
@@ -190,9 +153,9 @@ FLASHMEM void SplitVFOFollowup() {
   Purpose: Set VFO A to receive frequency and VFO B to the transmit frequency
 *****/
 FLASHMEM void DoSplitVFO() {
-  currentFreqB = currentFreqA;
+  t41.CurrentFreqB = t41.CurrentFreqA;
 
   // GetMenuValue(minValue, maxValue, startValue, increment, prompt, valueOffset)
-  //GetMenuValue(-40, 30, &currentFreqB, SPLIT_INCREMENT, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
-  GetMenuValue(-40, 30, &currentFreqB, 500, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
+  //GetMenuValue(-40, 30, &t41.CurrentFreqB, SPLIT_INCREMENT, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
+  GetMenuValue(-40, 30, (int*)&t41.CurrentFreqB, 500, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
 }

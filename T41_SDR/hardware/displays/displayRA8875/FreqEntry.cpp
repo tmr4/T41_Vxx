@@ -290,9 +290,9 @@ FLASHMEM void SetFavoriteFrequency() {
       favoriteFreqs[index] = TxRxFreq;
 
       if(activeVFO == VFO_A) {
-        currentFreqA = TxRxFreq;
+        t41.CurrentFreqA = TxRxFreq;
       } else {
-        currentFreqB = TxRxFreq;
+        t41.CurrentFreqB = TxRxFreq;
       }
 
       SetFreq(TxRxFreq);

@@ -861,6 +861,38 @@ FLASHMEM void ShowSpectrumFreqValues() {
   }
 }
 
+// updates various display elements associated with tuning frequency
+FLASHMEM void UpdateDisplayFreq() {
+  switch(displayState) {
+    case DISPLAY_T41:
+      ShowFrequency();          // update frequency display
+      ShowOperatingStats();     // update center frequency in band info
+      ShowSpectrumFreqValues(); // update spectrum frequency values
+      break;
+
+    case DISPLAY_BEACON_MONITOR:
+      break;
+
+    case DISPLAY_CALIBRATION:
+      ShowOperatingStats();
+
+      if(calibrateItem == 1) {
+        // receive IQ calibration
+        ShowSpectrumFreqValues();
+      }
+      break;
+
+    case DISPLAY_FULL_MENU:
+      ShowFrequency();
+      ShowOperatingStats();
+      break;
+
+    default:
+    // no screen updates at all
+    break;
+  }
+}
+
 FLASHMEM void UpdateFilters() {
   switch(displayState) {
     case DISPLAY_T41:
@@ -1074,7 +1106,7 @@ FASTRUN void ShowFrequency() {
     tft.setFontScale(1, 2);
     tft.setTextColor(RA8875_LIGHT_GREY);
     tft.setCursor(VFO_B_INACTIVE_OFFSET, FREQUENCY_Y);
-    FormatFrequency(currentFreqB, freqBuffer);
+    FormatFrequency(t41.CurrentFreqB, freqBuffer);
   } else { // VFO_B
     if(TxRxFreq < bands[currentBandB].fBandLow || TxRxFreq > bands[currentBandB].fBandHigh) {
       tft.setTextColor(RA8875_RED);
@@ -1087,7 +1119,7 @@ FASTRUN void ShowFrequency() {
     tft.setFontScale(1, 2);
     tft.setTextColor(RA8875_LIGHT_GREY);
     tft.setCursor(FREQUENCY_X + 20, FREQUENCY_Y);
-    FormatFrequency(currentFreqA, freqBuffer);
+    FormatFrequency(t41.CurrentFreqA, freqBuffer);
   }
 
   tft.print(freqBuffer); // Show the other one

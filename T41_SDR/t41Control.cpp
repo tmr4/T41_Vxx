@@ -196,6 +196,20 @@ void SendID(bool request) {
   T41ControlSendCmd(cmd);
 }
 
+void SendSetFreqA(int freq) {
+  char cmd[20];
+
+  sprintf(cmd, "FA%011d;", freq);
+  T41ControlSendCmd(cmd);
+}
+
+void SendSetFreqB(int freq) {
+  char cmd[20];
+
+  sprintf(cmd, "FB%011d;", freq);
+  T41ControlSendCmd(cmd);
+}
+
 void SendSetFreq(int freq) {
   char cmd[20];
 
@@ -338,7 +352,7 @@ void SendIF() {
     tuneIndex,                      // center tune index (%d) at index 34
     AGCMode,                        // AGC mode (%d) at index 35
     spectrumZoom,                   // spectrum zoom (%d) at index 36
-    activeVFO == 0 ? currentFreqB : currentFreqA // inactive VFO freq in Hz (%011d) at index 37
+    (int)(activeVFO == 0 ? t41.CurrentFreqB : t41.CurrentFreqA) // inactive VFO freq in Hz (%011d) at index 37
     //splitVFO ? 1 : 0,               // VFO split status (%d) at index xx
   );
   T41ControlSendCmd(cmd);
@@ -373,6 +387,13 @@ int GetMode() {
   return mode;
 }
 
+// *** generally it's best to use the Update method to change T41 properties here.
+//     Properties should not be updated directly or call a function that does so
+//     especially if they notify the remote as this creates a update loop.
+//     If the two units get out of sync the loop will become infinite as the units go
+//     back and forth trying to impose their own value. Ignoring this can degrade
+//     radio performance ***
+// *** TODO: verify only single message goes back and forth for property updates ***
 void T41ControlLoop() {
   float32_t dbm;
 
@@ -383,7 +404,7 @@ void T41ControlLoop() {
     int mode = GetMode();
 
     T41ControlGetCommand(cmd, 256);
-    //Serial.print("Received: ");  Serial.println(cmd);
+    Serial.print("Received: ");  Serial.println(cmd);
     //int sizeBuf = SerialUSB1.availableForWrite();
     //Serial.println(sizeBuf);
     switch(cmd[0]) {
@@ -420,15 +441,15 @@ void T41ControlLoop() {
               f = atol(&cmd[2]);
               if(mouseCenterTuneActive) {
                 SetCenterTune(f - t41.CenterFreq);
-                currentFreqA = f;
+                t41.CurrentFreqA = f;
               } else {
-                SetFineTune(f - currentFreqA);
+                SetFineTune(f - t41.CurrentFreqA);
               }
               //Serial.print("Set VFO A to "); Serial.println(f);
               return;
             } else if(cmd[2] == ';') {
               // read VFO A frequency
-              sprintf(cmd,"FA%011d;",currentFreqA);
+              sprintf(cmd, "FA%011d;", (int)t41.CurrentFreqA);
             }
             break;
 
@@ -438,15 +459,15 @@ void T41ControlLoop() {
               f = atol(&cmd[2]);
               if(mouseCenterTuneActive) {
                 SetCenterTune(f - t41.CenterFreq);
-                currentFreqB = f;
+                t41.CurrentFreqB = f;
               } else {
-                SetFineTune(f - currentFreqB);
+                SetFineTune(f - t41.CurrentFreqB);
               }
              // Serial.print("Set VFO B to "); Serial.println(f);
               return;
             } else if(cmd[2] == ';') {
               // read VFO B frequency
-              sprintf(cmd,"FB%011d;",currentFreqB);
+              sprintf(cmd, "FB%011d;", (int)t41.CurrentFreqB);
             }
             break;
 
@@ -454,10 +475,11 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set center frequency
               f = atol(&cmd[2]);
-              t41.CenterFreq = f;
-              t41.NCOFreq = 0L;
-              SetTxRxFreq(f);
-              DrawBandwidthBar();
+              //t41.CenterFreq = f; // *** this is a no-no ***
+              //t41.NCOFreq = 0L;
+              t41.CenterFreq.Update(f);
+              SetFreq(f);
+              t41.SetFreq();
               //Serial.print("Center freq set to "); Serial.println(f);
               return;
             } else if(cmd[2] == ';') {
@@ -475,7 +497,7 @@ void T41ControlLoop() {
               return;
             } else if(cmd[2] == ';') {
               // read VFO A frequency offset
-              sprintf(cmd,"FF%011d;",(int)t41.NCOFreq-currentFreqA);
+              sprintf(cmd, "FF%011d;", (int)t41.NCOFreq - (int)t41.CurrentFreqA);
             }
             break;
 

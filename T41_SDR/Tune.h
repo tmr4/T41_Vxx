@@ -17,7 +17,6 @@ void SetSI5351FreqCorFactor(int factor);
 void SetCenterTune(int tuneChange);
 void SetNCOFreq(int newNCOFreq);
 void SetFineTune(int tuneChange);
-void SetTxRxFreq(int freq);
 
 void ResetTuning();
 void DoSplitVFO();

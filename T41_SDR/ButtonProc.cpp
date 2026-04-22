@@ -88,7 +88,7 @@ FLASHMEM void ChangeBand(int change) {
         TxRxFreqOld = TxRxFreq;
       }
       currentBandA = currentBand;
-      t41.CenterFreq = currentFreqA = lastFrequencies[currentBandA][VFO_A];
+      t41.CenterFreq = t41.CurrentFreqA = lastFrequencies[currentBandA][VFO_A];
       break;
 
     case VFO_B:
@@ -104,7 +104,7 @@ FLASHMEM void ChangeBand(int change) {
         TxRxFreqOld = TxRxFreq;
       }
       currentBandB = currentBand;
-      t41.CenterFreq = currentFreqB = lastFrequencies[currentBandB][VFO_B];
+      t41.CenterFreq = t41.CurrentFreqB = lastFrequencies[currentBandB][VFO_B];
       break;
 
     case VFO_SPLIT:

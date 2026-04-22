@@ -44,8 +44,6 @@ int ftIncrement = 500;
 int currentBand = BAND_40M;
 int currentBandA = BAND_40M;
 int currentBandB = BAND_40M;
-int currentFreqA = CURRENT_FREQ_A;  // initial VFOA center freq
-int currentFreqB = CURRENT_FREQ_B;  // initial VFOB center freq
 //int freqCorrectionFactor = 17578;   // AD3 source @ 5MHz
 int freqCorrectionFactor = 0;   // gives
 

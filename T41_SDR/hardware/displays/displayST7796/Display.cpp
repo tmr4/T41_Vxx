@@ -504,7 +504,7 @@ FASTRUN void ShowFrequency() {
     //tft.setTextColor(ST7735_LIGHTGREY);
     tft.setTextColor(ST7735_GREEN);
     tft.setCursor(VFO_B_INACTIVE_OFFSET, FREQUENCY_Y);
-    FormatFrequency(currentFreqB, freqBuffer);
+    FormatFrequency(t41.CurrentFreqB, freqBuffer);
   } else { // VFO_B
     if(TxRxFreq < bands[currentBandB].fBandLow || TxRxFreq > bands[currentBandB].fBandHigh) {
       tft.setTextColor(ST7735_RED);
@@ -519,7 +519,7 @@ FASTRUN void ShowFrequency() {
     //tft.setTextColor(ST7735_LIGHTGREY);
     tft.setTextColor(ST7735_GREEN);
     tft.setCursor(FREQUENCY_X + 20, FREQUENCY_Y);
-    FormatFrequency(currentFreqA, freqBuffer);
+    FormatFrequency(t41.CurrentFreqA, freqBuffer);
   }
 
   tft.print(freqBuffer); // Show the other one

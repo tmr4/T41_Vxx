@@ -12,12 +12,22 @@ This class replaces many old T41 global variables with properties and helper fun
   Helper: simple function returning a value
 
 Properties that replaced old global variables:
-  CenterFreq
-  AudioVolume
-  NCOFreq
+  RemoteStatus
 
+  // the following properties provide remote notifications and display updates
+    ActiveVFO
+    CenterFreq
+    NCOFreq
+    AudioVolume
+    FilterHiCut
+    FilterLoCut
 
-Helper functions that do the job of old global variables:
+  // the following properties don't provide any notifications
+    // these are mainly used to keep track of the VFO frequencies
+    CurrentFreqA
+    CurrentFreqB
+
+  Helper functions that do the job of old global variables:
 TXRXFreq
 
 
@@ -123,7 +133,12 @@ void NotifyPropertyChanged(T val) {
   Serial.print("Property changed to: "); Serial.println(val);
 }
 
+//T41Properties* T41Properties::instance = NULL;
+
 T41Properties::T41Properties() {
+  //if(instance == NULL) {
+  //  instance = this;
+  //}
   begin();
 }
 
@@ -136,11 +151,27 @@ void T41Properties::SetPropertyDefaults() {
   int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
-  CenterFreq.Init(7074000);
-  NCOFreq.Init(0);
+  CenterFreq.Init(CURRENT_FREQ_A, &SendSetFreq, &UpdateDisplayFreq);
+  NCOFreq.Init(0, &SendSetFreq, &UpdateDisplayFreq);
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
   FilterHiCut.Init(200, &SendFilterHi, &UpdateFilters);
   FilterLoCut.Init(3000, &SendFilterLo, &UpdateFilters);
+
+  // *** these are updated when CenterFreq is polled in ProcessControls ***
+  ActiveVFO.Init(VFO_A);
+  CurrentFreqA.Init(CURRENT_FREQ_A);
+  CurrentFreqB.Init(CURRENT_FREQ_B);
+}
+
+void T41Properties::SetFreq() {
+  int freq =  CenterFreq + NCOFreq;
+
+  if(ActiveVFO == VFO_A) {
+    CurrentFreqA = freq;
+  } else {
+    CurrentFreqB = freq;
+  }
+}
 
     /*
     AGCMode = EEPROMData.AGCMode;
@@ -170,10 +201,6 @@ void T41Properties::SetPropertyDefaults() {
     currentBand = EEPROMData.currentBand;
     currentBandA = EEPROMData.currentBandA;
     currentBandB = EEPROMData.currentBandB;
-  //  currentFreqA = EEPROMData.lastFrequencies[currentBandA][0];
-  //  currentFreqB = EEPROMData.lastFrequencies[currentBandB][1];
-    currentFreqA = EEPROMData.currentFreqA;
-    currentFreqB = EEPROMData.currentFreqB;
     freqCorrectionFactor = EEPROMData.freqCorrectionFactor;
 
     for(int i = 0; i < EQUALIZER_CELL_COUNT; i++) {
@@ -236,4 +263,3 @@ void T41Properties::SetPropertyDefaults() {
     buttonThresholdReleased = EEPROMData.buttonThresholdReleased;
     buttonRepeatDelay = EEPROMData.buttonRepeatDelay;
     */
-}

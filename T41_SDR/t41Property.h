@@ -6,10 +6,8 @@ public:
   T41Properties();
 
   void begin();
-  void SetPropertyDefaults();
 
   // T41 properties
-  // *** interestingly CenterFreq is not updated when the center tune encoder is moved; examine need for this property ***
   // *** template doesn't decrement with unsigned int ***
   Property<int> RemoteStatus;
   Property<int> CenterFreq;
@@ -18,13 +16,19 @@ public:
   Property<int> FilterHiCut;
   Property<int> FilterLoCut;
 
+  Property<int> ActiveVFO;
+  Property<int> CurrentFreqA;
+  Property<int> CurrentFreqB;
+
   // helper functions
   int TXRXFreq() { return CenterFreq + NCOFreq; }
+  void SetFreq();
 
 protected:
+  void SetPropertyDefaults();
 
 private:
-
+  //static T41Properties* instance;
 };
 
 extern T41Properties t41;
@@ -33,17 +37,6 @@ extern T41Properties t41;
 /*
 from T41_Views (this is private data, first letter capitalized if property):
 
-next:
-  int activeVFO = 0; // VFO A
-  long currentFreqA = 7048000;
-  long currentFreqB = 7030000;
-  int radioMode = 0;        // SSB_MODE;
-  int currentDemodMode = 1; // DEMOD_LSB
-  int currentBand = 1;      // BAND_40M;
-  int transmitPowerLevel = 1;
-  int tuneIndex = 6;
-  int ftIndex = 3;
-
 done:
   int centerFreq = 7048000;
   int audioVolume = 30;
@@ -51,6 +44,17 @@ done:
   int remoteStatus -1: not avail, 0: not connected (white), 1: connected (green), 2: connection lost (red)
   int fLoCut = -200; *** these were simple properties and didn't need an private value ***
   int fHiCut = -3000;
+  int currentFreqA = 7048000;
+  int currentFreqB = 7030000;
+
+next:
+  int activeVFO = 0; // VFO A
+  int radioMode = 0;        // SSB_MODE;
+  int currentDemodMode = 1; // DEMOD_LSB
+  int currentBand = 1;      // BAND_40M;
+  int transmitPowerLevel = 1;
+  int tuneIndex = 6;
+  int ftIndex = 3;
 
 list:
   private bool centerTuneActive = false;
@@ -95,8 +99,6 @@ typedef struct {
   int currentBand;
   int currentBandA;
   int currentBandB;
-  int currentFreqA;
-  int currentFreqB;
   int freqCorrectionFactor;
 
   int equalizerRec[EQUALIZER_CELL_COUNT];

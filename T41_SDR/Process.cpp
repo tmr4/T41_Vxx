@@ -883,17 +883,21 @@ float VolumeToAmplification(int volume) {
 }
 
 /*****
-  Purpose: Process any updates to the following controls:
-            Audio filter encoder
-            Keyboard and mouse
-            Course and Fine tune encoders
-            Live menus
-            Volume encoder
+  Process any updates to the following controls:
+    Audio filter encoder
+    Keyboard and mouse
+    Course and Fine tune encoders
+    Live menus
+    Volume encoder
+
+  Poll following T41 properties:
+
 *****/
 // *** TODO: consider what controls are proper in various radio and display states and if to control them here ***
 FASTRUN void ProcessControls() {
   bool updateDisplay = false;
   bool updateDisplayVolume = false;
+  bool remoteConnected = t41.RemoteStatus == REMOTE_CONNECTED;
 
   switch(displayState) {
     case DISPLAY_T41:
@@ -916,15 +920,23 @@ FASTRUN void ProcessControls() {
   // *** inline function to poll front panel, empty function if not used ***
   PollFrontPanel();
 
+  // Handle tuning changes
+  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
+
+  // poll for T41 property changes
+  if(t41.CenterFreq.Poll(updateDisplay, remoteConnected)) t41.SetFreq();
+  if(t41.NCOFreq.Poll(updateDisplay, remoteConnected)) t41.SetFreq();
+
   // update volume if changed
-  t41.AudioVolume.Poll(updateDisplayVolume, t41.RemoteStatus == REMOTE_CONNECTED);
+  t41.AudioVolume.Poll(updateDisplayVolume, remoteConnected);
 
   // update filters if changed
+  // *** TODO: examine if we can skip this comparison ***
   if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
     ProcessFilterEncoder();
 
-    t41.FilterHiCut.Poll(updateDisplay, t41.RemoteStatus == REMOTE_CONNECTED);
-    t41.FilterHiCut.Poll(updateDisplay, t41.RemoteStatus == REMOTE_CONNECTED);
+    t41.FilterHiCut.Poll(updateDisplay, remoteConnected);
+    t41.FilterHiCut.Poll(updateDisplay, remoteConnected);
   }
 
   // handle USB Host
@@ -939,16 +951,6 @@ FASTRUN void ProcessControls() {
   }
 #endif
 
-  // Handle tuning changes
-  // There may seem some duplication of display updates here, but these tuning events
-  // shouldn't occur on the same loop so little efficiency to be gained by changing
-  #if CAT_CONTROL_HOST || CAT_CONTROL
-  if(ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER)) {
-    SendSetFreq(t41.TXRXFreq());
-  };
-  #else
-  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
-  #endif
   if(fineTuneFlag) {
     #if CAT_CONTROL_HOST || CAT_CONTROL
     // prevent circular response

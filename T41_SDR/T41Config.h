@@ -42,7 +42,7 @@
 #define PADDLE_FLIP								0						    // 0 = right paddle = DAH, 1 = DIT
 #define STRAIGHT_KEY_OR_PADDLES		0						    // 0 = straight, 1 = paddles
 
-#define CURRENT_FREQ_A            7048000         // VFO_A
+#define CURRENT_FREQ_A            7074000         // VFO_A
 #define CURRENT_FREQ_B            7030000         // VFO_B
 
                                                   //            0   1   2     3     4      5       6        7

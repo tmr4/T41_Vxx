@@ -1054,7 +1054,7 @@ FLASHMEM bool ProcessIQMenu() {
       ChangeBand(1);
       if(currentBand == BAND_10M) ChangeBand(1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
       t41.CenterFreq = bands[currentBand].calFreq;
-      //SetTxRxFreq(t41.CenterFreq);
+      //SetFreq(t41.CenterFreq);
       SetFreqCal(0);
       //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
       UpdateIQDisplay();
@@ -1083,7 +1083,7 @@ FLASHMEM bool ProcessIQMenu() {
       ChangeBand(-1);
       if(currentBand == BAND_10M) ChangeBand(-1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
       t41.CenterFreq = bands[currentBand].calFreq;
-      //SetTxRxFreq(t41.CenterFreq);
+      //SetFreq(t41.CenterFreq);
       SetFreqCal(0);
       //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
       UpdateIQDisplay();
@@ -1913,7 +1913,7 @@ FLASHMEM void CalibrateIQAllBands() {
 
     if(bands[currentBand].calFreq > 0) {
       t41.CenterFreq = bands[currentBand].calFreq;
-      //SetTxRxFreq(t41.CenterFreq);
+      //SetFreq(t41.CenterFreq);
       SetFreqCal(0);
       //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
       UpdateIQDisplay();
@@ -1953,7 +1953,7 @@ FLASHMEM void CalibrateIQAllBands() {
   // return to original band
   ChangeBand(bandCalBand - currentBand);
   t41.CenterFreq = bands[currentBand].calFreq;
-  SetTxRxFreq(t41.CenterFreq);
+  SetFreq(t41.CenterFreq);
   //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
   UpdateIQDisplay();
 */

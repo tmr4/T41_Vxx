@@ -156,7 +156,7 @@ void BeaconExit() {
       ChangeBand(beaconBands[i] - currentBand);
 
       // save band frequency and set it to the beacon's frequency for this band
-      SetTxRxFreq(priorBeaconBandFreq[i]);
+      SetFreq(priorBeaconBandFreq[i]);
 
       // save and set filters for the beacon bands as well
       bands[currentBand].fHiCut = priorFilterHi[i];
@@ -557,7 +557,7 @@ void BeaconLoop() {
 
         // save band frequency and set it to the beacon's frequency for this band
         priorBeaconBandFreq[i] = TxRxFreq;
-        SetTxRxFreq(beaconFreq[i]);
+        SetFreq(beaconFreq[i]);
 
         // save and set filters for the beacon bands as well
         priorFilterHi[i] = bands[currentBand].fHiCut;

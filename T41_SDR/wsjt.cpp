@@ -321,11 +321,11 @@ void WSJTLoop()
               f = atol(&cmd[2]);
               ChangeBand(f);
               SetCenterTune(f - t41.CenterFreq);
-              currentFreqA = f;
+              t41.CurrentFreqA = f;
               return;
             } else if(cmd[2] == ';') {
               // read VFO A frequency
-              sprintf(cmd,"FA%011d;",currentFreqA);
+              sprintf(cmd, "FA%011d;" , (int)t41.CurrentFreqA);
             }
             break;
 
@@ -335,11 +335,11 @@ void WSJTLoop()
               f = atol(&cmd[2]);
               ChangeBand(f);
               SetCenterTune(f - t41.CenterFreq);
-              currentFreqB = f;
+              t41.CurrentFreqB = f;
               return;
             } else if(cmd[2] == ';') {
               // read VFO B frequency
-              sprintf(cmd,"FB%011d;",currentFreqB);
+              sprintf(cmd, "FB%011d; ", (int)t41.CurrentFreqB);
             }
             break;
 
@@ -349,7 +349,7 @@ void WSJTLoop()
               f = atol(&cmd[2]);
               t41.CenterFreq = f;
               t41.NCOFreq = 0L;
-              SetTxRxFreq(f);
+              SetFreq(f);
               DrawBandwidthBar();
               return;
             } else if(cmd[2] == ';') {
@@ -565,7 +565,7 @@ void WSJTLoop()
       case 'S':
         if(cmd[1] == 'F' && cmd[3] == ';') {
           int vfo = atoi(&cmd[2]);
-          int freq = vfo == 0 ? currentFreqA : currentFreqB;
+          int freq = vfo == 0 ? t41.CurrentFreqA : t41.CurrentFreqB;
           sprintf(cmd,"SF%d%011d%d;", vfo, freq, mode);
         } else if(cmd[1] == 'P' && cmd[3] == ';') { // this is split with DX Lab Suite, but Split Operation Frequency Setting with TS-890S; the reponse works for both with no split operation
           // set split VFO on/off

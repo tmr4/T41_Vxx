@@ -113,14 +113,14 @@ FLASHMEM void VFOSelect(int32_t index) {
 
   switch(index) {
     case VFO_A:
-      t41.CenterFreq = currentFreqA;
+      t41.CenterFreq = t41.CurrentFreqA;
       activeVFO = VFO_A;
       currentBand = currentBandA;
       //fillRect(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y, 150, 20, RA8875_BLACK);  // Erase split message
       break;
 
     case VFO_B:
-      t41.CenterFreq = currentFreqB;
+      t41.CenterFreq = t41.CurrentFreqB;
       activeVFO = VFO_B;
       currentBand = currentBandB;
       //fillRect(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y, 150, 20, RA8875_BLACK);  // Erase split message
