@@ -92,9 +92,10 @@ typedef __uint8_t uint8_t;
 
 // remote modes
 #define REMOTE_NOT_AVAIL      0
-#define REMOTE_WAITING        1
-#define REMOTE_CONNECTED      2
-#define REMOTE_LOST           3
+#define REMOTE_NOT_CONNECTED  1
+#define REMOTE_WAITING        2
+#define REMOTE_CONNECTED      3
+#define REMOTE_LOST           4
 
 #define OFF                       0
 #define ON                        1

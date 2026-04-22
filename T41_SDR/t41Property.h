@@ -11,7 +11,7 @@ public:
   // T41 properties
   // *** interestingly CenterFreq is not updated when the center tune encoder is moved; examine need for this property ***
   // *** template doesn't decrement with unsigned int ***
-  Property<int> RemoteMode;
+  Property<int> RemoteStatus;
   Property<int> CenterFreq;
   Property<int> NCOFreq;
   Property<int> AudioVolume;

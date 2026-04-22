@@ -21,7 +21,6 @@ void T41ControlLoop();
 void T41PrepareSpectrumData(int16_t *data, int16_t max);
 void T41ControlSendData(uint8_t *data, int len);
 
-void SendID(bool request);
 void SendSetBandChange(int upDown);
 void SendSetFreq(int freq);
 void SendSetMode(int mode);

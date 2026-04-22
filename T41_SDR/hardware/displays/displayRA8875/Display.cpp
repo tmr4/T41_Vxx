@@ -870,8 +870,12 @@ FLASHMEM void ShowRemoteStatus(int status) {
       return;
       break;
 
-    case REMOTE_WAITING:
+    case REMOTE_NOT_CONNECTED:
       tft.setTextColor(RA8875_WHITE);
+      break;
+
+    case REMOTE_WAITING:
+      tft.setTextColor(ORANGE);
       break;
 
     case REMOTE_CONNECTED:
@@ -944,6 +948,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.print(DEMOD[currentDemodMode].text);
 
   ShowCurrentPowerSetting();
+  ShowRemoteStatus(t41.RemoteStatus);
 }
 
 /*****

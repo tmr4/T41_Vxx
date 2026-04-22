@@ -43,6 +43,12 @@ int signalStrengthReceivedIndex = -1;
 bool checkingConnection = false;
 
 //-------------------------------------------------------------------------------------------------------------
+// Forwards
+//-------------------------------------------------------------------------------------------------------------
+
+void SendID(bool request);
+
+//-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
@@ -54,31 +60,33 @@ void T41ControlSetup() {
 }
 
 void T41RemoteConnectCheck() {
-  static int count = 0;
+  static unsigned long last = 0;
+  unsigned long now = millis();
+  int lasped = now - last;
 
-  if(t41.RemoteMode != REMOTE_CONNECTED) {
-    // a loop takes about 100ms
-    // send a connection request every ~5s
-    if(++count == 500) {
-      t41.RemoteMode = REMOTE_WAITING;
+  if(t41.RemoteStatus != REMOTE_CONNECTED) {
+    // send a connection request every 5s until connected
+    if(lasped > 5000) {
+      t41.RemoteStatus = REMOTE_WAITING;
       SendID(true);
-      count = 0;
+      last = now;
     }
   } else {
-    // check connection
+    // check for lost connection
     if(checkingConnection) {
-      if(++count == 500) {
-        t41.RemoteMode = REMOTE_LOST;
+      // check if response received within 5s
+      if(lasped > 5000) {
+        // connection lost
+        t41.RemoteStatus = REMOTE_LOST;
         checkingConnection = false;
-        count = 0;
+        last = now;
       }
     } else {
-      // a loop takes about 100ms
-      // send a connection check every ~30s
-      if(++count == 30000) {
+      // check connection every 30s
+      if(lasped > 30000) {
         checkingConnection = true;
         SendID(true);
-        count = 0;
+        last = now;
       }
     }
   }
@@ -512,7 +520,7 @@ void T41ControlLoop() {
           if(checkingConnection) {
             checkingConnection = false;
           }
-          t41.RemoteMode = REMOTE_CONNECTED;
+          t41.RemoteStatus = REMOTE_CONNECTED;
           return;
         } else if(cmd[1] == 'F' && cmd[2] == ';') {
           // retrieves transceiver status

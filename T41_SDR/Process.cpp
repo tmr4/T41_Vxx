@@ -912,7 +912,7 @@ FASTRUN void ProcessControls() {
 
   // update volume if changed
   updateDisplayVolume = updateDisplay || (displayState == DISPLAY_FULL_MENU);
-  t41.AudioVolume.Poll(updateDisplayVolume, t41.RemoteMode == REMOTE_CONNECTED);
+  t41.AudioVolume.Poll(updateDisplayVolume, t41.RemoteStatus == REMOTE_CONNECTED);
 
   // update filters if changed
   if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
@@ -947,9 +947,9 @@ FASTRUN void ProcessControls() {
   // handle USB Host
 #ifdef USB_HOST_SUPPORT
   static unsigned long last_usb_read = 0;
+  unsigned long now = millis();
 
-  // poll USB Host at about 125 Hz
-  int now = millis();
+  // poll USB Host at about every 8ms (125 Hz)
   if (now - last_usb_read > 8) {
     UsbHostLoop();
     last_usb_read = now;

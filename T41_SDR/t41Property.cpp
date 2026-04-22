@@ -125,9 +125,9 @@ void T41Properties::begin() {
 }
 
 void T41Properties::SetPropertyDefaults() {
-  int remoteMode = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_WAITING : REMOTE_NOT_AVAIL;
+  int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
-  RemoteMode.Init(remoteMode, &ShowRemoteStatus);
+  RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
   CenterFreq.Init(7074000);
   NCOFreq.Init(0);
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
