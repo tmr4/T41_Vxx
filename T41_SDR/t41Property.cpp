@@ -125,7 +125,7 @@ void T41Properties::begin() {
 }
 
 void T41Properties::SetPropertyDefaults() {
-  int remoteMode = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
+  int remoteMode = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_WAITING : REMOTE_NOT_AVAIL;
 
   RemoteMode.Init(remoteMode, &ShowRemoteStatus);
   CenterFreq.Init(7074000);

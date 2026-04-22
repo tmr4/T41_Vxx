@@ -110,16 +110,6 @@ void UsbHostLoop() {
   // this forces set frequency commands to set the center freq vs fine tune
   mouseCenterTuneActive = true;
   T41ControlLoop();
-  if(t41.RemoteMode != REMOTE_CONNECTED) {
-    static int count = 0;
-
-    // a loop takes about 100ms
-    // send a connection request every ~5s
-    if(++count == 500) {
-      SendID(true);
-      count = 0;
-    }
-  }
 #endif
 
 /*

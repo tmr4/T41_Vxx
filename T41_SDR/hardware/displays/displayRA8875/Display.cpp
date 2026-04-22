@@ -870,7 +870,7 @@ FLASHMEM void ShowRemoteStatus(int status) {
       return;
       break;
 
-    case REMOTE_NOT_CONNECTED:
+    case REMOTE_WAITING:
       tft.setTextColor(RA8875_WHITE);
       break;
 

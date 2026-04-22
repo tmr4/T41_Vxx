@@ -13,6 +13,7 @@
 #include "MenuProc.h"
 #include "mouse.h"
 #include "Process.h"
+#include "t41Control.h"
 #include "Tune.h"
 #include "Utility.h"
 
@@ -39,6 +40,8 @@ bool signalStrengthReceived = false;
 float signalStrength = 0.0;
 int signalStrengthReceivedIndex = -1;
 
+bool checkingConnection = false;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -48,6 +51,37 @@ int signalStrengthReceivedIndex = -1;
 // void T41ControlSetup(Stream& serial) { serial.begin(); }.  As such might as well duplicate these functions for both the T41 control app and Beacon monitor
 void T41ControlSetup() {
   //controlSerial.begin(19200);
+}
+
+void T41RemoteConnectCheck() {
+  static int count = 0;
+
+  if(t41.RemoteMode != REMOTE_CONNECTED) {
+    // a loop takes about 100ms
+    // send a connection request every ~5s
+    if(++count == 500) {
+      t41.RemoteMode = REMOTE_WAITING;
+      SendID(true);
+      count = 0;
+    }
+  } else {
+    // check connection
+    if(checkingConnection) {
+      if(++count == 500) {
+        t41.RemoteMode = REMOTE_LOST;
+        checkingConnection = false;
+        count = 0;
+      }
+    } else {
+      // a loop takes about 100ms
+      // send a connection check every ~30s
+      if(++count == 30000) {
+        checkingConnection = true;
+        SendID(true);
+        count = 0;
+      }
+    }
+  }
 }
 
 void T41ControlSendData(uint8_t *data, int len) {
@@ -320,6 +354,8 @@ int GetMode() {
 void T41ControlLoop() {
   float32_t dbm;
 
+  T41RemoteConnectCheck();
+
   if(controlSerial.available()) {
     char cmd[256];
     int mode = GetMode();
@@ -473,6 +509,9 @@ void T41ControlLoop() {
           sprintf(cmd,"ID024;");
           //sprintf(cmd,"ID019;"); // TS-2000
         } else if(cmd[1] == 'D' && cmd[5] == ';') { // IDxxx;
+          if(checkingConnection) {
+            checkingConnection = false;
+          }
           t41.RemoteMode = REMOTE_CONNECTED;
           return;
         } else if(cmd[1] == 'F' && cmd[2] == ';') {
