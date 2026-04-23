@@ -96,6 +96,15 @@ int CheckNCOFreqBounds(int f) {
   return freq;
 }
 
+/*****
+  Purpose: sets frequancy for selected band and update filters accordingly
+*****/
+FLASHMEM void SetupBandFreq(int freq) {
+  SetFreq(freq);
+
+  SetupDemodFilterBW();
+}
+
 // *** TODO: display dependent ***
 FLASHMEM void SplitVFOFollowup() {
   // *** TODO: need to reestablish "Split Active" that didn't work in ver49.2k ***

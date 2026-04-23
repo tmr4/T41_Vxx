@@ -155,13 +155,16 @@ void T41Properties::SetPropertyDefaults() {
   CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
   NCOFreq.Init(0, &CheckNCOFreqBounds, &SendNCOFreq, &UpdateDisplayNCOFreq);
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
-  FilterHiCut.Init(200, &SendFilterHi, &UpdateFilters);
-  FilterLoCut.Init(3000, &SendFilterLo, &UpdateFilters);
+  FilterHiCut.Init(200, &SendFilterHi, &UpdateDisplayFilters);
+  FilterLoCut.Init(3000, &SendFilterLo, &UpdateDisplayFilters);
+  CurrentBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, &SendBand, &UpdateDisplayBand);
 
-  // *** these are updated when CenterFreq is polled in ProcessControls ***
+  // properties w/o notifications or display updates
   ActiveVFO.Init(VFO_A);
-  CurrentFreqA.Init(CURRENT_FREQ_A);
-  CurrentFreqB.Init(CURRENT_FREQ_B);
+  CurrentFreqA.Init(CURRENT_FREQ_A); // *** these are updated when CenterFreq or ***
+  CurrentFreqB.Init(CURRENT_FREQ_B); // *** NCOFreq is polled in ProcessControls ***
+  CurrentBandA.Init(BAND_40M);
+  CurrentBandB.Init(BAND_40M);
 }
 
 void T41Properties::SetVFOFreq() {
@@ -174,93 +177,10 @@ void T41Properties::SetVFOFreq() {
   }
 }
 
-    /*
-    AGCMode = EEPROMData.AGCMode;
-    rfGainAllBands = EEPROMData.rfGainAllBands;
-    spectrumNoiseFloor = EEPROMData.spectrumNoiseFloor;
-    tuneIndex = EEPROMData.tuneIndex;
-    ftIndex = EEPROMData.ftIndex;
-    transmitPowerLevel = EEPROMData.transmitPowerLevel;
-    radioMode = EEPROMData.radioMode;
-    nrOptionSelect = EEPROMData.nrOptionSelect;
-    currentScale = EEPROMData.currentScale;
-    spectrumZoom = EEPROMData.spectrumZoom;
-    spectrum_display_scale = EEPROMData.spectrum_display_scale;
-
-    cwFilterIndex = EEPROMData.cwFilterIndex;
-    paddleDit = EEPROMData.paddleDit;
-    paddleDah = EEPROMData.paddleDah;
-    decoderFlag = EEPROMData.decoderFlag;
-    keyType = EEPROMData.keyType;
-    currentWPM = EEPROMData.currentWPM;
-    sidetoneVolume = EEPROMData.sidetoneVolume;
-    cwTransmitDelay = (unsigned long) EEPROMData.cwTransmitDelay;
-
-    activeVFO = EEPROMData.activeVFO;
-    freqIncrement = EEPROMData.freqIncrement; // *** this isn't needed if tuneIndex is used to set initial value ***
-
-    currentBand = EEPROMData.currentBand;
-    currentBandA = EEPROMData.currentBandA;
-    currentBandB = EEPROMData.currentBandB;
-    freqCorrectionFactor = EEPROMData.freqCorrectionFactor;
-
-    for(int i = 0; i < EQUALIZER_CELL_COUNT; i++) {
-      equalizerRec[i] = EEPROMData.equalizerRec[i];
-      equalizerXmt[i] = EEPROMData.equalizerXmt[i];
-    }
-
-    currentMicThreshold = EEPROMData.currentMicThreshold;
-    currentMicCompRatio = EEPROMData.currentMicCompRatio;
-    currentMicAttack = EEPROMData.currentMicAttack;
-    currentMicRelease = EEPROMData.currentMicRelease;
-    currentMicGain = EEPROMData.currentMicGain;
-
-    for(int i = 0; i < NUMBER_OF_SWITCHES; i++) {
-      switchValues[0] = EEPROMData.switchValues[0];
-    }
-
-    LPFcoeff = EEPROMData.LPFcoeff;
-    NR_PSI = EEPROMData.NR_PSI;
-    NR_alpha = EEPROMData.NR_alpha;
-    NR_beta = EEPROMData.NR_beta;
-    omegaN = EEPROMData.omegaN;
-    pll_fmax = EEPROMData.pll_fmax;
-
-    for(int i = 0; i < NUMBER_OF_BANDS; i++) {
-      powerOutCW[i] = EEPROMData.powerOutCW[i];
-      powerOutSSB[i] = EEPROMData.powerOutSSB[i];
-      CWPowerCalibrationFactor[i] = EEPROMData.CWPowerCalibrationFactor[i];
-      SSBPowerCalibrationFactor[i] = EEPROMData.SSBPowerCalibrationFactor[i];
-      IQAmpCorrectionFactor[i] = EEPROMData.IQAmpCorrectionFactor[i];
-      IQPhaseCorrectionFactor[i] = EEPROMData.IQPhaseCorrectionFactor[i];
-      IQXAmpCorrectionFactor[i] = EEPROMData.IQXAmpCorrectionFactor[i];
-      IQXPhaseCorrectionFactor[i] = EEPROMData.IQXPhaseCorrectionFactor[i];
-    }
-
-    for(int i = 0; i < 13; i++) {
-      favoriteFreqs[i] = EEPROMData.favoriteFreqs[i];
-    }
-
-    for(int i = 0; i < NUMBER_OF_BANDS; i++) {
-      lastFrequencies[i][0] = EEPROMData.lastFrequencies[i][0];
-      lastFrequencies[i][1] = EEPROMData.lastFrequencies[i][1];
-    }
-
-    strncpy(mapFileName, EEPROMData.mapFileName, 50);
-    strncpy(myCall, EEPROMData.myCall, 10);
-    strncpy(myTimeZone, EEPROMData.myTimeZone, 10);
-
-    paddleFlip = EEPROMData.paddleFlip;
-    sdCardPresent = EEPROMData.sdCardPresent;
-
-    myLat = EEPROMData.myLat;
-    myLong = EEPROMData.myLong;
-    for(int i = 0; i < NUMBER_OF_BANDS; i++) {
-      currentNoiseFloor[i] = EEPROMData.currentNoiseFloor[i];
-    }
-    compressorFlag = EEPROMData.compressorFlag;
-
-    buttonThresholdPressed = EEPROMData.buttonThresholdPressed;
-    buttonThresholdReleased = EEPROMData.buttonThresholdReleased;
-    buttonRepeatDelay = EEPROMData.buttonRepeatDelay;
-    */
+void T41Properties::SetVFOBand() {
+  if(ActiveVFO == VFO_A) {
+    t41.CurrentBandA = t41.CurrentBand;
+  } else {
+    t41.CurrentBandB = t41.CurrentBand;
+  }
+}

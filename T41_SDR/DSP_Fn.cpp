@@ -372,7 +372,7 @@ FLASHMEM void AGCLoadValues() {
       break;
   }
 
-  max_gain = powf (10.0, (float32_t)bands[currentBand].agcThresh / 20.0);
+  max_gain = powf (10.0, (float32_t)bands[t41.CurrentBand].agcThresh / 20.0);
   attack_buffsize = (int)ceil(sample_rate * n_tau * tau_attack);
   in_index = attack_buffsize + out_index;
   attack_mult = 1.0 - expf(-1.0 / (sample_rate * tau_attack));

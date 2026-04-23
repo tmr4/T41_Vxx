@@ -241,6 +241,13 @@ void SendSetBandChange(int upDown) {
   T41ControlSendCmd(cmd);
 }
 
+void SendBand(int band) {
+  char cmd[5];
+
+  sprintf(cmd, "BD%d;", band);
+  T41ControlSendCmd(cmd);
+}
+
 void SendSetMode(int mode) {
   char cmd[5];
   sprintf(cmd, "MD%d;", mode);
@@ -325,7 +332,7 @@ void SendAS() {
 
   sprintf(cmd, "AS%011d%d%d%d;",
     t41.TXRXFreq(), // freq in Hz (%011d) at index 2
-    currentBand,                    // current band (%d) at index 13
+    (int)t41.CurrentBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
     currentDemodMode         // demodulation mode (%d)  at index 15
   );
@@ -340,12 +347,12 @@ void SendIF() {
     // active VFO Freq = TxRxFreq, t41.CenterFreq = TxRxFreq - NCOFreq
     //  *** TODO: we only need 8 digits for first field for T41, consider using other 3 for something ***
     t41.TXRXFreq(), // freq in Hz (%011d) at index 2
-    currentBand,                    // current band (%d) at index 13
+    (int)t41.CurrentBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
     currentDemodMode,        // demodulation mode (%d)  at index 15
     (int)t41.AudioVolume,                    // audio volume (%03d) at index 16
     (int)t41.NCOFreq,                        // NCO freq (%+06d) at index 19
-    currentNoiseFloor[currentBand], // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
+    currentNoiseFloor[t41.CurrentBand], // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
     liveNoiseFloorFlag,             // set noise floor active/inactive 1/0 (%d) at index 29
     !GetXRState(),                       // RX/TX (1/0) (%d) at index 30
     activeVFO,                      // VFO A/B (0/1) (%d) at index 31
@@ -429,6 +436,8 @@ void T41ControlLoop() {
           // band up
           ChangeBand(-1);
           SendAS();
+        } else if(cmd[1] == 'D' && cmd[3] == ';') {
+          t41.CurrentBand.Update(atol(&cmd[2]));
         }
         sendCommand = false; // *** TODO: or we can set cmd[0] to null
         break;
@@ -612,10 +621,10 @@ void T41ControlLoop() {
       case 'N':
         if(cmd[1] == 'F' && cmd[2] == ';') {
           // send noise floor
-          sprintf(cmd,"NF%04d;", currentNoiseFloor[currentBand]);
+          sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.CurrentBand]);
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
           // set noise floor
-          currentNoiseFloor[currentBand] = atoi(&cmd[2]);
+          currentNoiseFloor[t41.CurrentBand] = atoi(&cmd[2]);
           sendCommand = false;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           // *** TODO: consider just toggling this through call to
@@ -623,7 +632,7 @@ void T41ControlLoop() {
 
           // save final noise floor setting if toggling flag off
           if(liveNoiseFloorFlag == 0) {
-            //EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
+            //EEPROMData.currentNoiseFloor[t41.CurrentBand]  = currentNoiseFloor[t41.CurrentBand];
             EEPROMWrite();
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
@@ -644,7 +653,7 @@ void T41ControlLoop() {
           ProcessFilterEncoder();
 
           CalcAudioFilters();
-          UpdateFilters();
+          UpdateDisplayFilters();
           sendCommand = false;
         } else if(cmd[1] == 'W' && cmd[2] == ';') {
           // sets 0.5kHz-1.5kHz audio filter

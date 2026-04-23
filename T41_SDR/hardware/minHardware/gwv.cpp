@@ -41,9 +41,6 @@ int activeVFO = 0;
 int freqIncrement = 100000; // *** these need to be automated according to defines in config file ***
 int ftIncrement = 500;
 
-int currentBand = BAND_40M;
-int currentBandA = BAND_40M;
-int currentBandB = BAND_40M;
 int freqCorrectionFactor = 1200;
 
 int equalizerRec[EQUALIZER_CELL_COUNT] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };

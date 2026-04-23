@@ -19,6 +19,8 @@ void SetCenterTune(int tuneChange);
 void SetNCOFreq(int newNCOFreq);
 int CheckNCOFreqBounds(int f);
 
+void SetupBandFreq(int freq);
+
 void ResetTuning();
 void DoSplitVFO();
 

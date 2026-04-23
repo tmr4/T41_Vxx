@@ -84,13 +84,13 @@ FLASHMEM void CWOptions() {
 // *** TODO: T41EEE does this for each band ***
 FLASHMEM void RFPowerFollowup() {
   if(radioMode == CW_MODE) {                                                                                                                                      //AFP 10-13-22
-    powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];  //  afp 10-21-22
+    powerOutCW[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.CurrentBand];  //  afp 10-21-22
 
-    //EEPROMData.powerOutCW[currentBand] = powerOutCW[currentBand];
+    //EEPROMData.powerOutCW[t41.CurrentBand] = powerOutCW[t41.CurrentBand];
   } else {
     if(radioMode == SSB_MODE) {
-      powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // afp 10-21-22
-      //EEPROMData.powerOutSSB[currentBand] = powerOutSSB[currentBand];                                                                                                //AFP 10-21-22
+      powerOutSSB[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[t41.CurrentBand];  // afp 10-21-22
+      //EEPROMData.powerOutSSB[t41.CurrentBand] = powerOutSSB[t41.CurrentBand];                                                                                                //AFP 10-21-22
     }
   }
   //EEPROMData.transmitPowerLevel = transmitPowerLevel;
@@ -115,14 +115,14 @@ FLASHMEM void VFOSelect(int32_t index) {
     case VFO_A:
       t41.CenterFreq = t41.CurrentFreqA;
       activeVFO = VFO_A;
-      currentBand = currentBandA;
+      t41.CurrentBand = t41.CurrentBandA;
       //fillRect(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y, 150, 20, RA8875_BLACK);  // Erase split message
       break;
 
     case VFO_B:
       t41.CenterFreq = t41.CurrentFreqB;
       activeVFO = VFO_B;
-      currentBand = currentBandB;
+      t41.CurrentBand = t41.CurrentBandB;
       //fillRect(FILTER_PARAMETERS_X + 180, FILTER_PARAMETERS_Y, 150, 20, RA8875_BLACK);  // Erase split message
       break;
 
@@ -156,10 +156,10 @@ FLASHMEM void VFOSelect(int32_t index) {
   }
   */
 
-  bands[currentBand].freq = t41.CenterFreq;
+  bands[t41.CurrentBand].freq = t41.CenterFreq;
 
-  SetBand(t41.CenterFreq);              // SetBand updates the display
-  SetBandRelay(HIGH);                   // Required when switching VFOs
+  SetupBandFreq(t41.CenterFreq);
+  SetBandRelay(HIGH); // Required when switching VFOs
 
   //EEPROMData.activeVFO = activeVFO;
   EEPROMWrite();

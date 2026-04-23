@@ -79,7 +79,7 @@
   to drive radio operations for each display, keeping the needed elements of DrawFreqSpectrum() and discarding those
   not needed.  Doing this we find that the display is updated for other actions, changing bands for example.
   Here's a list of additional functions for the beacon monitor (ignoring for now changes caused by user interaction
-  with the T41 buttons or encoders): SetBand, SetTxRxFreq, ChangeDemodMode, ChangeMode, DrawSmeterBar (tricky as we
+  with the T41 buttons or encoders): SetupBandFreq, SetTxRxFreq, ChangeDemodMode, ChangeMode, DrawSmeterBar (tricky as we
   need the dBm calc) and UpdateInfoBoxItem (could be breaking for any followup items that do more than update the
   display, mouse routines perhaps?). And of course layer 2 needs cleared.
 
@@ -459,7 +459,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
   if(liveNoiseFloorFlag != 1) {
-    currentNF = currentNoiseFloor[currentBand];
+    currentNF = currentNoiseFloor[t41.CurrentBand];
   }
 
   // initialize yOldPlot if this is a new spectrum
@@ -475,8 +475,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
 
     TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
-    pixelnew = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1]));
-    pixelnew1 = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1]));
+    pixelnew = displayScale[currentScale].baseOffset + bands[t41.CurrentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1]));
+    pixelnew1 = displayScale[currentScale].baseOffset + bands[t41.CurrentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1]));
 
     // calculate the freq spectrum plot value
     yPlot = spectrumNoiseFloor - pixelnew - currentNF;
@@ -885,6 +885,38 @@ FLASHMEM void UpdateDisplayFreq() {
   }
 }
 
+FLASHMEM void UpdateDisplayBand() {
+  switch(displayState) {
+    case DISPLAY_T41:
+      ShowFrequency();
+      ShowOperatingStats();
+      DrawBandwidthBar();
+      ShowBandwidthBarValues();
+      ShowSpectrumFreqValues();
+      DrawAudioFilterLines();
+      break;
+
+    case DISPLAY_BEACON_MONITOR:
+      break;
+
+    case DISPLAY_T41_FT8_DECODE:
+      ShowFrequency();
+      ShowOperatingStats();
+      DrawAudioFilterLines();
+      break;
+
+    case DISPLAY_FULL_MENU:
+      ShowFrequency();
+      ShowOperatingStats();
+      DrawAudioFilterLines();
+      break;
+
+    default:
+    // no screen updates at all
+    break;
+  }
+}
+
 FLASHMEM void UpdateDisplayNCOFreq() {
   switch(displayState) {
     case DISPLAY_T41:
@@ -903,7 +935,7 @@ FLASHMEM void UpdateDisplayNCOFreq() {
   }
 }
 
-FLASHMEM void UpdateFilters() {
+FLASHMEM void UpdateDisplayFilters() {
   switch(displayState) {
     case DISPLAY_T41:
       ShowBandwidthBarValues();
@@ -977,9 +1009,9 @@ FLASHMEM void ShowOperatingStats() {
   tft.setTextColor(RA8875_LIGHT_ORANGE);
   tft.setCursor(OPERATION_STATS_BD, OPERATION_STATS_T);
   if(activeVFO == VFO_A) {
-    tft.print(bands[currentBandA].name);  // Show band -- 40M
+    tft.print(bands[t41.CurrentBandA].name);  // Show band -- 40M
   } else {
-    tft.print(bands[currentBandB].name);  // Show band -- 40M
+    tft.print(bands[t41.CurrentBandB].name);  // Show band -- 40M
   }
 
   tft.setTextColor(RA8875_GREEN);
@@ -1092,20 +1124,13 @@ FASTRUN void ShowFrequency() {
   char freqBuffer[15];
   int TxRxFreq = t41.TXRXFreq();
 
-  // *** do this in the proper place if this is needed ***
-  //if(activeVFO == VFO_A) {  // Needed for edge checking
-  //  currentBand = currentBandA;
-  //} else {
-  //  currentBand = currentBandB;
-  //}
-
   FormatFrequency(TxRxFreq, freqBuffer);
   tft.setFontScale(3, 2);
 //  tft.fillRect(0, FREQUENCY_Y, SPEC_BOX_W, tft.getFontHeight(), RA8875_BLACK);
   tft.fillRect(FREQUENCY_X, FREQUENCY_Y, SPEC_BOX_W, tft.getFontHeight(), RA8875_BLACK);
 
   if(activeVFO == VFO_A) {
-    if(TxRxFreq < bands[currentBandA].fBandLow || TxRxFreq > bands[currentBandA].fBandHigh) {
+    if(TxRxFreq < bands[t41.CurrentBandA].fBandLow || TxRxFreq > bands[t41.CurrentBandA].fBandHigh) {
       tft.setTextColor(RA8875_RED);  // Out of band
     } else {
       tft.setTextColor(RA8875_GREEN); // In US band
@@ -1118,7 +1143,7 @@ FASTRUN void ShowFrequency() {
     tft.setCursor(VFO_B_INACTIVE_OFFSET, FREQUENCY_Y);
     FormatFrequency(t41.CurrentFreqB, freqBuffer);
   } else { // VFO_B
-    if(TxRxFreq < bands[currentBandB].fBandLow || TxRxFreq > bands[currentBandB].fBandHigh) {
+    if(TxRxFreq < bands[t41.CurrentBandB].fBandLow || TxRxFreq > bands[t41.CurrentBandB].fBandHigh) {
       tft.setTextColor(RA8875_RED);
     } else {
       tft.setTextColor(RA8875_GREEN);
@@ -1161,9 +1186,9 @@ FASTRUN void DrawSmeterBar() {
     dbmCount = 0;
     Serial.print("dbm: "); Serial.println(dbm);
     Serial.print("dbm_calibration: "); Serial.println(dbm_calibration);
-    Serial.print("gainCorrection: "); Serial.println(bands[currentBand].gainCorrection);
+    Serial.print("gainCorrection: "); Serial.println(bands[t41.CurrentBand].gainCorrection);
     Serial.print("audioMaxSquaredAve: "); Serial.println(audioMaxSquaredAve);
-    Serial.print("rfGain: "); Serial.println(bands[currentBand].rfGain);
+    Serial.print("rfGain: "); Serial.println(bands[t41.CurrentBand].rfGain);
     Serial.print("rfGainAllBands: "); Serial.println(rfGainAllBands);
     Serial.print("currentRF_InAtten: "); Serial.println(currentRF_InAtten);
   }

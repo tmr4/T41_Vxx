@@ -71,7 +71,7 @@ FLASHMEM void FT8CalibratePreamble(int setZoom) {
   //radioState = CALIBRATE_TRANSMIT_STATE;
   transmitPowerLevelTemp = transmitPowerLevel;
   transmitPowerLevel = 5;
-  powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
+  powerOutCW[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.CurrentBand];
   userXmtMode = radioMode;          // Store the user's mode setting
   userZoomIndex = spectrumZoom;  // Save the zoom index so it can be reset at the conclusion
   SetZoom(setZoom);
@@ -158,15 +158,15 @@ static void UpdateIQCorrection(bool xmit = true) {
   if(xmit) {
     //  Read encoder and update values.
     if(IQCalType == 0) {
-      IQXAmpCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQXAmpCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Gain X");
+      IQXAmpCorrectionFactor[t41.CurrentBand] = GetEncoderValueLive(-2.0, 2.0, IQXAmpCorrectionFactor[t41.CurrentBand], correctionIncrement, (char *)"IQ Gain X");
     } else {
-      IQXPhaseCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQXPhaseCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Phase X");
+      IQXPhaseCorrectionFactor[t41.CurrentBand] = GetEncoderValueLive(-2.0, 2.0, IQXPhaseCorrectionFactor[t41.CurrentBand], correctionIncrement, (char *)"IQ Phase X");
     }
   } else {
     if(IQCalType == 0) {
-      IQAmpCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQAmpCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Gain");
+      IQAmpCorrectionFactor[t41.CurrentBand] = GetEncoderValueLive(-2.0, 2.0, IQAmpCorrectionFactor[t41.CurrentBand], correctionIncrement, (char *)"IQ Gain");
     } else {
-      IQPhaseCorrectionFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, IQPhaseCorrectionFactor[currentBand], correctionIncrement, (char *)"IQ Phase");
+      IQPhaseCorrectionFactor[t41.CurrentBand] = GetEncoderValueLive(-2.0, 2.0, IQPhaseCorrectionFactor[t41.CurrentBand], correctionIncrement, (char *)"IQ Phase");
     }
   }
 }
@@ -220,8 +220,8 @@ FLASHMEM void FT8DoReceiveCalibrate() {
         break;
       case MENU_OPTION_SELECT:
         tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        //EEPROMData.IQAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
-        //EEPROMData.IQPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
+        //EEPROMData.IQAmpCorrectionFactor[t41.CurrentBand] = IQAmpCorrectionFactor[t41.CurrentBand];
+        //EEPROMData.IQPhaseCorrectionFactor[t41.CurrentBand] = IQPhaseCorrectionFactor[t41.CurrentBand];
         IQChoice = 6;
         break;
       default:
@@ -283,8 +283,8 @@ FLASHMEM void FT8DoXmitCalibrate() {
 
       case (MENU_OPTION_SELECT):  // Save values and exit calibration.
         tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        //EEPROMData.IQXAmpCorrectionFactor[currentBand] = IQAmpCorrectionFactor[currentBand];
-        //EEPROMData.IQXPhaseCorrectionFactor[currentBand] = IQPhaseCorrectionFactor[currentBand];
+        //EEPROMData.IQXAmpCorrectionFactor[t41.CurrentBand] = IQAmpCorrectionFactor[t41.CurrentBand];
+        //EEPROMData.IQXPhaseCorrectionFactor[t41.CurrentBand] = IQPhaseCorrectionFactor[t41.CurrentBand];
         IQChoice = 6;
         break;
 
@@ -328,8 +328,8 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
         BUFFER_SIZE*N_BLOCKS = 2048 samples
      **********************************************************************************/
 
-  //bandOutputFactor = bandCouplingFactor[currentBand] * CWPowerCalibrationFactor[currentBand] / CWPowerCalibrationFactor[1];
-  //bandOutputFactor = bandCouplingFactor[currentBand] * 1.0;
+  //bandOutputFactor = bandCouplingFactor[t41.CurrentBand] * CWPowerCalibrationFactor[t41.CurrentBand] / CWPowerCalibrationFactor[1];
+  //bandOutputFactor = bandCouplingFactor[t41.CurrentBand] * 1.0;
   bandOutputFactor = 0.1;
 
   // generate I and Q for the transmit or receive calibration
@@ -342,12 +342,12 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
 
   // adjust IQ signals for amplitude and phase correction factors
   if(currentDemodMode == DEMOD_LSB) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
+    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand], 256);
   } else {
     if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8) {
-      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
+      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
+      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand], 256);
     }
   }
 
@@ -406,19 +406,19 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
     arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 256);
 
     /**********************************************************************************
-      Scale the data buffers by the rfGain value defined in bands[currentBand] structure
+      Scale the data buffers by the rfGain value defined in bands[t41.CurrentBand] structure
     **********************************************************************************/
-    arm_scale_f32(audioBufferL, recBandFactor[currentBand], audioBufferL, 256);
-    arm_scale_f32(audioBufferR, recBandFactor[currentBand], audioBufferR, 256);
+    arm_scale_f32(audioBufferL, recBandFactor[t41.CurrentBand], audioBufferL, 256);
+    arm_scale_f32(audioBufferR, recBandFactor[t41.CurrentBand], audioBufferR, 256);
 
     // Manual IQ amplitude correction
     if(currentDemodMode == DEMOD_LSB) {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 256);
-      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 256);
+      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.CurrentBand], audioBufferL, 256);
+      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.CurrentBand], 256);
     } else {
       if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8) {
-        arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, 256);
-        IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], 256);
+        arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.CurrentBand], audioBufferL, 256);
+        IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.CurrentBand], 256);
       }
     }
 
@@ -475,7 +475,7 @@ FLASHMEM void FT8ShowSpectrum2() {
   pixelnew[1] = 0;
 
   if(liveNoiseFloorFlag != 1) {
-    currentNF = currentNoiseFloor[currentBand];
+    currentNF = currentNoiseFloor[t41.CurrentBand];
   }
 
   //  This is the "spectra scanning" for loop.  During calibration, only small areas of the spectrum need to be examined.

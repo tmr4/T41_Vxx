@@ -98,10 +98,10 @@ void InitFFTArrays() {
 FLASHMEM void InitAMDemodBiquadFilter() {
   // *** TODO: seems this should be calc on filter BW change, but isn't ***
 /*
-  int LP_F_help = bands[currentBand].fHiCut;
+  int LP_F_help = bands[t41.CurrentBand].fHiCut;
 
-  if(LP_F_help < -bands[currentBand].fLoCut) {
-    LP_F_help = -bands[currentBand].fLoCut;
+  if(LP_F_help < -bands[t41.CurrentBand].fLoCut) {
+    LP_F_help = -bands[t41.CurrentBand].fLoCut;
   }
 
   SetIIRCoeffs(biquad_lowpass1_coeffs, (float32_t)LP_F_help, 1.3, sampleRate / 8.0, 0);  // 1st stage
@@ -309,10 +309,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     }
 
     /**********************************************************************************
-        Scale the data buffers by the rfGain value defined in bands[currentBand] structure
+        Scale the data buffers by the rfGain value defined in bands[t41.CurrentBand] structure
     **********************************************************************************/
-    arm_scale_f32(audioBufferL, bands[currentBand].rfGain, audioBufferL, blocks * 128);
-    arm_scale_f32(audioBufferR, bands[currentBand].rfGain, audioBufferR, blocks * 128);
+    arm_scale_f32(audioBufferL, bands[t41.CurrentBand].rfGain, audioBufferL, blocks * 128);
+    arm_scale_f32(audioBufferR, bands[t41.CurrentBand].rfGain, audioBufferR, blocks * 128);
 
     /**********************************************************************************
       Clear Buffers
@@ -339,12 +339,12 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
     // Manual IQ amplitude correction
     if(currentDemodMode == DEMOD_LSB || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM || currentDemodMode == DEMOD_NFM) {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, blocks * 128);
-      IQPhaseCorrection(audioBufferL, audioBufferR, -IQPhaseCorrectionFactor[currentBand], blocks * 128);
+      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.CurrentBand], audioBufferL, blocks * 128);
+      IQPhaseCorrection(audioBufferL, audioBufferR, -IQPhaseCorrectionFactor[t41.CurrentBand], blocks * 128);
     //} else if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM || currentDemodMode == DEMOD_FT8) {
     } else {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[currentBand], audioBufferL, blocks * 128);
-      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[currentBand], blocks * 128);
+      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.CurrentBand], audioBufferL, blocks * 128);
+      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.CurrentBand], blocks * 128);
     }
 
     /**********************************************************************************
@@ -956,6 +956,8 @@ FASTRUN void ProcessControls() {
   }
   if(t41.NCOFreq.Poll(updateDisplay, remoteConnected)) t41.SetVFOFreq();
 
+  if(t41.CurrentBand.Poll(updateDisplay, remoteConnected)) t41.SetVFOBand();
+
   // handle any live menu items
   if(getMenuValueActive) {
     if(getMenuSelected) {
@@ -1252,10 +1254,10 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
 
       // *** TODO: evaluate noise floor default setting for new v12 hardware ***
       // *** TODO: some calibration routines need this adjustment because there is no noise floor adjustment ***
-      //pixelnew[i] = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i])) + 50;
+      //pixelnew[i] = displayScale[currentScale].baseOffset + bands[t41.CurrentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i])) + 50;
 
       if(controlDataFlag) {
-        // pixelnew = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
+        // pixelnew = displayScale[currentScale].baseOffset + bands[t41.CurrentBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
         // hardwire for 10dB scale, 20 pixel offset, 20 dBScale
         int16_t pixelnew = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
 

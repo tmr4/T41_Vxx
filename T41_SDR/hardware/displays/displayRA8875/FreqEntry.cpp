@@ -84,7 +84,7 @@ FLASHMEM void ButtonFrequencyEntry() {
 #define TEXT_OFFSET -8
 
   TxRxFreqOld = TxRxFreq;
-  lastFrequencies[currentBand][activeVFO] = TxRxFreq;
+  lastFrequencies[t41.CurrentBand][activeVFO] = TxRxFreq;
 
   tft.writeTo(L1);
   tft.fillRect(WATERFALL_L, SPECTRUM_TOP_Y + 1, WATERFALL_W, WATERFALL_BOTTOM - SPECTRUM_TOP_Y, RA8875_BLACK);  // Make space for FEInfo
@@ -122,11 +122,11 @@ FLASHMEM void ButtonFrequencyEntry() {
   tft.print("S   Save Direct to Last Freq. ");
   tft.setCursor(WATERFALL_L + 20, SPECTRUM_TOP_Y + 240);
   tft.print("Direct Entry was called from ");
-  tft.print(DE_Band[currentBand]);
+  tft.print(DE_Band[t41.CurrentBand]);
   tft.print(" band");
   tft.setCursor(WATERFALL_L + 20, SPECTRUM_TOP_Y + 270);
   tft.print("Frequency response limited above ");
-  tft.print(DE_Flimit[currentBand]);
+  tft.print(DE_Flimit[t41.CurrentBand]);
   tft.print("MHz");
   tft.setCursor(WATERFALL_L + 20, SPECTRUM_TOP_Y + 300);
   tft.print("For widest direct entry frequency range");
@@ -230,16 +230,16 @@ FLASHMEM void ButtonFrequencyEntry() {
   SetFreq(t41.CenterFreq);
 
   if(save_last_frequency) {
-    lastFrequencies[currentBand][activeVFO] = enteredF;
+    lastFrequencies[t41.CurrentBand][activeVFO] = enteredF;
   } else {
-    lastFrequencies[currentBand][activeVFO] = TxRxFreqOld;
+    lastFrequencies[t41.CurrentBand][activeVFO] = TxRxFreqOld;
   }
   tft.fillRect(0, 0, 799, 479, RA8875_BLACK);   // Clear layer 2
   tft.writeTo(L1);
 
   EEPROMWrite();
 
-  SetBand(t41.CenterFreq);
+  SetupBandFreq(t41.CenterFreq);
   RedrawDisplayScreen(); // *** we can get rid of this by adjusting above to not write to right portion of screen ***
 }
 
@@ -364,26 +364,26 @@ FLASHMEM void GetFavoriteFrequency() {
     } else if(centerFreq >= bands[BAND_10M].fBandLow && centerFreq <= bands[BAND_10M].fBandHigh) {
       currentBand2 = BAND_10M;
     }
-    currentBand = currentBand2;
+    t41.CurrentBand = currentBand2;
 
 
     if(val == MENU_OPTION_SELECT) {  // Make a choice??
       t41.CenterFreq = centerFreq;
       switch(activeVFO) {
         case VFO_A:
-          if(currentBandA == NUMBER_OF_BANDS) {  // Incremented too far?
-            currentBandA = 0;                     // Yep. Roll to list front.
+          if(t41.CurrentBandA == NUMBER_OF_BANDS) {  // Incremented too far?
+            t41.CurrentBandA = 0;                     // Yep. Roll to list front.
           }
-          currentBandA = currentBand2;
-          lastFrequencies[currentBand][VFO_A] = TxRxFreq;
+          t41.CurrentBandA = currentBand2;
+          lastFrequencies[t41.CurrentBand][VFO_A] = TxRxFreq;
           break;
 
         case VFO_B:
-          if(currentBandB == NUMBER_OF_BANDS) {  // Incremented too far?
-            currentBandB = 0;                     // Yep. Roll to list front.
+          if(t41.CurrentBandB == NUMBER_OF_BANDS) {  // Incremented too far?
+            t41.CurrentBandB = 0;                     // Yep. Roll to list front.
           }                                       // Same for VFO B
-          currentBandB = currentBand2;
-          lastFrequencies[currentBand][VFO_B] = TxRxFreq;
+          t41.CurrentBandB = currentBand2;
+          lastFrequencies[t41.CurrentBand][VFO_B] = TxRxFreq;
           break;
       }
     }
@@ -392,17 +392,17 @@ FLASHMEM void GetFavoriteFrequency() {
       //EraseSpectrumDisplayContainer();
       //DrawSpectrumFrame();
       //ShowSpectrumFreqValues();
-      //SetBand();
+      //SetupBandFreq();
       //ShowSpectrumdBScale();
       //EraseMenus();
       //ResetTuning();
       //ShowOperatingStats();
       //t41.NCOFreq = 0L;
       //DrawBandwidthBar();  // AFP 10-20-22
-      //digitalWrite(bandswitchPins[currentBand], LOW);
+      //digitalWrite(bandswitchPins[t41.CurrentBand], LOW);
       //ShowSpectrumdBScale();
       //DrawFreqSpectrum();
-      //currentDemodMode = currentBand;
+      //currentDemodMode = t41.CurrentBand;
       return;
     }
   }

@@ -201,7 +201,7 @@ FLASHMEM void SoftReset() {
   // set T41 last state different from radio state indicating a state change
   // so receiver will be configured on the first pass through loop()
   lastState = -1;
-  currentDemodMode = bands[currentBand].demod;
+  currentDemodMode = bands[t41.CurrentBand].demod;
 
   // the following items in addition to the radio state change
   // are sufficient to fully draw the display

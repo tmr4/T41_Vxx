@@ -172,7 +172,7 @@ void WSJTControlGetCommand(char * cmd, int max) {
 // Kenwood Band
 int GetKenwoodBand() {
   int band;
-  switch(currentBand) {
+  switch(t41.CurrentBand) {
     case BAND_80M:
       band=1;
       break;
@@ -503,10 +503,10 @@ void WSJTLoop()
       case 'N':
         if(cmd[1] == 'F' && cmd[2] == ';') {
           // send noise floor
-          sprintf(cmd,"NF%04d;", currentNoiseFloor[currentBand]);
+          sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.CurrentBand]);
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
           // set noise floor
-          currentNoiseFloor[currentBand] = atoi(&cmd[2]);
+          currentNoiseFloor[t41.CurrentBand] = atoi(&cmd[2]);
           return;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           // *** TODO: consider just toggling this through call to
@@ -514,7 +514,7 @@ void WSJTLoop()
 
           // save final noise floor setting if toggling flag off
           if(liveNoiseFloorFlag == 0) {
-            //EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
+            //EEPROMData.currentNoiseFloor[t41.CurrentBand]  = currentNoiseFloor[t41.CurrentBand];
             EEPROMWrite();
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);

@@ -227,7 +227,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
   if(liveNoiseFloorFlag != 1) {
-    currentNF = currentNoiseFloor[currentBand];
+    currentNF = currentNoiseFloor[t41.CurrentBand];
   }
 
   // initialize yOldPlot if this is a new spectrum
@@ -243,8 +243,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
 
     TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
-    pixelnew = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + offset]));
-    pixelnew1 = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1 + offset]));
+    pixelnew = displayScale[currentScale].baseOffset + bands[t41.CurrentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + offset]));
+    pixelnew1 = displayScale[currentScale].baseOffset + bands[t41.CurrentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1 + offset]));
 
     // calculate the freq spectrum plot value
     yPlot = spectrumNoiseFloor - pixelnew - currentNF;
@@ -499,13 +499,6 @@ FASTRUN void ShowFrequency() {
   char freqBuffer[15];
   int TxRxFreq = t41.TXRXFreq();
 
-  // *** do this in the proper place if this is needed ***
-  //if(activeVFO == VFO_A) {  // Needed for edge checking
-  //  currentBand = currentBandA;
-  //} else {
-  //  currentBand = currentBandB;
-  //}
-
   FormatFrequency(TxRxFreq, freqBuffer);
   //tft.setFontScale(3, 2);
   tft.setFont(Arial_20);
@@ -514,7 +507,7 @@ FASTRUN void ShowFrequency() {
   tft.fillRect(FREQUENCY_X, FREQUENCY_Y, SPEC_BOX_W, 20*8, ILI9341_BLACK);
 
   if(activeVFO == VFO_A) {
-    if(TxRxFreq < bands[currentBandA].fBandLow || TxRxFreq > bands[currentBandA].fBandHigh) {
+    if(TxRxFreq < bands[t41.CurrentBandA].fBandLow || TxRxFreq > bands[t41.CurrentBandA].fBandHigh) {
       tft.setTextColor(ILI9341_RED);  // Out of band
     } else {
       tft.setTextColor(ILI9341_GREEN); // In US band
@@ -528,7 +521,7 @@ FASTRUN void ShowFrequency() {
     tft.setCursor(VFO_B_INACTIVE_OFFSET, FREQUENCY_Y);
     FormatFrequency(t41.CurrentFreqB, freqBuffer);
   } else { // VFO_B
-    if(TxRxFreq < bands[currentBandB].fBandLow || TxRxFreq > bands[currentBandB].fBandHigh) {
+    if(TxRxFreq < bands[t41.CurrentBandB].fBandLow || TxRxFreq > bands[t41.CurrentBandB].fBandHigh) {
       tft.setTextColor(ILI9341_RED);
     } else {
       tft.setTextColor(ILI9341_GREEN);
@@ -573,9 +566,9 @@ FLASHMEM void ShowOperatingStats() {
   tft.setTextColor(ILI9341_ORANGE);
   tft.setCursor(OPERATION_STATS_BD, OPERATION_STATS_T);
   if(activeVFO == VFO_A) {
-    tft.print(bands[currentBandA].name);  // Show band -- 40M
+    tft.print(bands[t41.CurrentBandA].name);  // Show band -- 40M
   } else {
-    tft.print(bands[currentBandB].name);  // Show band -- 40M
+    tft.print(bands[t41.CurrentBandB].name);  // Show band -- 40M
   }
 
   tft.setTextColor(ILI9341_GREEN);

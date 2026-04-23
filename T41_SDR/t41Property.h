@@ -15,14 +15,19 @@ public:
   Property<int> AudioVolume;
   Property<int> FilterHiCut;
   Property<int> FilterLoCut;
+  Property<int> CurrentBand;
 
+  // properties w/o notifications or display updates
   Property<int> ActiveVFO;
   Property<int> CurrentFreqA;
   Property<int> CurrentFreqB;
+  Property<int> CurrentBandA;
+  Property<int> CurrentBandB;
 
   // helper functions
   int TXRXFreq() { return CenterFreq + NCOFreq; }
   void SetVFOFreq();
+  void SetVFOBand();
 
 protected:
   void SetPropertyDefaults();
@@ -46,12 +51,14 @@ done:
   int fHiCut = -3000;
   int currentFreqA = 7048000;
   int currentFreqB = 7030000;
+  int activeVFO = 0; // VFO A
+  int currentBand = 1;      // BAND_40M;
+  int currentBandA = 1; //BAND_40M; *** not property or data ***
+  int currentBandB = 1; //BAND_40M;
 
 next:
-  int activeVFO = 0; // VFO A
   int radioMode = 0;        // SSB_MODE;
   int currentDemodMode = 1; // DEMOD_LSB
-  int currentBand = 1;      // BAND_40M;
   int transmitPowerLevel = 1;
   int tuneIndex = 6;
   int ftIndex = 3;
@@ -60,8 +67,6 @@ list:
   private bool centerTuneActive = false;
   //private int freqIncrement = 100000; *** maybe helper? ***
   //private int ftIncrement = 500;
-  //private int currentBandA = 1; //BAND_40M; *** not property or data ***
-  //private int currentBandB = 1; //BAND_40M;
   private int currentNF = 0;
   private int agcMode = 1;
   private int liveNoiseFloorFlag = 0;
@@ -96,9 +101,6 @@ typedef struct {
   int activeVFO;
   int freqIncrement;
 
-  int currentBand;
-  int currentBandA;
-  int currentBandB;
   int freqCorrectionFactor;
 
   int equalizerRec[EQUALIZER_CELL_COUNT];

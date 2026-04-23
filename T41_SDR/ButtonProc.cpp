@@ -54,18 +54,11 @@ FLASHMEM void ChangeBand(int change) {
   int TxRxFreq;
 
   // Added if so unused GPOs will not be touched
-  if(currentBand < BAND_12M) {
-    digitalWrite(bandswitchPins[currentBand], LOW);
+  if(t41.CurrentBand < BAND_12M) {
+    digitalWrite(bandswitchPins[t41.CurrentBand], LOW);
   }
 
-  currentBand += change;
-  if(currentBand == NUMBER_OF_BANDS) {  // Incremented too far?
-    currentBand = 0;                     // Yep. Roll to list front.
-  }
-  if(currentBand < 0) {                 // Incremented too far?
-    currentBand = NUMBER_OF_BANDS - 1;  // Yep. Roll to list front.
-  }
-
+  t41.CurrentBand += change;
   // *** DSB/data demolation mode are unchanged across band changes ***
   if((radioMode == SSB_MODE) || (radioMode == CW_MODE)) {
     currentDemodMode = ValidateDemodMode(-1);
@@ -77,34 +70,32 @@ FLASHMEM void ChangeBand(int change) {
   switch(activeVFO) {
     case VFO_A:
       if(save_last_frequency) {
-        lastFrequencies[currentBandA][VFO_A] = TxRxFreq;
+        lastFrequencies[t41.CurrentBandA][VFO_A] = TxRxFreq;
       } else {
         if(directFreqFlag) {
-          lastFrequencies[currentBandA][VFO_A] = TxRxFreqOld;
+          lastFrequencies[t41.CurrentBandA][VFO_A] = TxRxFreqOld;
           directFreqFlag = false;
         } else {
-          lastFrequencies[currentBandA][VFO_A] = TxRxFreq;
+          lastFrequencies[t41.CurrentBandA][VFO_A] = TxRxFreq;
         }
         TxRxFreqOld = TxRxFreq;
       }
-      currentBandA = currentBand;
-      t41.CenterFreq = t41.CurrentFreqA = lastFrequencies[currentBandA][VFO_A];
+      t41.CenterFreq = lastFrequencies[t41.CurrentBandA][VFO_A];
       break;
 
     case VFO_B:
       if(save_last_frequency) {
-        lastFrequencies[currentBandB][VFO_B] = TxRxFreq;
+        lastFrequencies[t41.CurrentBandB][VFO_B] = TxRxFreq;
       } else {
         if(directFreqFlag) {
-          lastFrequencies[currentBandB][VFO_B] = TxRxFreqOld;
+          lastFrequencies[t41.CurrentBandB][VFO_B] = TxRxFreqOld;
           directFreqFlag = false;
         } else {
-          lastFrequencies[currentBandB][VFO_B] = TxRxFreq;
+          lastFrequencies[t41.CurrentBandB][VFO_B] = TxRxFreq;
         }
         TxRxFreqOld = TxRxFreq;
       }
-      currentBandB = currentBand;
-      t41.CenterFreq = t41.CurrentFreqB = lastFrequencies[currentBandB][VFO_B];
+      t41.CenterFreq = lastFrequencies[t41.CurrentBandB][VFO_B];
       break;
 
     case VFO_SPLIT:
@@ -138,10 +129,10 @@ FLASHMEM void ChangeBand(int change) {
     }
   }
 
-  SetBand(TxRxFreq);
+  SetupBandFreq(TxRxFreq);
 
-  if(currentBand < BAND_12M) {
-    digitalWrite(bandswitchPins[currentBand], HIGH);
+  if(t41.CurrentBand < BAND_12M) {
+    digitalWrite(bandswitchPins[t41.CurrentBand], HIGH);
   }
 }
 
@@ -159,8 +150,8 @@ FLASHMEM void ChangeBand(long newFreq) {
   }
 
   // change bands if newBand is valid and different than current band
-  if((newBand < NUMBER_OF_BANDS) && (newBand != currentBand)) {
-    ChangeBand(newBand - currentBand);
+  if((newBand < NUMBER_OF_BANDS) && (newBand != t41.CurrentBand)) {
+    ChangeBand(newBand - t41.CurrentBand);
   }
 }
 
@@ -234,7 +225,7 @@ FLASHMEM int ValidateDemodMode(int demod) {
     case SSB_MODE:
     case CW_MODE:
       if(demod < 0) {
-        demod = bands[currentBand].demod;
+        demod = bands[t41.CurrentBand].demod;
       } else if((demod > DEMOD_LSB) || (demod < DEMOD_USB)) {
         demod = DEMOD_USB;
       }
@@ -494,7 +485,7 @@ FLASHMEM void ButtonNotchFilter() {
 FLASHMEM void ToggleLiveNoiseFloorFlag() {
   // save final noise floor setting if toggling from ON
   if(liveNoiseFloorFlag == 2) {
-    //EEPROMData.currentNoiseFloor[currentBand]  = currentNoiseFloor[currentBand];
+    //EEPROMData.currentNoiseFloor[t41.CurrentBand]  = currentNoiseFloor[t41.CurrentBand];
     EEPROMWrite();
   }
 

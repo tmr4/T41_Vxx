@@ -50,14 +50,25 @@ public:
   }
 
   // same as above with max, min
-  FLASHMEM void Init(T val, T _min, T _max, FuncPtrT _fPtrT, FuncPtrInt _fPtr, int _id, bool polled = true) {
+  FLASHMEM void Init(T val, T _min, T _max, FuncPtrT _fPtrT, FuncPtrInt _fPtrInt, int _id, bool polled = true) {
     value = val;
     hasMinMax = true;
     min = _min;
     max = _max;
     fPtrT = _fPtrT;
-    fPtrInt = _fPtr;
+    fPtrInt = _fPtrInt;
     id = _id;
+    notifyOnPoll = polled;
+  }
+
+  // same as above with max, min
+  FLASHMEM void Init(T val, T _min, T _max, FuncPtrT _fPtrT, FuncPtr _fPtr, bool polled = true) {
+    value = val;
+    hasMinMax = true;
+    min = _min;
+    max = _max;
+    fPtrT = _fPtrT;
+    fPtr = _fPtr;
     notifyOnPoll = polled;
   }
 

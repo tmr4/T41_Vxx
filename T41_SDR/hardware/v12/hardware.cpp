@@ -83,7 +83,7 @@ void ShowAnalogGain() {
 
   attenuator = currentRF_InAtten;
 
-  if((((bands[currentBand].rfGain != RF_gain_old) || (attenuator != RF_att_old)) && twinpeaks_tested == 1) || write_analog_gain) {
+  if((((bands[t41.CurrentBand].rfGain != RF_gain_old) || (attenuator != RF_att_old)) && twinpeaks_tested == 1) || write_analog_gain) {
     tft.setFontScale((enum RA8875tsize)0);
     tft.setCursor(TIME_X - 40, TIME_Y + 26); // *** TODO: evaluate position ***
     tft.print((float)(RF_gain_old * 1.5));
@@ -103,7 +103,7 @@ void ShowAnalogGain() {
     tft.print("dB");
     tft.setTextColor(RA8875_WHITE);
     tft.print("dB");
-    RF_gain_old = bands[currentBand].rfGain;
+    RF_gain_old = bands[t41.CurrentBand].rfGain;
     RF_att_old = attenuator;
     //write_analog_gain = 0;
   }
@@ -115,7 +115,7 @@ void ShowAnalogGain() {
 
 FLASHMEM void RFInAttenFollowup() {
   SetRF_InAtten(currentRF_InAtten);
-  RAtten[currentBand] = currentRF_InAtten;
+  RAtten[t41.CurrentBand] = currentRF_InAtten;
 
   ShowAnalogGain();
 
@@ -126,12 +126,12 @@ FLASHMEM void RFInAttenFollowup() {
 
 FLASHMEM void SetRFInAttenValue() {
   SetRF_InAtten(currentRF_InAtten);
-  //RAtten[currentBand] = currentRF_InAtten;
+  //RAtten[t41.CurrentBand] = currentRF_InAtten;
 }
 
 FLASHMEM void SSBRFOutAttenFollowup() {
   SetRF_OutAtten(currentRF_OutAtten);
-  XAttenSSB[currentBand] = currentRF_OutAtten;
+  XAttenSSB[t41.CurrentBand] = currentRF_OutAtten;
 
   // *** TODO: set to EEPROM ***
   //EEPROMData.rfGainAllBands = rfGainAllBands;
@@ -140,7 +140,7 @@ FLASHMEM void SSBRFOutAttenFollowup() {
 
 FLASHMEM void CWRFOutAttenFollowup() {
   SetRF_OutAtten(currentRF_OutAtten);
-  XAttenCW[currentBand] = currentRF_OutAtten;
+  XAttenCW[t41.CurrentBand] = currentRF_OutAtten;
 
   // *** TODO: set to EEPROM ***
   //EEPROMData.rfGainAllBands = rfGainAllBands;
@@ -170,7 +170,7 @@ FLASHMEM void RFOptions() {
 
     case 3:  // SSB RF Out Atten
       GetMenuValue(0, 63, &currentRF_OutAtten, 1, "SSB Att:", 200, NULL, NULL, &SSBRFOutAttenFollowup);
-      //powerOutSSB[currentBand] = currentRF_OutAtten;
+      //powerOutSSB[t41.CurrentBand] = currentRF_OutAtten;
       //SetRF_OutAtten(currentRF_OutAtten);
       break;
 
@@ -219,7 +219,7 @@ FLASHMEM void CalibrateOptions() {
       if(keyPressedOn == 1 && radioMode == CW_MODE) {
         //================  CW Transmit Mode Straight Key ===========
         if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && keyType == 0) {  //Straight Key
-          powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];
+          powerOutCW[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.CurrentBand];
           CW_ExciterIQData();
           ShowTransmitReceiveStatus();
           SetFreq(t41.CenterFreq);
@@ -233,14 +233,14 @@ FLASHMEM void CalibrateOptions() {
           //modeSelectOutExR.gain(0, 0);
         }
       }
-      CWPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, CWPowerCalibrationFactor[currentBand], 0.001, (char *)"CW PA Cal: ");
-      powerOutCW[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[currentBand];  // AFP 10-21-22
+      CWPowerCalibrationFactor[t41.CurrentBand] = GetEncoderValueLive(-2.0, 2.0, CWPowerCalibrationFactor[t41.CurrentBand], 0.001, (char *)"CW PA Cal: ");
+      powerOutCW[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.CurrentBand];  // AFP 10-21-22
       val = ReadSelectedPushButton();
       if(val != BOGUS_PIN_READ) {        // Any button press??
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          //EEPROMData.CWPowerCalibrationFactor[currentBand] = CWPowerCalibrationFactor[currentBand];
+          //EEPROMData.CWPowerCalibrationFactor[t41.CurrentBand] = CWPowerCalibrationFactor[t41.CurrentBand];
           EEPROMWrite();
           calibrateItem = 5;
         }
@@ -248,8 +248,8 @@ FLASHMEM void CalibrateOptions() {
       break;
 
     case 5:  // SSB PA Cal
-      SSBPowerCalibrationFactor[currentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[currentBand], 0.001, (char *)"SSB PA Cal: ");
-      powerOutSSB[currentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[currentBand];  // AFP 10-21-22
+      SSBPowerCalibrationFactor[t41.CurrentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[t41.CurrentBand], 0.001, (char *)"SSB PA Cal: ");
+      powerOutSSB[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[t41.CurrentBand];  // AFP 10-21-22
       val = ReadSelectedPushButton();
       if(val != BOGUS_PIN_READ) {        // Any button press??
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
@@ -300,10 +300,10 @@ float CalcSignalStrength() {
     //  dbm_calibration = 24 good for S1
     // dbm_calibration set to 31; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
     // rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10; rfGainAllBands is initialized to 0
-    //dbm = dbm_calibration + bands[currentBand].gainCorrection + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[currentBand].rfGain * 1.5 - rfGainAllBands;
-    //dbm = 24.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].rfGain * 1.5 - rfGainAllBands;
-    //dbm = 32.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].rfGain * 1.5 - rfGainAllBands;
-    dbm = 38.0 + bands[currentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[currentBand].rfGain * 1.5 - rfGainAllBands;
+    //dbm = dbm_calibration + bands[t41.CurrentBand].gainCorrection + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.CurrentBand].rfGain * 1.5 - rfGainAllBands;
+    //dbm = 24.0 + bands[t41.CurrentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.CurrentBand].rfGain * 1.5 - rfGainAllBands;
+    //dbm = 32.0 + bands[t41.CurrentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.CurrentBand].rfGain * 1.5 - rfGainAllBands;
+    dbm = 38.0 + bands[t41.CurrentBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.CurrentBand].rfGain * 1.5 - rfGainAllBands;
 
     //if(std::isnan(dbm)) {
     //  dbm = -133.0;
@@ -362,14 +362,14 @@ void SoftResetHardware() {
 void ConfigRadioStateHardware() {
   switch(radioState) {
     case SSB_RECEIVE_STATE:
-      currentRF_InAtten = RAtten[currentBand];
+      currentRF_InAtten = RAtten[t41.CurrentBand];
       SetRF_InAtten(currentRF_InAtten);
       break;
 
     case SSB_TRANSMIT_STATE:
     case DATA_TRANSMIT_STATE:
       digitalWrite(RF_XMIT_RELAY, XMIT_SSB);
-      //SetRF_OutAtten(powerOutSSB[currentBand]);
+      //SetRF_OutAtten(powerOutSSB[t41.CurrentBand]);
       SetRF_OutAtten(currentRF_OutAtten);
 
       oldCenterFreq = t41.CenterFreq;
@@ -377,7 +377,7 @@ void ConfigRadioStateHardware() {
       break;
 
     case CW_RECEIVE_STATE:
-      currentRF_InAtten = RAtten[currentBand];
+      currentRF_InAtten = RAtten[t41.CurrentBand];
       SetRF_InAtten(currentRF_InAtten);
       break;
 
@@ -387,7 +387,7 @@ void ConfigRadioStateHardware() {
       break;
 
     case DATA_RECEIVE_STATE:
-      currentRF_InAtten = RAtten[currentBand];
+      currentRF_InAtten = RAtten[t41.CurrentBand];
       SetRF_InAtten(currentRF_InAtten);
       break;
 

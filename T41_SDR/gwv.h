@@ -32,9 +32,6 @@ extern int activeVFO;
 extern int freqIncrement;
 extern int ftIncrement;
 
-extern int currentBand;
-extern int currentBandA;
-extern int currentBandB;
 extern int freqCorrectionFactor;
 
 extern int equalizerRec[];

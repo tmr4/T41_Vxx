@@ -270,45 +270,6 @@ float ApproxAtan(float z) {
 }
 
 /*****
-  Purpose: sets frequancy for selected band and update filters accordingly
-*****/
-FLASHMEM void SetBand(int freq) {
-  SetFreq(freq);
-
-  SetupDemodFilterBW();
-
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowFrequency();
-      ShowOperatingStats();
-      DrawBandwidthBar();
-      ShowBandwidthBarValues();
-      ShowSpectrumFreqValues();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-      break;
-
-    case DISPLAY_T41_FT8_DECODE:
-      ShowFrequency();
-      ShowOperatingStats();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_FULL_MENU:
-      ShowFrequency();
-      ShowOperatingStats();
-      DrawAudioFilterLines();
-      break;
-
-    default:
-    // no screen updates at all
-    break;
-  }
-}
-
-/*****
   Purpose: Tries to open the EEPROM SD file to see if an SD card is present in the system
 
 

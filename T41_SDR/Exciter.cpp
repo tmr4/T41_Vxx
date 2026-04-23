@@ -37,16 +37,16 @@ void PlayExciterIQData() {
   int blocks = currentDemodMode == DEMOD_FT8 ? 2 : 16;
 
   // adjust IQ signal amplitude and phase
-  // *** TODO: v66-9 has currentBandA, why? ***
+  // *** TODO: v66-9 has t41.CurrentBandA, why? ***
   if(currentDemodMode == DEMOD_LSB) {
-    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand], 256);
+    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand], 256);
   } else if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8_INTERNAL) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
+    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand] * 2.0, 256);
   } else if(currentDemodMode == DEMOD_FT8) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[currentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[currentBand] * 2.0, 256);
+    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand] * 2.0, 256);
   }
 
   if(currentDemodMode != DEMOD_FT8) {
@@ -251,7 +251,7 @@ void SetBandRelay(int state) {
   }
 
   // Set current band relay "on".  Ignore 12M and 10M.  15M and 17M use the same relay.
-  if(currentBand < BAND_12M) digitalWrite(bandswitchPins[currentBand], state);
+  if(t41.CurrentBand < BAND_12M) digitalWrite(bandswitchPins[t41.CurrentBand], state);
 }
 
 // *** TODO: see if this can be refactored from above ***

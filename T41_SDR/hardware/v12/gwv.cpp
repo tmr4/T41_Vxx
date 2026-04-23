@@ -41,9 +41,6 @@ int activeVFO = 0;
 int freqIncrement = 100000; // *** these need to be automated according to defines in config file ***
 int ftIncrement = 500;
 
-int currentBand = BAND_40M;
-int currentBandA = BAND_40M;
-int currentBandB = BAND_40M;
 //int freqCorrectionFactor = 17578;   // AD3 source @ 5MHz
 int freqCorrectionFactor = 0;   // gives
 
