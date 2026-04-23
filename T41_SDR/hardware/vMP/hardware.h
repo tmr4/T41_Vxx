@@ -79,14 +79,14 @@
 #define FILTERPIN15M            38    // 15M filter relay
 
 // GPIO connector pins bottom to top as shown on breadboard adapter
-#define PROFILER_MAINLOOP_PIN          0
-#define PROFILER_PROCESS_PIN           1
-#define PROFILER_DRAWFREQSPEC_PIN      2
-#define PROFILER_DRAWAUDIOSPEC_PIN     3
-#define PROFILER_FT8PROCESSBLOCK_PIN  14
-#define PROFILER_FT8GETDATA_PIN       15
-#define PROFILER_FT8DECODE_PIN        16
-#define PROFILER_FT8_TX_PIN           17
+#define PROFILER_MAINLOOP          0
+#define PROFILER_PROCESS_RX           1
+#define PROFILER_DRAWFREQSPEC      2
+#define PROFILER_DRAWAUDIOSPEC     3
+#define PROFILER_PROCESS_FT8  14
+#define PROFILER_FT8_CAT_RX       15
+#define PROFILER_DECODE_FT8        16
+#define PROFILER_FT8_CAT_TX           17
 
 //---- end of Teensy 4.1 Pin assignments
 

@@ -67,14 +67,14 @@ extern uint16_t GPAB_state;
 #define FILTERPIN15M 29    // 15M filter relay
 
 // *** TODO: set proper profiler pins if used ***
-#define PROFILER_MAINLOOP_PIN         1
-#define PROFILER_PROCESS_PIN          1
-#define PROFILER_DRAWFREQSPEC_PIN     1
-#define PROFILER_DRAWAUDIOSPEC_PIN    1
-#define PROFILER_FT8PROCESSBLOCK_PIN  1
-#define PROFILER_FT8GETDATA_PIN       1
-#define PROFILER_FT8DECODE_PIN        1
-#define PROFILER_FT8_TX_PIN           1
+#define PROFILER_MAINLOOP         1
+#define PROFILER_PROCESS_RX          1
+#define PROFILER_DRAWFREQSPEC     1
+#define PROFILER_DRAWAUDIOSPEC    1
+#define PROFILER_PROCESS_FT8  1
+#define PROFILER_FT8_CAT_RX       1
+#define PROFILER_DECODE_FT8        1
+#define PROFILER_FT8_CAT_TX           1
 
 //---- end of Teensy 4.1 Pin assignments
 

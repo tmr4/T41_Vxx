@@ -99,14 +99,14 @@ extern int calNFAdjust;
 #define FILTERPIN20M            15    // 20M filter relay
 #define FILTERPIN15M            15    // 15M filter relay
 
-#define PROFILER_MAINLOOP_PIN         33
-#define PROFILER_PROCESS_PIN          34
-#define PROFILER_DRAWFREQSPEC_PIN     41
-#define PROFILER_DRAWAUDIOSPEC_PIN    14
-#define PROFILER_FT8PROCESSBLOCK_PIN  35
-#define PROFILER_FT8GETDATA_PIN       36
-#define PROFILER_FT8DECODE_PIN        38
-#define PROFILER_FT8_TX_PIN           16
+#define PROFILER_MAINLOOP         33
+#define PROFILER_PROCESS_RX       34
+#define PROFILER_DRAWFREQSPEC     41
+#define PROFILER_DRAWAUDIOSPEC    14
+#define PROFILER_PROCESS_FT8      35
+#define PROFILER_FT8_CAT_RX       36
+#define PROFILER_DECODE_FT8       38
+#define PROFILER_FT8_CAT_TX       16
 
 // other
 

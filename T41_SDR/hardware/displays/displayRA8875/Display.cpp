@@ -473,7 +473,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
     bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
 
-    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
+    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
     pixelnew = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1]));
     pixelnew1 = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1]));
@@ -613,7 +613,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     tft.writeTo(L1);
   }
 
-  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
+  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
 }
 
 /*****
@@ -625,18 +625,11 @@ FASTRUN void DrawAudioSpectrum() {
   int audioYPixel;
   static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
 
-  // yielding here avoids delaying next loop
   YieldToProcess();
 
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
-    TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
-
-    // *** normally this loop is very fast if data is 0 as drawing is skipped ***
-    // *** this line can sometimes shorten loop time slightly by skipping data
-    //     past high filter if some data is small but not nessesarily 0 ***
-    // *** however, this fails to completely erase spectrum left after filter movement ***
-    //if(i > filterHiPosition) break;
+    TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
 
     // don't overwrite audio filter lines
     if((i != filterLoPosition) && (i != filterHiPosition)) {
@@ -661,9 +654,6 @@ FASTRUN void DrawAudioSpectrum() {
           audioYPixel = CLIP_AUDIO_PEAK;
         }
         tft.drawFastVLine(AUDIO_SPEC_L + i, AUDIO_SPEC_BOTTOM - audioYPixel, audioYPixel, RA8875_MAGENTA);  // draw new AUDIO spectrum line
-
-        // *** yielding here or below delays start of next frequency spectrum update, increasing loop time by about 10ms ***
-        //YieldToProcess();
       } else {
         audioYPixel = 0;
       }
@@ -672,13 +662,15 @@ FASTRUN void DrawAudioSpectrum() {
       yOldAudioPlot[i] = audioYPixel;
     }
 
-    // *** see above ***
-    //YieldToProcess();
     // *** some timely placed yields smooths audio processing, but doesn't reduce loop time
-    if(i == 75 || i == 150) YieldToProcess();
+    if((filterHiPosition > 150) && (i < filterHiPosition)) {
+      if((i == 75) || ((filterHiPosition > 225) && (i == 150))) {
+        YieldToProcess();
+      }
+    }
   }
 
-  RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC_PIN);
+  RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
 }
 
 /*****
@@ -1645,7 +1637,7 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
   static uint16_t waterfall[WATERFALL_W] = {0};
 
   for(int i = 0; i < samples; i++) {
-    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
+    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
     yPlot = SPECTRUM_TOP_Y + 85 - spec[i] / 3;
     y1Plot = SPECTRUM_TOP_Y + 85 - spec[i + 1] / 3;
@@ -1702,7 +1694,7 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
     tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 101, WATERFALL_W, 1, waterfall);
   }
 
-  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
+  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
 }
 
 FLASHMEM void ShowFT8SpectrumFreqValues() {

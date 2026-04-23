@@ -269,7 +269,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) {
     success = true;
 
-    SETPROFILEPIN(PROFILER_PROCESS_PIN);
+    SETPROFILEPIN(PROFILER_PROCESS_RX);
 
     elapsedMicros usec = 0;
 
@@ -472,7 +472,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
       #ifdef USE_BUFFERED_FT8_WAV
       case DEMOD_FT8_INTERNAL:
-        SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+        SETPROFILEPIN(PROFILER_FT8_CAT_RX);
         // transfer to wav buffer to audio buffers
         // and interpolate to 24 kHz to get audio signal for T41
         // *** TODO: evaluate if use of CMISS_DSP library is better ***
@@ -487,7 +487,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
             audioBufferL[2*i] = audioBufferR[i];
           }
         }
-        RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+        RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
         break;
       #endif
 
@@ -498,7 +498,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // wav file sample rate is 12 kHz
         // get a half sized sample and interpolate to the proper size/rate
         // wav FT8 signal data to audioBufferR, audio to audioBufferL
-        SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+        SETPROFILEPIN(PROFILER_FT8_CAT_RX);
         if(ReadFT8Wav(audioBufferR, 128)) {
           // interpolate to 24 kHz to get audio signal for T41
           // *** TODO: evaluate if use of CMISS_DSP library is better ***
@@ -519,7 +519,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
           //  Q_in_R.clear();
           //}
         }
-        RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+        RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
         break;
 
       default:
@@ -863,7 +863,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     elapsed_micros_sum = elapsed_micros_sum + usec;
     elapsed_micros_idx_t++;
 
-    RESETPROFILEPIN(PROFILER_PROCESS_PIN);
+    RESETPROFILEPIN(PROFILER_PROCESS_RX);
   }
 
   return !success ? 0 : (updateFreqSpec ? 2 : 1);

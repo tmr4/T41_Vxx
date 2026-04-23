@@ -22,6 +22,8 @@
 extern USBSerial_BigBuffer usbHostSerial;
 #endif
 
+#include "debug.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -137,6 +139,7 @@ void T41PrepareSpectrumData(int16_t *data, int16_t max) {
 }
 
 void T41ControlSendCmd(char *cmd) {
+  SETPROFILEPIN(PROFILER_FT8_CAT_TX);
   //Serial.print("Sending: ");Serial.println(cmd);
   int sizeBuf = controlSerial.availableForWrite();
   if(cmd[0] != 0 && sizeBuf > 0) {
@@ -165,6 +168,7 @@ void T41ControlSendCmd(char *cmd) {
   } else {
     controlDataFlag = false;
   }
+  RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
 }
 
 void T41ControlGetCommand(char * cmd, int max) {
@@ -394,8 +398,15 @@ int GetMode() {
 //     back and forth trying to impose their own value. Ignoring this can degrade
 //     radio performance ***
 // *** TODO: verify only single message goes back and forth for property updates ***
+/*
+
+  Processing times (ms):
+    FilterHiCut (NH%011d;): 2.5
+
+*/
 void T41ControlLoop() {
   float32_t dbm;
+  bool sendCommand = true;
 
   T41RemoteConnectCheck();
 
@@ -404,7 +415,8 @@ void T41ControlLoop() {
     int mode = GetMode();
 
     T41ControlGetCommand(cmd, 256);
-    Serial.print("Received: ");  Serial.println(cmd);
+    SETPROFILEPIN(PROFILER_FT8_CAT_RX);
+    //Serial.print("Received: ");  Serial.println(cmd);
     //int sizeBuf = SerialUSB1.availableForWrite();
     //Serial.println(sizeBuf);
     switch(cmd[0]) {
@@ -418,7 +430,7 @@ void T41ControlLoop() {
           ChangeBand(-1);
           SendAS();
         }
-        return; // *** TODO: or we can set cmd[0] to null
+        sendCommand = false; // *** TODO: or we can set cmd[0] to null
         break;
 
       case 'D':
@@ -429,7 +441,7 @@ void T41ControlLoop() {
           // stop sending spectrum data
           controlDataFlag = false;
         }
-        return; // *** TODO: or we can set cmd[0] to null
+        sendCommand = false; // *** TODO: or we can set cmd[0] to null
         break;
 
       case 'F':
@@ -446,7 +458,7 @@ void T41ControlLoop() {
                 SetFineTune(f - t41.CurrentFreqA);
               }
               //Serial.print("Set VFO A to "); Serial.println(f);
-              return;
+              sendCommand = false;
             } else if(cmd[2] == ';') {
               // read VFO A frequency
               sprintf(cmd, "FA%011d;", (int)t41.CurrentFreqA);
@@ -464,7 +476,7 @@ void T41ControlLoop() {
                 SetFineTune(f - t41.CurrentFreqB);
               }
              // Serial.print("Set VFO B to "); Serial.println(f);
-              return;
+              sendCommand = false;
             } else if(cmd[2] == ';') {
               // read VFO B frequency
               sprintf(cmd, "FB%011d;", (int)t41.CurrentFreqB);
@@ -481,7 +493,7 @@ void T41ControlLoop() {
               SetFreq(f);
               t41.SetFreq();
               //Serial.print("Center freq set to "); Serial.println(f);
-              return;
+              sendCommand = false;
             } else if(cmd[2] == ';') {
               // read center frequency
               sprintf(cmd,"FC%011d;", (int)t41.CenterFreq);
@@ -494,7 +506,7 @@ void T41ControlLoop() {
               f = atol(&cmd[2]);
               SetFineTune(f-t41.CenterFreq-t41.NCOFreq);
               catControlChange = true;
-              return;
+              sendCommand = false;
             } else if(cmd[2] == ';') {
               // read VFO A frequency offset
               sprintf(cmd, "FF%011d;", (int)t41.NCOFreq - (int)t41.CurrentFreqA);
@@ -510,14 +522,14 @@ void T41ControlLoop() {
                 ChangeFtIncrement(atol(&cmd[3]) - ftIndex);
               }
             }
-            return;
+            sendCommand = false;
             break;
 
           case 'S':
             if(cmd[3] == ';') {
               // fine tune on or off
               SetFtActive(atoi(&cmd[2]));
-              return;
+              sendCommand = false;
             }
             break;
 
@@ -526,7 +538,7 @@ void T41ControlLoop() {
               // select VFO
               VFOSelect(atoi(&cmd[2]));
               SendAS();
-              return;
+              sendCommand = false;
             }
             break;
 
@@ -544,7 +556,7 @@ void T41ControlLoop() {
           AGCMode = atol(&cmd[2]);
           UpdateInfoBoxItem(IB_ITEM_AGC);
         }
-        return;
+        sendCommand = false;
         break;
 
       case 'I':
@@ -557,7 +569,7 @@ void T41ControlLoop() {
             checkingConnection = false;
           }
           t41.RemoteStatus = REMOTE_CONNECTED;
-          return;
+          sendCommand = false;
         } else if(cmd[1] == 'F' && cmd[2] == ';') {
           // retrieves transceiver status
           if(useKenwoodIF) {
@@ -580,7 +592,7 @@ void T41ControlLoop() {
             );
           } else {
             SendIF();
-            return;
+            sendCommand = false;
           }
         }
         break;
@@ -593,12 +605,12 @@ void T41ControlLoop() {
           // set demod mode status
           ChangeDemodMode(atoi(&cmd[2]));
           SendAS();
-          return;
+          sendCommand = false;
         } else if(cmd[1] == 'E' && cmd[3] == ';') {
           // set operating mode
           ChangeMode(atoi(&cmd[2]));
           SendAS();
-          return;
+          sendCommand = false;
         }
         break;
 
@@ -609,7 +621,7 @@ void T41ControlLoop() {
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
           // set noise floor
           currentNoiseFloor[currentBand] = atoi(&cmd[2]);
-          return;
+          sendCommand = false;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           // *** TODO: consider just toggling this through call to
           liveNoiseFloorFlag = atoi(&cmd[2]);
@@ -620,19 +632,19 @@ void T41ControlLoop() {
             EEPROMWrite();
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
-          return;
+          sendCommand = false;
         } else if(cmd[1] == 'H' && cmd[13] == ';') {
           t41.FilterHiCut = atol(&cmd[2]);
 
           CalcFilters();
           UpdateFilters();
-          return;
+          sendCommand = false;
         } else if(cmd[1] == 'L' && cmd[13] == ';') {
           t41.FilterLoCut = atol(&cmd[2]);
 
           CalcFilters();
           UpdateFilters();
-          return;
+          sendCommand = false;
         } else if(cmd[1] == 'S' && cmd[4] == ';') {
           // inc/dec audio filter
           posFilterEncoder += atoi(&cmd[2]);
@@ -640,7 +652,7 @@ void T41ControlLoop() {
 
           CalcFilters();
           UpdateFilters();
-          return;
+          sendCommand = false;
         } else if(cmd[1] == 'W' && cmd[2] == ';') {
           // sets 0.5kHz-1.5kHz audio filter
           t41.FilterLoCut = 500;
@@ -648,7 +660,7 @@ void T41ControlLoop() {
 
           CalcFilters();
           UpdateFilters();
-          return;
+          sendCommand = false;
         }
         break;
 
@@ -692,7 +704,7 @@ void T41ControlLoop() {
           signalStrengthReceived = true;
           //Serial.println(signalStrength);
         }
-        return;
+        sendCommand = false;
         break;
 
       case 'T':
@@ -703,7 +715,7 @@ void T41ControlLoop() {
           Teensy3Clock.set(atol(&cmd[2]));
           setTime(atol(&cmd[2]));
         }
-        return;
+        sendCommand = false;
         break;
 
       case 'V': // VOxxx;
@@ -711,7 +723,7 @@ void T41ControlLoop() {
           // set volume (without notify chain)
           t41.AudioVolume.Update(atoi(&cmd[2]));
         }
-        return;
+        sendCommand = false;
         break;
 
       case 'Z': // ZMx;
@@ -720,18 +732,18 @@ void T41ControlLoop() {
           spectrumZoom = atoi(&cmd[2]);
           SetZoom(spectrumZoom);
         }
-        return;
+        sendCommand = false;
         break;
 
       case '?': // unknow command
-        return; // do nothing for now
+        sendCommand = false; // do nothing for now
         break;
 
       default:
         // what was received in not handled or recognized
 #if controlSerial == Serial
         // ignore if the control line is Serial ...
-        return;
+        sendCommand = false;
 #else
         // ... otherwise send back a question
         cmd[0] = '?';
@@ -741,8 +753,12 @@ void T41ControlLoop() {
         break;
     }
 
-    T41ControlSendCmd(cmd);
-    //Serial.print("Responded with: "); Serial.println(cmd);
+    if(sendCommand) {
+      T41ControlSendCmd(cmd);
+      //Serial.print("Responded with: "); Serial.println(cmd);
+    }
+
+    RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
   }
 }
 

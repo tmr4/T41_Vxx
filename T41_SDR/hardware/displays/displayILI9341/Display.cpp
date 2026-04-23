@@ -241,7 +241,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
     bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
 
-    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
+    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
     pixelnew = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + offset]));
     pixelnew1 = displayScale[currentScale].baseOffset + bands[currentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1 + offset]));
@@ -386,7 +386,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   }
   if(++head >= 60) head = 0;
 
-  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC_PIN);
+  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
   tft.drawRect(SPEC_BOX_L, SPEC_BOX_T, SPEC_BOX_W, SPEC_BOX_H, ILI9341_YELLOW);
 }
 

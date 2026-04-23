@@ -313,22 +313,22 @@ FLASHMEM void setup() {
   TEMPMON_TEMPSENSE0 |= 0x2U;
 
 #ifdef PROFILER_ACTIVE
-  pinMode(PROFILER_PROCESS_PIN, OUTPUT);
-  digitalWrite(PROFILER_PROCESS_PIN, LOW);
-  pinMode(PROFILER_MAINLOOP_PIN, OUTPUT);
-  digitalWrite(PROFILER_MAINLOOP_PIN, LOW);
-  pinMode(PROFILER_DRAWFREQSPEC_PIN, OUTPUT);
-  digitalWrite(PROFILER_DRAWFREQSPEC_PIN, LOW);
-  pinMode(PROFILER_DRAWAUDIOSPEC_PIN, OUTPUT);
-  digitalWrite(PROFILER_DRAWAUDIOSPEC_PIN, LOW);
-  pinMode(PROFILER_FT8PROCESSBLOCK_PIN, OUTPUT);
-  digitalWrite(PROFILER_FT8PROCESSBLOCK_PIN, LOW);
-  pinMode(PROFILER_FT8GETDATA_PIN, OUTPUT);
-  digitalWrite(PROFILER_FT8GETDATA_PIN, LOW);
-  pinMode(PROFILER_FT8DECODE_PIN, OUTPUT);
-  digitalWrite(PROFILER_FT8DECODE_PIN, LOW);
-  pinMode(PROFILER_FT8_TX_PIN, OUTPUT);
-  digitalWrite(PROFILER_FT8_TX_PIN, LOW);
+  pinMode(PROFILER_PROCESS_RX, OUTPUT);
+  digitalWrite(PROFILER_PROCESS_RX, LOW);
+  pinMode(PROFILER_MAINLOOP, OUTPUT);
+  digitalWrite(PROFILER_MAINLOOP, LOW);
+  pinMode(PROFILER_DRAWFREQSPEC, OUTPUT);
+  digitalWrite(PROFILER_DRAWFREQSPEC, LOW);
+  pinMode(PROFILER_DRAWAUDIOSPEC, OUTPUT);
+  digitalWrite(PROFILER_DRAWAUDIOSPEC, LOW);
+  pinMode(PROFILER_PROCESS_FT8, OUTPUT);
+  digitalWrite(PROFILER_PROCESS_FT8, LOW);
+  pinMode(PROFILER_FT8_CAT_RX, OUTPUT);
+  digitalWrite(PROFILER_FT8_CAT_RX, LOW);
+  pinMode(PROFILER_DECODE_FT8, OUTPUT);
+  digitalWrite(PROFILER_DECODE_FT8, LOW);
+  pinMode(PROFILER_FT8_CAT_TX, OUTPUT);
+  digitalWrite(PROFILER_FT8_CAT_TX, LOW);
 #endif
 }
 
@@ -374,8 +374,8 @@ FASTRUN void loop() {
   unsigned long cwTransmitTimer;
 
   // *** can't use set/reset here as it can be hard to catch with a quick loop ***
-  //SETPROFILEPIN(PROFILER_MAINLOOP_PIN);
-  TOGGLEPROFILEPIN(PROFILER_MAINLOOP_PIN);
+  //SETPROFILEPIN(PROFILER_MAINLOOP);
+  TOGGLEPROFILEPIN(PROFILER_MAINLOOP);
 
   HardwareLoopStart();
 
@@ -564,7 +564,7 @@ FASTRUN void loop() {
             break;
 
           case DEMOD_FT8_INTERNAL:
-            TOGGLEPROFILEPIN(PROFILER_MAINLOOP_PIN);
+            TOGGLEPROFILEPIN(PROFILER_MAINLOOP);
             // transmit FT8 signal about ~10ms at a time
             // total transmit time = 12.64 sec or (79 symbols * 0.16 sec/symbol)
             // this is 151680 samples (12.64 sec * 12000 samples/sec)
@@ -572,7 +572,7 @@ FASTRUN void loop() {
             // without this about 5ms of decay pulse will remain
             // to play at next interval (even with pause below)
             if(ft8TxSignalBuf != NULL && i < 151680 + 128) {
-              TOGGLEPROFILEPIN(PROFILER_FT8_TX_PIN);
+              TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
               PrepareFT8ExciterIQData(ft8TxSignalBuf + i);
               i += 128;
             } else {

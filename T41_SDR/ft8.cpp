@@ -340,11 +340,11 @@ FLASHMEM void MockRXMsgTraffic(int type) {
 //-------------------------------------------------------------------------------------------------------------
 
 FLASHMEM void AutoSyncFT8() {
-  TOGGLEPROFILEPIN(PROFILER_FT8DECODE_PIN);
+  TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
 
   // allow process to loop until we're within 1 second of the next T/R sequence
   if((second())%15 == 14) {
-    SETPROFILEPIN(PROFILER_FT8DECODE_PIN);
+    SETPROFILEPIN(PROFILER_DECODE_FT8);
 
     // now we can sync up without causing a long delay
     while((second())%15 != 0) {
@@ -356,7 +356,7 @@ FLASHMEM void AutoSyncFT8() {
     start_time =millis();
     ft8SyncState = 1;
 
-    RESETPROFILEPIN(PROFILER_FT8DECODE_PIN);
+    RESETPROFILEPIN(PROFILER_DECODE_FT8);
   }
   else {
     ft8SyncState = 0;
@@ -875,12 +875,12 @@ FLASHMEM bool ProcessFT8Frame() {
   // process a frame of data
   // there are 79 frames in a FT8 message
   // but can be more within an interval depending on timing errors
-  SETPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
+  SETPROFILEPIN(PROFILER_PROCESS_FT8);
   // processing takes about 16ms
   if(ft8lib_ProcessFrame(frameCount)) {
     result = true;
   }
-  RESETPROFILEPIN(PROFILER_FT8PROCESSBLOCK_PIN);
+  RESETPROFILEPIN(PROFILER_PROCESS_FT8);
 
   return result;
 }
@@ -904,9 +904,9 @@ FLASHMEM void DecodeFT8Data(struct tm *start) {
   //   850ms with ft8_7.wav (5 messages in FT8 range, 7 total)
   //   850ms with ft8_7.wav buffered w/ 1/2 frame offset to (eliminate some silence at beginning of signal)
   //   890ms with ft8_7.wav buffered w/ 1 frame offset to (eliminate silence)
-  SETPROFILEPIN(PROFILER_FT8DECODE_PIN);
+  SETPROFILEPIN(PROFILER_DECODE_FT8);
   ft8lib_Decode(start);
-  RESETPROFILEPIN(PROFILER_FT8DECODE_PIN);
+  RESETPROFILEPIN(PROFILER_DECODE_FT8);
 
   // start input queues
   Q_in_L.begin();
@@ -1432,7 +1432,7 @@ FLASHMEM void FT8DecoderLoop() {
             ft8DecoderState = STATE_TX;
           }
 
-          SETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+          SETPROFILEPIN(PROFILER_FT8_CAT_RX);
         }
 #ifdef TX_TESTING
       } else {
@@ -1448,7 +1448,7 @@ FLASHMEM void FT8DecoderLoop() {
     case STATE_TX:
       DEBUG_RXTX("at STATE_TX...");
 
-      TOGGLEPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+      TOGGLEPROFILEPIN(PROFILER_FT8_CAT_RX);
 
       if(!ft8PTT) {
         // we continue looping through here until start of interval to transmit
@@ -1487,7 +1487,7 @@ FLASHMEM void FT8DecoderLoop() {
       Q_in_L.begin();
       Q_in_R.begin();
 
-      RESETPROFILEPIN(PROFILER_FT8GETDATA_PIN);
+      RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
       break;
   }
 

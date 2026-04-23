@@ -81,14 +81,14 @@
 #define FILTERPIN15M            22    // 15M filter relay
 
 // GPIO pins: even top, odd bottom, increasing right to left (normal Audio Platform orientation)
-#define PROFILER_MAINLOOP_PIN         10 // GPIO #1
-#define PROFILER_PROCESS_PIN          41 // GPIO #2
-#define PROFILER_DRAWFREQSPEC_PIN     14 // GPIO #3
-#define PROFILER_DRAWAUDIOSPEC_PIN    40 // GPIO #4
-#define PROFILER_FT8PROCESSBLOCK_PIN  15 // GPIO #5
-#define PROFILER_FT8GETDATA_PIN       32 // GPIO #6
-#define PROFILER_FT8DECODE_PIN        16 // GPIO #7
-#define PROFILER_FT8_TX_PIN           29 // GPIO #8
+#define PROFILER_MAINLOOP         10 // GPIO #1
+#define PROFILER_PROCESS_RX          41 // GPIO #2
+#define PROFILER_DRAWFREQSPEC     14 // GPIO #3
+#define PROFILER_DRAWAUDIOSPEC    40 // GPIO #4
+#define PROFILER_PROCESS_FT8  15 // GPIO #5
+#define PROFILER_FT8_CAT_RX       32 // GPIO #6
+#define PROFILER_DECODE_FT8        16 // GPIO #7
+#define PROFILER_FT8_CAT_TX           29 // GPIO #8
 
 //---- end of Teensy 4.1 Pin assignments
 
