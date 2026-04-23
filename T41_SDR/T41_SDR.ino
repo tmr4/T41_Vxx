@@ -217,6 +217,7 @@ FLASHMEM void SoftReset() {
 
   t41.NCOFreq = 0;
   ResetTuning();
+  UpdateDisplayNCOFreq();
 }
 
 // *** for testing ***

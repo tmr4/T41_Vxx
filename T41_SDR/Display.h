@@ -67,6 +67,7 @@ void EraseSpectrumWindow();
 void RedrawDisplayScreen();
 void ShowFrequency();
 void UpdateDisplayFreq();
+void UpdateDisplayNCOFreq();
 void ShowOperatingStats();
 void ShowRemoteStatus();
 void ShowSAM(float);

@@ -4,6 +4,7 @@
 #include "Display.h"
 #include "Encoders.h"
 #include "t41Control.h"
+#include "Tune.h"
 
 /*
 
@@ -151,8 +152,8 @@ void T41Properties::SetPropertyDefaults() {
   int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
-  CenterFreq.Init(CURRENT_FREQ_A, &SendSetFreq, &UpdateDisplayFreq);
-  NCOFreq.Init(0, &SendSetFreq, &UpdateDisplayFreq);
+  CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
+  NCOFreq.Init(0, &CheckNCOFreqBounds, &SendNCOFreq, &UpdateDisplayNCOFreq);
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
   FilterHiCut.Init(200, &SendFilterHi, &UpdateFilters);
   FilterLoCut.Init(3000, &SendFilterLo, &UpdateFilters);
@@ -163,7 +164,7 @@ void T41Properties::SetPropertyDefaults() {
   CurrentFreqB.Init(CURRENT_FREQ_B);
 }
 
-void T41Properties::SetFreq() {
+void T41Properties::SetVFOFreq() {
   int freq =  CenterFreq + NCOFreq;
 
   if(ActiveVFO == VFO_A) {

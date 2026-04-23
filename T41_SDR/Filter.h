@@ -15,7 +15,7 @@ void SetIIRCoeffs(float32_t *coefficient_set, float32_t f0, float32_t Q, float32
 
 void DoReceiveEQ();
 void DoExciterEQ();
-void CalcFilters();
+void CalcAudioFilters();
 
 void SetupDemodFilterBW();
 void SetBWFilters(int filterChange);

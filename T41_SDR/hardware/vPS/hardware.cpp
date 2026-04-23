@@ -182,7 +182,6 @@ void SoftResetHardware() {
   // encoder globals
   getEncoderValueFlag = false;
   resetTuningFlag = false;
-  fineTuneFlag = false;
   posFilterEncoder = 0;
   lastFilterEncoder = 1; // force initial update
   filter_pos_BW = 0;

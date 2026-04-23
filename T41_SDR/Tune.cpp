@@ -37,26 +37,7 @@ void ResetTuning() {
 
   SetFreq(t41.CenterFreq);
 
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowFrequency();          // update frequency display
-      ShowOperatingStats();     // update center frequency in band info
-      ShowSpectrumFreqValues(); // update spectrum frequency values
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-      break;
-
-    case DISPLAY_FULL_MENU:
-      ShowFrequency();
-      ShowOperatingStats();
-      break;
-
-    default:
-    // no screen updates at all
-    break;
-  }
-  DrawBandwidthBar();
+  //UpdateDisplayNCOFreq();
 }
 
 /*****
@@ -67,15 +48,13 @@ void ResetTuning() {
     long tuneChange - amound to change center freq
 *****/
 void SetCenterTune(int tuneChange) {
-  t41.CenterFreq += tuneChange;  // tune the master vfo
+  t41.CenterFreq += tuneChange;
 
   SetFreq(t41.TXRXFreq());
 }
 
-/*****
-  Purpose: Set NCO frequency
-*****/
-void SetNCOFreq(int newNCOFreq) {
+int CheckNCOFreqBounds(int f) {
+  int freq = f;
   int lowSideAdj = 0, highSideAdj = 0;
 
   switch(currentDemodMode) {
@@ -101,44 +80,21 @@ void SetNCOFreq(int newNCOFreq) {
       break;
   }
 
-  t41.NCOFreq = newNCOFreq;
-  fineTuneFlag = true;
-  if(activeVFO == VFO_A) {
-    t41.CurrentFreqA = t41.TXRXFreq();
-  } else {
-    t41.CurrentFreqB = t41.TXRXFreq();
-  }
-
   // recenter at band edges
   if(spectrumZoom != 0) {
-    if((t41.NCOFreq + highSideAdj) >= (sampleRate / 2.0 / (1 << spectrumZoom))) {
-      t41.NCOFreq += highSideAdj;
-      fineTuneFlag = false;
+    if((f + highSideAdj) >= (sampleRate / 2.0 / (1 << spectrumZoom))) {
+      freq += highSideAdj;
       resetTuningFlag = true;
-      return;
-    }
-    if((t41.NCOFreq - lowSideAdj) <= (-sampleRate / 2.0 / (1 << spectrumZoom))) {
-      t41.NCOFreq -= lowSideAdj;
-      fineTuneFlag = false;
+    } else if((f - lowSideAdj) <= (-sampleRate / 2.0 / (1 << spectrumZoom))) {
+      freq -= lowSideAdj;
       resetTuningFlag = true;
-      return;
     }
-  } else if(t41.NCOFreq > 142000 || t41.NCOFreq < -43000) {  // Offset tuning window in zoom 1x
-    fineTuneFlag = false;
+  } else if(f > 142000 || f < -43000) {  // Offset tuning window in zoom 1x
     resetTuningFlag = true;
-    return;
   }
+
+  return freq;
 }
-
-/*****
-  Purpose: Set fine tuning frequency
-
-  int tuneChange: the amount to increment/decrement the tuned frequency
-*****/
-void SetFineTune(int tuneChange) {
-  SetNCOFreq(t41.NCOFreq + tuneChange);
-}
-
 
 // *** TODO: display dependent ***
 FLASHMEM void SplitVFOFollowup() {

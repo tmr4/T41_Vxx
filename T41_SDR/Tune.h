@@ -15,8 +15,9 @@ void InitSI5351();
 void SetSI5351FreqCorFactor(int factor);
 
 void SetCenterTune(int tuneChange);
+
 void SetNCOFreq(int newNCOFreq);
-void SetFineTune(int tuneChange);
+int CheckNCOFreqBounds(int f);
 
 void ResetTuning();
 void DoSplitVFO();

@@ -22,7 +22,8 @@ void T41PrepareSpectrumData(int16_t *data, int16_t max);
 void T41ControlSendData(uint8_t *data, int len);
 
 void SendSetBandChange(int upDown);
-void SendSetFreq(int freq);
+void SendCenterFreq(int freq);
+void SendNCOFreq(int freq);
 void SendSetFreqA(int freq);
 void SendSetFreqB(int freq);
 void SendSetMode(int mode);
@@ -32,7 +33,6 @@ void SendVolume(int volume);
 void SendFilter();
 void SendFilterHi(int filter);
 void SendFilterLo(int filter);
-void SendSetFineTune();
 
 void SendSignalStrengthRequest();
 void SendSignalStrengthRequest(int index);

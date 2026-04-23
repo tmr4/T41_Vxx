@@ -227,8 +227,7 @@ FLASHMEM void ButtonFrequencyEntry() {
 
   t41.NCOFreq = 0L;
   directFreqFlag = true;
-  fineTuneFlag = true;  // Put back in so tuning bar is refreshed
-  SetFreq(t41.CenterFreq);  // Used here instead of fineTuneFlag
+  SetFreq(t41.CenterFreq);
 
   if(save_last_frequency) {
     lastFrequencies[currentBand][activeVFO] = enteredF;
@@ -298,7 +297,7 @@ FLASHMEM void SetFavoriteFrequency() {
       SetFreq(TxRxFreq);
       ShowOperatingStats();
       ShowBandwidthBarValues();
-      CalcFilters();
+      CalcAudioFilters();
       ShowFrequency();
       break;
     }

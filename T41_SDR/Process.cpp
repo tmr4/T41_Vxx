@@ -920,25 +920,6 @@ FASTRUN void ProcessControls() {
   // *** inline function to poll front panel, empty function if not used ***
   PollFrontPanel();
 
-  // Handle tuning changes
-  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
-
-  // poll for T41 property changes
-  if(t41.CenterFreq.Poll(updateDisplay, remoteConnected)) t41.SetFreq();
-  if(t41.NCOFreq.Poll(updateDisplay, remoteConnected)) t41.SetFreq();
-
-  // update volume if changed
-  t41.AudioVolume.Poll(updateDisplayVolume, remoteConnected);
-
-  // update filters if changed
-  // *** TODO: examine if we can skip this comparison ***
-  if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
-    ProcessFilterEncoder();
-
-    t41.FilterHiCut.Poll(updateDisplay, remoteConnected);
-    t41.FilterHiCut.Poll(updateDisplay, remoteConnected);
-  }
-
   // handle USB Host
 #ifdef USB_HOST_SUPPORT
   static unsigned long last_usb_read = 0;
@@ -951,44 +932,29 @@ FASTRUN void ProcessControls() {
   }
 #endif
 
-  if(fineTuneFlag) {
-    #if CAT_CONTROL_HOST || CAT_CONTROL
-    // prevent circular response
-    if(!catControlChange) {
-      SendSetFineTune();
-    } else {
-      catControlChange = false;
-    }
-    #endif
+  // Handle tuning changes
+  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
 
-    if(updateDisplay) {
-      switch(displayState) {
-        case DISPLAY_T41:
-          ShowFrequency();
-          DrawBandwidthBar();
-          break;
+  // update volume if changed
+  t41.AudioVolume.Poll(updateDisplayVolume, remoteConnected);
 
-        case DISPLAY_T41_FT8_DECODE:
-          ShowFrequency();
-          break;
-
-        case DISPLAY_BEACON_MONITOR:
-          break;
-
-        default:
-        // no screen updates at all
-        break;
-      }
-    }
-    if(displayState == DISPLAY_FULL_MENU) {
-      ShowFrequency();
-    }
-    fineTuneFlag = false;
+  // update filters if changed
+  // *** TODO: examine if we can skip this comparison ***
+  if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
+    ProcessFilterEncoder();
   }
+  t41.FilterHiCut.Poll(updateDisplay, remoteConnected);
+  t41.FilterHiCut.Poll(updateDisplay, remoteConnected);
+
+  // *** TODO: consider refining CenterFreq and NCOFreq updates as there is some duplication ***
+  if(t41.CenterFreq.Poll(updateDisplay, remoteConnected)) t41.SetVFOFreq();
+
+  // DrawBandwidthBar relies on resetTuningFlag being set prior to the ResetTuning call
   if(resetTuningFlag) {
-    resetTuningFlag = false; // DrawBandwidthBar relies on this being set prior to the ResetTuning call
+    resetTuningFlag = false;
     ResetTuning();
   }
+  if(t41.NCOFreq.Poll(updateDisplay, remoteConnected)) t41.SetVFOFreq();
 
   // handle any live menu items
   if(getMenuValueActive) {

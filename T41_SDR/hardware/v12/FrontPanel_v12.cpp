@@ -197,7 +197,7 @@ void EncoderFineTune() {
     return;
   }
 
-  SetFineTune(ftIncrement * fineTuneEncoderMove);
+  t41.NCOFreq += ftIncrement * fineTuneEncoderMove;
 
   fineTuneEncoderMove = 0L;
 }

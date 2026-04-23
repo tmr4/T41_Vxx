@@ -365,7 +365,7 @@ void SetDecIntFIRFilters(int decFilterBW = 0) {
 /*****
   Purpose: calculates decimation, interpolation and audio filters with current BW
 *****/
-void CalcFilters() {
+void CalcAudioFilters() {
   int loCut = 0, hiCut = 0;
   float sr = sampleRate / (currentDemodMode == DEMOD_FT8 ? 1.0 : 8.0);
 
@@ -441,7 +441,7 @@ FLASHMEM void SetupDemodFilterBW() {
       break;
   }
 
-  CalcFilters();
+  CalcAudioFilters();
 }
 
 void AdjustFilterBW(int filterChange) {
@@ -494,5 +494,5 @@ void SetBWFilters(int filterChange) {
       break;
   }
 
-  CalcFilters();
+  CalcAudioFilters();
 }

@@ -28,9 +28,6 @@ extern USBSerial_BigBuffer usbHostSerial;
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-// flag changes made via CAT control that could cause a circular response (fine tune for example)
-bool catControlChange = false;
-
 // *** this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
 
@@ -214,13 +211,21 @@ void SendSetFreqB(int freq) {
   T41ControlSendCmd(cmd);
 }
 
-void SendSetFreq(int freq) {
+void SendCenterFreq(int freq) {
   char cmd[20];
 
   // set center frequency
   // *** note FA/FB set frequency based on mouseCenterTuneActive
   // and by default adjust fine tune, not center tune ***
   sprintf(cmd, "FC%011d;", freq);
+  T41ControlSendCmd(cmd);
+}
+
+void SendNCOFreq(int freq) {
+  char cmd[20];
+
+  // set NCO frequency
+  sprintf(cmd, "FF%011d;", freq);
   T41ControlSendCmd(cmd);
 }
 
@@ -290,13 +295,6 @@ void SendFilterLo(int filter) {
   char cmd[20];
 
   sprintf(cmd, "NL%011d;", filter);
-  T41ControlSendCmd(cmd);
-}
-
-void SendSetFineTune() {
-  char cmd[20];
-
-  sprintf(cmd, "FF%011d;", t41.TXRXFreq());
   T41ControlSendCmd(cmd);
 }
 
@@ -400,8 +398,10 @@ int GetMode() {
 // *** TODO: verify only single message goes back and forth for property updates ***
 /*
 
-  Processing times (ms):
-    FilterHiCut (NH%011d;): 2.5
+  Property event times:
+    *** a small time base is needed to view short duration events in the profile viewer ***
+    FilterHiCut NH%011d; 2.5ms
+    NCOFreq     FF%011d; 500ns
 
 */
 void T41ControlLoop() {
@@ -455,7 +455,7 @@ void T41ControlLoop() {
                 SetCenterTune(f - t41.CenterFreq);
                 t41.CurrentFreqA = f;
               } else {
-                SetFineTune(f - t41.CurrentFreqA);
+                t41.NCOFreq.Update(f); // *** verify ***
               }
               //Serial.print("Set VFO A to "); Serial.println(f);
               sendCommand = false;
@@ -473,7 +473,7 @@ void T41ControlLoop() {
                 SetCenterTune(f - t41.CenterFreq);
                 t41.CurrentFreqB = f;
               } else {
-                SetFineTune(f - t41.CurrentFreqB);
+                t41.NCOFreq.Update(f); // *** verify ***
               }
              // Serial.print("Set VFO B to "); Serial.println(f);
               sendCommand = false;
@@ -487,11 +487,8 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set center frequency
               f = atol(&cmd[2]);
-              //t41.CenterFreq = f; // *** this is a no-no ***
-              //t41.NCOFreq = 0L;
               t41.CenterFreq.Update(f);
               SetFreq(f);
-              t41.SetFreq();
               //Serial.print("Center freq set to "); Serial.println(f);
               sendCommand = false;
             } else if(cmd[2] == ';') {
@@ -502,14 +499,12 @@ void T41ControlLoop() {
 
           case 'F':
             if(cmd[13] == ';') {
-              // set VFO A frequency
-              f = atol(&cmd[2]);
-              SetFineTune(f-t41.CenterFreq-t41.NCOFreq);
-              catControlChange = true;
+              // set NCO frequency offset
+              t41.NCOFreq.Update(atol(&cmd[2]));
               sendCommand = false;
             } else if(cmd[2] == ';') {
-              // read VFO A frequency offset
-              sprintf(cmd, "FF%011d;", (int)t41.NCOFreq - (int)t41.CurrentFreqA);
+              // read NCO frequency offset
+              sprintf(cmd, "FF%011d;", (int)t41.NCOFreq);
             }
             break;
 
@@ -634,32 +629,29 @@ void T41ControlLoop() {
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
           sendCommand = false;
         } else if(cmd[1] == 'H' && cmd[13] == ';') {
-          t41.FilterHiCut = atol(&cmd[2]);
+          t41.FilterHiCut.Update(atol(&cmd[2]));
 
-          CalcFilters();
-          UpdateFilters();
+          CalcAudioFilters();
           sendCommand = false;
         } else if(cmd[1] == 'L' && cmd[13] == ';') {
-          t41.FilterLoCut = atol(&cmd[2]);
+          t41.FilterLoCut.Update(atol(&cmd[2]));
 
-          CalcFilters();
-          UpdateFilters();
+          CalcAudioFilters();
           sendCommand = false;
         } else if(cmd[1] == 'S' && cmd[4] == ';') {
           // inc/dec audio filter
           posFilterEncoder += atoi(&cmd[2]);
           ProcessFilterEncoder();
 
-          CalcFilters();
+          CalcAudioFilters();
           UpdateFilters();
           sendCommand = false;
         } else if(cmd[1] == 'W' && cmd[2] == ';') {
           // sets 0.5kHz-1.5kHz audio filter
-          t41.FilterLoCut = 500;
-          t41.FilterHiCut = 1500;
+          t41.FilterLoCut.Update(500);
+          t41.FilterHiCut.Update(1500);
 
-          CalcFilters();
-          UpdateFilters();
+          CalcAudioFilters();
           sendCommand = false;
         }
         break;

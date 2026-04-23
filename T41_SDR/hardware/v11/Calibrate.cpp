@@ -1576,7 +1576,7 @@ FLASHMEM void SetupSignalStrengthSource(int source) {
       // set up this and external unit for calibration
       minSignalStrength = 0;
       signalStrengthSource = 1;
-      SendSetFreq(t41.CenterFreq + intermediateFreq);
+      SendCenterFreq(t41.CenterFreq + intermediateFreq);
       if(currentDemodMode == DEMOD_LSB) {
         SendSetMode(DEMOD_USB);
       } else {

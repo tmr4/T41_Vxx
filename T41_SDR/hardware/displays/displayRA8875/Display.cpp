@@ -885,6 +885,24 @@ FLASHMEM void UpdateDisplayFreq() {
   }
 }
 
+FLASHMEM void UpdateDisplayNCOFreq() {
+  switch(displayState) {
+    case DISPLAY_T41:
+      ShowFrequency();
+      DrawBandwidthBar();
+      ShowBandwidthBarValues();
+      break;
+
+    case DISPLAY_FULL_MENU:
+      ShowFrequency();
+      break;
+
+    default:
+    // no screen updates at all
+    break;
+  }
+}
+
 FLASHMEM void UpdateFilters() {
   switch(displayState) {
     case DISPLAY_T41:

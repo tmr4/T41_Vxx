@@ -6,8 +6,7 @@
 #define MAX_AUDIO_VOLUME        100
 #define MIN_AUDIO_VOLUME          0
 
-extern bool fineTuneFlag;
-extern bool resetTuningFlag;  // Experimental flag for ResetTuning() due to possible timing issues
+extern bool resetTuningFlag;
 extern bool getEncoderValueFlag;
 
 extern int posFilterEncoder, lastFilterEncoder;

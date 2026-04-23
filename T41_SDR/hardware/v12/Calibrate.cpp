@@ -156,7 +156,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
       t41.FilterHiCut = 1000;
       t41.FilterLoCut = -1000;
       currentDemodMode = DEMOD_SAM;
-      CalcFilters();
+      CalcAudioFilters();
 
       spectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
       break;
@@ -271,7 +271,7 @@ FLASHMEM void CalibratePost(int calType) {
       currentDemodMode = userDemodMode;
       t41.FilterLoCut = userFilterLowCut;
       t41.FilterHiCut = userFilterHiCut;
-      CalcFilters();
+      CalcAudioFilters();
       break;
 
     case 1: // receive cal
@@ -2309,7 +2309,7 @@ void SetupSignalStrengthSource(int source) {
       // set up this and external unit for calibration
       minSignalStrength = 0;
       signalStrengthSource = 1;
-      SendSetFreq(t41.CenterFreq + intermediateFreq);
+      SendCenterFreq(t41.CenterFreq + intermediateFreq);
       if(currentDemodMode == DEMOD_LSB) {
         SendSetMode(DEMOD_USB);
       } else {

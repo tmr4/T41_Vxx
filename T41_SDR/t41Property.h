@@ -22,7 +22,7 @@ public:
 
   // helper functions
   int TXRXFreq() { return CenterFreq + NCOFreq; }
-  void SetFreq();
+  void SetVFOFreq();
 
 protected:
   void SetPropertyDefaults();

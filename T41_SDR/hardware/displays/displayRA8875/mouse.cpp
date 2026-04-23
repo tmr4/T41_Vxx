@@ -190,7 +190,7 @@ void MouseButtonFreqArea(int cursorX, int button) {
         }
       }
       if(inc < sampleRate / (1 << spectrumZoom)) {
-        SetNCOFreq(t41.NCOFreq - inc);
+        t41.NCOFreq -= inc;
       } else {
         SetCenterTune(-inc);
       }
@@ -248,7 +248,7 @@ void MouseWheelFreqArea(int cursorX, int wheel) {
   //Serial.println(inc);
 
   if(inc < sampleRate / (1 << spectrumZoom)) {
-    SetNCOFreq(t41.NCOFreq + inc * wheel);
+    t41.NCOFreq += inc * wheel;
   } else {
     SetCenterTune(inc * wheel);
   }
