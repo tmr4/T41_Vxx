@@ -205,7 +205,7 @@ int GetKenwoodBand() {
 int GetKenwoodMode() {
   // 1: LSB, 2: USB, 3: CW, 4: FM, 5: AM
   int mode;
-  if(radioMode == CW_MODE) {
+  if(t41.RadioMode == CW_MODE) {
     mode=3;
   } else {
     switch(currentDemodMode) {

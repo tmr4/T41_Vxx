@@ -72,7 +72,7 @@ FLASHMEM void FT8CalibratePreamble(int setZoom) {
   transmitPowerLevelTemp = transmitPowerLevel;
   transmitPowerLevel = 5;
   powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
-  userXmtMode = radioMode;          // Store the user's mode setting
+  userXmtMode = t41.RadioMode;          // Store the user's mode setting
   userZoomIndex = spectrumZoom;  // Save the zoom index so it can be reset at the conclusion
   SetZoom(setZoom);
   tft.writeTo(L2);  // Erase the bandwidth bar
@@ -139,7 +139,7 @@ FLASHMEM void FT8CalibratePrologue() {
   t41.NCOFreq = 0L;
   currentScale = userScale;                     //  Restore vertical scale to user preference.  KF5N
   ShowSpectrumdBScale();
-  radioMode = userXmtMode;   // Restore the user's floor setting.  KF5N July 27, 2023
+  //t41.RadioMode = userXmtMode;   // Restore the user's floor setting.  KF5N July 27, 2023
   transmitPowerLevel = transmitPowerLevelTemp;  // Restore the user's transmit power level setting.  KF5N August 15, 2023
   EEPROMWrite();                                // Save calibration numbers and configuration.  KF5N August 12, 2023
   // Restore the user's zoom setting

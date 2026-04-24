@@ -21,7 +21,6 @@ int spectrumNoiseFloor = SPECTRUM_NOISE_FLOOR;
 int tuneIndex = DEFAULTFREQINDEX;
 int ftIndex = DEFAULT_FT_INDEX;
 int transmitPowerLevel = DEFAULT_POWER_LEVEL;
-int radioMode = SSB_MODE;  // 0 = SSB, 1 = CW, 2 = FT8
 int nrOptionSelect = 0;
 int currentScale = 1;  // 20 dB/division
 int spectrumZoom = 1; // SPECTRUM_ZOOM_2

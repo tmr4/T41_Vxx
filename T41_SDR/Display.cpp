@@ -18,6 +18,34 @@
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+FLASHMEM void UpdateModeDisplay() {
+  switch(displayState) {
+    case DISPLAY_T41:
+      ShowOperatingStats();
+      ShowBandwidthBarValues();
+      DrawBandwidthBar();
+      DrawAudioSpectContainer();
+      DrawAudioFilterLines();
+      break;
+
+    case DISPLAY_T41_FT8_DECODE:
+      ShowOperatingStats();
+      DrawAudioSpectContainer();
+      DrawAudioFilterLines();
+      break;
+
+    case DISPLAY_BEACON_MONITOR:
+      break;
+
+    default:
+    // no screen updates at all
+    break;
+  }
+
+  // *** TODO: where is this shown? Add to info box for v12 ***
+  //ShowAnalogGain();
+}
+
 // updates various display elements associated with tuning frequency
 FLASHMEM void UpdateDisplayFreq() {
   switch(displayState) {

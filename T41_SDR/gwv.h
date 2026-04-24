@@ -13,7 +13,6 @@ extern int spectrumNoiseFloor;
 extern int tuneIndex;
 extern int ftIndex;
 extern int transmitPowerLevel;
-extern int radioMode;
 extern int nrOptionSelect;
 extern int currentScale;
 extern int spectrumZoom;

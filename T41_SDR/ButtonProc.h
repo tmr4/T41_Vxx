@@ -21,7 +21,7 @@ void ButtonFilter();
 void ButtonMode();
 void ButtonDemodMode();
 void ChangeDemodMode(int mode);
-void ChangeMode(int mode, int demod = -1);
+void ChangeMode(int mode, int demod = -1, bool notify = true);
 void ButtonNR();
 void ButtonNotchFilter();
 void ButtonFrequencyEntry();

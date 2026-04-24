@@ -83,12 +83,12 @@ FLASHMEM void CWOptions() {
 
 // *** TODO: T41EEE does this for each band ***
 FLASHMEM void RFPowerFollowup() {
-  if(radioMode == CW_MODE) {                                                                                                                                      //AFP 10-13-22
+  if(t41.RadioMode == CW_MODE) {                                                                                                                                      //AFP 10-13-22
     powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];  //  afp 10-21-22
 
     //EEPROMData.powerOutCW[t41.ActiveBand] = powerOutCW[t41.ActiveBand];
   } else {
-    if(radioMode == SSB_MODE) {
+    if(t41.RadioMode == SSB_MODE) {
       powerOutSSB[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[t41.ActiveBand];  // afp 10-21-22
       //EEPROMData.powerOutSSB[t41.ActiveBand] = powerOutSSB[t41.ActiveBand];                                                                                                //AFP 10-21-22
     }
@@ -127,7 +127,7 @@ FLASHMEM void VFOSelect(int32_t index) {
 
   // *** TODO: this needs reworked ***
   /*
-  if(radioMode == DATA_MODE) {
+  if(t41.RadioMode == DATA_MODE) {
     priorDemodMode = currentDemodMode; // save demod mode for restoration later
 
     switch(currentDemodMode) {
@@ -154,7 +154,7 @@ FLASHMEM void VFOSelect(int32_t index) {
   //EEPROMData.t41.ActiveVFO = t41.ActiveVFO;
   EEPROMWrite();
 
-  if(radioMode == CW_MODE) {
+  if(t41.RadioMode == CW_MODE) {
     DrawCWFilter();
   }
 }

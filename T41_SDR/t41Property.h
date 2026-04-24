@@ -10,6 +10,9 @@ public:
   // T41 properties
   // *** template doesn't decrement with unsigned int ***
   Property<int> RemoteStatus;
+
+  Property<int> RadioMode;
+
   Property<int> CenterFreq;
   Property<int> NCOFreq;
   Property<int> AudioVolume;
@@ -23,9 +26,9 @@ public:
   Property<int> InactiveBand;
 
   // helper functions
-  int ActiveFreq();
-  int GetFreqA();
-  int GetFreqB();
+  int ActiveFreq() { return CenterFreq + NCOFreq; }
+  int GetFreqA() { return ActiveVFO == VFO_A ? ActiveFreq() : InactiveFreq; }
+  int GetFreqB() { return ActiveVFO == VFO_B ? ActiveFreq() : InactiveFreq; }
   void SetFreqA(int f);
   void SetFreqB(int f);
   void SwapActiveVFO();
@@ -44,7 +47,6 @@ extern T41Properties t41;
 from T41_Views (this is private data, first letter capitalized if property):
 
 next:
-  int radioMode = 0;        // SSB_MODE;
   int currentDemodMode = 1; // DEMOD_LSB
   int transmitPowerLevel = 1;
   int tuneIndex = 6;
@@ -70,7 +72,7 @@ typedef struct {
   int tuneIndex;
   int ftIndex;
   float32_t transmitPowerLevel;
-  int radioMode;
+  int t41.RadioMode;
   int nrOptionSelect;
   int currentScale;
   long spectrumZoom;

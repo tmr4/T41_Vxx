@@ -1092,10 +1092,10 @@ void FreqShift2() {
   //  currentFreqA = centerFreq + NCOFreq;
   //}
 
-  if(radioMode == SSB_MODE || radioMode == DATA_MODE) {
+  if(t41.RadioMode == SSB_MODE || t41.RadioMode == DATA_MODE) {
     sideToneShift = 0;
   } else {
-    if(radioMode == CW_MODE ) {
+    if(t41.RadioMode == CW_MODE ) {
       if(currentDemodMode == 1) {
         sideToneShift = CWFreqShift;
       } else {

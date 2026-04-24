@@ -533,7 +533,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.setTextColor(ST7735_GREEN);
   tft.setCursor(OPERATION_STATS_MD, OPERATION_STATS_T);
 
-  switch(radioMode) {
+  switch(t41.RadioMode) {
     case SSB_MODE:
       tft.print("SSB");
       break;

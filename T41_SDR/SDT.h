@@ -4,8 +4,6 @@
 
 #include <Arduino.h>
 
-#include "t41Property.h"
-
 #ifndef float32_t
 typedef float float32_t;
 #endif
@@ -109,6 +107,7 @@ typedef __uint8_t uint8_t;
 
 // delete once we get rid of global working variables
 #include "gwv.h"
+#include "t41Property.h"
 
 // radio hardware and state global variables
 

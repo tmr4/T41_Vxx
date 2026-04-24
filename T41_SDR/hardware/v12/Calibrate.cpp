@@ -143,7 +143,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   userCenterFreq = t41.CenterFreq;
   userNCOFreq = t41.NCOFreq;
   userRadioState = radioState;
-  userMode = radioMode;
+  userMode = t41.RadioMode;
   userDemodMode = currentDemodMode;
   userZoomIndex = spectrumZoom;
 

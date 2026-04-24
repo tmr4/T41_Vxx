@@ -150,7 +150,7 @@ FLASHMEM void CalibrateOptions() {
       break;
 
     case 1:  // CW PA Cal
-      if(keyPressedOn == 1 && radioMode == CW_MODE) {
+      if(keyPressedOn == 1 && t41.RadioMode == CW_MODE) {
         //================  CW Transmit Mode Straight Key ===========
         if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && keyType == 0) {  //Straight Key
           powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];

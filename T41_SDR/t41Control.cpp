@@ -345,7 +345,7 @@ void SendAS() {
   sprintf(cmd, "AS%011d%d%d%d;",
     t41.ActiveFreq(), // freq in Hz (%011d) at index 2
     (int)t41.ActiveBand,                    // current band (%d) at index 13
-    radioMode,                        // transmission mode (%d) at index 14
+    (int)t41.RadioMode,                        // transmission mode (%d) at index 14
     currentDemodMode         // demodulation mode (%d)  at index 15
   );
   T41ControlSendCmd(cmd);
@@ -360,7 +360,7 @@ void SendIF() {
     //  *** TODO: we only need 8 digits for first field for T41, consider using other 3 for something ***
     t41.ActiveFreq(), // freq in Hz (%011d) at index 2
     (int)t41.ActiveBand,                    // current band (%d) at index 13
-    radioMode,                        // transmission mode (%d) at index 14
+    (int)t41.RadioMode,                        // transmission mode (%d) at index 14
     currentDemodMode,        // demodulation mode (%d)  at index 15
     (int)t41.AudioVolume,                    // audio volume (%03d) at index 16
     (int)t41.NCOFreq,                        // NCO freq (%+06d) at index 19
@@ -383,7 +383,7 @@ void SendIF() {
 int GetMode() {
   // 1: LSB, 2: USB, 3: CW, 4: FM, 5: AM
   int mode;
-  if(radioMode == CW_MODE) {
+  if(t41.RadioMode == CW_MODE) {
     mode=3;
   } else {
     switch(currentDemodMode) {
@@ -629,8 +629,8 @@ void T41ControlLoop() {
           sendCommand = false;
         } else if(cmd[1] == 'E' && cmd[3] == ';') {
           // set operating mode
-          ChangeMode(atoi(&cmd[2]));
-          SendAS();
+          ChangeMode(atoi(&cmd[2]), -1, false);
+          //SendAS();
           sendCommand = false;
         }
         break;

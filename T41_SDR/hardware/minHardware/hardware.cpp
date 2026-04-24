@@ -40,9 +40,7 @@ void InitHardware() { AudioSetup(false); }
 
 //void SoftResetHardware() {}
 void SoftResetHardware() {
-  // *** TODO: this was required for min startup before properties.  Is it still? If so, find out why and possibly change ***
   posFilterEncoder = 0;
-  //lastFilterEncoder = 1; // force initial update
   lastFilterEncoder = 0;
 }
 

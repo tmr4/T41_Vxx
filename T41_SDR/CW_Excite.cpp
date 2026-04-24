@@ -31,7 +31,7 @@ bool pwrScale = true;
   Purpose: CW key interrupt
 *****/
 void KeyTipOn() {
-  if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && radioMode == CW_MODE ) {
+  if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && t41.RadioMode == CW_MODE ) {
     keyPressedOn = 1;
   }
 }
@@ -41,7 +41,7 @@ void KeyTipOn() {
 *****/
 void KeyRingOn() {
   if(keyType == 1) {
-    if(digitalRead(KEYER_DAH_INPUT_RING) == LOW && radioMode == CW_MODE ) {
+    if(digitalRead(KEYER_DAH_INPUT_RING) == LOW && t41.RadioMode == CW_MODE ) {
       keyPressedOn = 1;
     }
   }

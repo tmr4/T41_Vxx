@@ -153,6 +153,9 @@ void T41Properties::SetPropertyDefaults() {
   int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
+
+  RadioMode.Init(SSB_MODE, &SendSetMode, &UpdateModeDisplay);
+
   CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
   NCOFreq.Init(0, &CheckNCOFreqBounds, &SendNCOFreq, &UpdateDisplayNCOFreq);
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
@@ -167,9 +170,6 @@ void T41Properties::SetPropertyDefaults() {
 }
 
 // helper functions
-int T41Properties::ActiveFreq() { return CenterFreq + NCOFreq; }
-int T41Properties::GetFreqA() { return ActiveVFO == VFO_A ? ActiveFreq() : InactiveFreq; }
-int T41Properties::GetFreqB() { return ActiveVFO == VFO_B ? ActiveFreq() : InactiveFreq; }
 
 // these don't change NCOFreq
 void T41Properties::SetFreqA(int f) {

@@ -52,7 +52,7 @@ FLASHMEM void UpdateBand(int from) {
   }
 
   // *** SSB/data demolation mode are unchanged across band changes ***
-  if((radioMode == SSB_MODE) || (radioMode == CW_MODE)) {
+  if((t41.RadioMode == SSB_MODE) || (t41.RadioMode == CW_MODE)) {
     currentDemodMode = ValidateDemodMode(-1);
   }
 
@@ -70,7 +70,7 @@ FLASHMEM void UpdateBand(int from) {
     EEPROMWrite();
   }
 
-  if(radioMode == DATA_MODE) {
+  if(t41.RadioMode == DATA_MODE) {
     switch(currentDemodMode) {
       case DEMOD_FT8:
         break;
@@ -162,40 +162,10 @@ FLASHMEM void ButtonFilter() {
   DrawAudioFilterLines();
 }
 
-FLASHMEM void UpdateModeDisplay() {
-  SetupDemodFilterBW();
-
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowOperatingStats();
-      ShowBandwidthBarValues();
-      DrawBandwidthBar();
-      DrawAudioSpectContainer();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_T41_FT8_DECODE:
-      ShowOperatingStats();
-      DrawAudioSpectContainer();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-      break;
-
-    default:
-    // no screen updates at all
-    break;
-  }
-
-  // *** TODO: where is this shown? Add to info box for v12 ***
-  //ShowAnalogGain();
-}
-
 // validate demod mode depending on the radio mode
 //  returns default demod mode if demod = -1
 FLASHMEM int ValidateDemodMode(int demod) {
-  switch(radioMode) {
+  switch(t41.RadioMode) {
     case SSB_MODE:
     case CW_MODE:
       if(demod < 0) {
@@ -236,7 +206,7 @@ FLASHMEM void ChangeDemodMode(int demod) {
 
   // change demod mode
   mode = ValidateDemodMode(demod);
-  switch(radioMode) {
+  switch(t41.RadioMode) {
     case SSB_MODE:
     case CW_MODE:
     case DSB_MODE:
@@ -252,6 +222,7 @@ FLASHMEM void ChangeDemodMode(int demod) {
       break;
   }
 
+  SetupDemodFilterBW();
   UpdateModeDisplay();
 }
 
@@ -272,8 +243,10 @@ FLASHMEM void ButtonDemodMode() {
     demod: desired demod mode (-1 give default demod mode)
     *** current demod mode is not preserved over mode changes ***
 *****/
-FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
-  if(mode == radioMode) {
+FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true */) {
+  int tmp = t41.RadioMode;
+
+  if(mode == t41.RadioMode) {
     if((demod < 0) || (demod == currentDemodMode)) {
       return; // nothing to do
     } // else continue to change demod mode for current radio mode
@@ -284,8 +257,14 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
     return; // nothing to do
   }
 
+  if(notify) {
+    t41.RadioMode = mode;
+  } else {
+    t41.RadioMode.Update(mode);
+  }
+
   // switching modes, wrap up current mode
-  switch(radioMode) {
+  switch(tmp) {
     case CW_MODE:
       // hide cw related items in info box
       infoBoxItemActive[IB_ITEM_DECODER] = false;
@@ -302,8 +281,6 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
       infoBoxItemActive[IB_ITEM_KEYER] = false;
       ClearInfoBoxKeyer();
 
-      // *** TODO: do this early here, otherwise this won't erase filter if on as radio mode hasn't changed yet ***
-      radioMode = mode;
       DrawCWFilter();
       break;
 
@@ -332,12 +309,11 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
       break;
   }
 
-  // set new radio mode and demod mode
-  radioMode = mode;
+  // set new demod mode
   currentDemodMode = ValidateDemodMode(demod);
 
   // set up radio for changes
-  switch(radioMode) {
+  switch(t41.RadioMode) {
     case CW_MODE:
       // show cw related items in info box
       infoBoxItemActive[IB_ITEM_DECODER] = true;
@@ -413,14 +389,14 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */) {
       break;
   }
 
-  UpdateModeDisplay();
+  SetupDemodFilterBW();
 }
 
 /*****
   Purpose: change to the next standard mode, SSB -> CW -> DSB -> Data -> SSB
 *****/
 FLASHMEM void ButtonMode() {
-  int mode = radioMode + 1;
+  int mode = t41.RadioMode + 1;
 
   if((mode > DATA_MODE) || (mode < SSB_MODE)) {
     mode = SSB_MODE;
@@ -514,7 +490,7 @@ FLASHMEM void ToggleCWDecoder() {
   decoderFlag = !decoderFlag;
   UpdateInfoBoxItem(IB_ITEM_DECODER);
 
-  if(radioMode == CW_MODE) {
+  if(t41.RadioMode == CW_MODE) {
     if(decoderFlag == ON) {
       InitCWDecoder();
     } else {

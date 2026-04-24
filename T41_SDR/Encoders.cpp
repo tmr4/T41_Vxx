@@ -79,7 +79,7 @@ bool ProcessCenterTuneEncoder(bool readEncoder /* = false */) {
   if(tuneChange == 0)
     return false;
 
-  if(radioMode == CW_MODE && decoderFlag == ON) {
+  if(t41.RadioMode == CW_MODE && decoderFlag == ON) {
     ResetHistograms();
   }
 

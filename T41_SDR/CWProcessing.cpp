@@ -163,7 +163,7 @@ FLASHMEM void SelectCWFilterFollowup() {
   // update CW filters if index is different
   if(cwFilterIndex != getMenuInc) {
     ShowOperatingStats();
-    if(radioMode == CW_MODE) {
+    if(t41.RadioMode == CW_MODE) {
       DrawCWFilter();
     }
   }

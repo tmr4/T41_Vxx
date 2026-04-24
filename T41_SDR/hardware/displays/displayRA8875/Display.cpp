@@ -904,7 +904,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(OPERATION_STATS_MD, OPERATION_STATS_T);
 
-  switch(radioMode) {
+  switch(t41.RadioMode) {
     case SSB_MODE:
       tft.print("SSB");
       break;
@@ -953,7 +953,7 @@ FLASHMEM void DrawCWFilter() {
   float CWFilterPosition = 85.0; // max filter position
   int color = MAROON;
 
-  if(radioMode == CW_MODE) {
+  if(t41.RadioMode == CW_MODE) {
     tft.writeTo(L2);
 
     switch(cwFilterIndex) {

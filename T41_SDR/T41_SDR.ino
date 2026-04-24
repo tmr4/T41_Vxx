@@ -218,6 +218,7 @@ FLASHMEM void SoftReset() {
   t41.NCOFreq = 0;
   ResetTuning();
   ShowFrequency(true);
+  CalcAudioFilters();
 }
 
 // *** for testing ***
@@ -413,24 +414,24 @@ FASTRUN void loop() {
   }
 
   //  State detection
-  if(radioMode == SSB_MODE && digitalRead(PTT) == HIGH) {
+  if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == HIGH) {
     radioState = SSB_RECEIVE_STATE;
   }
-  if(radioMode == SSB_MODE && digitalRead(PTT) == LOW) {
+  if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == LOW) {
     radioState = SSB_TRANSMIT_STATE;
   }
-  if(radioMode == CW_MODE && (digitalRead(paddleDit) == HIGH && digitalRead(paddleDah) == HIGH)) {
+  if(t41.RadioMode == CW_MODE && (digitalRead(paddleDit) == HIGH && digitalRead(paddleDah) == HIGH)) {
     radioState = CW_RECEIVE_STATE;
   }
-  if(radioMode == CW_MODE && (digitalRead(paddleDit) == LOW && keyType == 0)) {
+  if(t41.RadioMode == CW_MODE && (digitalRead(paddleDit) == LOW && keyType == 0)) {
     radioState = CW_TRANSMIT_STRAIGHT_STATE;
   }
-  if(radioMode == CW_MODE && (keyPressedOn == 1 && keyType == 1)) {
+  if(t41.RadioMode == CW_MODE && (keyPressedOn == 1 && keyType == 1)) {
     radioState = CW_TRANSMIT_KEYER_STATE;
     keyPressedOn = 0;
   }
 
-  if(radioMode == DATA_MODE) {
+  if(t41.RadioMode == DATA_MODE) {
     //Serial.print("ft8PTT: "); Serial.println(ft8PTT);
     if(ft8PTT) {
       radioState = DATA_TRANSMIT_STATE;

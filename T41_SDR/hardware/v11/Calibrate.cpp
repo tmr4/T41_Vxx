@@ -149,7 +149,7 @@ FLASHMEM void SaveRadioState() {
   userNCOFreq = t41.NCOFreq;
   userCenterFreq = t41.CenterFreq;
   userRadioState = radioState;
-  userMode = radioMode;
+  userMode = t41.RadioMode;
   userDemodMode = currentDemodMode;
   userZoomIndex = spectrumZoom;
   userBand = t41.ActiveBand;
@@ -195,7 +195,7 @@ FLASHMEM void RestoreRadioState() {
   t41.NCOFreq = userNCOFreq;
   t41.CenterFreq = userCenterFreq;
   radioState = userRadioState;
-  radioMode = userMode;
+  //t41.RadioMode = userMode;
   currentDemodMode = userDemodMode;
   spectrumZoom = userZoomIndex;
   currentScale = userScale;
@@ -2089,7 +2089,7 @@ FLASHMEM void ChangeCalMode(int mode) {
     // pwr cal: case 3-5
 
     case 3 ... 5: // CW, SSB, FT8
-      radioMode = CW_MODE;
+      //t41.RadioMode = CW_MODE;
       //CalibrationSetup(3, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
       //CalibrationSetup(3, CALIBRATE_TRANSMIT_STATE, CW_TRANSMIT_STRAIGHT_STATE);
       CalibrationSetup(3, CW_RECEIVE_STATE, CW_RECEIVE_STATE);

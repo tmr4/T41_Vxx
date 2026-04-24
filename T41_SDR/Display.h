@@ -48,6 +48,7 @@ call the routines at the appropriate time.  The InitDisplay function is required
 */
 
 // consolidated update functions
+void UpdateModeDisplay();
 void UpdateDisplayFreq();
 void UpdateDisplayNCOFreq();
 void UpdateDisplayBand();
