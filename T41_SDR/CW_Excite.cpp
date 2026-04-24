@@ -52,7 +52,7 @@ void KeyRingOn() {
            This creates a 10ms, 750 Hz sample at 192 kHz sample rate to the Teensy Audio Adapter line-out to
            the exciter board.  Function must be called again within that time for a continuous signal.  Prior to call
            Q_out_L_Ex, Q_out_R_Ex and Q_out_L (for sidetone) must be properly routed.  Sidetone signal adjusted for a gain of 1
-           at a volume of 30.  Signal level is controlled by powerOutCW[t41.CurrentBand] and volumeLog[sidetoneVolume] / 0.000100.
+           at a volume of 30.  Signal level is controlled by powerOutCW[t41.ActiveBand] and volumeLog[sidetoneVolume] / 0.000100.
            This gives a reasonable volume with power level of 1-20 W.  This should be done prior to calling this function or CreateCWSignal.
 
   Parameter list:
@@ -65,24 +65,24 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
   double tp = transmitPowerLevel;
   double cwPwr;
   float fac;
-  //float cwPwr = (pwrScale ? (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.CurrentBand] / CWPowerCalibrationFactor[1] : 8.0);
+  //float cwPwr = (pwrScale ? (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand] / CWPowerCalibrationFactor[1] : 8.0);
   //float cwPwr = (pwrScale ? (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) : 8.0);
   // using Pt=1W measurement
-  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel)) * 0.78938 * CWPowerCalibrationFactor[t41.CurrentBand]) : 8.0);
+  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel)) * 0.78938 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
   // using Pt=10W measurement
-  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel / 10.0)) * 3.5459 * CWPowerCalibrationFactor[t41.CurrentBand]) : 8.0);
+  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel / 10.0)) * 3.5459 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
   //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel / 10.0)) * 3.5459) : 8.0);
   // using theoretical pwr to voltage formula
   //float cwPwr = (pwrScale ? (.70711 * pow(transmitPowerLevel, 0.5)) : 8.0);
   // using empirical pwr to voltage formula
-  //float cwPwr = (pwrScale ? (.675 * pow(transmitPowerLevel, 0.5552) / 5.25 * CWPowerCalibrationFactor[t41.CurrentBand]) : 8.0);
-  //float cwPwr = (pwrScale ? (7.0711 * pow(transmitPowerLevel, 0.5) * CWPowerCalibrationFactor[t41.CurrentBand]) : 8.0);
+  //float cwPwr = (pwrScale ? (.675 * pow(transmitPowerLevel, 0.5552) / 5.25 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
+  //float cwPwr = (pwrScale ? (7.0711 * pow(transmitPowerLevel, 0.5) * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
   // empirical formula y = -0.0002x4 + 0.0062x3 - 0.0653x2 + 0.4673x + 0.2741
   // works well with dummy load at 7MHz considering the tap atten of -20dB
   //float cwPwr = (pwrScale ? (-.0002 * pow(tp, 4.0) + 0.0062 * pow(tp, 3.0) - 0.0653 * pow(tp, 2.0) + 0.4673 * tp + 0.2741) : 8.0);
   // however that gives a 41.3dBm at Pt=1
   //float cwPwr = (pwrScale ? ((-.0002 * pow(tp, 4.0) + 0.0062 * pow(tp, 3.0) - 0.0653 * pow(tp, 2.0) + 0.4673 * tp + 0.2741) / 5.58) : 8.0);
-  //float cwPwr = CWPowerCalibrationFactor[t41.CurrentBand];
+  //float cwPwr = CWPowerCalibrationFactor[t41.ActiveBand];
   // y = 6.3749x^5 - 154.46x^4 + 1437.3x^3 - 6384.5x^2 + 17189x + 962.75
   //float cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0;
 
@@ -110,11 +110,11 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
 /*
   // adjust IQ signal amplitude and phase
   if(currentDemodMode == DEMOD_LSB) {
-    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand], 256);
+    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
   } else if(currentDemodMode == DEMOD_USB) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand] * 2.0, 256);
+    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
+    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand] * 2.0, 256);
   }
 */
   // ramp signal if requested
@@ -184,9 +184,9 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
 
   // scale to compensate for losses in interpolation and output pwr
   if(pwrScale) {
-    cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0 * CWPowerCalibrationFactor[t41.CurrentBand];
+    cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0 * CWPowerCalibrationFactor[t41.ActiveBand];
   } else {
-    //cwPwr = CWPowerEqnCalFactor[t41.CurrentBand];
+    //cwPwr = CWPowerEqnCalFactor[t41.ActiveBand];
     cwPwr = 1.0;
   }
   arm_scale_f32(audioBufferL_EX, cwPwr, audioBufferL_EX, 2048);

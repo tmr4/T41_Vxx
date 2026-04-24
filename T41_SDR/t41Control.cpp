@@ -28,6 +28,9 @@ extern USBSerial_BigBuffer usbHostSerial;
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+// for testing
+volatile bool sendGet = false;
+
 // *** this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
 
@@ -56,6 +59,12 @@ void SendID(bool request);
 // void T41ControlSetup(Stream& serial) { serial.begin(); }.  As such might as well duplicate these functions for both the T41 control app and Beacon monitor
 void T41ControlSetup() {
   //controlSerial.begin(19200);
+  if(CAT_CONTROL) {
+    sendGet = false;
+  } else {
+    sendGet = true;
+    //sendGet = false;
+  }
 }
 
 void T41RemoteConnectCheck() {
@@ -137,7 +146,10 @@ void T41PrepareSpectrumData(int16_t *data, int16_t max) {
 
 void T41ControlSendCmd(char *cmd) {
   SETPROFILEPIN(PROFILER_FT8_CAT_TX);
-  //Serial.print("Sending: ");Serial.println(cmd);
+  if(sendGet) {
+    Serial.print("Sending: ");
+    Serial.println(cmd);
+  }
   int sizeBuf = controlSerial.availableForWrite();
   if(cmd[0] != 0 && sizeBuf > 0) {
     // the size of Teensy 4.1 serial transmit buffer is 8k and is used in 4 2k parts.
@@ -331,8 +343,8 @@ void SendAS() {
   char cmd[19];
 
   sprintf(cmd, "AS%011d%d%d%d;",
-    t41.TXRXFreq(), // freq in Hz (%011d) at index 2
-    (int)t41.CurrentBand,                    // current band (%d) at index 13
+    t41.ActiveFreq(), // freq in Hz (%011d) at index 2
+    (int)t41.ActiveBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
     currentDemodMode         // demodulation mode (%d)  at index 15
   );
@@ -346,23 +358,23 @@ void SendIF() {
   sprintf(cmd, "IF%011d%d%d%d%03d%+06d%04d%d%d%d%d%d%d%d%d%011d;",
     // active VFO Freq = TxRxFreq, t41.CenterFreq = TxRxFreq - NCOFreq
     //  *** TODO: we only need 8 digits for first field for T41, consider using other 3 for something ***
-    t41.TXRXFreq(), // freq in Hz (%011d) at index 2
-    (int)t41.CurrentBand,                    // current band (%d) at index 13
+    t41.ActiveFreq(), // freq in Hz (%011d) at index 2
+    (int)t41.ActiveBand,                    // current band (%d) at index 13
     radioMode,                        // transmission mode (%d) at index 14
     currentDemodMode,        // demodulation mode (%d)  at index 15
     (int)t41.AudioVolume,                    // audio volume (%03d) at index 16
     (int)t41.NCOFreq,                        // NCO freq (%+06d) at index 19
-    currentNoiseFloor[t41.CurrentBand], // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
+    currentNoiseFloor[t41.ActiveBand], // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
     liveNoiseFloorFlag,             // set noise floor active/inactive 1/0 (%d) at index 29
     !GetXRState(),                       // RX/TX (1/0) (%d) at index 30
-    activeVFO,                      // VFO A/B (0/1) (%d) at index 31
+    (int)t41.ActiveVFO,                      // VFO A/B (0/1) (%d) at index 31
     mouseCenterTuneActive ? 1 : 0,  // fine or center tune enabled (0/1) (%d) at index 32
     ftIndex,                        // fine tune index (%d) at index 33
     tuneIndex,                      // center tune index (%d) at index 34
     AGCMode,                        // AGC mode (%d) at index 35
     spectrumZoom,                   // spectrum zoom (%d) at index 36
-    (int)(activeVFO == 0 ? t41.CurrentFreqB : t41.CurrentFreqA) // inactive VFO freq in Hz (%011d) at index 37
-    //splitVFO ? 1 : 0,               // VFO split status (%d) at index xx
+    (int)t41.InactiveFreq           // inactive VFO freq in Hz (%011d) at index 37
+    //splitVFO ? 1 : 0,             // VFO split status (%d) at index xx
   );
   T41ControlSendCmd(cmd);
 }
@@ -423,7 +435,10 @@ void T41ControlLoop() {
 
     T41ControlGetCommand(cmd, 256);
     SETPROFILEPIN(PROFILER_FT8_CAT_RX);
-    //Serial.print("Received: ");  Serial.println(cmd);
+    if(sendGet) {
+      Serial.print("Received: ");
+      Serial.println(cmd);
+    }
     //int sizeBuf = SerialUSB1.availableForWrite();
     //Serial.println(sizeBuf);
     switch(cmd[0]) {
@@ -437,7 +452,9 @@ void T41ControlLoop() {
           ChangeBand(-1);
           SendAS();
         } else if(cmd[1] == 'D' && cmd[3] == ';') {
-          t41.CurrentBand.Update(atol(&cmd[2]));
+          int tmp = t41.ActiveBand;
+          t41.ActiveBand.Update(atoi(&cmd[2]));
+          UpdateBand(tmp);
         }
         sendCommand = false; // *** TODO: or we can set cmd[0] to null
         break;
@@ -460,9 +477,9 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set VFO A frequency
               f = atol(&cmd[2]);
+              ChangeBand(f);
               if(mouseCenterTuneActive) {
-                SetCenterTune(f - t41.CenterFreq);
-                t41.CurrentFreqA = f;
+                t41.SetFreqA(f);
               } else {
                 t41.NCOFreq.Update(f); // *** verify ***
               }
@@ -470,7 +487,7 @@ void T41ControlLoop() {
               sendCommand = false;
             } else if(cmd[2] == ';') {
               // read VFO A frequency
-              sprintf(cmd, "FA%011d;", (int)t41.CurrentFreqA);
+              sprintf(cmd, "FA%011d;", t41.GetFreqA());
             }
             break;
 
@@ -478,9 +495,9 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set VFO B frequency
               f = atol(&cmd[2]);
+              ChangeBand(f);
               if(mouseCenterTuneActive) {
-                SetCenterTune(f - t41.CenterFreq);
-                t41.CurrentFreqB = f;
+                t41.SetFreqB(f);
               } else {
                 t41.NCOFreq.Update(f); // *** verify ***
               }
@@ -488,7 +505,7 @@ void T41ControlLoop() {
               sendCommand = false;
             } else if(cmd[2] == ';') {
               // read VFO B frequency
-              sprintf(cmd, "FB%011d;", (int)t41.CurrentFreqB);
+              sprintf(cmd, "FA%011d;", t41.GetFreqB());
             }
             break;
 
@@ -579,7 +596,7 @@ void T41ControlLoop() {
           if(useKenwoodIF) {
             // *** TODO: not set up, just for testing ***
             sprintf(cmd, "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
-              t41.TXRXFreq(),     // freq in Hz
+              t41.ActiveFreq(),     // freq in Hz
               0,            // freq step size
               0,            // RIT/XIT freq in Hz, +-99999, this isn't preserved in the T41 but would be VFO A - VFO B if split
               0,            // RIT on/off
@@ -587,7 +604,7 @@ void T41ControlLoop() {
               0,0,          // channel bank number
               !GetXRState(),     // RX/TX (1/0)
               mode,         // operating mode
-              activeVFO,    // RX VFO
+              (int)t41.ActiveVFO,    // RX VFO
               0,            // scan Status
               0,            // split status (Kenwood manual refers to SP command which doesn't exist)
               0,            // CTCSS enabled
@@ -621,10 +638,10 @@ void T41ControlLoop() {
       case 'N':
         if(cmd[1] == 'F' && cmd[2] == ';') {
           // send noise floor
-          sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.CurrentBand]);
+          sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.ActiveBand]);
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
           // set noise floor
-          currentNoiseFloor[t41.CurrentBand] = atoi(&cmd[2]);
+          currentNoiseFloor[t41.ActiveBand] = atoi(&cmd[2]);
           sendCommand = false;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           // *** TODO: consider just toggling this through call to
@@ -632,7 +649,7 @@ void T41ControlLoop() {
 
           // save final noise floor setting if toggling flag off
           if(liveNoiseFloorFlag == 0) {
-            //EEPROMData.currentNoiseFloor[t41.CurrentBand]  = currentNoiseFloor[t41.CurrentBand];
+            //EEPROMData.currentNoiseFloor[t41.ActiveBand]  = currentNoiseFloor[t41.ActiveBand];
             EEPROMWrite();
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);

@@ -153,8 +153,8 @@ float CalcSignalStrength() {
     // dbm_calibration set to 25; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
     // attenuator is 0 and could be set in a future HW revision; rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10
     //  rfGainAllBands is initialized to 0
-    //dbm = dbm_calibration + bands[t41.CurrentBand].gainCorrection + (float32_t)attenuator + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.CurrentBand].rfGain * 1.5 - rfGainAllBands;
-    dbm = 29.0 + bands[t41.CurrentBand].gainCorrection + 0.0 + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.CurrentBand].rfGain * 1.5 - rfGainAllBands;
+    //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + (float32_t)attenuator + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
+    dbm = 29.0 + bands[t41.ActiveBand].gainCorrection + 0.0 + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
   } else {
 
     // reset audioMaxSquaredAve to a small value
@@ -185,7 +185,7 @@ void SoftResetHardware() {
   getEncoderValueFlag = false;
   resetTuningFlag = false;
   posFilterEncoder = 0;
-  lastFilterEncoder = 1; // force initial update
+  lastFilterEncoder = 0;
   filter_pos_BW = 0;
   last_filter_pos_BW = 0;
 }

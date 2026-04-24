@@ -172,7 +172,7 @@ void WSJTControlGetCommand(char * cmd, int max) {
 // Kenwood Band
 int GetKenwoodBand() {
   int band;
-  switch(t41.CurrentBand) {
+  switch(t41.ActiveBand) {
     case BAND_80M:
       band=1;
       break;
@@ -320,12 +320,11 @@ void WSJTLoop()
               // set VFO A frequency
               f = atol(&cmd[2]);
               ChangeBand(f);
-              SetCenterTune(f - t41.CenterFreq);
-              t41.CurrentFreqA = f;
+              t41.SetFreqA(f);
               return;
             } else if(cmd[2] == ';') {
               // read VFO A frequency
-              sprintf(cmd, "FA%011d;" , (int)t41.CurrentFreqA);
+              sprintf(cmd, "FA%011d;", t41.GetFreqA());
             }
             break;
 
@@ -334,12 +333,11 @@ void WSJTLoop()
               // set VFO B frequency
               f = atol(&cmd[2]);
               ChangeBand(f);
-              SetCenterTune(f - t41.CenterFreq);
-              t41.CurrentFreqB = f;
+              t41.SetFreqB(f);
               return;
             } else if(cmd[2] == ';') {
               // read VFO B frequency
-              sprintf(cmd, "FB%011d; ", (int)t41.CurrentFreqB);
+              sprintf(cmd, "FA%011d;", t41.GetFreqB());
             }
             break;
 
@@ -456,7 +454,7 @@ void WSJTLoop()
           // ;                                                     ;
           //                  IF000070480005000+00000000001xx000000;
           sprintf(cmd, "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
-            t41.TXRXFreq(),     // freq in Hz
+            t41.ActiveFreq(),     // freq in Hz
             5000,         // freq step size
             0,            // RIT/XIT freq in Hz, +-99999, this isn't preserved in the T41 but would be VFO A - VFO B if split
             0,            // RIT on/off
@@ -464,7 +462,7 @@ void WSJTLoop()
             0,0,          // channel bank number
             !GetXRState(),     // RX/TX (1/0)
             mode,         // operating mode
-            activeVFO,    // RX VFO
+            (int)t41.ActiveVFO,    // RX VFO
             0,            // scan Status
             0,            // split status (Kenwood manual refers to SP command which doesn't exist)
             0,            // CTCSS enabled
@@ -503,10 +501,10 @@ void WSJTLoop()
       case 'N':
         if(cmd[1] == 'F' && cmd[2] == ';') {
           // send noise floor
-          sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.CurrentBand]);
+          sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.ActiveBand]);
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
           // set noise floor
-          currentNoiseFloor[t41.CurrentBand] = atoi(&cmd[2]);
+          currentNoiseFloor[t41.ActiveBand] = atoi(&cmd[2]);
           return;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           // *** TODO: consider just toggling this through call to
@@ -514,7 +512,7 @@ void WSJTLoop()
 
           // save final noise floor setting if toggling flag off
           if(liveNoiseFloorFlag == 0) {
-            //EEPROMData.currentNoiseFloor[t41.CurrentBand]  = currentNoiseFloor[t41.CurrentBand];
+            //EEPROMData.currentNoiseFloor[t41.ActiveBand]  = currentNoiseFloor[t41.ActiveBand];
             EEPROMWrite();
           }
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
@@ -565,7 +563,7 @@ void WSJTLoop()
       case 'S':
         if(cmd[1] == 'F' && cmd[3] == ';') {
           int vfo = atoi(&cmd[2]);
-          int freq = vfo == 0 ? t41.CurrentFreqA : t41.CurrentFreqB;
+          int freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
           sprintf(cmd,"SF%d%011d%d;", vfo, freq, mode);
         } else if(cmd[1] == 'P' && cmd[3] == ';') { // this is split with DX Lab Suite, but Split Operation Frequency Setting with TS-890S; the reponse works for both with no split operation
           // set split VFO on/off

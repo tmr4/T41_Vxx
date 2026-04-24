@@ -152,7 +152,7 @@ FLASHMEM void SaveRadioState() {
   userMode = radioMode;
   userDemodMode = currentDemodMode;
   userZoomIndex = spectrumZoom;
-  userBand = t41.CurrentBand;
+  userBand = t41.ActiveBand;
   userScale = currentScale;
   userVol = t41.AudioVolume;
   userTransmitPowerLevel = transmitPowerLevel;
@@ -167,13 +167,13 @@ FLASHMEM void CalibrationInit() {
 
   displayState = DISPLAY_CALIBRATION;
 
-  t41.CenterFreq = t41.TXRXFreq();
+  t41.CenterFreq = t41.ActiveFreq();
   t41.NCOFreq = 0;
 
   t41.AudioVolume = 2;
   //transmitPowerLevel = 5;
   transmitPowerLevel = 1;
-  //powerOutCW[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.CurrentBand];
+  //powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
 
   for(int i = 0; i < 256; i++) {
     // used in calibration
@@ -201,9 +201,9 @@ FLASHMEM void RestoreRadioState() {
   currentScale = userScale;
   volSetting = userVol;
 
-  if(t41.CurrentBand != userBand) {
-    ChangeBand(userBand - t41.CurrentBand);
-    t41.CurrentBand = userBand;
+  if(t41.ActiveBand != userBand) {
+    ChangeBand(userBand - t41.ActiveBand);
+    t41.ActiveBand = userBand;
   }
 
   // Restore the user's zoom setting
@@ -256,8 +256,8 @@ FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
       SetZoom(0); // 1x
       //SetZoom(1); // 2x
       //SetZoom(2); // 4x
-      userIQAmpFactor = IQAmpCorrectionFactor[t41.CurrentBand];
-      userIQPhaseFactor = IQPhaseCorrectionFactor[t41.CurrentBand];
+      userIQAmpFactor = IQAmpCorrectionFactor[t41.ActiveBand];
+      userIQPhaseFactor = IQPhaseCorrectionFactor[t41.ActiveBand];
 
       digitalWrite(RXTX, HIGH);  // Turn on transmitter.
       break;
@@ -268,14 +268,14 @@ FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
       SetZoom(2); // 4x
       //SetZoom(3); // 8x
       //SetZoom(1); // 2x
-      userIQAmpFactor = IQXAmpCorrectionFactor[t41.CurrentBand];
-      userIQPhaseFactor = IQXPhaseCorrectionFactor[t41.CurrentBand];
+      userIQAmpFactor = IQXAmpCorrectionFactor[t41.ActiveBand];
+      userIQPhaseFactor = IQXPhaseCorrectionFactor[t41.ActiveBand];
 
       digitalWrite(RXTX, HIGH);  // Turn on transmitter.
       break;
 
     case 3: // pwr cal
-      t41.CenterFreq = bands[t41.CurrentBand].calFreq;
+      t41.CenterFreq = bands[t41.ActiveBand].calFreq;
       SetFreq(t41.CenterFreq);  // Update frequencies if the radio state has changed
       break;
 
@@ -327,7 +327,7 @@ FLASHMEM void ShowAdjustIncrement(int row) {
 }
 
 FLASHMEM void ShowBand() {
-  UpdateMenuItem(1, bands[t41.CurrentBand].name);
+  UpdateMenuItem(1, bands[t41.ActiveBand].name);
 }
 
 FLASHMEM void ShowIQCalMode() {
@@ -386,23 +386,23 @@ FLASHMEM void ShowPwrFactor() {
   float pwr;
 
   if(pwrTypeIndex == 1) {
-    pwr = CWPowerEqnCalFactor[t41.CurrentBand];
+    pwr = CWPowerEqnCalFactor[t41.ActiveBand];
   } else {
     switch(pwrIndex) {
       case 0: // CW
-        pwr = CWPowerCalibrationFactor[t41.CurrentBand];
+        pwr = CWPowerCalibrationFactor[t41.ActiveBand];
         break;
 
       case 1: // SSB
-        pwr = SSBPowerCalibrationFactor[t41.CurrentBand];
+        pwr = SSBPowerCalibrationFactor[t41.ActiveBand];
         break;
 
       case 2: // FT8
-        pwr = FT8PowerCalibrationFactor[t41.CurrentBand];
+        pwr = FT8PowerCalibrationFactor[t41.ActiveBand];
         break;
 
       case 3: // two-tone
-        pwr = CWPowerCalibrationFactor[t41.CurrentBand];
+        pwr = CWPowerCalibrationFactor[t41.ActiveBand];
         break;
 
       default:
@@ -418,23 +418,23 @@ FLASHMEM void UpdatePwrFactor(float factor) {
   float pwr;
 
   if(pwrTypeIndex == 1) {
-    pwr = CWPowerEqnCalFactor[t41.CurrentBand] += factor;
+    pwr = CWPowerEqnCalFactor[t41.ActiveBand] += factor;
   } else {
     switch(pwrIndex) {
       case 0: // CW
-        pwr = CWPowerCalibrationFactor[t41.CurrentBand] += factor;
+        pwr = CWPowerCalibrationFactor[t41.ActiveBand] += factor;
         break;
 
       case 1: // SSB
-        pwr = SSBPowerCalibrationFactor[t41.CurrentBand] += factor;
+        pwr = SSBPowerCalibrationFactor[t41.ActiveBand] += factor;
         break;
 
       case 2: // FT8
-        pwr = FT8PowerCalibrationFactor[t41.CurrentBand] += factor;
+        pwr = FT8PowerCalibrationFactor[t41.ActiveBand] += factor;
         break;
 
       case 3: // two-tone
-        pwr = CWPowerCalibrationFactor[t41.CurrentBand] += factor;
+        pwr = CWPowerCalibrationFactor[t41.ActiveBand] += factor;
         break;
 
       default:
@@ -472,19 +472,19 @@ FLASHMEM void ResetTransmitIQFactors(int band) {
 }
 
 FLASHMEM void ResetReceiveIQFactors() {
-  ResetReceiveIQFactors(t41.CurrentBand);
+  ResetReceiveIQFactors(t41.ActiveBand);
 }
 
 FLASHMEM void ResetTransmitIQFactors() {
-  ResetTransmitIQFactors(t41.CurrentBand);
+  ResetTransmitIQFactors(t41.ActiveBand);
 }
 
 FLASHMEM void SetReceiveIQFactors(float ampVal, float phaseVal) {
-  SetIQFactors(&IQAmpCorrectionFactor[t41.CurrentBand], &IQPhaseCorrectionFactor[t41.CurrentBand], ampVal, phaseVal);
+  SetIQFactors(&IQAmpCorrectionFactor[t41.ActiveBand], &IQPhaseCorrectionFactor[t41.ActiveBand], ampVal, phaseVal);
 }
 
 FLASHMEM void SetTransmitIQFactors(float ampVal, float phaseVal) {
-  SetIQFactors(&IQXAmpCorrectionFactor[t41.CurrentBand], &IQXPhaseCorrectionFactor[t41.CurrentBand], ampVal, phaseVal);
+  SetIQFactors(&IQXAmpCorrectionFactor[t41.ActiveBand], &IQXPhaseCorrectionFactor[t41.ActiveBand], ampVal, phaseVal);
 }
 
 FLASHMEM void UpdateIQDisplay(bool autoFlag = false) {
@@ -497,16 +497,16 @@ FLASHMEM void UpdateIQDisplay(bool autoFlag = false) {
   }
   tft.setCursor(680, 320);
   if(transmitCal) {
-    tft.print(IQXAmpCorrectionFactor[t41.CurrentBand], 3);
+    tft.print(IQXAmpCorrectionFactor[t41.ActiveBand], 3);
   } else {
-    tft.print(IQAmpCorrectionFactor[t41.CurrentBand], 3);
+    tft.print(IQAmpCorrectionFactor[t41.ActiveBand], 3);
   }
   tft.fillRect(680, 360, 150, CHAR_HEIGHT, RA8875_BLACK);
   tft.setCursor(680, 360);
   if(transmitCal) {
-    tft.print(IQXPhaseCorrectionFactor[t41.CurrentBand], 3);
+    tft.print(IQXPhaseCorrectionFactor[t41.ActiveBand], 3);
   } else {
-    tft.print(IQPhaseCorrectionFactor[t41.CurrentBand], 3);
+    tft.print(IQPhaseCorrectionFactor[t41.ActiveBand], 3);
   }
 }
 
@@ -516,9 +516,9 @@ FLASHMEM bool AdjustIQFactors() {
   // IQ amp correction factor
   if(menuEncoderMove != 0) {
     if(transmitCal) {
-      IQXAmpCorrectionFactor[t41.CurrentBand] += menuEncoderMove * adjIncrement;
+      IQXAmpCorrectionFactor[t41.ActiveBand] += menuEncoderMove * adjIncrement;
     } else {
-      IQAmpCorrectionFactor[t41.CurrentBand] += menuEncoderMove * adjIncrement;
+      IQAmpCorrectionFactor[t41.ActiveBand] += menuEncoderMove * adjIncrement;
     }
 
     menuEncoderMove = 0;
@@ -528,9 +528,9 @@ FLASHMEM bool AdjustIQFactors() {
   // IQ phase correction factor
   if(adjustVolEncoder != 0) {
     if(transmitCal) {
-      IQXPhaseCorrectionFactor[t41.CurrentBand] += adjustVolEncoder * adjIncrement;
+      IQXPhaseCorrectionFactor[t41.ActiveBand] += adjustVolEncoder * adjIncrement;
     } else {
-      IQPhaseCorrectionFactor[t41.CurrentBand] += adjustVolEncoder * adjIncrement;
+      IQPhaseCorrectionFactor[t41.ActiveBand] += adjustVolEncoder * adjIncrement;
     }
 
     adjustVolEncoder = 0;
@@ -617,7 +617,7 @@ FLASHMEM void ShowSpectrumTitle() {
   tft.fillRect(0, 0, 512, tft.getFontHeight(), RA8875_BLACK);
   tft.setTextColor(RA8875_WHITE);
   tft.setCursor(0, 0);
-  sprintf(msg, "Spectrum - Band: %.4s  Cal Mode: %.10s, %.7s, %.5s", bands[t41.CurrentBand].name, iqModes[modeIndex], iqTypes[typeIndex], iqSpeeds[speedIndex]);
+  sprintf(msg, "Spectrum - Band: %.4s  Cal Mode: %.10s, %.7s, %.5s", bands[t41.ActiveBand].name, iqModes[modeIndex], iqTypes[typeIndex], iqSpeeds[speedIndex]);
   tft.print(msg);
 
 }
@@ -707,11 +707,11 @@ FLASHMEM void PlotIQGainValue(float sigStr, bool plotType = true) {
   float amp, phase;
 
   if(transmitCal) {
-    amp = IQXAmpCorrectionFactor[t41.CurrentBand];
-    phase = IQXPhaseCorrectionFactor[t41.CurrentBand];
+    amp = IQXAmpCorrectionFactor[t41.ActiveBand];
+    phase = IQXPhaseCorrectionFactor[t41.ActiveBand];
   } else {
-    amp = IQAmpCorrectionFactor[t41.CurrentBand];
-    phase = IQPhaseCorrectionFactor[t41.CurrentBand];
+    amp = IQAmpCorrectionFactor[t41.ActiveBand];
+    phase = IQPhaseCorrectionFactor[t41.ActiveBand];
   }
 
   // convert dBm signal strength to S scale if needed
@@ -1052,8 +1052,8 @@ FLASHMEM bool ProcessIQMenu() {
 
     case BAND_UP: // 2
       ChangeBand(1);
-      if(t41.CurrentBand == BAND_10M) ChangeBand(1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      t41.CenterFreq = bands[t41.CurrentBand].calFreq;
+      if(t41.ActiveBand == BAND_10M) ChangeBand(1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
+      t41.CenterFreq = bands[t41.ActiveBand].calFreq;
       //SetFreq(t41.CenterFreq);
       SetFreqCal(0);
       //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
@@ -1081,8 +1081,8 @@ FLASHMEM bool ProcessIQMenu() {
 
     case BAND_DN: // 5
       ChangeBand(-1);
-      if(t41.CurrentBand == BAND_10M) ChangeBand(-1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      t41.CenterFreq = bands[t41.CurrentBand].calFreq;
+      if(t41.ActiveBand == BAND_10M) ChangeBand(-1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
+      t41.CenterFreq = bands[t41.ActiveBand].calFreq;
       //SetFreq(t41.CenterFreq);
       SetFreqCal(0);
       //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2);
@@ -1298,8 +1298,8 @@ FLASHMEM bool ProcessPwrMenu() {
 
     case BAND_UP: // 2
       ChangeBand(1);
-      if(t41.CurrentBand == BAND_10M) ChangeBand(1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      t41.CenterFreq = bands[t41.CurrentBand].calFreq;
+      if(t41.ActiveBand == BAND_10M) ChangeBand(1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
+      t41.CenterFreq = bands[t41.ActiveBand].calFreq;
       SetFreqCal(0);
       ShowBand();
       break;
@@ -1327,8 +1327,8 @@ FLASHMEM bool ProcessPwrMenu() {
 
     case BAND_DN: // 5
       ChangeBand(-1);
-      if(t41.CurrentBand == BAND_10M) ChangeBand(-1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
-      t41.CenterFreq = bands[t41.CurrentBand].calFreq;
+      if(t41.ActiveBand == BAND_10M) ChangeBand(-1); // *** skip 10m for now *** TODO: without this test signal dies passing through 10m band.  why? ***
+      t41.CenterFreq = bands[t41.ActiveBand].calFreq;
       SetFreqCal(0);
       ShowBand();
       break;
@@ -1687,7 +1687,7 @@ FLASHMEM bool TuneCalParameter(int indexStart, int indexEnd, float increment, fl
       //Serial.println(minSignalStrength);
     }
 
-    PlotIQGainValue(meanSignalStrength, (IQCorrectionFactor == &IQXAmpCorrectionFactor[t41.CurrentBand]) || (IQCorrectionFactor == &IQAmpCorrectionFactor[t41.CurrentBand]));
+    PlotIQGainValue(meanSignalStrength, (IQCorrectionFactor == &IQXAmpCorrectionFactor[t41.ActiveBand]) || (IQCorrectionFactor == &IQAmpCorrectionFactor[t41.ActiveBand]));
 
     // update IQ correction factor for next increment
     index++;
@@ -1824,10 +1824,10 @@ FLASHMEM void AutoCal() {
 
   if(transmitCal) {
     // transmit calibration
-    result = AutoTune(&IQXAmpCorrectionFactor[t41.CurrentBand], &IQXPhaseCorrectionFactor[t41.CurrentBand]);
+    result = AutoTune(&IQXAmpCorrectionFactor[t41.ActiveBand], &IQXPhaseCorrectionFactor[t41.ActiveBand]);
   } else {
     // receive calibration
-    result = AutoTune(&IQAmpCorrectionFactor[t41.CurrentBand], &IQPhaseCorrectionFactor[t41.CurrentBand]);
+    result = AutoTune(&IQAmpCorrectionFactor[t41.ActiveBand], &IQPhaseCorrectionFactor[t41.ActiveBand]);
   }
 
   tft.setFontScale((enum RA8875tsize)0);
@@ -1902,8 +1902,8 @@ FLASHMEM void CalibrateIQAllBands() {
 
   // save current band and set to 80m band here and on external T41
   // *** this code assumes external T41 starts on 40m band ***
-  bandCalBand = t41.CurrentBand;
-  ChangeBand(BAND_80M - t41.CurrentBand);
+  bandCalBand = t41.ActiveBand;
+  ChangeBand(BAND_80M - t41.ActiveBand);
   //SendSetBandChange(-1); // v12 external
 
   // cycle through bands doing auto cal
@@ -1911,8 +1911,8 @@ FLASHMEM void CalibrateIQAllBands() {
     // clear previous plot
     DrawIQGainPlot();
 
-    if(bands[t41.CurrentBand].calFreq > 0) {
-      t41.CenterFreq = bands[t41.CurrentBand].calFreq;
+    if(bands[t41.ActiveBand].calFreq > 0) {
+      t41.CenterFreq = bands[t41.ActiveBand].calFreq;
       //SetFreq(t41.CenterFreq);
       SetFreqCal(0);
       //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
@@ -1928,20 +1928,20 @@ FLASHMEM void CalibrateIQAllBands() {
       AutoCal();
 
       if(transmitCal) {
-        amp = IQXAmpCorrectionFactor[t41.CurrentBand];
-        phase = IQXPhaseCorrectionFactor[t41.CurrentBand];
+        amp = IQXAmpCorrectionFactor[t41.ActiveBand];
+        phase = IQXPhaseCorrectionFactor[t41.ActiveBand];
       } else {
-        amp = IQAmpCorrectionFactor[t41.CurrentBand];
-        phase = IQPhaseCorrectionFactor[t41.CurrentBand];
+        amp = IQAmpCorrectionFactor[t41.ActiveBand];
+        phase = IQPhaseCorrectionFactor[t41.ActiveBand];
       }
 
       // print factors to display and serial
       tft.setFontScale((enum RA8875tsize)0);
       tft.setTextColor(RA8875_WHITE);
       tft.setCursor(menuPosX, 10 + 15 * (i + 2));
-      tft.print(bands[t41.CurrentBand].name); tft.print("   "); tft.print(amp, 3); tft.print("  "); tft.println(phase, 3);
+      tft.print(bands[t41.ActiveBand].name); tft.print("   "); tft.print(amp, 3); tft.print("  "); tft.println(phase, 3);
 
-      Serial.print(bands[t41.CurrentBand].name); Serial.print("\t"); Serial.print(amp, 3); Serial.print("\t"); Serial.println(phase, 3);
+      Serial.print(bands[t41.ActiveBand].name); Serial.print("\t"); Serial.print(amp, 3); Serial.print("\t"); Serial.println(phase, 3);
     }
 
     ChangeBand(1);
@@ -1951,8 +1951,8 @@ FLASHMEM void CalibrateIQAllBands() {
   Serial.println();
 
   // return to original band
-  ChangeBand(bandCalBand - t41.CurrentBand);
-  t41.CenterFreq = bands[t41.CurrentBand].calFreq;
+  ChangeBand(bandCalBand - t41.ActiveBand);
+  t41.CenterFreq = bands[t41.ActiveBand].calFreq;
   SetFreq(t41.CenterFreq);
   //si5351.set_freq((t41.CenterFreq + calFreqOffset) * SI5351_FREQ_MULT, SI5351_CLK2); // v12
   UpdateIQDisplay();
@@ -2155,11 +2155,11 @@ FLASHMEM void TwoToneTransmit() {
     PrepareTwoToneData();
 
     if(currentDemodMode == DEMOD_LSB) {
-      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 2048);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand], 2048);
+      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 2048);
+      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand], 2048);
     } else if(currentDemodMode == DEMOD_USB) {
-      arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 2048);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand] * 2.0, 2048);
+      arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 2048);
+      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand] * 2.0, 2048);
     }
 
     /*
@@ -2167,11 +2167,11 @@ FLASHMEM void TwoToneTransmit() {
     // play it
     // adjust IQ signal amplitude and phase
     if(currentDemodMode == DEMOD_LSB) {
-      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand], 256);
+      arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
+      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
     } else if(currentDemodMode == DEMOD_USB) {
-      arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.CurrentBand], audioBufferL_EX, 256);
-      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.CurrentBand] * 2.0, 256);
+      arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
+      IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand] * 2.0, 256);
     }
 
     // interpolation I channel by 2 to 48kHz
@@ -2187,10 +2187,10 @@ FLASHMEM void TwoToneTransmit() {
 
     // scale to compensate for losses in interpolation and output pwr
     if(pwrScale) {
-      cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0 * CWPowerCalibrationFactor[t41.CurrentBand];
+      cwPwr = (6.3749 * pow(tp, 5.0) - 154.46 * pow(tp, 4.0) + 1437.3 * pow(tp, 3.0) - 6384.5 * pow(tp, 2.0) + 17189.0 * tp + 962.75) / 100000.0 * CWPowerCalibrationFactor[t41.ActiveBand];
     } else {
-      //cwPwr = CWPowerEqnCalFactor[t41.CurrentBand] / 8.0;
-      cwPwr = CWPowerEqnCalFactor[t41.CurrentBand] / 4.0;
+      //cwPwr = CWPowerEqnCalFactor[t41.ActiveBand] / 8.0;
+      cwPwr = CWPowerEqnCalFactor[t41.ActiveBand] / 4.0;
     }
     arm_scale_f32(audioBufferL_EX, cwPwr, audioBufferL_EX, 2048);
     arm_scale_f32(audioBufferR_EX, cwPwr, audioBufferR_EX, 2048);
@@ -2315,7 +2315,7 @@ FLASHMEM void CalibratePwr() {
   CAUTION: SI5351_FREQ_MULT is set in the si5253.h header file and is 100UL
 *****/
 FLASHMEM void SetFreqCal(long calFreqShift) {
-  int TxRxFreq = t41.TXRXFreq();
+  int TxRxFreq = t41.ActiveFreq();
 
   unsigned long long Clk1SetFreq = (TxRxFreq * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
   unsigned long long Clk2SetFreq;

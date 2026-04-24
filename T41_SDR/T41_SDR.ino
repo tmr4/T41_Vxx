@@ -201,7 +201,7 @@ FLASHMEM void SoftReset() {
   // set T41 last state different from radio state indicating a state change
   // so receiver will be configured on the first pass through loop()
   lastState = -1;
-  currentDemodMode = bands[t41.CurrentBand].demod;
+  currentDemodMode = bands[t41.ActiveBand].demod;
 
   // the following items in addition to the radio state change
   // are sufficient to fully draw the display
@@ -217,7 +217,7 @@ FLASHMEM void SoftReset() {
 
   t41.NCOFreq = 0;
   ResetTuning();
-  UpdateDisplayNCOFreq();
+  ShowFrequency(true);
 }
 
 // *** for testing ***
@@ -298,10 +298,12 @@ FLASHMEM void setup() {
   //memCheck = true;
   PrimeMallInfo();
 
-  //T41ControlSetup();
   //T41BeaconSetup();
   //WSJTControlSetup();
-  //T41ControlSetup();
+
+#if CAT_CONTROL || CAT_CONTROL_HOST
+  T41ControlSetup();
+#endif
 
   KeyerSetup(); // testing only
 

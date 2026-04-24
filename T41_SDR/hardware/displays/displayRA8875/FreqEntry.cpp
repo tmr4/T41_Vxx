@@ -20,7 +20,10 @@
 
 #define MAX_FAVORITES        13     // Max number of favorite frequencies stored in EEPROM
 
-extern int TxRxFreqOld;
+int TxRxFreqOld;
+
+bool save_last_frequency = false;
+bool directFreqFlag = false;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -32,7 +35,7 @@ extern int TxRxFreqOld;
 *****/
 FLASHMEM void ButtonFrequencyEntry() {
 #define show_FEHelp
-  int TxRxFreq = t41.TXRXFreq();
+  int TxRxFreq = t41.ActiveFreq();
   bool doneFE = false;                         // set to true when a valid frequency is entered
   long enteredF = 0L;                          // desired frequency
   char strF[6] = { ' ', ' ', ' ', ' ', ' ' };  // container for frequency string during entry
@@ -84,7 +87,7 @@ FLASHMEM void ButtonFrequencyEntry() {
 #define TEXT_OFFSET -8
 
   TxRxFreqOld = TxRxFreq;
-  lastFrequencies[t41.CurrentBand][activeVFO] = TxRxFreq;
+  lastFrequencies[t41.ActiveBand][t41.ActiveVFO] = TxRxFreq;
 
   tft.writeTo(L1);
   tft.fillRect(WATERFALL_L, SPECTRUM_TOP_Y + 1, WATERFALL_W, WATERFALL_BOTTOM - SPECTRUM_TOP_Y, RA8875_BLACK);  // Make space for FEInfo
@@ -122,11 +125,11 @@ FLASHMEM void ButtonFrequencyEntry() {
   tft.print("S   Save Direct to Last Freq. ");
   tft.setCursor(WATERFALL_L + 20, SPECTRUM_TOP_Y + 240);
   tft.print("Direct Entry was called from ");
-  tft.print(DE_Band[t41.CurrentBand]);
+  tft.print(DE_Band[t41.ActiveBand]);
   tft.print(" band");
   tft.setCursor(WATERFALL_L + 20, SPECTRUM_TOP_Y + 270);
   tft.print("Frequency response limited above ");
-  tft.print(DE_Flimit[t41.CurrentBand]);
+  tft.print(DE_Flimit[t41.ActiveBand]);
   tft.print("MHz");
   tft.setCursor(WATERFALL_L + 20, SPECTRUM_TOP_Y + 300);
   tft.print("For widest direct entry frequency range");
@@ -230,9 +233,9 @@ FLASHMEM void ButtonFrequencyEntry() {
   SetFreq(t41.CenterFreq);
 
   if(save_last_frequency) {
-    lastFrequencies[t41.CurrentBand][activeVFO] = enteredF;
+    lastFrequencies[t41.ActiveBand][t41.ActiveVFO] = enteredF;
   } else {
-    lastFrequencies[t41.CurrentBand][activeVFO] = TxRxFreqOld;
+    lastFrequencies[t41.ActiveBand][t41.ActiveVFO] = TxRxFreqOld;
   }
   tft.fillRect(0, 0, 799, 479, RA8875_BLACK);   // Clear layer 2
   tft.writeTo(L1);
@@ -257,7 +260,7 @@ FLASHMEM void ButtonFrequencyEntry() {
 FLASHMEM void SetFavoriteFrequency() {
   int index;
   int val;
-  int TxRxFreq = t41.TXRXFreq();
+  int TxRxFreq = t41.ActiveFreq();
 
   tft.setFontScale((enum RA8875tsize)1);
 
@@ -288,12 +291,6 @@ FLASHMEM void SetFavoriteFrequency() {
       EraseMenus();
       favoriteFreqs[index] = TxRxFreq;
 
-      if(activeVFO == VFO_A) {
-        t41.CurrentFreqA = TxRxFreq;
-      } else {
-        t41.CurrentFreqB = TxRxFreq;
-      }
-
       SetFreq(TxRxFreq);
       ShowOperatingStats();
       ShowBandwidthBarValues();
@@ -315,7 +312,7 @@ FLASHMEM void GetFavoriteFrequency() {
   int val;
   int currentBand2 = 0;
   int centerFreq;
-  int TxRxFreq = t41.TXRXFreq();
+  int TxRxFreq = t41.ActiveFreq();
 
   tft.setFontScale((enum RA8875tsize)1);
 
@@ -364,28 +361,14 @@ FLASHMEM void GetFavoriteFrequency() {
     } else if(centerFreq >= bands[BAND_10M].fBandLow && centerFreq <= bands[BAND_10M].fBandHigh) {
       currentBand2 = BAND_10M;
     }
-    t41.CurrentBand = currentBand2;
-
+    t41.ActiveBand = currentBand2;
 
     if(val == MENU_OPTION_SELECT) {  // Make a choice??
       t41.CenterFreq = centerFreq;
-      switch(activeVFO) {
-        case VFO_A:
-          if(t41.CurrentBandA == NUMBER_OF_BANDS) {  // Incremented too far?
-            t41.CurrentBandA = 0;                     // Yep. Roll to list front.
-          }
-          t41.CurrentBandA = currentBand2;
-          lastFrequencies[t41.CurrentBand][VFO_A] = TxRxFreq;
-          break;
-
-        case VFO_B:
-          if(t41.CurrentBandB == NUMBER_OF_BANDS) {  // Incremented too far?
-            t41.CurrentBandB = 0;                     // Yep. Roll to list front.
-          }                                       // Same for VFO B
-          t41.CurrentBandB = currentBand2;
-          lastFrequencies[t41.CurrentBand][VFO_B] = TxRxFreq;
-          break;
+      if(t41.ActiveBand == NUMBER_OF_BANDS) {  // Incremented too far?
+        t41.ActiveBand = 0;                     // Yep. Roll to list front.
       }
+      lastFrequencies[t41.ActiveBand][t41.ActiveVFO] = TxRxFreq;
     }
     if(val == MENU_OPTION_SELECT) {
 
@@ -399,10 +382,10 @@ FLASHMEM void GetFavoriteFrequency() {
       //ShowOperatingStats();
       //t41.NCOFreq = 0L;
       //DrawBandwidthBar();  // AFP 10-20-22
-      //digitalWrite(bandswitchPins[t41.CurrentBand], LOW);
+      //digitalWrite(bandswitchPins[t41.ActiveBand], LOW);
       //ShowSpectrumdBScale();
       //DrawFreqSpectrum();
-      //currentDemodMode = t41.CurrentBand;
+      //currentDemodMode = t41.ActiveBand;
       return;
     }
   }

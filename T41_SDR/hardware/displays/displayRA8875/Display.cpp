@@ -459,7 +459,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
   if(liveNoiseFloorFlag != 1) {
-    currentNF = currentNoiseFloor[t41.CurrentBand];
+    currentNF = currentNoiseFloor[t41.ActiveBand];
   }
 
   // initialize yOldPlot if this is a new spectrum
@@ -475,8 +475,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
 
     TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
-    pixelnew = displayScale[currentScale].baseOffset + bands[t41.CurrentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1]));
-    pixelnew1 = displayScale[currentScale].baseOffset + bands[t41.CurrentBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1]));
+    pixelnew = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1]));
+    pixelnew1 = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1]));
 
     // calculate the freq spectrum plot value
     yPlot = spectrumNoiseFloor - pixelnew - currentNF;
@@ -808,13 +808,6 @@ FLASHMEM void ShowSpectrumFreqValues() {
     //tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
   }
 
-  // TODO: *** this is misplaced *** shows problem with original code transitioning between VFOs ***
-  //if(activeVFO == VFO_A) {
-  //  currentFreqA = TxRxFreq;
-  //} else {
-  //  currentFreqB = TxRxFreq;
-  //}
-
   // calc tuned frequency and it's rounded (label) value
   // calc the position of the tick mark for the label value
   tunedFreq = (cFreq + (float)tunedInx * fInc);
@@ -850,108 +843,6 @@ FLASHMEM void ShowSpectrumFreqValues() {
       //tft.drawFastVLine(SPECTRUM_LEFT_X + centerLine - tickX, SPEC_BOX_LABELS - 4, 6, RA8875_YELLOW);
       tft.drawFastVLine(centerLine - tickX, SPEC_BOX_LABELS - 4, 6, RA8875_YELLOW);
     }
-  }
-}
-
-// updates various display elements associated with tuning frequency
-FLASHMEM void UpdateDisplayFreq() {
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowFrequency();          // update frequency display
-      ShowOperatingStats();     // update center frequency in band info
-      ShowSpectrumFreqValues(); // update spectrum frequency values
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-      break;
-
-    case DISPLAY_CALIBRATION:
-      ShowOperatingStats();
-
-      if(calibrateItem == 1) {
-        // receive IQ calibration
-        ShowSpectrumFreqValues();
-      }
-      break;
-
-    case DISPLAY_FULL_MENU:
-      ShowFrequency();
-      ShowOperatingStats();
-      break;
-
-    default:
-    // no screen updates at all
-    break;
-  }
-}
-
-FLASHMEM void UpdateDisplayBand() {
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowFrequency();
-      ShowOperatingStats();
-      DrawBandwidthBar();
-      ShowBandwidthBarValues();
-      ShowSpectrumFreqValues();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-      break;
-
-    case DISPLAY_T41_FT8_DECODE:
-      ShowFrequency();
-      ShowOperatingStats();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_FULL_MENU:
-      ShowFrequency();
-      ShowOperatingStats();
-      DrawAudioFilterLines();
-      break;
-
-    default:
-    // no screen updates at all
-    break;
-  }
-}
-
-FLASHMEM void UpdateDisplayNCOFreq() {
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowFrequency();
-      DrawBandwidthBar();
-      ShowBandwidthBarValues();
-      break;
-
-    case DISPLAY_FULL_MENU:
-      ShowFrequency();
-      break;
-
-    default:
-    // no screen updates at all
-    break;
-  }
-}
-
-FLASHMEM void UpdateDisplayFilters() {
-  switch(displayState) {
-    case DISPLAY_T41:
-      ShowBandwidthBarValues();
-      DrawBandwidthBar();
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_T41_FT8_DECODE:
-      DrawAudioFilterLines();
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-    case DISPLAY_FULL_MENU:
-    default:
-    // no screen updates at all
-    break;
   }
 }
 
@@ -1008,11 +899,7 @@ FLASHMEM void ShowOperatingStats() {
   // print band for the active VFO
   tft.setTextColor(RA8875_LIGHT_ORANGE);
   tft.setCursor(OPERATION_STATS_BD, OPERATION_STATS_T);
-  if(activeVFO == VFO_A) {
-    tft.print(bands[t41.CurrentBandA].name);  // Show band -- 40M
-  } else {
-    tft.print(bands[t41.CurrentBandB].name);  // Show band -- 40M
-  }
+  tft.print(bands[t41.ActiveBand].name);
 
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(OPERATION_STATS_MD, OPERATION_STATS_T);
@@ -1120,44 +1007,36 @@ void ShowSAM(float offset) {
 /*****
   Purpose: Show main frequency display at top
 *****/
-FASTRUN void ShowFrequency() {
+FASTRUN void ShowFrequency(bool includeInactiveVFO /* = false */) {
   char freqBuffer[15];
-  int TxRxFreq = t41.TXRXFreq();
+  int freq = t41.ActiveFreq();
+  int color = RA8875_GREEN;
+  int x = t41.ActiveVFO == VFO_A ? FREQUENCY_X : VFO_B_ACTIVE_OFFSET;
 
-  FormatFrequency(TxRxFreq, freqBuffer);
+  // show active frequency
   tft.setFontScale(3, 2);
-//  tft.fillRect(0, FREQUENCY_Y, SPEC_BOX_W, tft.getFontHeight(), RA8875_BLACK);
-  tft.fillRect(FREQUENCY_X, FREQUENCY_Y, SPEC_BOX_W, tft.getFontHeight(), RA8875_BLACK);
+  tft.fillRect(x, FREQUENCY_Y, 10 * tft.getFontWidth(), tft.getFontHeight(), RA8875_BLACK);
 
-  if(activeVFO == VFO_A) {
-    if(TxRxFreq < bands[t41.CurrentBandA].fBandLow || TxRxFreq > bands[t41.CurrentBandA].fBandHigh) {
-      tft.setTextColor(RA8875_RED);  // Out of band
-    } else {
-      tft.setTextColor(RA8875_GREEN); // In US band
-    }
-    tft.setCursor(FREQUENCY_X, FREQUENCY_Y);
-    tft.print(freqBuffer); // Show VFO_A
-
-    tft.setFontScale(1, 2);
-    tft.setTextColor(RA8875_LIGHT_GREY);
-    tft.setCursor(VFO_B_INACTIVE_OFFSET, FREQUENCY_Y);
-    FormatFrequency(t41.CurrentFreqB, freqBuffer);
-  } else { // VFO_B
-    if(TxRxFreq < bands[t41.CurrentBandB].fBandLow || TxRxFreq > bands[t41.CurrentBandB].fBandHigh) {
-      tft.setTextColor(RA8875_RED);
-    } else {
-      tft.setTextColor(RA8875_GREEN);
-    }
-    tft.setCursor(VFO_B_ACTIVE_OFFSET, FREQUENCY_Y);
-    tft.print(freqBuffer); // Show VFO_B
-
-    tft.setFontScale(1, 2);
-    tft.setTextColor(RA8875_LIGHT_GREY);
-    tft.setCursor(FREQUENCY_X + 20, FREQUENCY_Y);
-    FormatFrequency(t41.CurrentFreqA, freqBuffer);
+  if(freq < bands[t41.ActiveBand].fBandLow || freq > bands[t41.ActiveBand].fBandHigh) {
+    color = RA8875_RED; // Out of band
   }
 
-  tft.print(freqBuffer); // Show the other one
+  tft.setTextColor(color);
+  FormatFrequency(freq, freqBuffer);
+  tft.setCursor(x, FREQUENCY_Y);
+  tft.print(freqBuffer);
+
+  // show inactive freq if requested
+  if(includeInactiveVFO) {
+    x = t41.ActiveVFO == VFO_A ? VFO_B_INACTIVE_OFFSET : FREQUENCY_X + 20;
+    tft.setFontScale(1, 2);
+    tft.fillRect(x, FREQUENCY_Y, 10 * tft.getFontWidth(), tft.getFontHeight(), RA8875_BLACK);
+
+    tft.setTextColor(RA8875_LIGHT_GREY);
+    FormatFrequency(t41.InactiveFreq, freqBuffer);
+    tft.setCursor(x, FREQUENCY_Y);
+    tft.print(freqBuffer);
+  }
 }
 
 // this variable determines the pixels per S step. In the original code it was 12.2 pixels !?
@@ -1186,9 +1065,9 @@ FASTRUN void DrawSmeterBar() {
     dbmCount = 0;
     Serial.print("dbm: "); Serial.println(dbm);
     Serial.print("dbm_calibration: "); Serial.println(dbm_calibration);
-    Serial.print("gainCorrection: "); Serial.println(bands[t41.CurrentBand].gainCorrection);
+    Serial.print("gainCorrection: "); Serial.println(bands[t41.ActiveBand].gainCorrection);
     Serial.print("audioMaxSquaredAve: "); Serial.println(audioMaxSquaredAve);
-    Serial.print("rfGain: "); Serial.println(bands[t41.CurrentBand].rfGain);
+    Serial.print("rfGain: "); Serial.println(bands[t41.ActiveBand].rfGain);
     Serial.print("rfGainAllBands: "); Serial.println(rfGainAllBands);
     Serial.print("currentRF_InAtten: "); Serial.println(currentRF_InAtten);
   }
@@ -1251,7 +1130,7 @@ FLASHMEM void RedrawDisplayScreen() {
 
   // update display left to right, top to bottom
   // draw top of display
-  ShowFrequency();
+  ShowFrequency(true);
   ShowOperatingStats();
 
   // draw spectrum area

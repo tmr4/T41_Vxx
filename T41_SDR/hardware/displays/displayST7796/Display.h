@@ -130,7 +130,7 @@ extern ST7796_t3 tft;
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
+/*
 void InitDisplay();
 
 // static items
@@ -142,7 +142,7 @@ void DrawStaticDisplayItems();
 void DrawAudioSpectContainer();
 
 // mainly updated each loop during call to DrawFreqSpectrum
-void ShowFrequency();
+void ShowFrequency(bool includeInactiveVFO = false);
 void ShowOperatingStats();
 void ShowSpectrumFreqValues();
 void DrawSmeterBar();
@@ -182,3 +182,4 @@ void PrintKeyboardBuffer();
 
 void SetWaterfallHeight(int pixels);
 void ResetWaterfallHeight();
+*/

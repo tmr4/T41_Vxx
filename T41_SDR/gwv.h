@@ -28,7 +28,6 @@ extern int currentWPM;
 extern int sidetoneVolume;
 extern unsigned long cwTransmitDelay;
 
-extern int activeVFO;
 extern int freqIncrement;
 extern int ftIncrement;
 

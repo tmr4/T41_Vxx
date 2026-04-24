@@ -36,8 +36,6 @@ int currentWPM =  DEFAULT_KEYER_WPM;
 int sidetoneVolume = 20;
 unsigned long cwTransmitDelay = 750; // CW exciter stays active for this amount of time after last CW atom
 
-int activeVFO = 0;
-
 int freqIncrement = 100000; // *** these need to be automated according to defines in config file ***
 int ftIncrement = 500;
 

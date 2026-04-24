@@ -16,7 +16,6 @@ Properties that replaced old global variables:
   RemoteStatus
 
   // the following properties provide remote notifications and display updates
-    ActiveVFO
     CenterFreq
     NCOFreq
     AudioVolume
@@ -25,11 +24,13 @@ Properties that replaced old global variables:
 
   // the following properties don't provide any notifications
     // these are mainly used to keep track of the VFO frequencies
-    CurrentFreqA
-    CurrentFreqB
+    ActiveVFO
+    ActiveBand;
+    InactiveFreq;
+    InactiveBand;
 
   Helper functions that do the job of old global variables:
-TXRXFreq
+    ActiveFreq
 
 
 
@@ -59,7 +60,7 @@ Working volume property callbacks and remote status
 Set T41_USB_AUDIO to false, excluding some code and data though still compiling w/ Serial+MIDI+Audio
 
 4/20/2026
-TXRXFreq eliminated (8 byte FLASH code reduction only! obviously the compiler already optimized this away)
+ActiveFreq eliminated (8 byte FLASH code reduction only! obviously the compiler already optimized this away)
   FLASH: code:206876, data:78244, headers:8760   free for files:7832584
    RAM1: variables:147104, code:171352, padding:25256   free for local variables:180576
    RAM2: variables:334048  free for malloc/new:190240
@@ -154,33 +155,47 @@ void T41Properties::SetPropertyDefaults() {
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
   CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
   NCOFreq.Init(0, &CheckNCOFreqBounds, &SendNCOFreq, &UpdateDisplayNCOFreq);
-  AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
-  FilterHiCut.Init(200, &SendFilterHi, &UpdateDisplayFilters);
-  FilterLoCut.Init(3000, &SendFilterLo, &UpdateDisplayFilters);
-  CurrentBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, &SendBand, &UpdateDisplayBand);
+  AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
+  FilterHiCut.Init(3000, &SendFilterHi, &UpdateDisplayFilters);
+  FilterLoCut.Init(200, &SendFilterLo, &UpdateDisplayFilters);
+  ActiveBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, true, &SendBand, &UpdateDisplayBand);
 
   // properties w/o notifications or display updates
   ActiveVFO.Init(VFO_A);
-  CurrentFreqA.Init(CURRENT_FREQ_A); // *** these are updated when CenterFreq or ***
-  CurrentFreqB.Init(CURRENT_FREQ_B); // *** NCOFreq is polled in ProcessControls ***
-  CurrentBandA.Init(BAND_40M);
-  CurrentBandB.Init(BAND_40M);
+  InactiveFreq.Init(CURRENT_FREQ_B);
+  InactiveBand.Init(BAND_40M);
 }
 
-void T41Properties::SetVFOFreq() {
-  int freq =  CenterFreq + NCOFreq;
+// helper functions
+int T41Properties::ActiveFreq() { return CenterFreq + NCOFreq; }
+int T41Properties::GetFreqA() { return ActiveVFO == VFO_A ? ActiveFreq() : InactiveFreq; }
+int T41Properties::GetFreqB() { return ActiveVFO == VFO_B ? ActiveFreq() : InactiveFreq; }
 
+// these don't change NCOFreq
+void T41Properties::SetFreqA(int f) {
   if(ActiveVFO == VFO_A) {
-    CurrentFreqA = freq;
+    SetCenterTune(f - CenterFreq);
   } else {
-    CurrentFreqB = freq;
+    InactiveFreq = f;
   }
 }
 
-void T41Properties::SetVFOBand() {
-  if(ActiveVFO == VFO_A) {
-    t41.CurrentBandA = t41.CurrentBand;
+void T41Properties::SetFreqB(int f) {
+  if(ActiveVFO == VFO_B) {
+    SetCenterTune(f - CenterFreq);
   } else {
-    t41.CurrentBandB = t41.CurrentBand;
+    InactiveFreq = f;
   }
+}
+
+void T41Properties::SwapActiveVFO() {
+  int tmp = ActiveBand;
+
+  ActiveBand = InactiveBand;
+  InactiveBand = tmp;
+
+  t41.NCOFreq = 0L;
+  tmp = CenterFreq;
+  CenterFreq = InactiveFreq;
+  InactiveFreq = tmp;
 }

@@ -50,11 +50,12 @@ public:
   }
 
   // same as above with max, min
-  FLASHMEM void Init(T val, T _min, T _max, FuncPtrT _fPtrT, FuncPtrInt _fPtrInt, int _id, bool polled = true) {
+  FLASHMEM void Init(T val, T _min, T _max, bool circ, FuncPtrT _fPtrT, FuncPtrInt _fPtrInt, int _id, bool polled = true) {
     value = val;
     hasMinMax = true;
     min = _min;
     max = _max;
+    minmaxCircular = circ;
     fPtrT = _fPtrT;
     fPtrInt = _fPtrInt;
     id = _id;
@@ -62,11 +63,12 @@ public:
   }
 
   // same as above with max, min
-  FLASHMEM void Init(T val, T _min, T _max, FuncPtrT _fPtrT, FuncPtr _fPtr, bool polled = true) {
+  FLASHMEM void Init(T val, T _min, T _max, bool circ, FuncPtrT _fPtrT, FuncPtr _fPtr, bool polled = true) {
     value = val;
     hasMinMax = true;
     min = _min;
     max = _max;
+    minmaxCircular = circ;
     fPtrT = _fPtrT;
     fPtr = _fPtr;
     notifyOnPoll = polled;
@@ -146,6 +148,7 @@ private:
   T value;
   bool hasMinMax = false;
   T min, max;
+  bool minmaxCircular = false;
   bool hasChanged = false;
   bool updated = false;
 
@@ -163,8 +166,13 @@ private:
       if(bPtrInt != NULL) {
         value = (int)(*bPtrInt)((int)value);
       } else {
-        if(value > max) value = max;
-        if(value < min) value = min;
+        if(minmaxCircular) {
+          if(value > max) value = min;
+          if(value < min) value = max;
+        } else {
+          if(value > max) value = max;
+          if(value < min) value = min;
+        }
       }
     }
     if(tmp != val) {

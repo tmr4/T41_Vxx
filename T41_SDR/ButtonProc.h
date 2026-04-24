@@ -10,13 +10,11 @@ extern int liveNoiseFloorFlag;
 
 extern bool nfmBWFilterActive;
 
-extern bool save_last_frequency;
-extern bool directFreqFlag;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+void UpdateBand(int from);
 void ChangeBand(int change);
 void ChangeBand(long newFreq);
 void ButtonFilter();

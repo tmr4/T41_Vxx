@@ -47,6 +47,12 @@ call the routines at the appropriate time.  The InitDisplay function is required
 
 */
 
+// consolidated update functions
+void UpdateDisplayFreq();
+void UpdateDisplayNCOFreq();
+void UpdateDisplayBand();
+void UpdateDisplayFilters();
+
 // General
 void InitDisplay();
 
@@ -65,11 +71,8 @@ void ShowDot();
 void DrawStaticDisplayItems();
 void EraseSpectrumWindow();
 void RedrawDisplayScreen();
-void ShowFrequency();
-void UpdateDisplayFreq();
-void UpdateDisplayNCOFreq();
+void ShowFrequency(bool includeInactiveVFO = false);
 void ShowOperatingStats();
-void UpdateDisplayBand();
 void ShowRemoteStatus();
 void ShowSAM(float);
 void ShowCurrentPowerSetting();
@@ -78,7 +81,6 @@ void EraseSpectrumDisplayContainer();
 void ShowSpectrumFreqValues();
 void DrawFreqSpectrum(bool newSpectrumFlag = false);
 void ShowSpectrumdBScale();
-void UpdateDisplayFilters();
 void ShowBandwidthBarValues();
 void DrawBandwidthBar();
 void SetZoom(int);

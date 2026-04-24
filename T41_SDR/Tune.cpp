@@ -50,7 +50,7 @@ void ResetTuning() {
 void SetCenterTune(int tuneChange) {
   t41.CenterFreq += tuneChange;
 
-  SetFreq(t41.TXRXFreq());
+  SetFreq(t41.ActiveFreq());
 }
 
 int CheckNCOFreqBounds(int f) {
@@ -118,9 +118,9 @@ FLASHMEM void SplitVFOFollowup() {
   Purpose: Set VFO A to receive frequency and VFO B to the transmit frequency
 *****/
 FLASHMEM void DoSplitVFO() {
-  t41.CurrentFreqB = t41.CurrentFreqA;
+  //t41.CurrentFreqB = t41.CurrentFreqA;
 
   // GetMenuValue(minValue, maxValue, startValue, increment, prompt, valueOffset)
   //GetMenuValue(-40, 30, &t41.CurrentFreqB, SPLIT_INCREMENT, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
-  GetMenuValue(-40, 30, (int*)&t41.CurrentFreqB, 500, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
+  //GetMenuValue(-40, 30, (int*)&t41.CurrentFreqB, 500, "Xmit offset:", 200, NULL, NULL, &SplitVFOFollowup);
 }

@@ -15,19 +15,20 @@ public:
   Property<int> AudioVolume;
   Property<int> FilterHiCut;
   Property<int> FilterLoCut;
-  Property<int> CurrentBand;
+  Property<int> ActiveBand;
 
   // properties w/o notifications or display updates
   Property<int> ActiveVFO;
-  Property<int> CurrentFreqA;
-  Property<int> CurrentFreqB;
-  Property<int> CurrentBandA;
-  Property<int> CurrentBandB;
+  Property<int> InactiveFreq;
+  Property<int> InactiveBand;
 
   // helper functions
-  int TXRXFreq() { return CenterFreq + NCOFreq; }
-  void SetVFOFreq();
-  void SetVFOBand();
+  int ActiveFreq();
+  int GetFreqA();
+  int GetFreqB();
+  void SetFreqA(int f);
+  void SetFreqB(int f);
+  void SwapActiveVFO();
 
 protected:
   void SetPropertyDefaults();
@@ -41,20 +42,6 @@ extern T41Properties t41;
 // *** possible T41 properties ***
 /*
 from T41_Views (this is private data, first letter capitalized if property):
-
-done:
-  int centerFreq = 7048000;
-  int audioVolume = 30;
-  int ncoFreq = 0;
-  int remoteStatus -1: not avail, 0: not connected (white), 1: connected (green), 2: connection lost (red)
-  int fLoCut = -200; *** these were simple properties and didn't need an private value ***
-  int fHiCut = -3000;
-  int currentFreqA = 7048000;
-  int currentFreqB = 7030000;
-  int activeVFO = 0; // VFO A
-  int currentBand = 1;      // BAND_40M;
-  int currentBandA = 1; //BAND_40M; *** not property or data ***
-  int currentBandB = 1; //BAND_40M;
 
 next:
   int radioMode = 0;        // SSB_MODE;
@@ -98,7 +85,6 @@ typedef struct {
   int sidetoneVolume;
   unsigned long cwTransmitDelay;
 
-  int activeVFO;
   int freqIncrement;
 
   int freqCorrectionFactor;

@@ -153,7 +153,7 @@ FLASHMEM void CalibrateOptions() {
       if(keyPressedOn == 1 && radioMode == CW_MODE) {
         //================  CW Transmit Mode Straight Key ===========
         if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && keyType == 0) {  //Straight Key
-          powerOutCW[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.CurrentBand];
+          powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
           CW_ExciterIQData();
           ShowTransmitReceiveStatus();
           SetFreq(t41.CenterFreq);                 //  AFP 10-02-22
@@ -167,14 +167,14 @@ FLASHMEM void CalibrateOptions() {
           //modeSelectOutExR.gain(0, 0);
         }
       }
-      //CWPowerCalibrationFactor[t41.CurrentBand] = GetEncoderValueLive(-2.0, 2.0, CWPowerCalibrationFactor[t41.CurrentBand], 0.001, (char *)"CW PA Cal: ");
-      powerOutCW[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.CurrentBand];  // AFP 10-21-22
+      //CWPowerCalibrationFactor[t41.ActiveBand] = GetEncoderValueLive(-2.0, 2.0, CWPowerCalibrationFactor[t41.ActiveBand], 0.001, (char *)"CW PA Cal: ");
+      powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];  // AFP 10-21-22
       val = ReadSelectedPushButton();
       if(val != BOGUS_PIN_READ) {        // Any button press??
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          //EEPROMData.CWPowerCalibrationFactor[t41.CurrentBand] = CWPowerCalibrationFactor[t41.CurrentBand];
+          //EEPROMData.CWPowerCalibrationFactor[t41.ActiveBand] = CWPowerCalibrationFactor[t41.ActiveBand];
           EEPROMWrite();
           calibrateItem = 5;
         }
@@ -182,8 +182,8 @@ FLASHMEM void CalibrateOptions() {
       break;
 
     case 2:  // SSB PA Cal
-      //SSBPowerCalibrationFactor[t41.CurrentBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[t41.CurrentBand], 0.001, (char *)"SSB PA Cal: ");
-      //powerOutSSB[t41.CurrentBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[t41.CurrentBand];  // AFP 10-21-22
+      //SSBPowerCalibrationFactor[t41.ActiveBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[t41.ActiveBand], 0.001, (char *)"SSB PA Cal: ");
+      //powerOutSSB[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[t41.ActiveBand];  // AFP 10-21-22
       //val = ReadSelectedPushButton();
       //if(val != BOGUS_PIN_READ) {        // Any button press??
       //  val = ProcessButtonPress(val);    // Use ladder value to get menu choice
@@ -235,8 +235,8 @@ float CalcSignalStrength() {
     // dbm_calibration set to 25; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
     // attenuator is 0 and could be set in a future HW revision; rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10
     //  rfGainAllBands is initialized to 0
-    //dbm = dbm_calibration + bands[t41.CurrentBand].gainCorrection + (float32_t)attenuator + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.CurrentBand].rfGain * 1.5 - rfGainAllBands;
-    dbm = 29.0 + bands[t41.CurrentBand].gainCorrection + 0.0 + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.CurrentBand].rfGain * 1.5 - rfGainAllBands;
+    //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + (float32_t)attenuator + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
+    dbm = 29.0 + bands[t41.ActiveBand].gainCorrection + 0.0 + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
   } else {
 
     // reset audioMaxSquaredAve to a small value
@@ -280,7 +280,7 @@ void SoftResetHardware() {
   volumeChangeFlag = false;
   resetTuningFlag = false;
   posFilterEncoder = 0;
-  lastFilterEncoder = 1; // force initial update
+  lastFilterEncoder = 0;
   filter_pos_BW = 0;
   last_filter_pos_BW = 0;
 }

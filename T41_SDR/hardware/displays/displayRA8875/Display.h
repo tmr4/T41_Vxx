@@ -143,7 +143,7 @@ void DrawStaticDisplayItems();
 void DrawAudioSpectContainer();
 
 // mainly updated each loop during call to DrawFreqSpectrum
-void ShowFrequency();
+void ShowFrequency(bool includeInactiveVFO = false);
 void ShowOperatingStats();
 void ShowSpectrumFreqValues();
 void DrawSmeterBar();

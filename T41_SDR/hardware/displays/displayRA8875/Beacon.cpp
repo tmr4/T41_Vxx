@@ -153,20 +153,20 @@ void BeaconExit() {
   // cycle back through monitored bands, restoring prior values
   for(int i = 0; i < 5; i++) {
     if(monitorFreq[i]) {
-      ChangeBand(beaconBands[i] - t41.CurrentBand);
+      ChangeBand(beaconBands[i] - t41.ActiveBand);
 
       // save band frequency and set it to the beacon's frequency for this band
       SetFreq(priorBeaconBandFreq[i]);
 
       // save and set filters for the beacon bands as well
-      bands[t41.CurrentBand].fHiCut = priorFilterHi[i];
-      bands[t41.CurrentBand].fLoCut = priorFilterLo[i];
+      bands[t41.ActiveBand].fHiCut = priorFilterHi[i];
+      bands[t41.ActiveBand].fLoCut = priorFilterLo[i];
     }
   }
   ChangeBand(1);
   ChangeDemodMode(priorDemod);
   ChangeMode(priorMode);
-  ChangeBand(priorBand - t41.CurrentBand);
+  ChangeBand(priorBand - t41.ActiveBand);
 
   RedrawDisplayScreen();
   beaconInit = false;
@@ -433,7 +433,7 @@ void BeaconLoop() {
   static int currentBeacon = 0;
   int beacon;
   float32_t dbm;
-  static int TxRxFreq = t41.TXRXFreq();
+  static int TxRxFreq = t41.ActiveFreq();
 
   if(beaconSyncFlag) {
     if(count == 0 && changeBandFlag) {
@@ -447,8 +447,8 @@ void BeaconLoop() {
       // just let the T41 loop bring us back here if we're not monitoring this band
       if(monitorFreq[beaconBand]) {
         // change band if needed
-        if(beaconBands[beaconBand] != t41.CurrentBand) {
-          ChangeBand(beaconBands[beaconBand] - t41.CurrentBand);
+        if(beaconBands[beaconBand] != t41.ActiveBand) {
+          ChangeBand(beaconBands[beaconBand] - t41.ActiveBand);
         }
 
         // allow radio to stablize during the rest of this 10 second cycle
@@ -544,7 +544,7 @@ void BeaconLoop() {
   } else {
     // save current state
     priorFreq = TxRxFreq;
-    priorBand = t41.CurrentBand;
+    priorBand = t41.ActiveBand;
     priorMode = radioMode;
     priorDemod = currentDemodMode;
 
@@ -553,17 +553,17 @@ void BeaconLoop() {
     // so we don't have to do it again
     for(int i = 0; i < 5; i++) {
       if(monitorFreq[i]) {
-        ChangeBand(beaconBands[i] - t41.CurrentBand);
+        ChangeBand(beaconBands[i] - t41.ActiveBand);
 
         // save band frequency and set it to the beacon's frequency for this band
         priorBeaconBandFreq[i] = TxRxFreq;
         SetFreq(beaconFreq[i]);
 
         // save and set filters for the beacon bands as well
-        priorFilterHi[i] = bands[t41.CurrentBand].fHiCut;
-        priorFilterLo[i] = bands[t41.CurrentBand].fLoCut;
-        bands[t41.CurrentBand].fHiCut = 1500;
-        bands[t41.CurrentBand].fLoCut = 500;
+        priorFilterHi[i] = bands[t41.ActiveBand].fHiCut;
+        priorFilterLo[i] = bands[t41.ActiveBand].fLoCut;
+        bands[t41.ActiveBand].fHiCut = 1500;
+        bands[t41.ActiveBand].fLoCut = 500;
 
         beaconBand = i; // remember the last band
       }

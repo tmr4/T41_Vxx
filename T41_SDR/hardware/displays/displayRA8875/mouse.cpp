@@ -138,15 +138,15 @@ bool CursorInInfoBox(int cursorX, int cursorY) {
 
 void MouseButtonFreqArea(int cursorX, int button) {
   int inc = 0;
-  int vfoOffset = activeVFO == VFO_A ? 0 : VFO_B_ACTIVE_OFFSET;
+  int vfoOffset = t41.ActiveVFO == VFO_A ? 0 : VFO_B_ACTIVE_OFFSET;
   int x = cursorX - vfoOffset; // adjust cursor position for active VFO
-  int TxRxFreq = t41.TXRXFreq();
+  int TxRxFreq = t41.ActiveFreq();
 
   switch(button) {
     case 1:
       // we're switching to the other VFO if we click within its field
-      if((activeVFO == VFO_B && cursorX < VFO_B_ACTIVE_OFFSET - 50) || (activeVFO == VFO_A && cursorX > VFO_B_INACTIVE_OFFSET)) {
-        VFOSelect(activeVFO == VFO_A ? VFO_B : VFO_A);
+      if((t41.ActiveVFO == VFO_B && cursorX < VFO_B_ACTIVE_OFFSET - 50) || (t41.ActiveVFO == VFO_A && cursorX > VFO_B_INACTIVE_OFFSET)) {
+        VFOSelect(t41.ActiveVFO == VFO_A ? VFO_B : VFO_A);
       }
       break;
 
@@ -203,9 +203,9 @@ void MouseButtonFreqArea(int cursorX, int button) {
 
 void MouseWheelFreqArea(int cursorX, int wheel) {
   int inc = 0;
-  int vfoOffset = activeVFO == VFO_A ? 0 : VFO_B_ACTIVE_OFFSET;
+  int vfoOffset = t41.ActiveVFO == VFO_A ? 0 : VFO_B_ACTIVE_OFFSET;
   int x = cursorX - vfoOffset; // adjust cursor position for active VFO
-  int TxRxFreq = t41.TXRXFreq();
+  int TxRxFreq = t41.ActiveFreq();
 
   //Serial.println(wheel);
 
