@@ -18,8 +18,6 @@
 int AGCMode = 1;
 int rfGainAllBands = 0;
 int spectrumNoiseFloor = 0; // SPECTRUM_NOISE_FLOOR; *** display dependent ***
-int tuneIndex = DEFAULTFREQINDEX;
-int ftIndex = DEFAULT_FT_INDEX;
 int transmitPowerLevel = DEFAULT_POWER_LEVEL;
 int nrOptionSelect = 0;
 int currentScale = 1;  // 20 dB/division

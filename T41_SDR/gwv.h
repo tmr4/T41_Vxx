@@ -10,8 +10,6 @@
 extern int AGCMode;
 extern int rfGainAllBands;
 extern int spectrumNoiseFloor;
-extern int tuneIndex;
-extern int ftIndex;
 extern int transmitPowerLevel;
 extern int nrOptionSelect;
 extern int currentScale;

@@ -40,6 +40,8 @@ Properties that replaced old global variables:
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+#define MAX_FREQ_INDEX  8
+
 T41Properties t41;
 
 //-------------------------------------------------------------------------------------------------------------
@@ -84,7 +86,10 @@ void T41Properties::SetPropertyDefaults() {
   FilterHiCut.Init(3000, &SendFilterHi, &UpdateDisplayFilters);
   FilterLoCut.Init(200, &SendFilterLo, &UpdateDisplayFilters);
 
+  // infobox properties
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
+  CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, MAX_FREQ_INDEX - 1, true, &SendFreqIncrement, &UpdateInfoBoxItem, IB_ITEM_TUNE);
+  FineTuneIndex.Init(DEFAULT_FT_INDEX, 0, 3, true, &SendFtIncrement, &UpdateInfoBoxItem, IB_ITEM_FINE);
 
   // *** TODO: these need notifications/updates added ***
   ActiveVFO.Init(VFO_A);
@@ -109,6 +114,8 @@ void T41Properties::Poll(bool updateDisplay, bool updateRemote) {
 
 void T41Properties::PollInfoBox(bool updateDisplay, bool updateRemote) {
   AudioVolume.Poll(updateDisplay, updateRemote);
+  CenterTuneIndex.Poll(updateDisplay, updateRemote);
+  FineTuneIndex.Poll(updateDisplay, updateRemote);
 }
 
 // these don't change NCOFreq
@@ -144,14 +151,26 @@ void T41Properties::SwapActiveVFO() {
 Notes:
 
 Track memory usage and loop timing as T41 properties are added:
-  *** loop times are a rough average over 20 loops ***
-  *** size on Audio Platform differs from PS due to USB Host ... examine ***
-
 Memory Usage and Loop Timing on Teensy 4.1:
 Project System:
   Compiler Settings: smallest code, 528MHz, Serial+MIDI+Audio
   Input: T41 vPS IQ waveforms, NF: Auto
   Timing: T41 timing profile
+
+*** loop times are a rough average over 20 loops ***
+*** size on Audio Platform differs from PS due to mouse/keyboard support (and ? ... examine) ***
+
+4/25/2026
+PS
+  FLASH: code:207052, data:78244, headers:8584   free for files:7832584
+   RAM1: variables:147360, code:171512, padding:25096   free for local variables:180320
+   RAM2: variables:334048  free for malloc/new:190240
+ EXTRAM: variables:1200320
+AP
+  FLASH: code:215812, data:79268, headers:9040   free for files:7822344
+   RAM1: variables:155456, code:180584, padding:16024   free for local variables:172224
+   RAM2: variables:334304  free for malloc/new:189984
+ EXTRAM: variables:480320
 
 4/22/2026
 Added hi/lo filter properties

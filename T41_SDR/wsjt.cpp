@@ -360,9 +360,9 @@ void WSJTLoop()
             if(cmd[4] == ';') {
               // freq or fine tune increment change
               if(cmd[2] == '0') {
-                ChangeFreqIncrement(atol(&cmd[3]) - tuneIndex);
+                ChangeFreqIncrement(atol(&cmd[3]) - t41.CenterTuneIndex);
               } else if(cmd[2] == '1') {
-                ChangeFtIncrement(atol(&cmd[3]) - ftIndex);
+                ChangeFtIncrement(atol(&cmd[3]) - t41.FineTuneIndex);
               }
             }
             return;

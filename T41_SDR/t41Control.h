@@ -35,6 +35,8 @@ void SendVolume(int volume);
 void SendFilter();
 void SendFilterHi(int filter);
 void SendFilterLo(int filter);
+void SendFreqIncrement(int index);
+void SendFtIncrement(int index);
 
 void SendSignalStrengthRequest();
 void SendSignalStrengthRequest(int index);

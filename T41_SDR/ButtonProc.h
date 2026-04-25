@@ -28,5 +28,5 @@ void ButtonFrequencyEntry();
 void ToggleLiveNoiseFloorFlag();
 void ToggleCWDecoder();
 
-void ChangeFreqIncrement(int change);
-void ChangeFtIncrement(int change);
+void ChangeFreqIncrement(int change, bool notify = true);
+void ChangeFtIncrement(int change, bool notify = true);

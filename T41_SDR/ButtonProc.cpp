@@ -23,8 +23,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define MAX_FREQ_INDEX  8
-
 bool lowerAudioFilterActive = false; // false - upper, true - lower audio filter active
 int liveNoiseFloorFlag = OFF;         // ON=1, OFF=0, Auto=-1
 
@@ -452,39 +450,33 @@ FLASHMEM void ToggleLiveNoiseFloorFlag() {
 /*****
   Purpose: To process a frequency increment button push
 *****/
-FLASHMEM void ChangeFreqIncrement(int change) {
-  long incrementValues[] = { 10, 50, 100, 250, 1000, 10000, 100000, 1000000 };
+FLASHMEM void ChangeFreqIncrement(int change, bool notify /* = true */) {
+  int incrementValues[] = { 10, 50, 100, 250, 1000, 10000, 100000, 1000000 };
+  int index = t41.CenterTuneIndex + change;
 
-  tuneIndex += change;
-  if(tuneIndex < 0) {
-    tuneIndex = MAX_FREQ_INDEX - 1;
+  if(notify) {
+    t41.CenterTuneIndex = index;
+  } else {
+    t41.CenterTuneIndex.Update(index);
   }
-  if(tuneIndex >= MAX_FREQ_INDEX) {
-    tuneIndex = 0;
-  }
 
-  freqIncrement = incrementValues[tuneIndex];
-
-  UpdateInfoBoxItem(IB_ITEM_TUNE);
+  freqIncrement = incrementValues[index];
 }
 
 /*****
   Purpose: To process a fine tune frequency increment button push
 *****/
-FLASHMEM void ChangeFtIncrement(int change) {
-  long selectFT[] = { 10, 50, 250, 500 };
+FLASHMEM void ChangeFtIncrement(int change, bool notify /* = true */) {
+  int selectFT[] = { 10, 50, 250, 500 };
+  int index = t41.FineTuneIndex + change;
 
-  ftIndex += change;
-  if(ftIndex > 3) {
-    ftIndex = 0;
+  if(notify) {
+    t41.FineTuneIndex = index;
+  } else {
+    t41.FineTuneIndex.Update(index);
   }
-  if(ftIndex < 0) {
-    ftIndex = 3;
-  }
 
-  ftIncrement = selectFT[ftIndex];
-
-  UpdateInfoBoxItem(IB_ITEM_FINE);
+  ftIncrement = selectFT[index];
 }
 
 /*****

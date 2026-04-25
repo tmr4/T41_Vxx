@@ -21,10 +21,14 @@ public:
 
   Property<int> CenterFreq;
   Property<int> NCOFreq;
-  Property<int> AudioVolume;
   Property<int> FilterHiCut;
   Property<int> FilterLoCut;
   Property<int> ActiveBand;
+
+  // infobox properties
+  Property<int> AudioVolume;
+  Property<int> CenterTuneIndex;
+  Property<int> FineTuneIndex;
 
   // properties w/o notifications or display updates
   Property<int> ActiveVFO;
@@ -66,8 +70,6 @@ from T41_Views (this is private data, first letter capitalized if property):
 
 next:
   int transmitPowerLevel = 1;
-  int tuneIndex = 6;
-  int ftIndex = 3;
 
 list:
   private bool centerTuneActive = false;
@@ -86,8 +88,6 @@ typedef struct {
   int AGCMode;
   int rfGainAllBands;
   int spectrumNoiseFloor;
-  int tuneIndex;
-  int ftIndex;
   float32_t transmitPowerLevel;
   int t41.RadioMode;
   int nrOptionSelect;

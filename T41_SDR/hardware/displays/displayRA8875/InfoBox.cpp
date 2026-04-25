@@ -140,8 +140,8 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   // label         options      option                   size    to erase  flag  col            row,           follow-up function
   { "Vol:",        NULL,        (int*)&t41.AudioVolume,             1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
   { "AGC",         agcOpts,     &AGCMode,                 1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
-  { "CT Inc:",     tuneValues,  &tuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
-  { "FT Inc:",     ftValues,    &ftIndex,                 0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
+  { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
+  { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex,                 0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
   { "Zoom:",       zoomOptions, (int*)&spectrumZoom,      0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    NULL                   }, // Zoom
   { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,      0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
   { "AutoNotch:",  onOff,       (int*)&ANR_notchOn,       0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
@@ -198,8 +198,6 @@ void UpdateInfoBoxItem(int item) {
   //if(displayState == DISPLAY_T41)
   {
     if(!infoBoxItemActive[item] || (item >= IB_NUM_ITEMS)) return;
-
-    //if(item == IB_ITEM_TUNE) Serial.println(tuneIndex);
 
     tft.setFontScale((enum RA8875tsize)infoBox[item].fontSize);
     tft.fillRect(xOffset, yOffset, tft.getFontWidth() * infoBox[item].clearWidth, tft.getFontHeight(), RA8875_BLACK);

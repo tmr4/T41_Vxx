@@ -345,6 +345,20 @@ void SendSetNarrowFilter() {
   T41ControlSendCmd(cmd);
 }
 
+void SendFreqIncrement(int index) {
+  char cmd[6];
+
+  sprintf(cmd, "FI0%1d;", index);
+  T41ControlSendCmd(cmd);
+}
+
+void SendFtIncrement(int index) {
+  char cmd[6];
+
+  sprintf(cmd, "FI1%1d;", index);
+  T41ControlSendCmd(cmd);
+}
+
 void SendAS() {
   char cmd[19];
 
@@ -375,8 +389,8 @@ void SendIF() {
     !GetXRState(),                       // RX/TX (1/0) (%d) at index 30
     (int)t41.ActiveVFO,                      // VFO A/B (0/1) (%d) at index 31
     mouseCenterTuneActive ? 1 : 0,  // fine or center tune enabled (0/1) (%d) at index 32
-    ftIndex,                        // fine tune index (%d) at index 33
-    tuneIndex,                      // center tune index (%d) at index 34
+    (int)t41.FineTuneIndex,                        // fine tune index (%d) at index 33
+    (int)t41.CenterTuneIndex,                      // center tune index (%d) at index 34
     AGCMode,                        // AGC mode (%d) at index 35
     spectrumZoom,                   // spectrum zoom (%d) at index 36
     (int)t41.InactiveFreq           // inactive VFO freq in Hz (%011d) at index 37
@@ -417,6 +431,7 @@ int GetMode() {
 // *** generally it's best to use the Update method to change T41 properties here.
 //     Properties should not be updated directly or call a function that does so
 //     especially if they notify the remote as this creates a update loop.
+//     Many update functions provide a flag to supress remote notifications.
 //     If the two units get out of sync the loop will become infinite as the units go
 //     back and forth trying to impose their own value. Ignoring this can degrade
 //     radio performance ***
@@ -544,9 +559,9 @@ void T41ControlLoop() {
             if(cmd[4] == ';') {
               // center or fine tune increment change
               if(cmd[2] == '0') {
-                ChangeFreqIncrement(atol(&cmd[3]) - tuneIndex);
+                ChangeFreqIncrement(atol(&cmd[3]) - t41.CenterTuneIndex, false);
               } else if(cmd[2] == '1') {
-                ChangeFtIncrement(atol(&cmd[3]) - ftIndex);
+                ChangeFtIncrement(atol(&cmd[3]) - t41.FineTuneIndex, false);
               }
             }
             sendCommand = false;
