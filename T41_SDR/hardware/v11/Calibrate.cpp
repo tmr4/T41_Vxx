@@ -1578,9 +1578,9 @@ FLASHMEM void SetupSignalStrengthSource(int source) {
       signalStrengthSource = 1;
       SendCenterFreq(t41.CenterFreq + intermediateFreq);
       if(currentDemodMode == DEMOD_LSB) {
-        SendSetMode(DEMOD_USB);
+        SendSetDemodMode(DEMOD_USB);
       } else {
-        SendSetMode(DEMOD_LSB);
+        SendSetDemodMode(DEMOD_LSB);
       }
       SendSetDisplayZoom(2);
       SendSetNarrowFilter();

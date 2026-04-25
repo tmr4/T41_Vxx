@@ -28,6 +28,7 @@ void SendNCOFreq(int freq);
 void SendSetFreqA(int freq);
 void SendSetFreqB(int freq);
 void SendSetMode(int mode);
+void SendSetDemodMode(int mode);
 void SendSetDisplayZoom(int zoom);
 void SendSmeter(int smeterPad, float dbm);
 void SendVolume(int volume);

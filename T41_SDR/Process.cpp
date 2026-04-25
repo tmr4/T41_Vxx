@@ -892,22 +892,23 @@ float VolumeToAmplification(int volume) {
 
   Poll following T41 properties:
 
+  *** called by YieldToProcess every ~10ms and less frequently by the main loop ***
 *****/
 // *** TODO: consider what controls are proper in various radio and display states and if to control them here ***
 FASTRUN void ProcessControls() {
   bool updateDisplay = false;
-  bool updateDisplayVolume = false;
+  bool updateInfoBox = false;
   bool remoteConnected = t41.RemoteStatus == REMOTE_CONNECTED;
 
   switch(displayState) {
     case DISPLAY_T41:
     case DISPLAY_T41_FT8_DECODE:
       updateDisplay = true;
-      updateDisplayVolume = true;
+      updateInfoBox = true;
       break;
 
     case DISPLAY_FULL_MENU:
-      updateDisplayVolume = true;
+      updateInfoBox = true;
       break;
 
     case DISPLAY_BEACON_MONITOR:
@@ -935,28 +936,17 @@ FASTRUN void ProcessControls() {
   // Handle tuning changes
   ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
 
-  // update volume if changed
-  t41.AudioVolume.Poll(updateDisplayVolume, remoteConnected);
-
   // update filters if changed
   // *** TODO: examine if we can skip this comparison ***
   if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
     ProcessFilterEncoder();
   }
-  t41.FilterHiCut.Poll(updateDisplay, remoteConnected);
-  t41.FilterHiCut.Poll(updateDisplay, remoteConnected);
 
-  // *** TODO: consider refining CenterFreq and NCOFreq updates as there is some duplication ***
-  t41.CenterFreq.Poll(updateDisplay, remoteConnected);
-
-  // DrawBandwidthBar relies on resetTuningFlag being set prior to the ResetTuning call
   if(resetTuningFlag) {
+    // *** DrawBandwidthBar relies on resetTuningFlag being set prior to the ResetTuning call ***
     resetTuningFlag = false;
     ResetTuning();
   }
-  t41.NCOFreq.Poll(updateDisplay, remoteConnected);
-
-  t41.ActiveBand.Poll(updateDisplay, remoteConnected);
 
   // handle any live menu items
   if(getMenuValueActive) {
@@ -991,6 +981,9 @@ FASTRUN void ProcessControls() {
       GetMenuOptionLoop();
     }
   }
+
+  t41.Poll(updateDisplay, remoteConnected);
+  t41.PollInfoBox(updateInfoBox, remoteConnected);
 }
 
 /*****

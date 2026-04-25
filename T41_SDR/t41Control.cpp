@@ -260,9 +260,15 @@ void SendBand(int band) {
   T41ControlSendCmd(cmd);
 }
 
-void SendSetMode(int mode) {
+void SendSetDemodMode(int mode) {
   char cmd[5];
   sprintf(cmd, "MD%d;", mode);
+  T41ControlSendCmd(cmd);
+}
+
+void SendSetMode(int mode) {
+  char cmd[5];
+  sprintf(cmd, "ME%d;", mode);
   T41ControlSendCmd(cmd);
 }
 

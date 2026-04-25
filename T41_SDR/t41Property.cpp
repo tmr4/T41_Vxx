@@ -36,10 +36,114 @@ Properties that replaced old global variables:
 
 */
 
+//-------------------------------------------------------------------------------------------------------------
+// Data
+//-------------------------------------------------------------------------------------------------------------
+
+T41Properties t41;
+
+//-------------------------------------------------------------------------------------------------------------
+// Forwards
+//-------------------------------------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------------------------------------
+// Code
+//-------------------------------------------------------------------------------------------------------------
+
+template<typename T>
+void NotifyPropertyChanged(T val) {
+  Serial.print("Property changed to: "); Serial.println(val);
+}
+
+//T41Properties* T41Properties::instance = NULL;
+
+T41Properties::T41Properties() {
+  //if(instance == NULL) {
+  //  instance = this;
+  //}
+  begin();
+}
+
+void T41Properties::begin() {
+  // initialize properties
+  SetPropertyDefaults();
+}
+
+void T41Properties::SetPropertyDefaults() {
+  int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
+
+  // polled properties
+  RemoteStatus.Init(remoteStatus, &ShowRemoteStatus); // notify on change, not polled
+
+  RadioMode.Init(SSB_MODE, &SendSetMode, &UpdateModeDisplay);
+  ActiveBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, true, &SendBand, &UpdateDisplayBand);
+
+  CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
+  NCOFreq.Init(0, &CheckNCOFreqBounds, &SendNCOFreq, &UpdateDisplayNCOFreq);
+  FilterHiCut.Init(3000, &SendFilterHi, &UpdateDisplayFilters);
+  FilterLoCut.Init(200, &SendFilterLo, &UpdateDisplayFilters);
+
+  AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
+
+  // *** TODO: these need notifications/updates added ***
+  ActiveVFO.Init(VFO_A);
+
+  // properties w/o notifications or display updates
+  InactiveFreq.Init(CURRENT_FREQ_B);
+  InactiveBand.Init(BAND_40M);
+}
+
+// helper functions
+void T41Properties::Poll(bool updateDisplay, bool updateRemote) {
+  // *** TODO: consider order to minimize update duplication ***
+  // *** TODO: consider refining updates as there is some duplication ***
+  RadioMode.Poll(updateDisplay, updateRemote);
+  ActiveBand.Poll(updateDisplay, updateRemote);
+  CenterFreq.Poll(updateDisplay, updateRemote);
+  NCOFreq.Poll(updateDisplay, updateRemote);
+  FilterHiCut.Poll(updateDisplay, updateRemote);
+  FilterHiCut.Poll(updateDisplay, updateRemote);
+}
+
+void T41Properties::PollInfoBox(bool updateDisplay, bool updateRemote) {
+  AudioVolume.Poll(updateDisplay, updateRemote);
+}
+
+// these don't change NCOFreq
+void T41Properties::SetFreqA(int f) {
+  if(ActiveVFO == VFO_A) {
+    SetCenterTune(f - CenterFreq);
+  } else {
+    InactiveFreq = f;
+  }
+}
+
+void T41Properties::SetFreqB(int f) {
+  if(ActiveVFO == VFO_B) {
+    SetCenterTune(f - CenterFreq);
+  } else {
+    InactiveFreq = f;
+  }
+}
+
+void T41Properties::SwapActiveVFO() {
+  int tmp = ActiveBand;
+
+  ActiveBand = InactiveBand;
+  InactiveBand = tmp;
+
+  t41.NCOFreq = 0L;
+  tmp = CenterFreq;
+  CenterFreq = InactiveFreq;
+  InactiveFreq = tmp;
+}
+
 /*
+Notes:
 
 Track memory usage and loop timing as T41 properties are added:
   *** loop times are a rough average over 20 loops ***
+  *** size on Audio Platform differs from PS due to USB Host ... examine ***
 
 Memory Usage and Loop Timing on Teensy 4.1:
 Project System:
@@ -47,7 +151,6 @@ Project System:
   Input: T41 vPS IQ waveforms, NF: Auto
   Timing: T41 timing profile
 
-Size on Audio Platform small as PS has to accommodate USB Host
 4/22/2026
 Added hi/lo filter properties
   FLASH: code:206500, data:78244, headers:9136   free for files:7832584
@@ -127,75 +230,3 @@ Prior to adding T41 class
  EXTRAM: variables:1200320
 
 */
-
-T41Properties t41;
-
-template<typename T>
-void NotifyPropertyChanged(T val) {
-  Serial.print("Property changed to: "); Serial.println(val);
-}
-
-//T41Properties* T41Properties::instance = NULL;
-
-T41Properties::T41Properties() {
-  //if(instance == NULL) {
-  //  instance = this;
-  //}
-  begin();
-}
-
-void T41Properties::begin() {
-  // initialize properties
-  SetPropertyDefaults();
-}
-
-void T41Properties::SetPropertyDefaults() {
-  int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
-
-  RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
-
-  RadioMode.Init(SSB_MODE, &SendSetMode, &UpdateModeDisplay);
-
-  CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
-  NCOFreq.Init(0, &CheckNCOFreqBounds, &SendNCOFreq, &UpdateDisplayNCOFreq);
-  AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
-  FilterHiCut.Init(3000, &SendFilterHi, &UpdateDisplayFilters);
-  FilterLoCut.Init(200, &SendFilterLo, &UpdateDisplayFilters);
-  ActiveBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, true, &SendBand, &UpdateDisplayBand);
-
-  // properties w/o notifications or display updates
-  ActiveVFO.Init(VFO_A);
-  InactiveFreq.Init(CURRENT_FREQ_B);
-  InactiveBand.Init(BAND_40M);
-}
-
-// helper functions
-
-// these don't change NCOFreq
-void T41Properties::SetFreqA(int f) {
-  if(ActiveVFO == VFO_A) {
-    SetCenterTune(f - CenterFreq);
-  } else {
-    InactiveFreq = f;
-  }
-}
-
-void T41Properties::SetFreqB(int f) {
-  if(ActiveVFO == VFO_B) {
-    SetCenterTune(f - CenterFreq);
-  } else {
-    InactiveFreq = f;
-  }
-}
-
-void T41Properties::SwapActiveVFO() {
-  int tmp = ActiveBand;
-
-  ActiveBand = InactiveBand;
-  InactiveBand = tmp;
-
-  t41.NCOFreq = 0L;
-  tmp = CenterFreq;
-  CenterFreq = InactiveFreq;
-  InactiveFreq = tmp;
-}

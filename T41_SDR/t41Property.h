@@ -1,6 +1,10 @@
 
 #include "property.h"
 
+//-------------------------------------------------------------------------------------------------------------
+// Data
+//-------------------------------------------------------------------------------------------------------------
+
 class T41Properties {
 public:
   T41Properties();
@@ -9,8 +13,9 @@ public:
 
   // T41 properties
   // *** template doesn't decrement with unsigned int ***
-  Property<int> RemoteStatus;
+  Property<int> RemoteStatus;  // notify on change, not polled
 
+  // polled properties
   Property<int> RadioMode;
 
   Property<int> CenterFreq;
@@ -26,6 +31,9 @@ public:
   Property<int> InactiveBand;
 
   // helper functions
+  void Poll(bool updateDisplay, bool updateRemote);
+  void PollInfoBox(bool updateDisplay, bool updateRemote);
+
   int ActiveFreq() { return CenterFreq + NCOFreq; }
   int GetFreqA() { return ActiveVFO == VFO_A ? ActiveFreq() : InactiveFreq; }
   int GetFreqB() { return ActiveVFO == VFO_B ? ActiveFreq() : InactiveFreq; }
@@ -41,6 +49,15 @@ private:
 };
 
 extern T41Properties t41;
+
+//-------------------------------------------------------------------------------------------------------------
+// Forwards
+//-------------------------------------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------------------------------------
+// Code
+//-------------------------------------------------------------------------------------------------------------
+
 
 // *** possible T41 properties ***
 /*
