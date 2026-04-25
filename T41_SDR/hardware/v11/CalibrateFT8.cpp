@@ -227,8 +227,8 @@ FLASHMEM void FT8DoReceiveCalibrate() {
         break;
       case MENU_OPTION_SELECT:
         tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        EEPROMData.IQAmpCorrectionFactor[t41.ActiveBand] = IQAmpCorrectionFactor[t41.ActiveBand];
-        EEPROMData.IQPhaseCorrectionFactor[t41.ActiveBand] = IQPhaseCorrectionFactor[t41.ActiveBand];
+        //EEPROMData.IQAmpCorrectionFactor[t41.ActiveBand] = IQAmpCorrectionFactor[t41.ActiveBand];
+        //EEPROMData.IQPhaseCorrectionFactor[t41.ActiveBand] = IQPhaseCorrectionFactor[t41.ActiveBand];
         IQChoice = 6;
         break;
       default:
@@ -290,8 +290,8 @@ FLASHMEM void FT8DoXmitCalibrate() {
 
       case (MENU_OPTION_SELECT):  // Save values and exit calibration.
         tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-        EEPROMData.IQXAmpCorrectionFactor[t41.ActiveBand] = IQAmpCorrectionFactor[t41.ActiveBand];
-        EEPROMData.IQXPhaseCorrectionFactor[t41.ActiveBand] = IQPhaseCorrectionFactor[t41.ActiveBand];
+        //EEPROMData.IQXAmpCorrectionFactor[t41.ActiveBand] = IQAmpCorrectionFactor[t41.ActiveBand];
+        //EEPROMData.IQXPhaseCorrectionFactor[t41.ActiveBand] = IQPhaseCorrectionFactor[t41.ActiveBand];
         IQChoice = 6;
         break;
 

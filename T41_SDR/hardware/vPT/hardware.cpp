@@ -206,7 +206,6 @@ void InitHardware() {
 void SoftResetHardware() {
   // encoder globals
   getEncoderValueFlag = false;
-  volumeChangeFlag = false;
   resetTuningFlag = false;
   posFilterEncoder = 0;
   lastFilterEncoder = 0;

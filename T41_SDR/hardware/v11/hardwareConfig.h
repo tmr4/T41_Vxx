@@ -20,12 +20,12 @@
 #define USB_HOST_SUPPORT
 
 // uncomment below for specific USB Host device support
-#define HOST_KEYBOARD_MOUSE_SUPPORT // uses about 44k of stack
-#define HOST_SERIAL_SUPPORT
+//#define HOST_KEYBOARD_MOUSE_SUPPORT // uses about 44k of stack
+#define HOST_SERIAL_SUPPORT 1
 
 // Remote control
 // set one line below to true to enable remote control
-#define CAT_CONTROL_HOST  false  // cable from USB host on this unit to serial on remote
+#define CAT_CONTROL_HOST  true  // cable from USB host on this unit to serial on remote
 #define CAT_CONTROL       false  // cable from serial on this unit to USB host on remote
 #define T41_USB_AUDIO     false  // *** for passing audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
 
@@ -42,6 +42,6 @@
 // Set disabled services to Serial. Any messages from these services are sent to Arduino serial monitor.
 // *** note: debug messages go out over Serial and will be transmitted if controlSerial
 // is set to Serial and the unit is connected to the USB host of another unit ***
-#define controlSerial Serial // Serial or SerialUSB1 for USB port or usbHostSerial for USB Host port
+#define controlSerial usbHostSerial // Serial or SerialUSB1 for USB port or usbHostSerial for USB Host port
 #define beaconSerial Serial // Serial or SerialUSB2
 #define wsjtSerial Serial // Serial or SerialUSB1 or SerialUSB2
