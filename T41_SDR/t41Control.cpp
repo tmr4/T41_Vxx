@@ -352,7 +352,7 @@ void SendAS() {
     t41.ActiveFreq(), // freq in Hz (%011d) at index 2
     (int)t41.ActiveBand,                    // current band (%d) at index 13
     (int)t41.RadioMode,                        // transmission mode (%d) at index 14
-    currentDemodMode         // demodulation mode (%d)  at index 15
+    (int)t41.DemodMode         // demodulation mode (%d)  at index 15
   );
   T41ControlSendCmd(cmd);
 }
@@ -367,7 +367,7 @@ void SendIF() {
     t41.ActiveFreq(), // freq in Hz (%011d) at index 2
     (int)t41.ActiveBand,                    // current band (%d) at index 13
     (int)t41.RadioMode,                        // transmission mode (%d) at index 14
-    currentDemodMode,        // demodulation mode (%d)  at index 15
+    (int)t41.DemodMode,        // demodulation mode (%d)  at index 15
     (int)t41.AudioVolume,                    // audio volume (%03d) at index 16
     (int)t41.NCOFreq,                        // NCO freq (%+06d) at index 19
     currentNoiseFloor[t41.ActiveBand], // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
@@ -392,7 +392,7 @@ int GetMode() {
   if(t41.RadioMode == CW_MODE) {
     mode=3;
   } else {
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_USB:
         mode=2; // USB
         break;
@@ -627,11 +627,11 @@ void T41ControlLoop() {
       case 'M':
         if(cmd[1] == 'D' && cmd[2] == ';') {
           // send demod mode
-          sprintf(cmd,"MD%d;", useKenwoodIF ? mode : currentDemodMode);
+          sprintf(cmd,"MD%d;", useKenwoodIF ? mode : t41.DemodMode);
         } else if(cmd[1] == 'D' && cmd[3] == ';') {
           // set demod mode status
-          ChangeDemodMode(atoi(&cmd[2]));
-          SendAS();
+          ChangeDemodMode(atoi(&cmd[2]), false);
+          //SendAS();
           sendCommand = false;
         } else if(cmd[1] == 'E' && cmd[3] == ';') {
           // set operating mode

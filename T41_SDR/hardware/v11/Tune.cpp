@@ -46,10 +46,10 @@ void SetFreq(int freq, bool reset) {
   Clk1SetFreq = (freq * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
 
   if(radioState == CW_TRANSMIT_STRAIGHT_STATE || radioState == CW_TRANSMIT_KEYER_STATE) {
-    if(currentDemodMode == DEMOD_LSB) {
+    if(t41.DemodMode == DEMOD_LSB) {
       Clk1SetFreq = (freq + CWFreqShift) * SI5351_FREQ_MULT * MASTER_CLK_MULT;  // flip CWFreqShift, sign originally minus
     } else {
-      if(currentDemodMode == DEMOD_USB) {
+      if(t41.DemodMode == DEMOD_USB) {
         Clk1SetFreq = (freq - CWFreqShift) * SI5351_FREQ_MULT * MASTER_CLK_MULT;  //  flip CWFreqShift, sign originally plus
       }
     }

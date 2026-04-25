@@ -1369,7 +1369,7 @@ FLASHMEM void FT8DecoderLoop() {
 
         #ifdef USE_BUFFERED_FT8_WAV
         // delay a bit since wav buffer playback is a bit fast
-        if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+        if(t41.DemodMode == DEMOD_FT8_INTERNAL) {
           //YieldForProcess(25);
         }
         #endif

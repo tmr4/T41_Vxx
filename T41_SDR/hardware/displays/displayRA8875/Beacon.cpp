@@ -546,7 +546,7 @@ void BeaconLoop() {
     priorFreq = TxRxFreq;
     priorBand = t41.ActiveBand;
     priorMode = t41.RadioMode;
-    priorDemod = currentDemodMode;
+    priorDemod = t41.DemodMode;
 
     // set radio state for beacon monitoring
     // cycle through the bands to preset the beacon frequencies

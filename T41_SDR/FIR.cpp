@@ -100,7 +100,7 @@ void InitHilbertFilters() {
   // *** TODO: examine these filter coeficients
   // see: https://groups.io/g/SoftwareControlledHamRadio/topic/t41_hilbert_filter_design/113214259
   // ***
-  if(currentDemodMode == DEMOD_FT8) {
+  if(t41.DemodMode == DEMOD_FT8) {
     arm_fir_init_f32(&FIR_Hilbert_L, 100, FIR_Hilbert_coeffs_45_FT8, FIR_Hilbert_state_L, 256);
     arm_fir_init_f32(&FIR_Hilbert_R, 100, FIR_Hilbert_coeffs_neg45_FT8, FIR_Hilbert_state_R, 256);
   } else {

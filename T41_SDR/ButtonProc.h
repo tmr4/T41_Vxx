@@ -20,7 +20,7 @@ void ChangeBand(long newFreq);
 void ButtonFilter();
 void ButtonMode();
 void ButtonDemodMode();
-void ChangeDemodMode(int mode);
+void ChangeDemodMode(int mode, bool notify = true);
 void ChangeMode(int mode, int demod = -1, bool notify = true);
 void ButtonNR();
 void ButtonNotchFilter();

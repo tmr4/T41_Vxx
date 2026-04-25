@@ -114,7 +114,6 @@ typedef __uint8_t uint8_t;
 extern float sampleRate, intermediateFreq;
 
 extern int radioState, lastState;  // used by the main loop to monitor current state
-extern int currentDemodMode;
 
 extern int volSetting;
 

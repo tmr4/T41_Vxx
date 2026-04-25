@@ -367,9 +367,9 @@ void SetDecIntFIRFilters(int decFilterBW = 0) {
 *****/
 void CalcAudioFilters() {
   int loCut = 0, hiCut = 0;
-  float sr = sampleRate / (currentDemodMode == DEMOD_FT8 ? 1.0 : 8.0);
+  float sr = sampleRate / (t41.DemodMode == DEMOD_FT8 ? 1.0 : 8.0);
 
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_USB:
     case DEMOD_AM:
     case DEMOD_NFM:
@@ -398,7 +398,7 @@ void CalcAudioFilters() {
   UpdateAudioFilterMask(FIR_Coef_I, FIR_Coef_Q, 256 + 1, loCut, hiCut, sr);
 
   // update decimation and interpolation filters
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_NFM:
       SetDecIntFIRFilters(nfmFilterBW);
       break;
@@ -416,7 +416,7 @@ void CalcAudioFilters() {
   Purpose: set filter BW appropriate for the current demod mode and updates filters
 *****/
 FLASHMEM void SetupDemodFilterBW() {
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_USB:
     case DEMOD_LSB:
     case DEMOD_NFM:
@@ -466,7 +466,7 @@ void AdjustFilterBW(int filterChange) {
     int FW - filter width
 *****/
 void SetBWFilters(int filterChange) {
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_USB:
     case DEMOD_LSB:
     case DEMOD_PSK31:

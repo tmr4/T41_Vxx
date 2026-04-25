@@ -59,7 +59,6 @@
 float sampleRate, intermediateFreq;
 
 int radioState, lastState;
-int currentDemodMode;
 
 int volSetting = 0;
 
@@ -201,7 +200,7 @@ FLASHMEM void SoftReset() {
   // set T41 last state different from radio state indicating a state change
   // so receiver will be configured on the first pass through loop()
   lastState = -1;
-  currentDemodMode = bands[t41.ActiveBand].demod;
+  t41.DemodMode = bands[t41.ActiveBand].demod;
 
   // the following items in addition to the radio state change
   // are sufficient to fully draw the display
@@ -561,7 +560,7 @@ FASTRUN void loop() {
       while(ft8PTT) {
         static int i = 0;
 
-        switch(currentDemodMode) {
+        switch(t41.DemodMode) {
           case DEMOD_FT8:
               PrepareMicExciterData();
               WSJTLoop(); // update ft8PTT

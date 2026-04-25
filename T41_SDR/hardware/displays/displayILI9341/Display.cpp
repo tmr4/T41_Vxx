@@ -437,7 +437,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
     tft.setCursor(centerLine - 10, SPEC_BOX_LABELS);
   }
 
-  if(currentDemodMode == DEMOD_FT8) {
+  if(t41.DemodMode == DEMOD_FT8) {
     //tunedInx = -1;
     //cFreq += fInc;
     //tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
@@ -577,7 +577,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.setCursor(OPERATION_STATS_DMD, OPERATION_STATS_T);
   tft.setTextColor(ILI9341_WHITE);
 
-  tft.print(DEMOD[currentDemodMode].text);
+  tft.print(DEMOD[t41.DemodMode].text);
 
   ShowCurrentPowerSetting();
 }

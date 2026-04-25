@@ -17,6 +17,7 @@ public:
 
   // polled properties
   Property<int> RadioMode;
+  Property<int> DemodMode;
 
   Property<int> CenterFreq;
   Property<int> NCOFreq;
@@ -64,7 +65,6 @@ extern T41Properties t41;
 from T41_Views (this is private data, first letter capitalized if property):
 
 next:
-  int currentDemodMode = 1; // DEMOD_LSB
   int transmitPowerLevel = 1;
   int tuneIndex = 6;
   int ftIndex = 3;

@@ -57,7 +57,7 @@ void ProcessMenuEncoder() {
     // we're setting noise floor
     currentNoiseFloor[t41.ActiveBand] += menuEncoderMove;
   } else {
-    if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
+    if(t41.DemodMode == DEMOD_NFM && nfmBWFilterActive) {
       // we're adjusting NFM demod bandwidth
       filter_pos_BW = last_filter_pos_BW - 5 * menuEncoderMove;
     } else {

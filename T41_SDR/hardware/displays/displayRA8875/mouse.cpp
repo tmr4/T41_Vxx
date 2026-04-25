@@ -270,6 +270,6 @@ void MouseButtonOpStatsArea(int cursorX, int button) {
     ToggleCWFilter();
   } else if(button == 1 && cursorX > OPERATION_STATS_DMD - 5 && cursorX < OPERATION_STATS_DMD + 35) {
     // change to the next demod mode
-    ChangeDemodMode(currentDemodMode + 1);
+    ChangeDemodMode(t41.DemodMode + 1);
   }
 }

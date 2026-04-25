@@ -109,10 +109,10 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
    **********************************************************************************/
 /*
   // adjust IQ signal amplitude and phase
-  if(currentDemodMode == DEMOD_LSB) {
+  if(t41.DemodMode == DEMOD_LSB) {
     arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
-  } else if(currentDemodMode == DEMOD_USB) {
+  } else if(t41.DemodMode == DEMOD_USB) {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand] * 2.0, 256);
   }

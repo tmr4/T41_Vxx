@@ -187,8 +187,8 @@ FLASHMEM void FT8DoReceiveCalibrate() {
   long calFreqShift = 0;
 
   FT8CalibratePreamble(0);                                                   // Set zoom to 1X.
-  if(currentDemodMode == DEMOD_LSB) calFreqShift = 24000 - 2000;  // LSB offset
-  if(currentDemodMode == DEMOD_USB) calFreqShift = 24000 + 2250;  // USB offset
+  if(t41.DemodMode == DEMOD_LSB) calFreqShift = 24000 - 2000;  // LSB offset
+  if(t41.DemodMode == DEMOD_USB) calFreqShift = 24000 + 2250;  // USB offset
   SetFreqCal(calFreqShift);
   calTypeFlag = 0;  // RX cal
   // Receive calibration loop
@@ -341,11 +341,11 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
   UpdateIQCorrection();
 
   // adjust IQ signals for amplitude and phase correction factors
-  if(currentDemodMode == DEMOD_LSB) {
+  if(t41.DemodMode == DEMOD_LSB) {
     arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
     IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
   } else {
-    if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8) {
+    if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_FT8) {
       arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
       IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
     }
@@ -412,11 +412,11 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
     arm_scale_f32(audioBufferR, recBandFactor[t41.ActiveBand], audioBufferR, 256);
 
     // Manual IQ amplitude correction
-    if(currentDemodMode == DEMOD_LSB) {
+    if(t41.DemodMode == DEMOD_LSB) {
       arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, 256);
       IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.ActiveBand], 256);
     } else {
-      if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8) {
+      if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_FT8) {
         arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, 256);
         IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.ActiveBand], 256);
       }
@@ -485,19 +485,19 @@ FLASHMEM void FT8ShowSpectrum2() {
   //  Thus there is a target "bin" for the reference signal and another "bin" for the undesired sideband.
   //  The target bin locations are used by the for-loop to sweep a small range in the FFT.  A maximum finding function finds the peak signal strength.
   int cal_bins[2] = {0, 0};
-  if(calTypeFlag == 0 && currentDemodMode == DEMOD_LSB) {
+  if(calTypeFlag == 0 && t41.DemodMode == DEMOD_LSB) {
     cal_bins[0] = 310;
     cal_bins[1] = 460;
   }  // Receive calibration, LSB
-  if(calTypeFlag == 0 && (currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8)) {
+  if(calTypeFlag == 0 && (t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_FT8)) {
     cal_bins[0] = 65;
     cal_bins[1] = 192;
   }  // Receive calibration, USB
-  if(calTypeFlag == 1 && currentDemodMode == DEMOD_LSB) {
+  if(calTypeFlag == 1 && t41.DemodMode == DEMOD_LSB) {
     cal_bins[0] = 240;
     cal_bins[1] = 305;
   }  // Transmit calibration, LSB
-  if(calTypeFlag == 1 && (currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8)) {
+  if(calTypeFlag == 1 && (t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_FT8)) {
     cal_bins[0] = 209;
     cal_bins[1] = 273;
   }  // Transmit calibration, USB
@@ -615,11 +615,11 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
   }
 
   // Find the maximums of the desired and undesired signals.
-  if(currentDemodMode == DEMOD_LSB) {
+  if(t41.DemodMode == DEMOD_LSB) {
     arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
     arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
   }
-  if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8) {
+  if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_FT8) {
     arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
     arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
   }
@@ -659,7 +659,7 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
   if(calTypeFlag == 0) {  // Receive Cal
     adjdB = ((float)adjAmplitude - (float)refAmplitude) / 1.95;
     tft.writeTo(L2);
-    if(currentDemodMode == DEMOD_LSB) {
+    if(t41.DemodMode == DEMOD_LSB) {
       tft.fillRect(450, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);     // SPECTRUM_TOP_Y = 100
       tft.fillRect(300, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);  // h = SPECTRUM_HEIGHT + 3
     } else {                                                           // SPECTRUM_HEIGHT = 150 so h = 153
@@ -669,11 +669,11 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
   } else {                                                       //Transmit Cal
     adjdB = ((float)adjAmplitude - (float)refAmplitude) / 1.95;  // Cast to float and calculate the dB level.  KF5N
     tft.writeTo(L2);
-    if(currentDemodMode == DEMOD_LSB) {
+    if(t41.DemodMode == DEMOD_LSB) {
       tft.fillRect(295, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);  // Adjusted height due to other graphics changes.  KF5N August 3, 2023
       tft.fillRect(230, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);
     } else {
-      if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8) {  //mode == DEMOD_LSB
+      if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_FT8) {  //mode == DEMOD_LSB
         tft.fillRect(199, SPECTRUM_TOP_Y + 20, 20, 135 - 6, DARK_RED);
         tft.fillRect(263, SPECTRUM_TOP_Y + 20, 20, 135 - 6, RA8875_BLUE);
       }

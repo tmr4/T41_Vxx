@@ -76,6 +76,7 @@ void T41Properties::SetPropertyDefaults() {
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus); // notify on change, not polled
 
   RadioMode.Init(SSB_MODE, &SendSetMode, &UpdateModeDisplay);
+  DemodMode.Init(DEMOD_LSB, &SendSetDemodMode, &UpdateModeDisplay);
   ActiveBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, true, &SendBand, &UpdateDisplayBand);
 
   CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
@@ -98,6 +99,7 @@ void T41Properties::Poll(bool updateDisplay, bool updateRemote) {
   // *** TODO: consider order to minimize update duplication ***
   // *** TODO: consider refining updates as there is some duplication ***
   RadioMode.Poll(updateDisplay, updateRemote);
+  DemodMode.Poll(updateDisplay, updateRemote);
   ActiveBand.Poll(updateDisplay, updateRemote);
   CenterFreq.Poll(updateDisplay, updateRemote);
   NCOFreq.Poll(updateDisplay, updateRemote);

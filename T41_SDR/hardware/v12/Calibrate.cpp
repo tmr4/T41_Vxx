@@ -144,7 +144,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   userNCOFreq = t41.NCOFreq;
   userRadioState = radioState;
   userMode = t41.RadioMode;
-  userDemodMode = currentDemodMode;
+  userDemodMode = t41.DemodMode;
   userZoomIndex = spectrumZoom;
 
   // calibration specific configuration
@@ -155,7 +155,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
 
       t41.FilterHiCut = 1000;
       t41.FilterLoCut = -1000;
-      currentDemodMode = DEMOD_SAM;
+      t41.DemodMode = DEMOD_SAM;
       CalcAudioFilters();
 
       spectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
@@ -262,13 +262,13 @@ FLASHMEM void CalibratePost(int calType) {
   t41.NCOFreq = userNCOFreq;
   t41.CenterFreq = userCenterFreq;
   radioState = userRadioState;
-  currentDemodMode = userDemodMode;
+  t41.DemodMode = userDemodMode;
   spectrumZoom = userZoomIndex;
 
   // calibration specific restoration
   switch(calType) {
     case 0: // frequency cal
-      currentDemodMode = userDemodMode;
+      t41.DemodMode = userDemodMode;
       t41.FilterLoCut = userFilterLowCut;
       t41.FilterHiCut = userFilterHiCut;
       CalcAudioFilters();
@@ -1291,12 +1291,12 @@ FLASHMEM float ShowSpectrum2() {
    * in Utility.cpp). We have zoom of x16, so the bin size is 375/16 = 23.4 Hz. So the
    * bin numbers are 256 + 750/(375/16) = 256+32 = 288 and 256-32 = 224
    ******************************/
-  if(calTypeFlag == 1 && currentDemodMode == DEMOD_LSB) {
+  if(calTypeFlag == 1 && t41.DemodMode == DEMOD_LSB) {
     capture_bins = 10;  // scans 2*capture_bins
     cal_bins[0] = 257 - 32;
     cal_bins[1] = 257 + 32;
   }  // Transmit calibration, LSB.
-  if(calTypeFlag == 1 && currentDemodMode == DEMOD_USB) {
+  if(calTypeFlag == 1 && t41.DemodMode == DEMOD_USB) {
     capture_bins = 10;  // scans 2*capture_bins
     cal_bins[0] = 257 + 32;
     cal_bins[1] = 257 - 32;
@@ -1872,22 +1872,22 @@ FLASHMEM void ProcessTransmitCalIQData() {
     //arm_scale_f32(audioBufferR, bands[t41.ActiveBand].rfGain, audioBufferR, 2048);
 
     // Manual IQ amplitude correction
-    if(currentDemodMode == DEMOD_LSB || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM) {
+    if(t41.DemodMode == DEMOD_LSB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM) {
       arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, 2048);
       IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.ActiveBand], 2048);
     } else {
-      if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM) {
-      //if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_FT8 || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM) {
+      if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM) {
+      //if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_FT8 || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM) {
         arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, 2048);
         IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.ActiveBand], 2048);
       }
     }
 
 
-    if(currentDemodMode == DEMOD_LSB) {
+    if(t41.DemodMode == DEMOD_LSB) {
       arm_scale_f32(audioBufferL, IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL, 2048);
     }
-    else if(currentDemodMode == DEMOD_USB) {
+    else if(t41.DemodMode == DEMOD_USB) {
       arm_scale_f32(audioBufferL, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL, 2048);
     }
     IQPhaseCorrection(audioBufferL, audioBufferR, IQXPhaseCorrectionFactor[t41.ActiveBand], 2048);
@@ -2310,7 +2310,7 @@ void SetupSignalStrengthSource(int source) {
       minSignalStrength = 0;
       signalStrengthSource = 1;
       SendCenterFreq(t41.CenterFreq + intermediateFreq);
-      if(currentDemodMode == DEMOD_LSB) {
+      if(t41.DemodMode == DEMOD_LSB) {
         SendSetDemodMode(DEMOD_USB);
       } else {
         SendSetDemodMode(DEMOD_LSB);

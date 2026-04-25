@@ -53,7 +53,7 @@ FLASHMEM void UpdateBand(int from) {
 
   // *** SSB/data demolation mode are unchanged across band changes ***
   if((t41.RadioMode == SSB_MODE) || (t41.RadioMode == CW_MODE)) {
-    currentDemodMode = ValidateDemodMode(-1);
+    t41.DemodMode = ValidateDemodMode(-1);
   }
 
   if(vfo == VFO_SPLIT) {
@@ -71,7 +71,7 @@ FLASHMEM void UpdateBand(int from) {
   }
 
   if(t41.RadioMode == DATA_MODE) {
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_FT8:
         break;
 
@@ -133,7 +133,7 @@ FLASHMEM void ChangeBand(long newFreq) {
   Purpose: Toggle which filter is adjusted by filter encoder
 *****/
 FLASHMEM void ButtonFilter() {
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_NFM:
     // Active filter in NFM demod mode:
     // At startup:  high audio
@@ -197,10 +197,10 @@ FLASHMEM int ValidateDemodMode(int demod) {
   Purpose: Change the demodulation mode
           *** can't use this to change radio mode ***
 *****/
-FLASHMEM void ChangeDemodMode(int demod) {
+FLASHMEM void ChangeDemodMode(int demod, bool notify /* = true */) {
   int mode;
 
-  if(demod == currentDemodMode) {
+  if(demod == t41.DemodMode) {
     return; // nothing to do
   }
 
@@ -210,11 +210,15 @@ FLASHMEM void ChangeDemodMode(int demod) {
     case SSB_MODE:
     case CW_MODE:
     case DSB_MODE:
-      currentDemodMode = mode;
+      if(notify) {
+        t41.DemodMode = mode;
+      } else {
+        t41.DemodMode.Update(mode);
+      }
       break;
 
     case DATA_MODE:
-      ChangeMode(DATA_MODE, mode);
+      ChangeMode(DATA_MODE, mode, notify);
       return;
       break;
 
@@ -234,7 +238,7 @@ FLASHMEM void ChangeDemodMode(int demod) {
       DATA: FT8 -> FT8.int -> FT8.wav
 *****/
 FLASHMEM void ButtonDemodMode() {
-  ChangeDemodMode(currentDemodMode + 1);
+  ChangeDemodMode(t41.DemodMode + 1);
 }
 
 /*****
@@ -247,7 +251,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
   int tmp = t41.RadioMode;
 
   if(mode == t41.RadioMode) {
-    if((demod < 0) || (demod == currentDemodMode)) {
+    if((demod < 0) || (demod == t41.DemodMode)) {
       return; // nothing to do
     } // else continue to change demod mode for current radio mode
   }
@@ -285,7 +289,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
       break;
 
     case DATA_MODE:
-      switch(currentDemodMode) {
+      switch(t41.DemodMode) {
         case DEMOD_FT8:
           ExitFT8();
           break;
@@ -310,7 +314,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
   }
 
   // set new demod mode
-  currentDemodMode = ValidateDemodMode(demod);
+  t41.DemodMode = ValidateDemodMode(demod);
 
   // set up radio for changes
   switch(t41.RadioMode) {
@@ -335,7 +339,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
       break;
 
     case DATA_MODE:
-      switch(currentDemodMode) {
+      switch(t41.DemodMode) {
         case DEMOD_FT8:
           InitFT8();
           break;
@@ -347,7 +351,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
             // can't set up FT8 decode, fall back to normal FT8
             ExitFT8Decoder();
 
-            currentDemodMode = DEMOD_FT8;
+            t41.DemodMode = DEMOD_FT8;
             InitFT8();
           }
           break;
@@ -365,14 +369,14 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
               ExitFT8Decoder();
 
               // can't set up FT8 decode, fall back to normal FT8
-              currentDemodMode = DEMOD_FT8;
+              t41.DemodMode = DEMOD_FT8;
               InitFT8();
             }
           } else {
             // can't set up FT8 decode, fall back to normal FT8
             ExitFT8Decoder();
 
-            currentDemodMode = DEMOD_FT8;
+            t41.DemodMode = DEMOD_FT8;
             InitFT8();
           }
           break;
@@ -380,7 +384,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
         case DEMOD_PSK31:
           //  *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
           //setupPSK31();
-          //currentDemodMode = DEMOD_PSK31;
+          //t41.DemodMode = DEMOD_PSK31;
           break;
 
         default:

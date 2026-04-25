@@ -57,7 +57,7 @@ int CheckNCOFreqBounds(int f) {
   int freq = f;
   int lowSideAdj = 0, highSideAdj = 0;
 
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_USB:
     case DEMOD_PSK31_WAV:
     case DEMOD_PSK31:

@@ -107,7 +107,7 @@ void MouseWheelMenuArea(int wheel) {
 }
 
 void MouseButtonSpectrumWaterfall(int button) {
-  if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+  if(t41.DemodMode == DEMOD_FT8_INTERNAL) {
     FT8MsgWindowClick(cursorX, cursorY, button);
     return;
   }
@@ -151,7 +151,7 @@ void MouseButtonSpectrumWaterfall(int button) {
 }
 
 void MouseWheelSpectrumWaterfall(int wheel) {
-  if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+  if(t41.DemodMode == DEMOD_FT8_INTERNAL) {
     if(wheel != 0) ScrollFt8MsgWindow(cursorX, wheel);
   } else {
     if(mouseCenterTuneActive) {
@@ -189,13 +189,13 @@ void MouseLoop() {
       } else if(CursorInAudioSpectrum(cursorX, cursorY)) {
         ButtonFilter();
       } else if(CursorInSpectrumWaterfall(cursorX, cursorY)) {
-        if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+        if(t41.DemodMode == DEMOD_FT8_INTERNAL) {
           FT8MsgWindowClick(cursorX, cursorY, button);
         } else {
           MouseButtonSpectrumWaterfall(button);
         }
       } else if(CursorInInfoBox(cursorX, cursorY)) {
-        if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+        if(t41.DemodMode == DEMOD_FT8_INTERNAL) {
           FT8MsgWindowClick(cursorX, cursorY, button);
         } else {
           MouseButtonInfoBox(button, cursorX + cursorW / 2, cursorY + cursorH / 2);
@@ -211,13 +211,13 @@ void MouseLoop() {
       } else if(CursorInFreqArea(cursorX, cursorY)) {
         MouseWheelFreqArea(cursorX, wheel);
       } else if(CursorInSpectrumWaterfall(cursorX, cursorY)) {
-        if(currentDemodMode == DEMOD_FT8_INTERNAL) {
+        if(t41.DemodMode == DEMOD_FT8_INTERNAL) {
           ScrollFt8MsgWindow(cursorX, wheel);
         } else {
           MouseWheelSpectrumWaterfall(wheel);
         }
       } else if(CursorInAudioSpectrum(cursorX, cursorY)) {
-        if(currentDemodMode == DEMOD_NFM && nfmBWFilterActive) {
+        if(t41.DemodMode == DEMOD_NFM && nfmBWFilterActive) {
           // we're adjusting NFM demod bandwidth
           filter_pos_BW = last_filter_pos_BW - 5 * wheel;
         } else {

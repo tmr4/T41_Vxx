@@ -128,17 +128,17 @@ FLASHMEM void VFOSelect(int32_t index) {
   // *** TODO: this needs reworked ***
   /*
   if(t41.RadioMode == DATA_MODE) {
-    priorDemodMode = currentDemodMode; // save demod mode for restoration later
+    priorDemodMode = t41.DemodMode; // save demod mode for restoration later
 
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_PSK31_WAV:
       case DEMOD_PSK31:
-        currentDemodMode = DEMOD_PSK31;
+        t41.DemodMode = DEMOD_PSK31;
         break;
 
       case DEMOD_FT8_INTERNAL:
       case DEMOD_FT8_WAV:
-        currentDemodMode = DEMOD_FT8_INTERNAL;
+        t41.DemodMode = DEMOD_FT8_INTERNAL;
         ft8SyncState = 0;
         UpdateInfoBoxItem(IB_ITEM_FT8);
         break;

@@ -380,7 +380,7 @@ void DrawAudioFilterLines() {
   // draw fiter indicator lines on the audio spectrum
 
   // set color of active filter bar to green
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_USB:
     case DEMOD_LSB:
     case DEMOD_PSK31:
@@ -640,7 +640,7 @@ FASTRUN void DrawAudioSpectrum() {
       }
 
       // *** TODO: impliment auto level for audio spectrum ***
-      if(currentDemodMode == DEMOD_LSB) {
+      if(t41.DemodMode == DEMOD_LSB) {
         audioYPixel = audioSpectrumOffset + map(15 * log10f((audioSpectBuffer[i] + audioSpectBuffer[i + 1] + audioSpectBuffer[i + 2]) / 3), 0, 100, 0, AUDIO_SPEC_H);
       } else {
         audioYPixel = audioSpectrumOffset + map(15 * log10f((audioSpectBuffer[1021 - i] + audioSpectBuffer[1022 - i] + audioSpectBuffer[1023 - i]) / 3), 0, 100, 0, AUDIO_SPEC_H);
@@ -696,7 +696,7 @@ FLASHMEM void ShowBandwidthBarValues() {
   tft.fillRect(posLeft, FILTER_PARAMETERS_Y, 200, tft.getFontHeight(), RA8875_BLACK);
 
   // set color of active filter value to green
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_USB:
     case DEMOD_PSK31:
     case DEMOD_FT8:
@@ -742,7 +742,7 @@ FLASHMEM void ShowBandwidthBarValues() {
       break;
   }
 
-  if(currentDemodMode != DEMOD_NFM) {
+  if(t41.DemodMode != DEMOD_NFM) {
     tft.setTextColor(loColor);
     MyDrawFloat(loValue, 1, posLeft, FILTER_PARAMETERS_Y, buff);
     tft.print("kHz");
@@ -802,7 +802,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
     tft.setCursor(centerLine - 20, SPEC_BOX_LABELS);
   }
 
-  if(currentDemodMode == DEMOD_FT8) {
+  if(t41.DemodMode == DEMOD_FT8) {
     //tunedInx = -1;
     //cFreq += fInc;
     //tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
@@ -927,7 +927,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.setCursor(OPERATION_STATS_DMD, OPERATION_STATS_T);
   tft.setTextColor(RA8875_WHITE);
 
-  tft.print(DEMOD[currentDemodMode].text);
+  tft.print(DEMOD[t41.DemodMode].text);
 
   ShowCurrentPowerSetting();
   ShowRemoteStatus();
@@ -1163,7 +1163,7 @@ FASTRUN void DrawBandwidthBar() {
     zoomOffset = 48000.0 * pixel_per_hz;
   }
 
-  if(currentDemodMode == DEMOD_FT8) {
+  if(t41.DemodMode == DEMOD_FT8) {
     //zoomOffset = 44100.0 / 8.0 * pixel_per_hz / ((float)(1 << spectrumZoom)) * 2.0;
   }
 
@@ -1172,7 +1172,7 @@ FASTRUN void DrawBandwidthBar() {
   newFilterWidth = (int)(((float)(t41.FilterHiCut - t41.FilterLoCut)) * pixel_per_hz * 1.06);
 
   // make sure bandwidth is within zoom range
-  switch(currentDemodMode) {
+  switch(t41.DemodMode) {
     case DEMOD_USB:
     case DEMOD_PSK31:
     case DEMOD_FT8:
@@ -1209,7 +1209,7 @@ FASTRUN void DrawBandwidthBar() {
 
   // update bar if we haven't reset tuning, otherwise this gets recalled by that routine
   if(!resetTuningFlag) {
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_USB:
       case DEMOD_PSK31:
       case DEMOD_FT8:
@@ -1334,7 +1334,7 @@ FLASHMEM void DrawAudioSpectContainer() {
   int start = 1;
   int inc = 1;
 
-  if(currentDemodMode == DEMOD_FT8) {
+  if(t41.DemodMode == DEMOD_FT8) {
     pixels_kHz *= 24.0 / 44.1;
     ticks = 11;
     start = 2;
@@ -1465,7 +1465,7 @@ FLASHMEM void SetZoom(int zoom) {
   }
 
   // limit zoom in FT8 mode to 2x and 4x
-  if(currentDemodMode == DEMOD_FT8) {
+  if(t41.DemodMode == DEMOD_FT8) {
     if((spectrumZoom == 0) || (spectrumZoom > 2)) {
       spectrumZoom = 1;
     }

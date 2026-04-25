@@ -196,7 +196,7 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
       audioSpectBuffer[1023 - k] = (audioIFFT[k] * audioIFFT[k]);
     }
 
-    if(currentDemodMode != DEMOD_NFM)
+    if(t41.DemodMode != DEMOD_NFM)
     {
       arm_max_f32(audioSpectBuffer, 1024, &audioMaxSquared, &audioMaxIndex);  // Max value of squared bin magnitued in audio
       audioMaxSquaredAve = .5 * audioMaxSquared + .5 * audioMaxSquaredAve;  // Running averaged values
@@ -236,7 +236,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   q15_t q15_buffer_LTemp[2048];
   float rfGainValue, intScaler;
   // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8 or 24Hz
-  int blocks = currentDemodMode == DEMOD_FT8 ? 2 : 16;
+  int blocks = t41.DemodMode == DEMOD_FT8 ? 2 : 16;
   // *** he amount of data required by the frequency spectrum calc depends on the zoom factor ***
   static int reqPasses = 20;
   static int passes = 20;
@@ -299,7 +299,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         and subtract the Means from the float L and R buffer data arrays.  Again use Arm_Math functions
         to manipulate the arrays.  Arrays are all 2048 long
     **********************************************************************************/
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       //case DEMOD_FT8:
       //  break;
 
@@ -338,10 +338,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     ***********************************************************************************************/
 
     // Manual IQ amplitude correction
-    if(currentDemodMode == DEMOD_LSB || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM || currentDemodMode == DEMOD_NFM) {
+    if(t41.DemodMode == DEMOD_LSB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM || t41.DemodMode == DEMOD_NFM) {
       arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, blocks * 128);
       IQPhaseCorrection(audioBufferL, audioBufferR, -IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
-    //} else if(currentDemodMode == DEMOD_USB || currentDemodMode == DEMOD_AM || currentDemodMode == DEMOD_SAM || currentDemodMode == DEMOD_FT8) {
+    //} else if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM || t41.DemodMode == DEMOD_FT8) {
     } else {
       arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, blocks * 128);
       IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
@@ -445,7 +445,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         now 192K/8 = 24K SPS.  The array size is also reduced by 8, making FFT calculations much faster.
         The effective bandwidth (up to Nyquist frequency) is 12KHz.
     **********************************************************************************/
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_PSK31:
         // decimation-by-4 in-place!
         arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
@@ -539,7 +539,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
     // audio DSP
     // apply audio filter cutoffs and calculate audio spectrum data
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_NFM:
         CalcAudioMax();
 
@@ -584,7 +584,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         our time domain output is a combination of the real part (left channel) AND the imaginary part (right channel) of the second half of the audioFFT
         The demod mode is accomplished by selecting/combining the real and imaginary parts of the output of the IFFT process.
     **********************************************************************************/
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_AM:
         for(int i = 0; i < 256; i++) {     // Magnitude estimation Lyons (2011): page 652 / libcsdr
           audiotmp = AlphaBetaMag(audioIFFT[512 + (i * 2)], audioIFFT[512 + (i * 2) + 1]);
@@ -661,7 +661,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     }
 
     // additional DSP work #1
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       // no additional work
       case DEMOD_AM:
       case DEMOD_SAM:
@@ -679,7 +679,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     }
 
     // additional DSP work #2
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_FT8_INTERNAL:
         #ifndef USE_BUFFERED_FT8_WAV
         // prepare FT8 library signal
@@ -805,7 +805,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     }
 
     // ======================================Interpolation  ================
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_FT8:
         // not needed, we're at a 44.1kHz sample rate and haven't decimated
         // *** this scaler works for a Windows input sound device volume of 10 to give
@@ -1089,10 +1089,10 @@ void FreqShift2() {
     sideToneShift = 0;
   } else {
     if(t41.RadioMode == CW_MODE ) {
-      if(currentDemodMode == 1) {
+      if(t41.DemodMode == 1) {
         sideToneShift = CWFreqShift;
       } else {
-        if(currentDemodMode == 0) {
+        if(t41.DemodMode == 0) {
           sideToneShift = -CWFreqShift;
         }
       }

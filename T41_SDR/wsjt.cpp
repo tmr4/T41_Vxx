@@ -208,7 +208,7 @@ int GetKenwoodMode() {
   if(t41.RadioMode == CW_MODE) {
     mode=3;
   } else {
-    switch(currentDemodMode) {
+    switch(t41.DemodMode) {
       case DEMOD_USB:
         mode=2; // USB
         break;

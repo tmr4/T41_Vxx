@@ -385,7 +385,7 @@ FLASHMEM void GetFavoriteFrequency() {
       //digitalWrite(bandswitchPins[t41.ActiveBand], LOW);
       //ShowSpectrumdBScale();
       //DrawFreqSpectrum();
-      //currentDemodMode = t41.ActiveBand;
+      //t41.DemodMode = t41.ActiveBand;
       return;
     }
   }
