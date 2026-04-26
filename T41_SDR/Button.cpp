@@ -152,7 +152,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case NOISE_FLOOR:  // 11
-      ToggleLiveNoiseFloorFlag();
+      t41.LiveNoiseFloor += 1;
       break;
 
     case FINE_TUNE_INCREMENT:  // 12

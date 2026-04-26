@@ -504,18 +504,15 @@ void WSJTLoop()
           // send noise floor
           sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.ActiveBand]);
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
+          int val = atoi(&cmd[2]);
+
           // set noise floor
-          currentNoiseFloor[t41.ActiveBand] = atoi(&cmd[2]);
+          currentNoiseFloor[t41.ActiveBand] = val;
+          t41.NoiseFloor.Update(val);
           return;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           // *** TODO: consider just toggling this through call to
-          liveNoiseFloorFlag = atoi(&cmd[2]);
-
-          // save final noise floor setting if toggling flag off
-          if(liveNoiseFloorFlag == 0) {
-            //EEPROMData.currentNoiseFloor[t41.ActiveBand]  = currentNoiseFloor[t41.ActiveBand];
-            EEPROMWrite();
-          }
+          t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
           return;
         }

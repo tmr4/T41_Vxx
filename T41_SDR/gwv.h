@@ -68,7 +68,6 @@ extern int sdCardPresent;
 
 extern float myLat;
 extern float myLong;
-extern int currentNoiseFloor[];
 extern int compressorFlag;
 
 extern int buttonThresholdPressed;

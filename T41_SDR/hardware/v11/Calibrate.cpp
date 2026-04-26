@@ -1578,12 +1578,12 @@ FLASHMEM void SetupSignalStrengthSource(int source) {
       signalStrengthSource = 1;
       SendCenterFreq(t41.CenterFreq + intermediateFreq);
       if(t41.DemodMode == DEMOD_LSB) {
-        SendSetDemodMode(DEMOD_USB);
+        SendDemodMode(DEMOD_USB);
       } else {
-        SendSetDemodMode(DEMOD_LSB);
+        SendDemodMode(DEMOD_LSB);
       }
-      SendSetDisplayZoom(2);
-      SendSetNarrowFilter();
+      SendDisplayZoom(2);
+      SendNarrowFilter();
 
       // allow frequency to stabilize
       prevMillis = millis();
@@ -1904,7 +1904,7 @@ FLASHMEM void CalibrateIQAllBands() {
   // *** this code assumes external T41 starts on 40m band ***
   bandCalBand = t41.ActiveBand;
   ChangeBand(BAND_80M - t41.ActiveBand);
-  //SendSetBandChange(-1); // v12 external
+  //SendBandChange(-1); // v12 external
 
   // cycle through bands doing auto cal
   for(int i = BAND_80M; i < NUMBER_OF_BANDS; i++) {
@@ -1945,7 +1945,7 @@ FLASHMEM void CalibrateIQAllBands() {
     }
 
     ChangeBand(1);
-    //SendSetBandChange(1); // v12 external
+    //SendBandChange(1); // v12 external
   }
 
   Serial.println();

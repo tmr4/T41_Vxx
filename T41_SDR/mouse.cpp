@@ -61,8 +61,6 @@ FLASHMEM void MouseInit() {
   SetMouseArea(0, 0, GetDisplayWidth(), GetDisplayHeight());
   cursorW = GetCursorWidth();
   cursorH = GetCursorHeight();
-
-  HighlightIBItem(IB_ITEM_FINE, 0x07E0); // RA8875_GREEN); *** display dependent ***
 }
 
 void MoveCursor(int x, int y) {
@@ -224,8 +222,8 @@ void MouseLoop() {
           posFilterEncoder = lastFilterEncoder - 5 * wheel;
         }
       } else if(CursorInInfoBox(cursorX, cursorY)) {
-        if(liveNoiseFloorFlag == 2) {
-          currentNoiseFloor[t41.ActiveBand] += wheel;
+        if(t41.LiveNoiseFloor == 2) {
+          t41.NoiseFloor = currentNoiseFloor[t41.ActiveBand] += wheel;
         } else {
           MouseWheelInfoBox(wheel, cursorX + cursorW / 2, cursorY + cursorH / 2);
         }

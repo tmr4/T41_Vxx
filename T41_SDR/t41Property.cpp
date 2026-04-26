@@ -78,10 +78,11 @@ void T41Properties::SetPropertyDefaults() {
   // notify properties (not polled!)
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
   MouseCenterTuneActive.Init(false, &SendMouseCenterTuneActive, &HighlightTuneInc, false); // make it a notify property
+  NoiseFloor.Init(0, &SendNoiseFloor, NULL, false); // make it a notify property
 
   // polled properties
-  RadioMode.Init(SSB_MODE, &SendSetMode, &UpdateModeDisplay);
-  DemodMode.Init(DEMOD_LSB, &SendSetDemodMode, &UpdateModeDisplay);
+  RadioMode.Init(SSB_MODE, &SendMode, &UpdateModeDisplay);
+  DemodMode.Init(DEMOD_LSB, &SendDemodMode, &UpdateModeDisplay);
   ActiveBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, true, &SendBand, &UpdateDisplayBand);
 
   CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
@@ -91,10 +92,11 @@ void T41Properties::SetPropertyDefaults() {
 
   // infobox properties
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
-  AGCMode.Init(1, 0, 5 - 1, true, &SendSetAGC, &UpdateInfoBoxItem, IB_ITEM_AGC);
+  AGCMode.Init(1, 0, 5 - 1, true, &SendAGC, &UpdateInfoBoxItem, IB_ITEM_AGC);
   CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, maxFreqIncIndex - 1, true, &SendFreqIncrement, &UpdateInfoBoxItem, IB_ITEM_TUNE);
   FineTuneIndex.Init(DEFAULT_FT_INDEX, 0, maxFtIncIndex - 1, true, &SendFtIncrement, &UpdateInfoBoxItem, IB_ITEM_FINE);
-  SpectrumZoom.Init(1, 0, MAX_ZOOM_ENTRIES - 1, true, &SendSetDisplayZoom, &UpdateInfoBoxItem, IB_ITEM_ZOOM);
+  SpectrumZoom.Init(1, 0, MAX_ZOOM_ENTRIES - 1, true, &SendDisplayZoom, &UpdateInfoBoxItem, IB_ITEM_ZOOM);
+  LiveNoiseFloor.Init(0, 0, 2, true, &SendNFSetting, &UpdateInfoBoxItem, IB_ITEM_FLOOR); // OFF=0, Auto=1, ON=2
 
   // *** TODO: these need notifications/updates added ***
   ActiveVFO.Init(VFO_A);
@@ -127,6 +129,7 @@ void T41Properties::PollInfoBox(bool updateDisplay) {
   CenterTuneIndex.Poll(updateDisplay, updateRemote);
   FineTuneIndex.Poll(updateDisplay, updateRemote);
   SpectrumZoom.Poll(updateDisplay, updateRemote);
+  LiveNoiseFloor.Poll(updateDisplay, updateRemote);
 }
 
 // these don't change NCOFreq

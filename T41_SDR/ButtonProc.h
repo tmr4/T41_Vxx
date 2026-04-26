@@ -4,7 +4,6 @@
 //-------------------------------------------------------------------------------------------------------------
 
 extern bool lowerAudioFilterActive;
-extern int liveNoiseFloorFlag;
 
 extern bool nfmBWFilterActive;
 
@@ -23,7 +22,6 @@ void ChangeMode(int mode, int demod = -1, bool notify = true);
 void ButtonNR();
 void ButtonNotchFilter();
 void ButtonFrequencyEntry();
-void ToggleLiveNoiseFloorFlag();
 void ToggleCWDecoder();
 
 void ChangeFreqIncrement(int change, bool notify = true);

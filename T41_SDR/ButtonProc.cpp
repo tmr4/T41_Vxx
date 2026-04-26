@@ -24,7 +24,6 @@
 //-------------------------------------------------------------------------------------------------------------
 
 bool lowerAudioFilterActive = false; // false - upper, true - lower audio filter active
-int liveNoiseFloorFlag = OFF;         // ON=1, OFF=0, Auto=-1
 
 bool nfmBWFilterActive = false; // false - audio filters active, true - NFM BW demod filter active
 
@@ -431,25 +430,6 @@ FLASHMEM void ButtonNotchFilter() {
   delay(100L);
 }
 
-
-/*****
-  Purpose:  Toggles flag to allow quick setting of noise floor in spectrum display.
-            Saves current noise floor to EEPROM when toggled to Off.  A band's
-            current noise floor isn't preserved in EEPROM if you switch bands while
-            toggle is On.
-*****/
-FLASHMEM void ToggleLiveNoiseFloorFlag() {
-  // save final noise floor setting if toggling from ON
-  if(liveNoiseFloorFlag == 2) {
-    //EEPROMData.currentNoiseFloor[t41.ActiveBand]  = currentNoiseFloor[t41.ActiveBand];
-    EEPROMWrite();
-  }
-
-  // toggle noise floor flag: OFF -> Auto -> ON -> OFF
-  liveNoiseFloorFlag += 1;
-  if(liveNoiseFloorFlag > 2) liveNoiseFloorFlag = 0;
-  UpdateInfoBoxItem(IB_ITEM_FLOOR);
-}
 
 /*****
   Purpose: To process a frequency increment button push

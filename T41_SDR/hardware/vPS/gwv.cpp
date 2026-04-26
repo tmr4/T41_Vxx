@@ -91,8 +91,6 @@ int sdCardPresent = 0;  // Do they have an micro SD card installed?
 
 float myLat = MY_LAT;
 float myLong = MY_LON;
-//int currentNoiseFloor[NUMBER_OF_BANDS] = { 0, 50, 0, 0, 0, 0, 0 };
-int currentNoiseFloor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 int compressorFlag = 0;
 
 int buttonThresholdPressed = 944;   // switchValues[0] + WIGGLE_ROOM

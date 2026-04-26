@@ -147,7 +147,7 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
   { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
   { "Zoom:",       zoomOptions, (int*)&t41.SpectrumZoom,     0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    &IBZoomFollowup        }, // Zoom
-  { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,         0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
+  { "NF Set:",     nfOptions,   (int*)&t41.LiveNoiseFloor,         0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
   { "AutoNotch:",  onOff,       (int*)&ANR_notchOn,          0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
   { "Compress:",   onOff,       &compressorFlag,             0,        6,      1,   IB_COL_2_X,    IB_ROW_5_Y,    &IBCompressionFollowup }, // Compress
 
@@ -742,7 +742,7 @@ void MouseButtonInfoBox(int button, int x, int y) {
           break;
 
         case IB_ITEM_FLOOR:
-          ToggleLiveNoiseFloorFlag();
+          t41.LiveNoiseFloor += 1;
           break;
 
         case IB_ITEM_DECODER:

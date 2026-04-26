@@ -209,14 +209,14 @@ void SendID(bool request) {
   T41ControlSendCmd(cmd);
 }
 
-void SendSetFreqA(int freq) {
+void SendFreqA(int freq) {
   char cmd[20];
 
   sprintf(cmd, "FA%011d;", freq);
   T41ControlSendCmd(cmd);
 }
 
-void SendSetFreqB(int freq) {
+void SendFreqB(int freq) {
   char cmd[20];
 
   sprintf(cmd, "FB%011d;", freq);
@@ -239,7 +239,7 @@ void SendNCOFreq(int freq) {
   T41ControlSendCmd(cmd);
 }
 
-void SendSetBandChange(int upDown) {
+void SendBandChange(int upDown) {
   char cmd[5];
 
   if(upDown > 0) {
@@ -258,19 +258,19 @@ void SendBand(int band) {
   T41ControlSendCmd(cmd);
 }
 
-void SendSetDemodMode(int mode) {
+void SendDemodMode(int mode) {
   char cmd[5];
   sprintf(cmd, "MD%d;", mode);
   T41ControlSendCmd(cmd);
 }
 
-void SendSetMode(int mode) {
+void SendMode(int mode) {
   char cmd[5];
   sprintf(cmd, "ME%d;", mode);
   T41ControlSendCmd(cmd);
 }
 
-void SendSetDisplayZoom(int zoom) {
+void SendDisplayZoom(int zoom) {
   char cmd[5];
 
   sprintf(cmd, "ZM%d;", zoom);
@@ -336,7 +336,7 @@ void SendSignalStrengthRequest(int index) {
 }
 
 // sets 0.5kHz-1.5kHz audio filter
-void SendSetNarrowFilter() {
+void SendNarrowFilter() {
   char cmd[4];
 
   sprintf(cmd, "NW;");
@@ -365,10 +365,24 @@ void SendMouseCenterTuneActive(int val) {
   T41ControlSendCmd(cmd);
 }
 
-void SendSetAGC(int val) {
+void SendAGC(int val) {
   char cmd[5];
 
   sprintf(cmd, "GT%d;", val);
+  T41ControlSendCmd(cmd);
+}
+
+void SendNFSetting(int val) {
+  char cmd[5];
+
+  sprintf(cmd, "NG%d;", val);
+  T41ControlSendCmd(cmd);
+}
+
+void SendNoiseFloor(int val) {
+  char cmd[8];
+
+  sprintf(cmd, "NF%04d;", val);
   T41ControlSendCmd(cmd);
 }
 
@@ -392,20 +406,20 @@ void SendIF() {
     // active VFO Freq = TxRxFreq, t41.CenterFreq = TxRxFreq - NCOFreq
     //  *** TODO: we only need 8 digits for first field for T41, consider using other 3 for something ***
     t41.ActiveFreq(), // freq in Hz (%011d) at index 2
-    (int)t41.ActiveBand,                    // current band (%d) at index 13
-    (int)t41.RadioMode,                        // transmission mode (%d) at index 14
-    (int)t41.DemodMode,        // demodulation mode (%d)  at index 15
-    (int)t41.AudioVolume,                    // audio volume (%03d) at index 16
-    (int)t41.NCOFreq,                        // NCO freq (%+06d) at index 19
-    currentNoiseFloor[t41.ActiveBand], // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
-    liveNoiseFloorFlag,             // set noise floor active/inactive 1/0 (%d) at index 29
-    !GetXRState(),                       // RX/TX (1/0) (%d) at index 30
-    (int)t41.ActiveVFO,                      // VFO A/B (0/1) (%d) at index 31
+    (int)t41.ActiveBand,            // current band (%d) at index 13
+    (int)t41.RadioMode,             // transmission mode (%d) at index 14
+    (int)t41.DemodMode,             // demodulation mode (%d)  at index 15
+    (int)t41.AudioVolume,           // audio volume (%03d) at index 16
+    (int)t41.NCOFreq,               // NCO freq (%+06d) at index 19
+    (int)t41.NoiseFloor,            // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
+    (int)t41.LiveNoiseFloor,        // set noise floor active/inactive 1/0 (%d) at index 29
+    !GetXRState(),                  // RX/TX (1/0) (%d) at index 30
+    (int)t41.ActiveVFO,             // VFO A/B (0/1) (%d) at index 31
     (int)t41.MouseCenterTuneActive, // fine or center tune enabled (0/1) (%d) at index 32
-    (int)t41.FineTuneIndex,                        // fine tune index (%d) at index 33
-    (int)t41.CenterTuneIndex,                      // center tune index (%d) at index 34
-    (int)t41.AGCMode,                        // AGC mode (%d) at index 35
-    (int)t41.SpectrumZoom,                   // spectrum zoom (%d) at index 36
+    (int)t41.FineTuneIndex,         // fine tune index (%d) at index 33
+    (int)t41.CenterTuneIndex,       // center tune index (%d) at index 34
+    (int)t41.AGCMode,               // AGC mode (%d) at index 35
+    (int)t41.SpectrumZoom,          // spectrum zoom (%d) at index 36
     (int)t41.InactiveFreq           // inactive VFO freq in Hz (%011d) at index 37
     //splitVFO ? 1 : 0,             // VFO split status (%d) at index xx
   );
@@ -675,18 +689,14 @@ void T41ControlLoop() {
           // send noise floor
           sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.ActiveBand]);
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
+          int val = atoi(&cmd[2]);
+
           // set noise floor
-          currentNoiseFloor[t41.ActiveBand] = atoi(&cmd[2]);
+          currentNoiseFloor[t41.ActiveBand] = val;
+          t41.NoiseFloor.Update(val);
           sendCommand = false;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
-          // *** TODO: consider just toggling this through call to
-          liveNoiseFloorFlag = atoi(&cmd[2]);
-
-          // save final noise floor setting if toggling flag off
-          if(liveNoiseFloorFlag == 0) {
-            //EEPROMData.currentNoiseFloor[t41.ActiveBand]  = currentNoiseFloor[t41.ActiveBand];
-            EEPROMWrite();
-          }
+          t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
           UpdateInfoBoxItem(IB_ITEM_FLOOR);
           sendCommand = false;
         } else if(cmd[1] == 'H' && cmd[13] == ';') {

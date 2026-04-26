@@ -1918,7 +1918,7 @@ FLASHMEM void PlotSpectrum() {
   // set current noise flow level for this loop
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
-  if(liveNoiseFloorFlag != 1) {
+  if(t41.LiveNoiseFloor != 1) {
     currentNF = currentNoiseFloor[t41.ActiveBand];
   }
 
@@ -1953,7 +1953,7 @@ FLASHMEM void PlotSpectrum() {
     // you might think divide by 4 would be more efficient as 2 right shifts
     // but right shift of a negative number is implimentation specific
     // and I want to keep the negative numbers here
-    if(liveNoiseFloorFlag == 1) {
+    if(t41.LiveNoiseFloor == 1) {
       int specPlotY = spectrumNoiseFloor - y_new_plot; // actual spectrum value at current noise floor
       int bin = specPlotY / 5;                         // divide by 5 to get histogram bin
 
@@ -2019,7 +2019,7 @@ FLASHMEM void PlotSpectrum() {
   //}
 
   // adjust noise floor if auto noise floor is active
-  if(liveNoiseFloorFlag == 1) {
+  if(t41.LiveNoiseFloor == 1) {
     // auto noise floor give priority to ensuring the noise floor is visible in the lower portion of the spectrum display
     // the spectrum is 512 pixels wide, the noise floor is adjusted as follows (in order of priority):
     //    1) increased if more than a 20% of the spectrum is the bottom bin
@@ -2311,12 +2311,12 @@ void SetupSignalStrengthSource(int source) {
       signalStrengthSource = 1;
       SendCenterFreq(t41.CenterFreq + intermediateFreq);
       if(t41.DemodMode == DEMOD_LSB) {
-        SendSetDemodMode(DEMOD_USB);
+        SendDemodMode(DEMOD_USB);
       } else {
-        SendSetDemodMode(DEMOD_LSB);
+        SendDemodMode(DEMOD_LSB);
       }
-      SendSetDisplayZoom(2);
-      SendSetNarrowFilter();
+      SendDisplayZoom(2);
+      SendNarrowFilter();
 
       // allow frequency to stabilize
       prevMillis = millis();
@@ -2542,7 +2542,7 @@ FLASHMEM void CalibrateTransmitIQ() {
         // *** this code assumes external T41 starts on 40m band ***
         bandCalBand = t41.ActiveBand;
         ChangeBand(BAND_80M - t41.ActiveBand);
-        SendSetBandChange(-1);
+        SendBandChange(-1);
 
         // cycle through bands doing auto cal
         for(int i = BAND_80M; i < NUMBER_OF_BANDS; i++) {
@@ -2571,7 +2571,7 @@ FLASHMEM void CalibrateTransmitIQ() {
           }
 
           ChangeBand(1);
-          SendSetBandChange(1);
+          SendBandChange(1);
         }
 
         Serial.println();

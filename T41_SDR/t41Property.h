@@ -17,6 +17,7 @@ public:
   // notify on change, not polled
   Property<int> RemoteStatus;
   Property<int> MouseCenterTuneActive;
+  Property<int> NoiseFloor;
 
   // polled properties
   Property<int> RadioMode;
@@ -34,6 +35,7 @@ public:
   Property<int> CenterTuneIndex;
   Property<int> FineTuneIndex;
   Property<int> SpectrumZoom;
+  Property<int> LiveNoiseFloor;
 
   // properties w/o notifications or display updates
   Property<int> ActiveVFO;
@@ -86,7 +88,6 @@ next:
   int spectrumNoiseFloor;
   int rfGainAllBands;
   private int currentNF = 0;
-  private int liveNoiseFloorFlag = 0;
 
 */
 /*
@@ -147,7 +148,6 @@ typedef struct {
 
   float myLong;
   float myLat;
-  int currentNoiseFloor[NUMBER_OF_BANDS];
   int compressorFlag;
 
   int buttonThresholdPressed;

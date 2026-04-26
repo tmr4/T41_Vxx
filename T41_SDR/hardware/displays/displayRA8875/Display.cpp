@@ -106,6 +106,8 @@ int centerLine = SPECTRUM_RES / 2 + SPECTRUM_LEFT_X;
 
 int wfHeight = WATERFALL_H;
 
+int currentNoiseFloor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
+
 // *** TODO: consider defining spectrumNoiseFloor here as well ***
 int audioSpectrumOffset;
 
@@ -458,7 +460,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   // set current noise flow level for this loop
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
-  if(liveNoiseFloorFlag != 1) {
+  if(t41.LiveNoiseFloor != 1) {
     currentNF = currentNoiseFloor[t41.ActiveBand];
   }
 
@@ -488,7 +490,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     // you might think divide by 4 would be more efficient as 2 right shifts
     // but right shift of a negative number is implimentation specific
     // and I want to keep the negative numbers here
-    if(liveNoiseFloorFlag == 1) {
+    if(t41.LiveNoiseFloor == 1) {
       int specPlotY = spectrumNoiseFloor - yPlot; // actual spectrum value at current noise floor
       int bin = specPlotY / 5;                    // divide by 5 to get histogram bin
 
@@ -570,7 +572,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   #endif
 
   // adjust noise floor if auto noise floor is active
-  if(liveNoiseFloorFlag == 1) {
+  if(t41.LiveNoiseFloor == 1) {
     // auto noise floor give priority to ensuring the noise floor is visible in the lower portion of the spectrum display
     // the spectrum is 512 pixels wide, the noise floor is adjusted as follows (in order of priority):
     //    1) increase if more than 20% of the spectrum is in the bottom bin
