@@ -147,3 +147,17 @@ FLASHMEM void UpdateDisplayFilters() {
     break;
   }
 }
+
+FLASHMEM void UpdateDisplayZoom() {
+  switch(displayState) {
+    case DISPLAY_T41:
+      DrawBandwidthBar();
+      ShowSpectrumFreqValues();
+      ShowOperatingStats(); // needes for to or from 1x zoom
+      break;
+
+    default:
+    // no screen updates at all
+    break;
+  }
+}

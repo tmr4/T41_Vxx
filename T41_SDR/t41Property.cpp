@@ -41,6 +41,7 @@ Properties that replaced old global variables:
 //-------------------------------------------------------------------------------------------------------------
 
 //#define MAX_FREQ_INDEX  8
+#define MAX_ZOOM_ENTRIES      5
 
 T41Properties t41;
 
@@ -74,8 +75,8 @@ void T41Properties::begin() {
 void T41Properties::SetPropertyDefaults() {
   int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
-  // notify properties
-  RemoteStatus.Init(remoteStatus, &ShowRemoteStatus); // notify on change, not polled
+  // notify properties (not polled!)
+  RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
   MouseCenterTuneActive.Init(false, &SendMouseCenterTuneActive, &HighlightTuneInc, false); // make it a notify property
 
   // polled properties
@@ -90,9 +91,10 @@ void T41Properties::SetPropertyDefaults() {
 
   // infobox properties
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
-  //CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, MAX_FREQ_INDEX - 1, true, &SendFreqIncrement, &UpdateInfoBoxItem, IB_ITEM_TUNE);
+  AGCMode.Init(1, 0, 5 - 1, true, &SendSetAGC, &UpdateInfoBoxItem, IB_ITEM_AGC);
   CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, maxFreqIncIndex - 1, true, &SendFreqIncrement, &UpdateInfoBoxItem, IB_ITEM_TUNE);
   FineTuneIndex.Init(DEFAULT_FT_INDEX, 0, maxFtIncIndex - 1, true, &SendFtIncrement, &UpdateInfoBoxItem, IB_ITEM_FINE);
+  SpectrumZoom.Init(1, 0, MAX_ZOOM_ENTRIES - 1, true, &SendSetDisplayZoom, &UpdateInfoBoxItem, IB_ITEM_ZOOM);
 
   // *** TODO: these need notifications/updates added ***
   ActiveVFO.Init(VFO_A);
@@ -121,8 +123,10 @@ void T41Properties::PollInfoBox(bool updateDisplay) {
   bool updateRemote = RemoteStatus == REMOTE_CONNECTED;
 
   AudioVolume.Poll(updateDisplay, updateRemote);
+  AGCMode.Poll(updateDisplay, updateRemote);
   CenterTuneIndex.Poll(updateDisplay, updateRemote);
   FineTuneIndex.Poll(updateDisplay, updateRemote);
+  SpectrumZoom.Poll(updateDisplay, updateRemote);
 }
 
 // these don't change NCOFreq

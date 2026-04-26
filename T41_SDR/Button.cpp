@@ -96,7 +96,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case ZOOM:  // 3
-      SetZoom(spectrumZoom+1);
+      t41.SpectrumZoom += 1;
       break;
 
     case MAIN_MENU_DN:  // 4

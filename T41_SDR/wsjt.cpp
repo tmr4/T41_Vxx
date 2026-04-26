@@ -410,7 +410,7 @@ void WSJTLoop()
       case 'G':
         if(cmd[1] == 'T' && cmd[3] == ';') {
           // update AGC
-          AGCMode = atol(&cmd[2]);
+          t41.AGCMode.Update(atoi(&cmd[2]));
           UpdateInfoBoxItem(IB_ITEM_AGC);
         }
         return;

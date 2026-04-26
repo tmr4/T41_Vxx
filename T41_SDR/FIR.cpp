@@ -91,6 +91,16 @@ arm_fir_instance_f32 FIR_CW_DecodeR;
 float32_t DMAMEM FIR_Coef_I[256 + 1];
 float32_t DMAMEM FIR_Coef_Q[256 + 1];
 
+arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_I1_state[12 + 2048 - 1];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q1_state[12 + 2048 - 1];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_I2_state[12 + 2048 - 1];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q2_state[12 + 2048 - 1];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate1_coeffs[12];
+float32_t DMAMEM Fir_Zoom_FFT_Decimate2_coeffs[12];
+
+extern int zoom_sample_ptr;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -350,4 +360,35 @@ void CalcCplxFIRCoeffs(float * coeffs_I, float * coeffs_Q, int numCoeffs, float3
     coeffs_I[i]   = z * cosf(nFs * x);
     coeffs_Q[i]   = z * sinf(nFs * x);
   }
+}
+
+/*****
+  Purpose: change IIR and decimation filters for altered frequency spectrum badwidth.
+*****/
+FLASHMEM void ZoomFFTFilterUpdate() {
+  float32_t Fstop_Zoom = 0.5 * sampleRate / (1 << t41.SpectrumZoom);
+  int factor1 = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
+
+  // 1st decimation stage
+  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate1_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate);
+
+  // 2nd decimation stage
+  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate2_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate / factor1);
+
+  zoom_sample_ptr = 0;
+}
+
+FLASHMEM void InitZoomFFTFilter(uint32_t blockSize /* = 2048 */) {
+  int factor1 = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
+  int factor2 = t41.SpectrumZoom < 2 ? 1 : 2;
+
+  ZoomFFTFilterUpdate();
+
+  // 1st decimation stage
+  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I1, 12, factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_I1_state, blockSize);
+  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q1, 12, factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_Q1_state, blockSize);
+
+  // 2nd decimation stage
+  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I2, 12, factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_I2_state, blockSize / factor1);
+  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q2, 12, factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_Q2_state, blockSize / factor1);
 }

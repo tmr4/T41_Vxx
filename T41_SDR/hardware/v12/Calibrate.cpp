@@ -117,7 +117,7 @@ void CalcZoomFreqSpec(uint32_t blockSize); // needed for ProcessTransmitCalIQDat
 //------------------------------------------------------------------------------------------------------------------
 
 FLASHMEM void ButtonZoom() {
-  SetZoom(spectrumZoom+1);
+  //SetZoom(t41.SpectrumZoom+1);
 }
 
 #define CAL_POWER_LEVEL_W 10
@@ -145,7 +145,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   userRadioState = radioState;
   userMode = t41.RadioMode;
   userDemodMode = t41.DemodMode;
-  userZoomIndex = spectrumZoom;
+  userZoomIndex = t41.SpectrumZoom;
 
   // calibration specific configuration
   switch(calType) {
@@ -158,7 +158,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
       t41.DemodMode = DEMOD_SAM;
       CalcAudioFilters();
 
-      spectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
+      t41.SpectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
       break;
 
     case 1: // receive IQ cal
@@ -169,7 +169,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
 
       currentScale = 1; // set vertical scale to 10 dB during calibration
       displayState = DISPLAY_CALIBRATION;
-      spectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
+      t41.SpectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
 
       SetRF_InAtten(RECIEVE_CAL_START_ATTEN);
       SetRF_OutAtten(RECIEVE_CAL_START_ATTEN);
@@ -199,8 +199,8 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
 
 
       displayState = DISPLAY_CALIBRATION;
-      spectrumZoom = 2;
-      //spectrumZoom = 3;
+      t41.SpectrumZoom = 2;
+      //t41.SpectrumZoom = 3;
       inAtten = 0;
       outAtten = 10;
       SetRF_InAtten(inAtten);
@@ -263,7 +263,7 @@ FLASHMEM void CalibratePost(int calType) {
   t41.CenterFreq = userCenterFreq;
   radioState = userRadioState;
   t41.DemodMode = userDemodMode;
-  spectrumZoom = userZoomIndex;
+  t41.SpectrumZoom = userZoomIndex;
 
   // calibration specific restoration
   switch(calType) {

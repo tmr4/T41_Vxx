@@ -242,7 +242,7 @@ FLASHMEM bool InitFT8() {
     //intermediateFreq = 12000.0;
     SetI2SFreq(sampleRate);
     InitFFTArrays();
-    SetZoom(1);
+    t41.SpectrumZoom = 1;
     //InitZoomFFTFilter(); // *** TODO: can save some memory by specifying block size if will operate in FT8 a lot ***
     InitHilbertFilters();
     SetupDemodFilterBW();
@@ -258,7 +258,7 @@ FLASHMEM void ExitFT8() {
     intermediateFreq = 48000.0;
     SetI2SFreq(sampleRate);
     InitFFTArrays();
-    SetZoom(1);
+    t41.SpectrumZoom = 1;
     InitHilbertFilters();
     SetupDemodFilterBW();
   }

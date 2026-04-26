@@ -15,13 +15,11 @@
 // Configuration working global variables
 
 //char versionSettings[10] = VERSION;
-int AGCMode = 1;
 int rfGainAllBands = 0;
 int spectrumNoiseFloor = 0; // SPECTRUM_NOISE_FLOOR; *** display dependent ***
 int transmitPowerLevel = DEFAULT_POWER_LEVEL;
 int nrOptionSelect = 0;
 int currentScale = 1;  // 20 dB/division
-int spectrumZoom = 1; // SPECTRUM_ZOOM_2
 float spectrum_display_scale = 20.0;     // 30.0
 
 int cwFilterIndex = 5;

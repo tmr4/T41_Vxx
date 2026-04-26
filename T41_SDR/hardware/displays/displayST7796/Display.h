@@ -56,9 +56,6 @@
 #define WATERFALL_W           SPECTRUM_RES
 #define WATERFALL_H           (WATERFALL_BOTTOM-WATERFALL_T)
 
-#define TEMP_X_OFFSET         15
-#define TEMP_Y_OFFSET         465                                           // 480 * 0.97 = 465
-
 #define X_R_STATUS_X          (XPIXELS - 55)
 #define X_R_STATUS_Y          0
 
@@ -153,7 +150,6 @@ void DrawAudioFilterLines();
 //
 void ShowSpectrumdBScale();
 void ShowTransmitReceiveStatus();
-void SetZoom(int zoom);
 void ShowCurrentPowerSetting();
 
 //void DrawFreqSpectrum(bool newSpectrumFlag = false);

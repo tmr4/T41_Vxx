@@ -3,8 +3,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define MAX_ZOOM_ENTRIES      5
-
 extern bool lowerAudioFilterActive;
 extern int liveNoiseFloorFlag;
 

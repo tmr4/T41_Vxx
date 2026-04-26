@@ -63,13 +63,7 @@ float32_t DMAMEM freqFFT[1024] __attribute__((aligned(4)));
 float32_t DMAMEM freqSpecBuf[1024];
 float32_t DMAMEM prevFreqSpecBuf[1024];
 
-arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_I1_state[12 + 2048 - 1];
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q1_state[12 + 2048 - 1];
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_I2_state[12 + 2048 - 1];
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q2_state[12 + 2048 - 1];
-float32_t DMAMEM Fir_Zoom_FFT_Decimate1_coeffs[12];
-float32_t DMAMEM Fir_Zoom_FFT_Decimate2_coeffs[12];
+extern arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -355,7 +349,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         Only go there from here, if magnification == 1
     ***********************************************************************************************/
 
-    if((spectrumZoom == 0) && updateSpectrumData) {
+    if((t41.SpectrumZoom == 0) && updateSpectrumData) {
       Calc1xFreqSpec();
       updateFreqSpec = true;
 
@@ -386,7 +380,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         shifted by Fs/4.  Buffering and processing is done in the CalcZoomFreqSpec function.
     **********************************************************************************/
     // Kick off frequency spectrum FFT routine only once for each audio process loop
-    if(spectrumZoom != 0) {
+    if(t41.SpectrumZoom != 0) {
       if(updateSpectrumData && (reqPasses == 20)) {
         passes = 0;
 
@@ -397,7 +391,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // so the passes required based on zoom factor will always be 1 but the passes required
         // based on sample rate are 4 or 8.
         //          <----------------- zoom factor ------------------>   <----- sample rate ----->
-        reqPasses = (spectrumZoom < 3 ? 1 : ((1 << spectrumZoom) / 4)) + 2048 / (blocks * 128) - 1;
+        reqPasses = (t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4)) + 2048 / (blocks * 128) - 1;
       }
       if(passes < reqPasses) {
         passes++;
@@ -1121,39 +1115,8 @@ void FreqShift2() {
 }
 
 /*****
-  Purpose: change IIR and decimation filters for altered frequency spectrum badwidth.
-*****/
-FLASHMEM void ZoomFFTFilterUpdate() {
-  float32_t Fstop_Zoom = 0.5 * sampleRate / (1 << spectrumZoom);
-  int factor1 = spectrumZoom < 3 ? 2 : (1 << spectrumZoom) / 2;
-
-  // 1st decimation stage
-  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate1_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate);
-
-  // 2nd decimation stage
-  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate2_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate / factor1);
-
-  zoom_sample_ptr = 0;
-}
-
-FLASHMEM void InitZoomFFTFilter(uint32_t blockSize /* = 2048 */) {
-  int factor1 = spectrumZoom < 3 ? 2 : (1 << spectrumZoom) / 2;
-  int factor2 = spectrumZoom < 2 ? 1 : 2;
-
-  ZoomFFTFilterUpdate();
-
-  // 1st decimation stage
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I1, 12, factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_I1_state, blockSize);
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q1, 12, factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_Q1_state, blockSize);
-
-  // 2nd decimation stage
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I2, 12, factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_I2_state, blockSize / factor1);
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q2, 12, factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_Q2_state, blockSize / factor1);
-}
-
-/*****
   Purpose: Calculate frequency spectrum
-           Intended for spectrumZoom > 1
+           Intended for t41.SpectrumZoom > 1
 
            *** TODO: process here is poorly explained, fix ***
 *****/
@@ -1164,10 +1127,10 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
   float32_t y_buffer[blockSize];
   static float32_t FFT_ring_buffer_x[SPECTRUM_RES * 2];
   static float32_t FFT_ring_buffer_y[SPECTRUM_RES * 2];
-  int sample_no = blockSize / (1 << spectrumZoom);
-  float32_t multiplier = (float32_t)spectrumZoom;;
+  int sample_no = blockSize / (1 << t41.SpectrumZoom);
+  float32_t multiplier = (float32_t)t41.SpectrumZoom;;
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
-  int factor = spectrumZoom < 3 ? 2 : (1 << spectrumZoom) / 2;
+  int factor = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
 
   if (sample_no > SPECTRUM_RES) {
     sample_no = SPECTRUM_RES;
@@ -1196,8 +1159,8 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
   // the right order has to be thought about!
   // we take all the samples from zoom_sample_ptr to 256 and
   // then all samples from 0 to zoom_sampl_ptr - 1
-  if(spectrumZoom > 3) { // SPECTRUM_ZOOM_8
-    multiplier = (float32_t)(1 << spectrumZoom);
+  if(t41.SpectrumZoom > 3) { // SPECTRUM_ZOOM_8
+    multiplier = (float32_t)(1 << t41.SpectrumZoom);
   }
   for(int idx = 0; idx < SPECTRUM_RES; idx++) {
     // interleave real and imaginary input values [real, imag, real, imag . . .]

@@ -30,8 +30,10 @@ public:
 
   // infobox properties
   Property<int> AudioVolume;
+  Property<int> AGCMode;
   Property<int> CenterTuneIndex;
   Property<int> FineTuneIndex;
+  Property<int> SpectrumZoom;
 
   // properties w/o notifications or display updates
   Property<int> ActiveVFO;
@@ -81,26 +83,17 @@ from T41_Views (this is private data, first letter capitalized if property):
 
 next:
   int transmitPowerLevel = 1;
-  private int agcMode = 1;
-
-list:
+  int spectrumNoiseFloor;
+  int rfGainAllBands;
   private int currentNF = 0;
   private int liveNoiseFloorFlag = 0;
-  private bool dataFlag = false;
 
 */
 /*
 // old EEPROMData
 typedef struct {
-  char versionSettings[10];
-  int AGCMode;
-  int rfGainAllBands;
-  int spectrumNoiseFloor;
-  float32_t transmitPowerLevel;
-  int t41.RadioMode;
   int nrOptionSelect;
   int currentScale;
-  long spectrumZoom;
   float spectrum_display_scale;
 
   int cwFilterIndex;
@@ -111,8 +104,6 @@ typedef struct {
   int currentWPM;
   int sidetoneVolume;
   unsigned long cwTransmitDelay;
-
-  int freqIncrement;
 
   int freqCorrectionFactor;
 

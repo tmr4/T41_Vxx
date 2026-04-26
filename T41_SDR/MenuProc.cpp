@@ -206,17 +206,15 @@ FLASHMEM void EEPROMOptions() {
 }
 
 /*****
-  Purpose: Present the bands available and return the selection
+  set agc to selected option
 *****/
 FLASHMEM void AGCOptions() {
-  // const char *AGCChoices[] = { "Off", "Long", "Slow", "Medium", "Fast", "Cancel" }; // G0ORX (Added Long) September 5, 2023
+  // const char *AGCChoices[] = { "Off", "Long", "Slow", "Medium", "Fast", "Cancel" };
 
-  AGCMode = secondaryMenuIndex;
-  AGCLoadValues();
+  t41.AGCMode = secondaryMenuIndex;
 
   //EEPROMData.AGCMode = AGCMode; // Store in EEPROM and...
   EEPROMWrite();  // ...save it
-  UpdateInfoBoxItem(IB_ITEM_AGC);
 }
 
 /*****

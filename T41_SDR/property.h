@@ -123,10 +123,17 @@ public:
   const T& operator=(const T& val) { return set(val); }
   const T& operator+=(const T& val) { return set(value + val); }
   const T& operator-=(const T& val) { return set(value - val); }
+  // *** TODO: updates and notifications aren't happening properly with ++ or -- (infobox zoom for example w/ mouse) ***
   const T& operator++() { return set(++value); }
   const T operator++(int) {
     T tmp = value;
     set(++value);
+    return tmp;
+  }
+  const T& operator--() { return set(--value); }
+  const T operator--(int) {
+    T tmp = value;
+    set(--value);
     return tmp;
   }
 

@@ -7,13 +7,11 @@
 // commented lines have no corresponding global extern
 
 //extern char versionSettings[];
-extern int AGCMode;
 extern int rfGainAllBands;
 extern int spectrumNoiseFloor;
 extern int transmitPowerLevel;
 extern int nrOptionSelect;
 extern int currentScale;
-extern int spectrumZoom;
 extern float spectrum_display_scale;
 
 extern int cwFilterIndex;

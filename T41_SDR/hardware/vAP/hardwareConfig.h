@@ -10,6 +10,10 @@
 #define READ_CENTERTUNE_ENCODER false // set to false if interrupt driven
 
 // pick one of the following display configurations
+// *** the AP display (DISPLAY_LANDSCAPE) is offset up 2 pixels compared to PS display (DISPLAY_FLIPPED)
+//     the bottom of the display however isn't offset by this amount, thus if image is shifted down by 2
+//     pixels, image is written off screen. I've chosen to retain flipped display offsets for now. ***
+// *** TODO: examine this effect on 5" displays and other 7" displays to verify consistent operation ***
 #define DISPLAY_LANDSCAPE
 //#define DISPLAY_FLIPPED
 

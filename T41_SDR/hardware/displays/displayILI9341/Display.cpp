@@ -407,8 +407,8 @@ FLASHMEM void ShowSpectrumFreqValues() {
   int tunedInx = 0;
   float cFreq = (float)t41.CenterFreq;
   float tunedFreq, lFreq;
-  float fInc =  sampleRate / (float)(1 << spectrumZoom) / 4.0;
-  // positions for graticules: first for spectrumZoom < 3, then for spectrumZoom > 2
+  float fInc =  sampleRate / (float)(1 << t41.SpectrumZoom) / 4.0;
+  // positions for graticules: first for t41.SpectrumZoom < 3, then for t41.SpectrumZoom > 2
   //const static int idx2pos[2][9] = {
   //  { -43, 21, 50, 250, 140, 250, 232, 250, 315 },
   //  { -43, 21, 50, 85, 200, 200, 232, 218, 315 }
@@ -418,7 +418,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
     { 0,0,0,0,0,0,0,0,0 }
   };
   float xExpand = 1.4;
-  float32_t pixel_per_hz = (1 << spectrumZoom) * SPECTRUM_RES / sampleRate;
+  float32_t pixel_per_hz = (1 << t41.SpectrumZoom) * SPECTRUM_RES / sampleRate;
 
   //tft.setFontScale((enum RA8875tsize)0);
   //tft.setFont(Arial_12);
@@ -428,7 +428,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
   //tft.fillRect(SPECTRUM_LEFT_X, SPEC_BOX_LABELS - 4, SPECTRUM_RES + 5, tft.getFontHeight() + 4, ILI9341_BLACK);
   tft.fillRect(SPECTRUM_LEFT_X, SPEC_BOX_LABELS - 4, SPECTRUM_RES + 5, 12, ILI9341_BLACK);
 
-  if(spectrumZoom == 0) {
+  if(t41.SpectrumZoom == 0) {
     tunedInx = -1;
     cFreq += intermediateFreq;
     tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
@@ -460,7 +460,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
   tft.setTextColor(ILI9341_WHITE);
   //for(int idx = -2; idx < 3; idx++) {
   for(int idx = -2; idx < 3; idx++) {
-    //pos_help = idx2pos[spectrumZoom < 3 ? 0 : 1][idx * 2 + 4];
+    //pos_help = idx2pos[t41.SpectrumZoom < 3 ? 0 : 1][idx * 2 + 4];
     //if(idx != tunedInx) {
     if(idx != tunedInx) {
       // calculate label freq (always a whole number) and the exact position of its tick mark
@@ -540,7 +540,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.print("CF");
   tft.setCursor(OPERATION_STATS_CF, OPERATION_STATS_T);
   tft.setTextColor(ILI9341_ORANGE);
-  if(spectrumZoom == 0) {
+  if(t41.SpectrumZoom == 0) {
     tft.print(t41.CenterFreq + (long)intermediateFreq);
   } else {
     tft.print(t41.CenterFreq);

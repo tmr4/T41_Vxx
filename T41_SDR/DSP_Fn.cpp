@@ -330,40 +330,38 @@ FLASHMEM void AltNoiseBlanking(float* insamp, int Nsam, float* E ) {
 
 // ================= AGC
 
-// G0ORX broke this code out so can be called from other places
-
 FLASHMEM void AGCLoadValues() {
   float32_t tmp;
   float32_t sample_rate = sampleRate / 8.0;
 
   //calculate internal parameters
-  switch(AGCMode)
+  switch(t41.AGCMode)
   {
     case 0:                                           //agcOFF
       break;
 
     case 1:                                           //agcLONG
-      // G0ORX
+
       hangtime = 2.000;
       tau_decay = 2.000;
       break;
 
     case 2:                                           //agcSLOW
-      // G0ORX
+
       hangtime = 1.000;
       tau_decay = 0.5;
       break;
 
     case 3:                                           //agcMED
       hang_thresh = 1.0; // *** this is effectively commented out in original ***
-      // G0ORX
+
       hangtime = 0.000;
       tau_decay = 0.250;
       break;
 
     case 4:                                           //agcFAST
       hang_thresh = 1.0;
-      // G0ORX
+
       hangtime = 0.0;
       tau_decay = 0.050;
       break;
@@ -402,31 +400,32 @@ FLASHMEM void AGCLoadValues() {
 }
 
 /*****
-  Purpose: Setup AGC()*****/
+  setup AGC
+*****/
 FLASHMEM void AGCPrep() {
   // Start variables taken from wdsp
 
-  tau_attack      = 0.001;                // tau_attack
-  tau_decay       = 0.250; // G0ORX
-  n_tau           = 4; // G0ORX
+  tau_attack      = 0.001;            // tau_attack
+  tau_decay       = 0.250;
+  n_tau           = 4;
 
   // max_gain = 1000.0 to be applied??? or is this AGC threshold = knee level?
-  max_gain              = 10000.0; // G0ORX
-  fixed_gain            = 20.0; // G0ORX
-  max_input             = 1.0; // G0ORX
-  out_targ              = 1.0; // G0ORX       // target value of audio after AGC
-  var_gain              = 1.5; // G0ORX
+  max_gain              = 10000.0;
+  fixed_gain            = 20.0;
+  max_input             = 1.0;
+  out_targ              = 1.0;        // target value of audio after AGC
+  var_gain              = 1.5;
 
   tau_fast_backaverage  = 0.250;      // tau_fast_backaverage
   tau_fast_decay        = 0.005;      // tau_fast_decay
   pop_ratio             = 5.0;        // pop_ratio
-  hang_enable           = 1; // G0ORX
+  hang_enable           = 1;
   tau_hang_backmult     = 0.500;      // tau_hang_backmult
   hangtime              = 0.250;      // hangtime
   hang_thresh           = 0.250;      // hang_thresh
   tau_hang_decay        = 0.100;      // tau_hang_decay
 
-  AGCLoadValues(); // G0ORX
+  AGCLoadValues();
 }
 
 #define RB_SIZE                     (int) (MAX_SAMPLE_RATE * MAX_N_TAU * MAX_TAU_ATTACK + 1)
@@ -448,7 +447,7 @@ void AGC() {
   static float32_t save_volts = 0.0;
   static float32_t volts = 0.0;
 
-  if(AGCMode == 0)  // AGC OFF
+  if(t41.AGCMode == 0)  // AGC OFF
   {
     for(unsigned i = 0; i < 256; i++)
     {

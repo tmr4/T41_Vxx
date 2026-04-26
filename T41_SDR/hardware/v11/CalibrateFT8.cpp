@@ -80,8 +80,8 @@ FLASHMEM void FT8CalibratePreamble(int setZoom) {
   transmitPowerLevel = 5;
   powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
   userXmtMode = t41.RadioMode;          // Store the user's mode setting
-  userZoomIndex = spectrumZoom;  // Save the zoom index so it can be reset at the conclusion
-  SetZoom(setZoom);
+  userZoomIndex = t41.SpectrumZoom;  // Save the zoom index so it can be reset at the conclusion
+  //SetZoom(setZoom);
   tft.writeTo(L2);  // Erase the bandwidth bar
   tft.clearMemory();
   tft.writeTo(L1);
@@ -150,7 +150,7 @@ FLASHMEM void FT8CalibratePrologue() {
   transmitPowerLevel = transmitPowerLevelTemp;  // Restore the user's transmit power level setting.  KF5N August 15, 2023
   EEPROMWrite();                                // Save calibration numbers and configuration.  KF5N August 12, 2023
   // Restore the user's zoom setting
-  SetZoom(userZoomIndex); // ... and zoom display
+  //SetZoom(userZoomIndex); // ... and zoom display
   EEPROMWrite();                                // Save calibration numbers and configuration.  KF5N August 12, 2023
   tft.writeTo(L2);  // Clear layer 2.  KF5N July 31, 2023
   tft.clearMemory();
@@ -431,12 +431,12 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
 
     FreqShift1(256);
 
-    if(spectrumZoom == 0) {  // && display_S_meter_or_spectrum_state == 1)
+    if(t41.SpectrumZoom == 0) {  // && display_S_meter_or_spectrum_state == 1)
       Calc1xFreqSpec();
     }
 
     // Kick off frequency spectrum FFT routine only once for each audio process loop
-    if(spectrumZoom != 0) {
+    if(t41.SpectrumZoom != 0) {
       if(updateSpectrumData && (reqPasses == 20)) {
         passes = 0;
 
@@ -447,7 +447,7 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
         // so the passes required based on zoom factor will always be 1 but the passes required
         // based on sample rate are 4 or 8.
         //          <----------------- zoom factor ------------------>   <----- sample rate ----->
-        reqPasses = (spectrumZoom < 3 ? 1 : ((1 << spectrumZoom) / 4)) + 2048 / (256) - 1;
+        reqPasses = (t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4)) + 2048 / (256) - 1;
       }
       if(passes < reqPasses) {
         passes++;

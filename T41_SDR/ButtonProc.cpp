@@ -71,6 +71,10 @@ FLASHMEM void UpdateBand(int from) {
   if(t41.RadioMode == DATA_MODE) {
     switch(t41.DemodMode) {
       case DEMOD_FT8:
+        // limit zoom in FT8 mode to 2x and 4x
+        if((t41.SpectrumZoom == 0) || (t41.SpectrumZoom > 2)) {
+          t41.SpectrumZoom = 1;
+        }
         break;
 
       case DEMOD_FT8_INTERNAL:

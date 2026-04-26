@@ -10,8 +10,10 @@
 #include "..\..\CWProcessing.h"
 #include "Display.h"
 #include "..\..\Display.h"
+#include "..\..\DSP_Fn.h"
 #include "..\..\EEPROM.h"
 #include "..\..\Encoders.h"
+#include "..\..\FIR.h"
 #include "..\..\ft8.h"
 #include "InfoBox.h"
 #include "..\..\keyer.h"
@@ -40,6 +42,8 @@ void IBKeyerFollowup(int row, int col);
 void IBStackFollowup(int row, int col);
 void IBHeapFollowup(int row, int col);
 void IBRFGainFollowup(int row, int col);
+void IBAGCFollowup(int row, int col);
+void IBZoomFollowup(int row, int col);
 
 void ClearInfoBox();
 
@@ -94,7 +98,7 @@ const char *ftValues[] = { "10", "50", "250", "500" };
 const char *filter[] = { "Off", "Kim", "Spectral", "LMS" };
 const char *onOff[2] = { "Off", "On" };
 const char *nfOptions[3] = { "Off", "Auto", "On"};
-const char *zoomOptions[] = { "1x ", "2x ", "4x ", "8x ", "16x" }; // combine with MAX_ZOOM_ENTRIES somewhere
+const char *zoomOptions[] = { "1x ", "2x ", "4x ", "8x ", "16x" };
 
 const char *keyerOpts[] = { "Off", "WPM" };
 const char *optionsWPM[2] = { "Straight Key", "Paddles " };
@@ -139,10 +143,10 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
 { //                                                        font    # chars
   // label         options      option                      size    to erase  flag  col            row,           follow-up function
   { "Vol:",        NULL,        (int*)&t41.AudioVolume,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
-  { "AGC",         agcOpts,     &AGCMode,                    1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
+  { "AGC",         agcOpts,     (int*)&t41.AGCMode,          1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    &IBAGCFollowup         }, // AGC
   { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
   { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
-  { "Zoom:",       zoomOptions, (int*)&spectrumZoom,         0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    NULL                   }, // Zoom
+  { "Zoom:",       zoomOptions, (int*)&t41.SpectrumZoom,     0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    &IBZoomFollowup        }, // Zoom
   { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,         0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
   { "AutoNotch:",  onOff,       (int*)&ANR_notchOn,          0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
   { "Compress:",   onOff,       &compressorFlag,             0,        6,      1,   IB_COL_2_X,    IB_ROW_5_Y,    &IBCompressionFollowup }, // Compress
@@ -283,6 +287,11 @@ void IBTuneIncFollowup(int row, int col) {
   HighlightTuneInc();
 }
 
+void IBZoomFollowup(int row, int col) {
+  InitZoomFFTFilter();
+  UpdateDisplayZoom();
+}
+
 /*****
   Purpose: Information box follow up function for the Compression item
            Assumes this is only called as part of updating Compression item
@@ -328,6 +337,10 @@ void IBVolFollowup(int row, int col) {
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(col, row);
   tft.print(t41.AudioVolume);
+}
+
+void IBAGCFollowup(int row, int col) {
+  AGCLoadValues();
 }
 
 /*****
@@ -722,9 +735,9 @@ void MouseButtonInfoBox(int button, int x, int y) {
 
         case IB_ITEM_ZOOM:
           if(button == 1) {
-            SetZoom(++spectrumZoom);
+            t41.SpectrumZoom += 1;
           } else {
-            SetZoom(--spectrumZoom);
+            t41.SpectrumZoom -= 1;
           }
           break;
 
@@ -747,33 +760,36 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
   int item, itemX, itemY, itemSize, itemChars, itemW, itemH;
 
   // *** TODO: this is weak ***
-  for(int i = 0; i < 9; i++) {
+  for(int i = 0; i < 10; i++) {
     switch(i) {
       case 0:
         item = IB_ITEM_VOL;
         break;
       case 1:
-        item = IB_ITEM_TUNE;
+        item = IB_ITEM_AGC;
         break;
       case 2:
-        item = IB_ITEM_FINE;
+        item = IB_ITEM_TUNE;
         break;
       case 3:
-        item = IB_ITEM_ZOOM;
+        item = IB_ITEM_FINE;
         break;
       case 4:
-        item = IB_ITEM_FT8_TX;
+        item = IB_ITEM_ZOOM;
         break;
       case 5:
-        item = IB_ITEM_FT8_TXF;
+        item = IB_ITEM_FT8_TX;
         break;
       case 6:
-        item = IB_ITEM_FT8_RXF;
+        item = IB_ITEM_FT8_TXF;
         break;
       case 7:
-        item = IB_ITEM_FT8_INT;
+        item = IB_ITEM_FT8_RXF;
         break;
       case 8:
+        item = IB_ITEM_FT8_INT;
+        break;
+      case 9:
         item = IB_ITEM_FT8_CQ;
         break;
     }
@@ -795,6 +811,10 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
           t41.AudioVolume += wheel;
           break;
 
+        case IB_ITEM_AGC:
+          t41.AGCMode += wheel;
+          break;
+
           case IB_ITEM_TUNE:
           ChangeFreqIncrement(wheel);
           if(t41.MouseCenterTuneActive) {
@@ -811,9 +831,9 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
 
       case IB_ITEM_ZOOM:
           if(wheel == 1) {
-            SetZoom(++spectrumZoom);
+            t41.SpectrumZoom += 1;
           } else {
-            SetZoom(--spectrumZoom);
+            t41.SpectrumZoom -= 1;
           }
           break;
 

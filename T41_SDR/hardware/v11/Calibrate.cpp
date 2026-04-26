@@ -151,7 +151,7 @@ FLASHMEM void SaveRadioState() {
   userRadioState = radioState;
   userMode = t41.RadioMode;
   userDemodMode = t41.DemodMode;
-  userZoomIndex = spectrumZoom;
+  userZoomIndex = t41.SpectrumZoom;
   userBand = t41.ActiveBand;
   userScale = currentScale;
   userVol = t41.AudioVolume;
@@ -197,7 +197,7 @@ FLASHMEM void RestoreRadioState() {
   radioState = userRadioState;
   //t41.RadioMode = userMode;
   t41.DemodMode = userDemodMode;
-  spectrumZoom = userZoomIndex;
+  t41.SpectrumZoom = userZoomIndex;
   currentScale = userScale;
   volSetting = userVol;
 
@@ -207,7 +207,7 @@ FLASHMEM void RestoreRadioState() {
   }
 
   // Restore the user's zoom setting
-  SetZoom(userZoomIndex); // ... and zoom display
+  //SetZoom(userZoomIndex); // ... and zoom display
 
   SetFreq(t41.CenterFreq);
 
@@ -253,7 +253,7 @@ FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
       //SetFreqCal(24000);
       //SetFreqCal(22000);
       SetFreqCal(0);
-      SetZoom(0); // 1x
+      //SetZoom(0); // 1x
       //SetZoom(1); // 2x
       //SetZoom(2); // 4x
       userIQAmpFactor = IQAmpCorrectionFactor[t41.ActiveBand];
@@ -265,7 +265,7 @@ FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
     case 2: // transmit IQ cal
       PrepareSpectrumArea();
       SetFreqCal(0);
-      SetZoom(2); // 4x
+      //SetZoom(2); // 4x
       //SetZoom(3); // 8x
       //SetZoom(1); // 2x
       userIQAmpFactor = IQXAmpCorrectionFactor[t41.ActiveBand];

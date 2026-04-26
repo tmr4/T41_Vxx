@@ -365,6 +365,13 @@ void SendMouseCenterTuneActive(int val) {
   T41ControlSendCmd(cmd);
 }
 
+void SendSetAGC(int val) {
+  char cmd[5];
+
+  sprintf(cmd, "GT%d;", val);
+  T41ControlSendCmd(cmd);
+}
+
 void SendAS() {
   char cmd[19];
 
@@ -397,8 +404,8 @@ void SendIF() {
     (int)t41.MouseCenterTuneActive, // fine or center tune enabled (0/1) (%d) at index 32
     (int)t41.FineTuneIndex,                        // fine tune index (%d) at index 33
     (int)t41.CenterTuneIndex,                      // center tune index (%d) at index 34
-    AGCMode,                        // AGC mode (%d) at index 35
-    spectrumZoom,                   // spectrum zoom (%d) at index 36
+    (int)t41.AGCMode,                        // AGC mode (%d) at index 35
+    (int)t41.SpectrumZoom,                   // spectrum zoom (%d) at index 36
     (int)t41.InactiveFreq           // inactive VFO freq in Hz (%011d) at index 37
     //splitVFO ? 1 : 0,             // VFO split status (%d) at index xx
   );
@@ -602,7 +609,7 @@ void T41ControlLoop() {
       case 'G':
         if(cmd[1] == 'T' && cmd[3] == ';') {
           // update AGC
-          AGCMode = atol(&cmd[2]);
+          t41.AGCMode.Update(atoi(&cmd[2]));
           UpdateInfoBoxItem(IB_ITEM_AGC);
         }
         sendCommand = false;
@@ -775,8 +782,7 @@ void T41ControlLoop() {
       case 'Z': // ZMx;
         if(cmd[1] == 'M' && cmd[3] == ';') {
           // set spectrum zoom
-          spectrumZoom = atoi(&cmd[2]);
-          SetZoom(spectrumZoom);
+          t41.SpectrumZoom.Update(atoi(&cmd[2]));
         }
         sendCommand = false;
         break;

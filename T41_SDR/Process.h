@@ -23,7 +23,6 @@ extern float32_t audioMaxSquaredAve;
 //-------------------------------------------------------------------------------------------------------------
 
 void InitFFTArrays();
-void InitZoomFFTFilter(uint32_t blockSize = 2048);
 void InitAMDemodBiquadFilter();
 
 int ProcessReceiverData(bool updateSpectrumData = false);

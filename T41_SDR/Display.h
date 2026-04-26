@@ -84,7 +84,6 @@ void DrawFreqSpectrum(bool newSpectrumFlag = false);
 void ShowSpectrumdBScale();
 void ShowBandwidthBarValues();
 void DrawBandwidthBar();
-void SetZoom(int);
 void SetWaterfallHeight(int);
 void ResetWaterfallHeight();
 void ShowTransmitReceiveStatus();
@@ -108,6 +107,7 @@ void ClearInfoBoxKeyer();
 void UpdateDecodeLockIndicator();
 void UpdateClock();
 void HighlightTuneInc();
+void UpdateDisplayZoom();
 
 // menu
 void ShowMenu(char const**, int);

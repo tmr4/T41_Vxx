@@ -81,11 +81,11 @@ int CheckNCOFreqBounds(int f) {
   }
 
   // recenter at band edges
-  if(spectrumZoom != 0) {
-    if((f + highSideAdj) >= (sampleRate / 2.0 / (1 << spectrumZoom))) {
+  if(t41.SpectrumZoom != 0) {
+    if((f + highSideAdj) >= (sampleRate / 2.0 / (1 << t41.SpectrumZoom))) {
       freq += highSideAdj;
       resetTuningFlag = true;
-    } else if((f - lowSideAdj) <= (-sampleRate / 2.0 / (1 << spectrumZoom))) {
+    } else if((f - lowSideAdj) <= (-sampleRate / 2.0 / (1 << t41.SpectrumZoom))) {
       freq -= lowSideAdj;
       resetTuningFlag = true;
     }

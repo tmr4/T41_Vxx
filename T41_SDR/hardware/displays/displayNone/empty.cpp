@@ -53,7 +53,6 @@ void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {}
 void ShowSpectrumdBScale() {}
 void ShowBandwidthBarValues() {}
 void DrawBandwidthBar() {}
-void SetZoom(int) {}
 void SetWaterfallHeight(int) {}
 void ResetWaterfallHeight() {}
 void ShowTransmitReceiveStatus() {}

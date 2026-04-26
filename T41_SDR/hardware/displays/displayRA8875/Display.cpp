@@ -780,21 +780,21 @@ FLASHMEM void ShowSpectrumFreqValues() {
   int tunedInx = 0;
   float cFreq = (float)t41.CenterFreq;
   float tunedFreq, lFreq;
-  float fInc =  sampleRate / (float)(1 << spectrumZoom) / 4.0;
-  // positions for graticules: first for spectrumZoom < 3, then for spectrumZoom > 2
+  float fInc =  sampleRate / (float)(1 << t41.SpectrumZoom) / 4.0;
+  // positions for graticules: first for t41.SpectrumZoom < 3, then for t41.SpectrumZoom > 2
   const static int idx2pos[2][9] = {
     { -43, 21, 50, 250, 140, 250, 232, 250, 315 },
     { -43, 21, 50, 85, 200, 200, 232, 218, 315 }
   };
   float xExpand = 1.4;
-  float32_t pixel_per_hz = (1 << spectrumZoom) * SPECTRUM_RES / sampleRate;
+  float32_t pixel_per_hz = (1 << t41.SpectrumZoom) * SPECTRUM_RES / sampleRate;
 
   tft.setFontScale((enum RA8875tsize)0);
 
   // erase frequency bar values and tick marks
   tft.fillRect(SPECTRUM_LEFT_X, SPEC_BOX_LABELS - 4, SPECTRUM_RES + 5, tft.getFontHeight() + 4, RA8875_BLACK);
 
-  if(spectrumZoom == 0) {
+  if(t41.SpectrumZoom == 0) {
     tunedInx = -1;
     cFreq += intermediateFreq;
     tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
@@ -824,7 +824,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
   // print non-center freq and tick marks
   tft.setTextColor(RA8875_WHITE);
   for(int idx = -2; idx < 3; idx++) {
-    pos_help = idx2pos[spectrumZoom < 3 ? 0 : 1][idx * 2 + 4];
+    pos_help = idx2pos[t41.SpectrumZoom < 3 ? 0 : 1][idx * 2 + 4];
     if(idx != tunedInx) {
       // calculate label freq (always a whole number) and the exact position of its tick mark
       lFreq = round((cFreq +  (float)idx * fInc) / 1000.0) * 1000.0;
@@ -890,7 +890,7 @@ FLASHMEM void ShowOperatingStats() {
   tft.print("Center Freq");
   tft.setCursor(OPERATION_STATS_CF, OPERATION_STATS_T);
   tft.setTextColor(RA8875_LIGHT_ORANGE);
-  if(spectrumZoom == 0) {
+  if(t41.SpectrumZoom == 0) {
     tft.print(t41.CenterFreq + (long)intermediateFreq);
   } else {
     tft.print(t41.CenterFreq);
@@ -1151,7 +1151,7 @@ FLASHMEM void RedrawDisplayScreen() {
 *****/
 FASTRUN void DrawBandwidthBar() {
   float zoomOffset = 0.0;
-  float32_t pixel_per_hz = (1 << spectrumZoom) * SPECTRUM_RES / sampleRate;
+  float32_t pixel_per_hz = (1 << t41.SpectrumZoom) * SPECTRUM_RES / sampleRate;
   int NCOFreqX;
   int newFilterX = 0; // x position of bandwidth bar
   int newFilterWidth = 0;
@@ -1159,15 +1159,15 @@ FASTRUN void DrawBandwidthBar() {
   static int oldFilterWidth = 0;
   static int oldTuneLine = 0;
 
-  if(spectrumZoom == 0) {
+  if(t41.SpectrumZoom == 0) {
     zoomOffset = 48000.0 * pixel_per_hz;
   }
 
   if(t41.DemodMode == DEMOD_FT8) {
-    //zoomOffset = 44100.0 / 8.0 * pixel_per_hz / ((float)(1 << spectrumZoom)) * 2.0;
+    //zoomOffset = 44100.0 / 8.0 * pixel_per_hz / ((float)(1 << t41.SpectrumZoom)) * 2.0;
   }
 
-  //NCOFreqX = (int)(t41.NCOFreq * pixel_per_hz * ((float)(1 << spectrumZoom)) / 2.0 - zoomOffset);
+  //NCOFreqX = (int)(t41.NCOFreq * pixel_per_hz * ((float)(1 << t41.SpectrumZoom)) / 2.0 - zoomOffset);
   NCOFreqX = (int)(t41.NCOFreq * pixel_per_hz - zoomOffset);
   newFilterWidth = (int)(((float)(t41.FilterHiCut - t41.FilterLoCut)) * pixel_per_hz * 1.06);
 
@@ -1447,43 +1447,6 @@ FLASHMEM void ShowTransmitReceiveStatus() {
       tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y);
       tft.print("REC");
       break;
-  }
-}
-
-/*****
-  Purpose: Set frequency display to specified level
-    *** TODO: needs reset tuning if bandwidth
-*****/
-FLASHMEM void SetZoom(int zoom) {
-  spectrumZoom = zoom;
-
-  if(spectrumZoom == MAX_ZOOM_ENTRIES) {
-    spectrumZoom = 0;
-  }
-  if(spectrumZoom < 0) {
-    spectrumZoom = MAX_ZOOM_ENTRIES - 1;
-  }
-
-  // limit zoom in FT8 mode to 2x and 4x
-  if(t41.DemodMode == DEMOD_FT8) {
-    if((spectrumZoom == 0) || (spectrumZoom > 2)) {
-      spectrumZoom = 1;
-    }
-  }
-
-  InitZoomFFTFilter();
-
-  switch(displayState) {
-    case DISPLAY_T41:
-      UpdateInfoBoxItem(IB_ITEM_ZOOM);
-      DrawBandwidthBar();
-      ShowSpectrumFreqValues();
-      ShowOperatingStats(); // needes for to or from 1x zoom
-      break;
-
-    default:
-    // no screen updates at all
-    break;
   }
 }
 
