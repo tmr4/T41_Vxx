@@ -25,7 +25,6 @@ Required display specific functions:
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern bool mouseCenterTuneActive;
 extern int mouseWheelValue;
 extern int menuBarSelected;
 

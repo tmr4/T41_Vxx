@@ -227,8 +227,6 @@ void SendCenterFreq(int freq) {
   char cmd[20];
 
   // set center frequency
-  // *** note FA/FB set frequency based on mouseCenterTuneActive
-  // and by default adjust fine tune, not center tune ***
   sprintf(cmd, "FC%011d;", freq);
   T41ControlSendCmd(cmd);
 }
@@ -359,6 +357,14 @@ void SendFtIncrement(int index) {
   T41ControlSendCmd(cmd);
 }
 
+void SendMouseCenterTuneActive(int val) {
+  char cmd[5];
+
+  // *** FS is fine tune selected ***
+  sprintf(cmd, "FS%d;", !val);
+  T41ControlSendCmd(cmd);
+}
+
 void SendAS() {
   char cmd[19];
 
@@ -388,7 +394,7 @@ void SendIF() {
     liveNoiseFloorFlag,             // set noise floor active/inactive 1/0 (%d) at index 29
     !GetXRState(),                       // RX/TX (1/0) (%d) at index 30
     (int)t41.ActiveVFO,                      // VFO A/B (0/1) (%d) at index 31
-    mouseCenterTuneActive ? 1 : 0,  // fine or center tune enabled (0/1) (%d) at index 32
+    (int)t41.MouseCenterTuneActive, // fine or center tune enabled (0/1) (%d) at index 32
     (int)t41.FineTuneIndex,                        // fine tune index (%d) at index 33
     (int)t41.CenterTuneIndex,                      // center tune index (%d) at index 34
     AGCMode,                        // AGC mode (%d) at index 35
@@ -499,7 +505,7 @@ void T41ControlLoop() {
               // set VFO A frequency
               f = atol(&cmd[2]);
               ChangeBand(f);
-              if(mouseCenterTuneActive) {
+              if(t41.MouseCenterTuneActive) {
                 t41.SetFreqA(f);
               } else {
                 t41.NCOFreq.Update(f); // *** verify ***
@@ -517,7 +523,7 @@ void T41ControlLoop() {
               // set VFO B frequency
               f = atol(&cmd[2]);
               ChangeBand(f);
-              if(mouseCenterTuneActive) {
+              if(t41.MouseCenterTuneActive) {
                 t41.SetFreqB(f);
               } else {
                 t41.NCOFreq.Update(f); // *** verify ***
@@ -570,7 +576,8 @@ void T41ControlLoop() {
           case 'S':
             if(cmd[3] == ';') {
               // fine tune on or off
-              SetFtActive(atoi(&cmd[2]));
+              t41.MouseCenterTuneActive.Update(!atoi(&cmd[2]));
+              HighlightTuneInc();
               sendCommand = false;
             }
             break;

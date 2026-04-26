@@ -107,8 +107,6 @@ void UsbHostLoop() {
 #endif
 
 #if CAT_CONTROL_HOST
-  // this forces set frequency commands to set the center freq vs fine tune
-  mouseCenterTuneActive = true;
   T41ControlLoop();
 #endif
 

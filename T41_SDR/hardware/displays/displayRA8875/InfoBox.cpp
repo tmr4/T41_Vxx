@@ -136,44 +136,44 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
 
 // *** TODO: add version ***
 /* PROGMEM */ const infoBoxItem infoBox[] =
-{ //                                                     font    # chars
-  // label         options      option                   size    to erase  flag  col            row,           follow-up function
-  { "Vol:",        NULL,        (int*)&t41.AudioVolume,             1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
-  { "AGC",         agcOpts,     &AGCMode,                 1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
-  { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex,               0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
-  { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex,                 0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
-  { "Zoom:",       zoomOptions, (int*)&spectrumZoom,      0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    NULL                   }, // Zoom
-  { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,      0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
-  { "AutoNotch:",  onOff,       (int*)&ANR_notchOn,       0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
-  { "Compress:",   onOff,       &compressorFlag,          0,        6,      1,   IB_COL_2_X,    IB_ROW_5_Y,    &IBCompressionFollowup }, // Compress
+{ //                                                        font    # chars
+  // label         options      option                      size    to erase  flag  col            row,           follow-up function
+  { "Vol:",        NULL,        (int*)&t41.AudioVolume,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
+  { "AGC",         agcOpts,     &AGCMode,                    1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    NULL                   }, // AGC
+  { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
+  { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
+  { "Zoom:",       zoomOptions, (int*)&spectrumZoom,         0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    NULL                   }, // Zoom
+  { "NF Set:",     nfOptions,   &liveNoiseFloorFlag,         0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
+  { "AutoNotch:",  onOff,       (int*)&ANR_notchOn,          0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
+  { "Compress:",   onOff,       &compressorFlag,             0,        6,      1,   IB_COL_2_X,    IB_ROW_5_Y,    &IBCompressionFollowup }, // Compress
 
   // Noise needs to be in column 1
-  { "Noise:",      filter,      &nrOptionSelect,          0,        8,      1,   IB_COL_1_X,    IB_ROW_6_Y,    NULL                   }, // Noise Filter
-  { "RF Gain:",    NULL,        NULL,                     0,        3,      0,   IB_COL_2_X,    IB_ROW_6_Y,    &IBRFGainFollowup      }, // RF Gain
+  { "Noise:",      filter,      &nrOptionSelect,             0,        8,      1,   IB_COL_1_X,    IB_ROW_6_Y,    NULL                   }, // Noise Filter
+  { "RF Gain:",    NULL,        NULL,                        0,        3,      0,   IB_COL_2_X,    IB_ROW_6_Y,    &IBRFGainFollowup      }, // RF Gain
 
   // Equalizers takes two columns
-  { "Equalizer:",  NULL,        NULL,                     0,       10,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBEQFollowup          }, // Equalizers
+  { "Equalizer:",  NULL,        NULL,                        0,       10,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBEQFollowup          }, // Equalizers
 
   // Decider takes two columns
-  { "Decoder:",    onOff,       &decoderFlag,             0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
+  { "Decoder:",    onOff,       &decoderFlag,                0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
 
   // Key type takes two columns
-  { "Key Type:",   optionsWPM,  &keyType,      0,       12,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
+  { "Key Type:",   optionsWPM,  &keyType,                    0,        2,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
 
   // Memory keyer requires 3 rows
-  { "Keyer     ",  keyerOpts,   &keyerState,              0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer
+  { "Keyer     ",  keyerOpts,   &keyerState,                 0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer
 
-  { "FT8       ",  ft8Opts,     &ft8SyncState,            0,        8,      1,   IB_COL_1_X,    IB_ROW_10_Y,   NULL                   }, // FT8 sync
-  { "Tx Int:",     ft8IntOpts,  &ft8IntState,             0,        4,      0,   IB_COL_2_X,    IB_ROW_10_Y,   NULL                   }, // FT8 Tx interval
-  { "Tx:",         ft8TxOpts,   &ft8TxState,              0,        7,      1,   IB_COL_1_X,    IB_ROW_11_Y,   NULL                   }, // FT8 Tx enabled
-  { "CQ resp:",    ft8CqOpts,   &ft8CqState,              0,        4,      1,   IB_COL_2_X,    IB_ROW_11_Y,   NULL                   }, // FT8 Tx interval
-  { "Tx Freq:",    NULL,        &ft8TxFreq,               0,        5,      0,   IB_COL_1_X,    IB_ROW_12_Y,   &IBFT8RxTxFollowup     }, // FT8 Tx freq
-  { "Rx Freq:",    NULL,        &ft8RxFreq,               0,        5,      0,   IB_COL_2_X,    IB_ROW_12_Y,   &IBFT8RxTxFollowup     }, // FT8 Rx freq
+  { "FT8       ",  ft8Opts,     &ft8SyncState,               0,        8,      1,   IB_COL_1_X,    IB_ROW_10_Y,   NULL                   }, // FT8 sync
+  { "Tx Int:",     ft8IntOpts,  &ft8IntState,                0,        4,      0,   IB_COL_2_X,    IB_ROW_10_Y,   NULL                   }, // FT8 Tx interval
+  { "Tx:",         ft8TxOpts,   &ft8TxState,                 0,        7,      1,   IB_COL_1_X,    IB_ROW_11_Y,   NULL                   }, // FT8 Tx enabled
+  { "CQ resp:",    ft8CqOpts,   &ft8CqState,                 0,        4,      1,   IB_COL_2_X,    IB_ROW_11_Y,   NULL                   }, // FT8 Tx interval
+  { "Tx Freq:",    NULL,        &ft8TxFreq,                  0,        5,      0,   IB_COL_1_X,    IB_ROW_12_Y,   &IBFT8RxTxFollowup     }, // FT8 Tx freq
+  { "Rx Freq:",    NULL,        &ft8RxFreq,                  0,        5,      0,   IB_COL_2_X,    IB_ROW_12_Y,   &IBFT8RxTxFollowup     }, // FT8 Rx freq
 
-  { "Stack:",      NULL,        NULL,                     0,        4,      2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBStackFollowup       }, // Stack
-  { "Heap:",       NULL,        NULL,                     0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBHeapFollowup        }, // Heap
-  { "Temp:",       NULL,        NULL,                     0,        3,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
-  { "Load:",       NULL,        NULL,                     0,        4,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBLoadFollowup        }  // Teensy Load
+  { "Stack:",      NULL,        NULL,                        0,        4,      2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBStackFollowup       }, // Stack
+  { "Heap:",       NULL,        NULL,                        0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBHeapFollowup        }, // Heap
+  { "Temp:",       NULL,        NULL,                        0,        3,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
+  { "Load:",       NULL,        NULL,                        0,        4,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBLoadFollowup        }  // Teensy Load
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -263,14 +263,24 @@ void ClearInfoBoxRow(int row) {
   tft.fillRect(INFO_BOX_L + 2, row,  INFO_BOX_W - 6, 20, RA8875_BLACK);
 }
 
+void HighlightTuneInc() {
+  if(t41.MouseCenterTuneActive) {
+    HighlightIBItem(IB_ITEM_TUNE, RA8875_GREEN);
+    HighlightIBItem(IB_ITEM_FINE, RA8875_WHITE);
+  } else {
+    HighlightIBItem(IB_ITEM_FINE, RA8875_GREEN);
+    HighlightIBItem(IB_ITEM_TUNE, RA8875_WHITE);
+  }
+}
+
 /*****
-  Purpose: Information box follow up function for the Compression item
+  Purpose: Information box follow up function for the tuning increment items
 
   Parameter list:
     int row, col  Row and column of info box item
 *****/
 void IBTuneIncFollowup(int row, int col) {
-  SetFtActive(!mouseCenterTuneActive);
+  HighlightTuneInc();
 }
 
 /*****
@@ -653,18 +663,6 @@ void IBHeapFollowup(int row, int col) {
   tft.print("k");
 }
 
-void SetFtActive(int flag) {
-  if(flag == 1) {
-    mouseCenterTuneActive = false;
-    HighlightIBItem(IB_ITEM_FINE, RA8875_GREEN);
-    HighlightIBItem(IB_ITEM_TUNE, RA8875_WHITE);
-  } else {
-    mouseCenterTuneActive = true;
-    HighlightIBItem(IB_ITEM_TUNE, RA8875_GREEN);
-    HighlightIBItem(IB_ITEM_FINE, RA8875_WHITE);
-  }
-}
-
 // mouse actions
 void MouseButtonInfoBox(int button, int x, int y) {
   // *** TODO: this is weak ***
@@ -712,13 +710,13 @@ void MouseButtonInfoBox(int button, int x, int y) {
       switch(item) {
         case IB_ITEM_TUNE:
           if(button == 1) {
-            SetFtActive(0);
+            t41.MouseCenterTuneActive = 1;
           }
           break;
 
         case IB_ITEM_FINE:
           if(button == 1) {
-            SetFtActive(1);
+            t41.MouseCenterTuneActive = 0;
           }
           break;
 
@@ -799,14 +797,14 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
 
           case IB_ITEM_TUNE:
           ChangeFreqIncrement(wheel);
-          if(mouseCenterTuneActive) {
+          if(t41.MouseCenterTuneActive) {
             HighlightIBItem(IB_ITEM_TUNE, RA8875_GREEN);
           }
           break;
 
         case IB_ITEM_FINE:
           ChangeFtIncrement(wheel);
-          if(!mouseCenterTuneActive) {
+          if(!t41.MouseCenterTuneActive) {
             HighlightIBItem(IB_ITEM_FINE, RA8875_GREEN);
           }
           break;

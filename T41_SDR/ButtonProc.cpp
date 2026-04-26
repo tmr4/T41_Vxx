@@ -451,7 +451,6 @@ FLASHMEM void ToggleLiveNoiseFloorFlag() {
   Purpose: To process a frequency increment button push
 *****/
 FLASHMEM void ChangeFreqIncrement(int change, bool notify /* = true */) {
-  int incrementValues[] = { 10, 50, 100, 250, 1000, 10000, 100000, 1000000 };
   int index = t41.CenterTuneIndex + change;
 
   if(notify) {
@@ -459,15 +458,12 @@ FLASHMEM void ChangeFreqIncrement(int change, bool notify /* = true */) {
   } else {
     t41.CenterTuneIndex.Update(index);
   }
-
-  freqIncrement = incrementValues[index];
 }
 
 /*****
   Purpose: To process a fine tune frequency increment button push
 *****/
 FLASHMEM void ChangeFtIncrement(int change, bool notify /* = true */) {
-  int selectFT[] = { 10, 50, 250, 500 };
   int index = t41.FineTuneIndex + change;
 
   if(notify) {
@@ -475,8 +471,6 @@ FLASHMEM void ChangeFtIncrement(int change, bool notify /* = true */) {
   } else {
     t41.FineTuneIndex.Update(index);
   }
-
-  ftIncrement = selectFT[index];
 }
 
 /*****

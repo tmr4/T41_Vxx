@@ -94,7 +94,6 @@ int GetCursorHeight() { return 0; }
 void CopyCursor(int, int) {}
 void DrawCursor(int, int, int, int) {}
 void ReplaceCursor(int, int) {}
-void SetFtActive(int) {}
 bool CursorInMenuArea(int cursorX, int cursorY) { return false; }
 bool CursorInFreqArea(int cursorX, int cursorY) { return false; }
 bool CursorInOpStatsArea(int cursorX, int cursorY) { return false; }

@@ -160,7 +160,6 @@ void UpdateClock();
 void UpdateDecodeLockIndicator();
 void UpdateIBWPM();
 void ClearInfoBoxKeyer();
-void SetFtActive(int flag);
 void HighlightIBItem(uint8_t item, int color);
 void MouseButtonInfoBox(int button, int cursorX, int cursorY);
 void MouseWheelInfoBox(int wheel, int x, int y);

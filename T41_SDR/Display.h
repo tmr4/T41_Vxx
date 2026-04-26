@@ -107,6 +107,7 @@ void UpdateIBWPM();
 void ClearInfoBoxKeyer();
 void UpdateDecodeLockIndicator();
 void UpdateClock();
+void HighlightTuneInc();
 
 // menu
 void ShowMenu(char const**, int);
@@ -125,7 +126,6 @@ int GetCursorHeight();
 void CopyCursor(int, int);
 void DrawCursor(int, int, int, int);
 void ReplaceCursor(int, int);
-void SetFtActive(int);
 bool CursorInMenuArea(int cursorX, int cursorY);
 bool CursorInFreqArea(int cursorX, int cursorY);
 bool CursorInOpStatsArea(int cursorX, int cursorY);

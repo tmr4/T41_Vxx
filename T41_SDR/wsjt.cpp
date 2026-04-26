@@ -381,7 +381,8 @@ void WSJTLoop()
           case 'S':
             if(cmd[3] == ';') {
               // fine tune on or off
-              SetFtActive(atoi(&cmd[2]));
+              t41.MouseCenterTuneActive.Update(!atoi(&cmd[2]));
+              HighlightTuneInc();
               return;
             }
             break;

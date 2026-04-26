@@ -13,7 +13,10 @@ public:
 
   // T41 properties
   // *** template doesn't decrement with unsigned int ***
-  Property<int> RemoteStatus;  // notify on change, not polled
+
+  // notify on change, not polled
+  Property<int> RemoteStatus;
+  Property<int> MouseCenterTuneActive;
 
   // polled properties
   Property<int> RadioMode;
@@ -36,12 +39,15 @@ public:
   Property<int> InactiveBand;
 
   // helper functions
-  void Poll(bool updateDisplay, bool updateRemote);
-  void PollInfoBox(bool updateDisplay, bool updateRemote);
+  void Poll(bool updateDisplay);
+  void PollInfoBox(bool updateDisplay);
 
   int ActiveFreq() { return CenterFreq + NCOFreq; }
   int GetFreqA() { return ActiveVFO == VFO_A ? ActiveFreq() : InactiveFreq; }
   int GetFreqB() { return ActiveVFO == VFO_B ? ActiveFreq() : InactiveFreq; }
+  int FreqIncrement() { return freqIncValues[CenterTuneIndex]; }
+  int FtIncrement() { return ftIncValues[FineTuneIndex]; }
+
   void SetFreqA(int f);
   void SetFreqB(int f);
   void SwapActiveVFO();
@@ -50,7 +56,12 @@ protected:
   void SetPropertyDefaults();
 
 private:
-  //static T41Properties* instance;
+  static constexpr int maxFreqIncIndex = 8;
+  static constexpr int freqIncValues[maxFreqIncIndex] = { 10, 50, 100, 250, 1000, 10000, 100000, 1000000 };
+
+  static constexpr int maxFtIncIndex = 4;
+  static constexpr int ftIncValues[maxFtIncIndex] = { 10, 50, 250, 500 };
+
 };
 
 extern T41Properties t41;
@@ -70,13 +81,10 @@ from T41_Views (this is private data, first letter capitalized if property):
 
 next:
   int transmitPowerLevel = 1;
+  private int agcMode = 1;
 
 list:
-  private bool centerTuneActive = false;
-  //private int freqIncrement = 100000; *** maybe helper? ***
-  //private int ftIncrement = 500;
   private int currentNF = 0;
-  private int agcMode = 1;
   private int liveNoiseFloorFlag = 0;
   private bool dataFlag = false;
 

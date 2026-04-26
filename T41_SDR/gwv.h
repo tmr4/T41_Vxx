@@ -25,9 +25,6 @@ extern int currentWPM;
 extern int sidetoneVolume;
 extern unsigned long cwTransmitDelay;
 
-extern int freqIncrement;
-extern int ftIncrement;
-
 extern int freqCorrectionFactor;
 
 extern int equalizerRec[];

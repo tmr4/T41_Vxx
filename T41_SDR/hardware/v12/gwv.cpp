@@ -33,9 +33,6 @@ int currentWPM =  DEFAULT_KEYER_WPM;
 int sidetoneVolume = 20;
 unsigned long cwTransmitDelay = 750; // CW exciter stays active for this amount of time after last CW atom
 
-int freqIncrement = 100000; // *** these need to be automated according to defines in config file ***
-int ftIncrement = 500;
-
 //int freqCorrectionFactor = 17578;   // AD3 source @ 5MHz
 int freqCorrectionFactor = 0;   // gives
 

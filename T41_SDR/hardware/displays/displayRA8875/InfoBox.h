@@ -21,8 +21,6 @@ void MouseButtonInfoBox(int button, int cursorX, int cursorY);
 void MouseWheelInfoBox(int wheel, int x, int y);
 void HighlightIBItem(uint8_t item, int color);
 
-void SetFtActive(int flag);
-
 void ClearInfoBoxKeyer();
 
 void UpdateClock();

@@ -1567,7 +1567,7 @@ FLASHMEM void UpdateFt8TxFreq(int freq) {
 }
 
 FLASHMEM void ChangeFt8TxFreq(int wheel) {
-  UpdateFt8TxFreq(ft8TxFreq + wheel * ftIncrement);
+  UpdateFt8TxFreq(ft8TxFreq + wheel * t41.FtIncrement());
 }
 
 FLASHMEM void UpdateFt8RxFreq(int freq) {
@@ -1585,7 +1585,7 @@ FLASHMEM void UpdateFt8RxFreq(int freq) {
 }
 
 FLASHMEM void ChangeFt8RxFreq(int wheel) {
-  UpdateFt8RxFreq(ft8RxFreq + wheel * ftIncrement);
+  UpdateFt8RxFreq(ft8RxFreq + wheel * t41.FtIncrement());
 }
 
 FLASHMEM void ChangeFt8TxInterval(int wheel) {
@@ -1777,7 +1777,7 @@ FLASHMEM void FT8MsgWindowClick(int x, int y, int button) {
   if(row < 0) return;
 
   if(window == INFO_BOX && row > 11 && button == 2) {
-    UpdateFt8RxFreq((ft8RxFreq / ftIncrement) * ftIncrement); // TX will be updated as well
+    UpdateFt8RxFreq((ft8RxFreq / t41.FtIncrement()) * t41.FtIncrement()); // TX will be updated as well
     //UpdateFt8TxFreq(1000);
   } else {
     switch(row) {

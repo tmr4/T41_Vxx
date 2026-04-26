@@ -40,7 +40,7 @@ Properties that replaced old global variables:
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define MAX_FREQ_INDEX  8
+//#define MAX_FREQ_INDEX  8
 
 T41Properties t41;
 
@@ -74,9 +74,11 @@ void T41Properties::begin() {
 void T41Properties::SetPropertyDefaults() {
   int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
-  // polled properties
+  // notify properties
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus); // notify on change, not polled
+  MouseCenterTuneActive.Init(false, &SendMouseCenterTuneActive, &HighlightTuneInc, false); // make it a notify property
 
+  // polled properties
   RadioMode.Init(SSB_MODE, &SendSetMode, &UpdateModeDisplay);
   DemodMode.Init(DEMOD_LSB, &SendSetDemodMode, &UpdateModeDisplay);
   ActiveBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, true, &SendBand, &UpdateDisplayBand);
@@ -88,8 +90,9 @@ void T41Properties::SetPropertyDefaults() {
 
   // infobox properties
   AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
-  CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, MAX_FREQ_INDEX - 1, true, &SendFreqIncrement, &UpdateInfoBoxItem, IB_ITEM_TUNE);
-  FineTuneIndex.Init(DEFAULT_FT_INDEX, 0, 3, true, &SendFtIncrement, &UpdateInfoBoxItem, IB_ITEM_FINE);
+  //CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, MAX_FREQ_INDEX - 1, true, &SendFreqIncrement, &UpdateInfoBoxItem, IB_ITEM_TUNE);
+  CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, maxFreqIncIndex - 1, true, &SendFreqIncrement, &UpdateInfoBoxItem, IB_ITEM_TUNE);
+  FineTuneIndex.Init(DEFAULT_FT_INDEX, 0, maxFtIncIndex - 1, true, &SendFtIncrement, &UpdateInfoBoxItem, IB_ITEM_FINE);
 
   // *** TODO: these need notifications/updates added ***
   ActiveVFO.Init(VFO_A);
@@ -100,7 +103,9 @@ void T41Properties::SetPropertyDefaults() {
 }
 
 // helper functions
-void T41Properties::Poll(bool updateDisplay, bool updateRemote) {
+void T41Properties::Poll(bool updateDisplay) {
+  bool updateRemote = RemoteStatus == REMOTE_CONNECTED;
+
   // *** TODO: consider order to minimize update duplication ***
   // *** TODO: consider refining updates as there is some duplication ***
   RadioMode.Poll(updateDisplay, updateRemote);
@@ -112,7 +117,9 @@ void T41Properties::Poll(bool updateDisplay, bool updateRemote) {
   FilterHiCut.Poll(updateDisplay, updateRemote);
 }
 
-void T41Properties::PollInfoBox(bool updateDisplay, bool updateRemote) {
+void T41Properties::PollInfoBox(bool updateDisplay) {
+  bool updateRemote = RemoteStatus == REMOTE_CONNECTED;
+
   AudioVolume.Poll(updateDisplay, updateRemote);
   CenterTuneIndex.Poll(updateDisplay, updateRemote);
   FineTuneIndex.Poll(updateDisplay, updateRemote);

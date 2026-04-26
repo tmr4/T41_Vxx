@@ -898,7 +898,6 @@ float VolumeToAmplification(int volume) {
 FASTRUN void ProcessControls() {
   bool updateDisplay = false;
   bool updateInfoBox = false;
-  bool remoteConnected = t41.RemoteStatus == REMOTE_CONNECTED;
 
   switch(displayState) {
     case DISPLAY_T41:
@@ -982,8 +981,8 @@ FASTRUN void ProcessControls() {
     }
   }
 
-  t41.Poll(updateDisplay, remoteConnected);
-  t41.PollInfoBox(updateInfoBox, remoteConnected);
+  t41.Poll(updateDisplay);
+  t41.PollInfoBox(updateInfoBox);
 }
 
 /*****

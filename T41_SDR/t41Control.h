@@ -37,6 +37,7 @@ void SendFilterHi(int filter);
 void SendFilterLo(int filter);
 void SendFreqIncrement(int index);
 void SendFtIncrement(int index);
+void SendMouseCenterTuneActive(int val);
 
 void SendSignalStrengthRequest();
 void SendSignalStrengthRequest(int index);

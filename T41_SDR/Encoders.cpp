@@ -90,7 +90,7 @@ bool ProcessCenterTuneEncoder(bool readEncoder /* = false */) {
   //   - two tone adjusts tone 1
   if((calibrateItem >= 1) && (calibrateItem <= 3)) return false; // *** TODO: validate required calibration return value ***
 
-  SetCenterTune((long)freqIncrement * tuneChange);
+  SetCenterTune((long)t41.FreqIncrement() * tuneChange);
 
   tuneChange = 0;
   return true;

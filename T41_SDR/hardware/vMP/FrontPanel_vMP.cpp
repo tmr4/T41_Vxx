@@ -155,7 +155,7 @@ FASTRUN void EncoderFineTuneISR() {
     return;
   }
 
-  t41.NCOFreq += ftIncrement * fineTuneEncoderMove;
+  t41.NCOFreq += t41.FtIncrement() * fineTuneEncoderMove;
 
   fineTuneEncoderMove = 0L;
 }

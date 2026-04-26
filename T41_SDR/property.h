@@ -133,6 +133,7 @@ public:
 protected:
   FLASHMEM void Notify() {
     UpdateDisplay();
+    if(fPtrT != NULL) (*fPtrT)(value);
   }
 
   FLASHMEM void UpdateDisplay() {

@@ -3,7 +3,6 @@
 
 #include "SDT.h"
 
-bool mouseCenterTuneActive = false;
 int mouseWheelValue = 0;
 int menuBarSelected = false;
 
@@ -154,10 +153,10 @@ void MouseWheelSpectrumWaterfall(int wheel) {
   if(t41.DemodMode == DEMOD_FT8_INTERNAL) {
     if(wheel != 0) ScrollFt8MsgWindow(cursorX, wheel);
   } else {
-    if(mouseCenterTuneActive) {
-      SetCenterTune((long)freqIncrement * wheel);
+    if(t41.MouseCenterTuneActive) {
+      SetCenterTune((long)t41.FreqIncrement() * wheel);
     } else {
-      t41.NCOFreq += ftIncrement * wheel;
+      t41.NCOFreq += t41.FtIncrement() * wheel;
     }
   }
 }
