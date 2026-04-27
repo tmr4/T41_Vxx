@@ -143,12 +143,12 @@ FLASHMEM void ExecuteButtonPress(int val) {
       break;
 
     case NOISE_REDUCTION:  // 9
-      ButtonNR();
+      t41.NoiseFilter += 1;
       break;
 
     case NOTCH_FILTER:  // 10
       ButtonNotchFilter();
-      UpdateInfoBoxItem(IB_ITEM_NOTCH);
+      UpdateInfoBoxItem(T41_ITEM_NOTCH);
       break;
 
     case NOISE_FLOOR:  // 11

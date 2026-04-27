@@ -6,10 +6,6 @@
 // Configuration working global variables
 // commented lines have no corresponding global extern
 
-//extern char versionSettings[];
-extern int rfGainAllBands;
-extern int transmitPowerLevel;
-extern int nrOptionSelect;
 extern int currentScale;
 extern float spectrum_display_scale;
 
@@ -64,8 +60,6 @@ extern int  separationCharacter;
 
 extern int paddleFlip;
 extern int sdCardPresent;
-
-extern int compressorFlag;
 
 extern int buttonThresholdPressed;
 extern int buttonThresholdReleased;

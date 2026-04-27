@@ -88,8 +88,8 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
         // turn on FT8
         ft8SyncState = 0;
         ft8SyncState = 0; // not sync'd
-        UpdateInfoBoxItem(IB_ITEM_FT8);
-        infoBoxItemActive[IB_ITEM_FT8] = true;
+        UpdateInfoBoxItem(T41_ITEM_FT8);
+        infoBoxItemActive[T41_ITEM_FT8] = true;
         break;
 
       case DEMOD_PSK31:
@@ -266,10 +266,10 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
   switch(tmp) {
     case CW_MODE:
       // hide cw related items in info box
-      infoBoxItemActive[IB_ITEM_DECODER] = false;
-      infoBoxItemActive[IB_ITEM_KEY] = false;
-      UpdateInfoBoxItem(IB_ITEM_DECODER);
-      UpdateInfoBoxItem(IB_ITEM_KEY);
+      infoBoxItemActive[T41_ITEM_DECODER] = false;
+      infoBoxItemActive[T41_ITEM_KEY] = false;
+      UpdateInfoBoxItem(T41_ITEM_DECODER);
+      UpdateInfoBoxItem(T41_ITEM_KEY);
 
       if(decoderFlag == ON) {
         ExitCWDecoder();
@@ -277,7 +277,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
 
       // turn off keyer
       keyerState = 0;
-      infoBoxItemActive[IB_ITEM_KEYER] = false;
+      infoBoxItemActive[T41_ITEM_KEYER] = false;
       ClearInfoBoxKeyer();
 
       DrawCWFilter();
@@ -315,10 +315,10 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
   switch(t41.RadioMode) {
     case CW_MODE:
       // show cw related items in info box
-      infoBoxItemActive[IB_ITEM_DECODER] = true;
-      infoBoxItemActive[IB_ITEM_KEY] = true;
-      UpdateInfoBoxItem(IB_ITEM_DECODER);
-      UpdateInfoBoxItem(IB_ITEM_KEY);
+      infoBoxItemActive[T41_ITEM_DECODER] = true;
+      infoBoxItemActive[T41_ITEM_KEY] = true;
+      UpdateInfoBoxItem(T41_ITEM_DECODER);
+      UpdateInfoBoxItem(T41_ITEM_KEY);
 
       if(decoderFlag == ON) {
         // init if decoding CW
@@ -329,8 +329,8 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
 
       // turn on keyer
       keyerState = 1;
-      infoBoxItemActive[IB_ITEM_KEYER] = true;
-      UpdateInfoBoxItem(IB_ITEM_KEYER);
+      infoBoxItemActive[T41_ITEM_KEYER] = true;
+      UpdateInfoBoxItem(T41_ITEM_KEYER);
       break;
 
     case DATA_MODE:
@@ -358,7 +358,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
               // switch to play a wav file
               ft8SyncState = 1;
               ft8SyncState = 1;
-              UpdateInfoBoxItem(IB_ITEM_FT8);
+              UpdateInfoBoxItem(T41_ITEM_FT8);
             } else {
               // couldn't load wav file
               ExitFT8Decoder();
@@ -405,18 +405,6 @@ FLASHMEM void ButtonMode() {
 }
 
 /*****
-  Purpose: To process select noise reduction
-*****/
-FLASHMEM void ButtonNR() {
-  nrOptionSelect++;
-  if(nrOptionSelect > NR_OPTIONS) {
-    nrOptionSelect = 0;
-  }
-
-  UpdateInfoBoxItem(IB_ITEM_FILTER);
-}
-
-/*****
   Purpose: To set the notch filter
 *****/
 FLASHMEM void ButtonNotchFilter() {
@@ -456,7 +444,7 @@ FLASHMEM void ChangeFtIncrement(int change, bool notify /* = true */) {
 *****/
 FLASHMEM void ToggleCWDecoder() {
   decoderFlag = !decoderFlag;
-  UpdateInfoBoxItem(IB_ITEM_DECODER);
+  UpdateInfoBoxItem(T41_ITEM_DECODER);
 
   if(t41.RadioMode == CW_MODE) {
     if(decoderFlag == ON) {

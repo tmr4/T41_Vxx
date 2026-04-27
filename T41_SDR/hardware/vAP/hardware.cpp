@@ -85,13 +85,11 @@ FLASHMEM void RFOptions() {
   //  const char *rfOptions[] = { "Power level", "Gain", "Cancel" };
   switch(secondaryMenuIndex) {
     case 0: // Power Level
-      //transmitPowerLevel = (float)GetEncoderValue(1, 20, transmitPowerLevel, 1, (char *)"Power: ");
-      GetMenuValue(1, 20, &transmitPowerLevel, 1, "Power:", 200, NULL, NULL, &RFPowerFollowup);
+      GetMenuValue(1, 20, (int*)&t41.TxPower, 1, "Power:", 200, NULL, NULL, &RFPowerFollowup);
       break;
 
     case 1: // Gain
-      //rfGainAllBands = GetEncoderValue(-60, 10, rfGainAllBands, 5, (char *)"RF Gain dB: ");
-      GetMenuValue(-60, 10, &rfGainAllBands, 5, "Gain:", 200, NULL, NULL, &RFGainFollowup);
+      GetMenuValue(-60, 10, (int*)&t41.RFGain, 5, "Gain:", 200, NULL, NULL, &RFGainFollowup);
       break;
   }
 }
@@ -152,9 +150,9 @@ float CalcSignalStrength() {
   if(audioMaxSquaredAve > 0.0) {
     // dbm_calibration set to 25; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
     // attenuator is 0 and could be set in a future HW revision; rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10
-    //  rfGainAllBands is initialized to 0
-    //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + (float32_t)attenuator + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
-    dbm = 29.0 + bands[t41.ActiveBand].gainCorrection + 0.0 + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
+    //  t41.RFGain is initialized to 0
+    //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + (float32_t)attenuator + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    dbm = 29.0 + bands[t41.ActiveBand].gainCorrection + 0.0 + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
   } else {
 
     // reset audioMaxSquaredAve to a small value

@@ -15,9 +15,6 @@
 // Configuration working global variables
 
 //char versionSettings[10] = VERSION;
-int rfGainAllBands = 0;
-int transmitPowerLevel = DEFAULT_POWER_LEVEL;
-int nrOptionSelect = 0;
 int currentScale = 1;  // 20 dB/division
 float spectrum_display_scale = 20.0;     // 30.0
 
@@ -86,8 +83,6 @@ int separationCharacter = (int) '.';
 
 int paddleFlip = PADDLE_FLIP;
 int sdCardPresent = 0;  // Do they have an micro SD card installed?
-
-int compressorFlag = 0;
 
 int buttonThresholdPressed = 944;   // switchValues[0] + WIGGLE_ROOM
 int buttonThresholdReleased = 964;  // buttonThresholdPressed + WIGGLE_ROOM

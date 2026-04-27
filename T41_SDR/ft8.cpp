@@ -367,7 +367,7 @@ FLASHMEM void AutoSyncFT8() {
     }
   }
 
-  UpdateInfoBoxItem(IB_ITEM_FT8);
+  UpdateInfoBoxItem(T41_ITEM_FT8);
 }
 
 // add a message index to the specified message list
@@ -710,18 +710,18 @@ FLASHMEM bool InitFT8Decoder(const char *call, const char *grid) {
         DrawFT8BandwidthBar();
 
         // update FT8 info box items
-        infoBoxItemActive[IB_ITEM_FT8] = true;
-        UpdateInfoBoxItem(IB_ITEM_FT8);
-        infoBoxItemActive[IB_ITEM_FT8_TX] = true;
-        UpdateInfoBoxItem(IB_ITEM_FT8_TX);
-        infoBoxItemActive[IB_ITEM_FT8_TXF] = true;
-        UpdateInfoBoxItem(IB_ITEM_FT8_TXF);
-        infoBoxItemActive[IB_ITEM_FT8_RXF] = true;
-        UpdateInfoBoxItem(IB_ITEM_FT8_RXF);
-        infoBoxItemActive[IB_ITEM_FT8_INT] = true;
-        UpdateInfoBoxItem(IB_ITEM_FT8_INT);
-        infoBoxItemActive[IB_ITEM_FT8_CQ] = true;
-        UpdateInfoBoxItem(IB_ITEM_FT8_CQ);
+        infoBoxItemActive[T41_ITEM_FT8] = true;
+        UpdateInfoBoxItem(T41_ITEM_FT8);
+        infoBoxItemActive[T41_ITEM_FT8_TX] = true;
+        UpdateInfoBoxItem(T41_ITEM_FT8_TX);
+        infoBoxItemActive[T41_ITEM_FT8_TXF] = true;
+        UpdateInfoBoxItem(T41_ITEM_FT8_TXF);
+        infoBoxItemActive[T41_ITEM_FT8_RXF] = true;
+        UpdateInfoBoxItem(T41_ITEM_FT8_RXF);
+        infoBoxItemActive[T41_ITEM_FT8_INT] = true;
+        UpdateInfoBoxItem(T41_ITEM_FT8_INT);
+        infoBoxItemActive[T41_ITEM_FT8_CQ] = true;
+        UpdateInfoBoxItem(T41_ITEM_FT8_CQ);
 
         // set up message area
         InitFT8Display();
@@ -780,12 +780,12 @@ FLASHMEM void ExitFT8Decoder() {
   // restore waterfall area
 
   // update FT8 info box items
-  infoBoxItemActive[IB_ITEM_FT8] = false;
-  infoBoxItemActive[IB_ITEM_FT8_TX] = false;
-  infoBoxItemActive[IB_ITEM_FT8_TXF] = false;
-  infoBoxItemActive[IB_ITEM_FT8_RXF] = false;
-  infoBoxItemActive[IB_ITEM_FT8_INT] = false;
-  infoBoxItemActive[IB_ITEM_FT8_CQ] = false;
+  infoBoxItemActive[T41_ITEM_FT8] = false;
+  infoBoxItemActive[T41_ITEM_FT8_TX] = false;
+  infoBoxItemActive[T41_ITEM_FT8_TXF] = false;
+  infoBoxItemActive[T41_ITEM_FT8_RXF] = false;
+  infoBoxItemActive[T41_ITEM_FT8_INT] = false;
+  infoBoxItemActive[T41_ITEM_FT8_CQ] = false;
   UpdateInfoBox();
 }
 
@@ -1256,7 +1256,7 @@ FLASHMEM void FT8DecoderLoop() {
 
       // reset volume flag
       t41.AudioVolume = vol;
-      //UpdateInfoBoxItem(IB_ITEM_VOL);
+      //UpdateInfoBoxItem(T41_ITEM_VOL);
     }
   }
 
@@ -1276,7 +1276,7 @@ FLASHMEM void FT8DecoderLoop() {
       // ensure we're in sync
       if(ft8SyncState) {
         //UpdateFT8Synchronization();
-        UpdateInfoBoxItem(IB_ITEM_FT8);
+        UpdateInfoBoxItem(T41_ITEM_FT8);
       } else {
         AutoSyncFT8();
       }
@@ -1407,7 +1407,7 @@ FLASHMEM void FT8DecoderLoop() {
       #ifdef USE_BUFFERED_FT8_WAV
       // reset read wav buffer
       countWavBuf = countWavBufStart;
-      UpdateInfoBoxItem(IB_ITEM_FT8);
+      UpdateInfoBoxItem(T41_ITEM_FT8);
       #endif
 
       // *** setting buffering state here allows clean transition if:
@@ -1561,7 +1561,7 @@ FLASHMEM void UpdateFt8TxFreq(int freq) {
   if(ft8TxFreq < 200) ft8TxFreq = 200; // bottom of ft8lib FT8 filter
   if(ft8TxFreq > 3350) ft8TxFreq = 3350; // 512 pixels * 6.25Hz/pixel + 200Hz offset - 50Hz bandwidth bar
 
-  UpdateInfoBoxItem(IB_ITEM_FT8_TXF);
+  UpdateInfoBoxItem(T41_ITEM_FT8_TXF);
 
   DrawFT8BandwidthBar();
 }
@@ -1577,7 +1577,7 @@ FLASHMEM void UpdateFt8RxFreq(int freq) {
   if(ft8RxFreq < 200) ft8RxFreq = 200; // bottom of ft8lib FT8 filter
   if(ft8RxFreq > 3350) ft8RxFreq = 3350; // 512 pixels * 6.25Hz/pixel + 200Hz offset - 50Hz bandwidth bar
 
-  UpdateInfoBoxItem(IB_ITEM_FT8_RXF);
+  UpdateInfoBoxItem(T41_ITEM_FT8_RXF);
 
   DrawFT8BandwidthBar();
   CreateList(RX_WINDOW);
@@ -1594,7 +1594,7 @@ FLASHMEM void ChangeFt8TxInterval(int wheel) {
   if(ft8IntState < 0) ft8IntState = 1;
   if(ft8IntState > 1) ft8IntState = 0;
 
-  UpdateInfoBoxItem(IB_ITEM_FT8_INT);
+  UpdateInfoBoxItem(T41_ITEM_FT8_INT);
 }
 
 FLASHMEM void ChangeFt8CqState(int wheel) {
@@ -1603,7 +1603,7 @@ FLASHMEM void ChangeFt8CqState(int wheel) {
   if(ft8CqState < 0) ft8CqState = 1;
   if(ft8CqState > 1) ft8CqState = 0;
 
-  UpdateInfoBoxItem(IB_ITEM_FT8_CQ);
+  UpdateInfoBoxItem(T41_ITEM_FT8_CQ);
 }
 
 FLASHMEM void ChangeFt8TxState(int wheel) {
@@ -1612,7 +1612,7 @@ FLASHMEM void ChangeFt8TxState(int wheel) {
   if(ft8TxState < 0) ft8TxState = 1;
   if(ft8TxState > 1) ft8TxState = 0;
 
-  UpdateInfoBoxItem(IB_ITEM_FT8_TX);
+  UpdateInfoBoxItem(T41_ITEM_FT8_TX);
 
   // set message 0 status
   // *** TODO: consider TX state changes in other situations ***
@@ -1641,9 +1641,9 @@ FLASHMEM void ReplyToCQ(int window, int row) {
 
     // update FT8 state options for CQ msg params
     ft8TxState = 1;
-    UpdateInfoBoxItem(IB_ITEM_FT8_TX);
+    UpdateInfoBoxItem(T41_ITEM_FT8_TX);
     ft8IntState = rxBuf[msgIndex].evenInterval ? 1 : 0;
-    UpdateInfoBoxItem(IB_ITEM_FT8_INT);
+    UpdateInfoBoxItem(T41_ITEM_FT8_INT);
 
     qsoViewActive = true;
   }

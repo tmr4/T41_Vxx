@@ -624,9 +624,9 @@ void UpdateMemTempLoad() {
   // update memory usage, temperature and load
   if(ms_5000.check() == 1) {
     // Stack is more informative when called from within a function that might be stressing the stack
-    UpdateInfoBoxItem(IB_ITEM_STACK);
-    UpdateInfoBoxItem(IB_ITEM_HEAP);
-    UpdateInfoBoxItem(IB_ITEM_TEMP);
-    UpdateInfoBoxItem(IB_ITEM_LOAD);
+    UpdateInfoBoxItem(T41_ITEM_STACK);
+    UpdateInfoBoxItem(T41_ITEM_HEAP);
+    UpdateInfoBoxItem(T41_ITEM_TEMP);
+    UpdateInfoBoxItem(T41_ITEM_LOAD);
   }
 }

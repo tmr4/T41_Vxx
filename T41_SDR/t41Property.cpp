@@ -3,6 +3,7 @@
 
 #include "Display.h"
 #include "Encoders.h"
+#include "Noise.h"
 #include "t41Control.h"
 #include "Tune.h"
 
@@ -49,6 +50,8 @@ T41Properties t41;
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+void RFPowerFollowup();
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -69,6 +72,7 @@ T41Properties::T41Properties() {
 
 void T41Properties::begin() {
   // initialize properties
+  T41Update::SetUpdateFunctions(UpdateInfoBoxItem, SendCommand);
   SetPropertyDefaults();
 }
 
@@ -77,26 +81,33 @@ void T41Properties::SetPropertyDefaults() {
 
   // notify properties (not polled!)
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
-  MouseCenterTuneActive.Init(false, &SendMouseCenterTuneActive, &HighlightTuneInc, false); // make it a notify property
-  NoiseFloor.Init(0, &SendNoiseFloor, NULL, false); // make it a notify property
+  MouseCenterTuneActive.Init(false, &HighlightTuneInc, T41_ITEM_MOUSE, false); // make it a notify property
+  NoiseFloor.Init(0, NULL, T41_ITEM_NOISE, false); // make it a notify property
 
   // polled properties
-  RadioMode.Init(SSB_MODE, &SendMode, &UpdateModeDisplay);
-  DemodMode.Init(DEMOD_LSB, &SendDemodMode, &UpdateModeDisplay);
-  ActiveBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, true, &SendBand, &UpdateDisplayBand);
+  RadioMode.Init(SSB_MODE, &UpdateModeDisplay, T41_ITEM_RADIO_MODE);
+  DemodMode.Init(DEMOD_LSB, &UpdateModeDisplay, T41_ITEM_DEMOD_MODE);
+  ActiveBand.Init(BAND_40M, 0, NUMBER_OF_BANDS - 1, true, &UpdateDisplayBand, T41_ITEM_BAND);
+  TxPower.Init(DEFAULT_POWER_LEVEL, 1, 20, false, &RFPowerFollowup, T41_ITEM_POWER);
 
-  CenterFreq.Init(CURRENT_FREQ_A, &SendCenterFreq, &UpdateDisplayFreq);
-  NCOFreq.Init(0, &CheckNCOFreqBounds, &SendNCOFreq, &UpdateDisplayNCOFreq);
-  FilterHiCut.Init(3000, &SendFilterHi, &UpdateDisplayFilters);
-  FilterLoCut.Init(200, &SendFilterLo, &UpdateDisplayFilters);
+  CenterFreq.Init(CURRENT_FREQ_A, &UpdateDisplayFreq, T41_ITEM_FREQ);
+  NCOFreq.Init(0, &CheckNCOFreqBounds, &UpdateDisplayNCOFreq, T41_ITEM_NCO);
+  FilterHiCut.Init(3000, &UpdateDisplayFilters, T41_ITEM_FHI);
+  FilterLoCut.Init(200, &UpdateDisplayFilters, T41_ITEM_FLO);
 
   // infobox properties
-  AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, &SendVolume, &UpdateInfoBoxItem, IB_ITEM_VOL);
-  AGCMode.Init(1, 0, 5 - 1, true, &SendAGC, &UpdateInfoBoxItem, IB_ITEM_AGC);
-  CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, maxFreqIncIndex - 1, true, &SendFreqIncrement, &UpdateInfoBoxItem, IB_ITEM_TUNE);
-  FineTuneIndex.Init(DEFAULT_FT_INDEX, 0, maxFtIncIndex - 1, true, &SendFtIncrement, &UpdateInfoBoxItem, IB_ITEM_FINE);
-  SpectrumZoom.Init(1, 0, MAX_ZOOM_ENTRIES - 1, true, &SendDisplayZoom, &UpdateInfoBoxItem, IB_ITEM_ZOOM);
-  LiveNoiseFloor.Init(0, 0, 2, true, &SendNFSetting, &UpdateInfoBoxItem, IB_ITEM_FLOOR); // OFF=0, Auto=1, ON=2
+  AudioVolume.Init(30, MIN_AUDIO_VOLUME, MAX_AUDIO_VOLUME, false, T41_ITEM_VOL);
+  AGCMode.Init(1, 0, 5 - 1, true, T41_ITEM_AGC);
+  CenterTuneIndex.Init(DEFAULTFREQINDEX, 0, maxFreqIncIndex - 1, true, T41_ITEM_TUNE);
+  FineTuneIndex.Init(DEFAULT_FT_INDEX, 0, maxFtIncIndex - 1, true, T41_ITEM_FINE);
+  SpectrumZoom.Init(1, 0, MAX_ZOOM_ENTRIES - 1, true, T41_ITEM_ZOOM);
+  LiveNoiseFloor.Init(0, 0, 2, true, T41_ITEM_FLOOR); // OFF=0, Auto=1, ON=2
+  AutoNotch.Init(0, 0, 1, true, T41_ITEM_NOTCH);
+  NoiseFilter.Init(0, 0, NR_OPTIONS, true, T41_ITEM_FILTER);
+  Compressor.Init(0, 0, 1, true, T41_ITEM_COMPRESS);
+  RFGain.Init(0, -60, 10, false, T41_ITEM_RFGAIN);
+  RxEqualizer.Init(0, 0, 1, true, T41_ITEM_EQUALIZER);
+  TxEqualizer.Init(0, 0, 1, true, T41_ITEM_EQUALIZER);
 
   // *** TODO: these need notifications/updates added ***
   ActiveVFO.Init(VFO_A);
@@ -115,6 +126,8 @@ void T41Properties::Poll(bool updateDisplay) {
   RadioMode.Poll(updateDisplay, updateRemote);
   DemodMode.Poll(updateDisplay, updateRemote);
   ActiveBand.Poll(updateDisplay, updateRemote);
+  TxPower.Poll(updateDisplay, updateRemote);
+
   CenterFreq.Poll(updateDisplay, updateRemote);
   NCOFreq.Poll(updateDisplay, updateRemote);
   FilterHiCut.Poll(updateDisplay, updateRemote);
@@ -130,6 +143,12 @@ void T41Properties::PollInfoBox(bool updateDisplay) {
   FineTuneIndex.Poll(updateDisplay, updateRemote);
   SpectrumZoom.Poll(updateDisplay, updateRemote);
   LiveNoiseFloor.Poll(updateDisplay, updateRemote);
+  NoiseFilter.Poll(updateDisplay, updateRemote);
+  AutoNotch.Poll(updateDisplay, updateRemote);
+  Compressor.Poll(updateDisplay, updateRemote);
+  RFGain.Poll(updateDisplay, updateRemote);
+  RxEqualizer.Poll(updateDisplay, updateRemote);
+  TxEqualizer.Poll(updateDisplay, updateRemote);
 }
 
 // these don't change NCOFreq
@@ -173,6 +192,18 @@ Project System:
 
 *** loop times are a rough average over 20 loops ***
 *** size on Audio Platform differs from PS due to mouse/keyboard support (and ? ... examine) ***
+
+4/27/2026
+PS
+  FLASH: code:208276, data:78244, headers:8384   free for files:7831560
+   RAM1: variables:147584, code:172856, padding:23752   free for local variables:180096
+   RAM2: variables:334048  free for malloc/new:190240
+ EXTRAM: variables:1200320
+AP
+  FLASH: code:217060, data:79268, headers:8816   free for files:7821320
+   RAM1: variables:155680, code:181992, padding:14616   free for local variables:172000
+   RAM2: variables:334304  free for malloc/new:189984
+ EXTRAM: variables:480320
 
 4/25/2026
 PS

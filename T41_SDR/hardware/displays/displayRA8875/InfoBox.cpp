@@ -70,7 +70,8 @@ typedef  struct {
 } infoBoxItem;
 
 #define IB_COL_1_X        INFO_BOX_L + 90  // X coordinate for info box 1st column field
-#define IB_COL_2_X        INFO_BOX_L + 220 // X coordinate for info box 2nd column field
+//#define IB_COL_2_X        INFO_BOX_L + 220 // X coordinate for info box 2nd column field
+#define IB_COL_2_X        INFO_BOX_L + 230 // X coordinate for info box 2nd column field
 #define IB_COL_2L_X       INFO_BOX_L + 205 // X coordinate for info box 2nd column field
 
 // 14 rows possible with current spacing
@@ -118,9 +119,9 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   true,  // FT Inc
   true,  // Zoom
   true,  // Noise Floor
-  true,  // Auto Notch
-  true,  // Compress
+  true,  // Notch
   true,  // Noise Filter
+  true,  // Compress
   true,  // RF Gain
   true,  // Equalizers
   false, // Decoder
@@ -147,12 +148,12 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
   { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
   { "Zoom:",       zoomOptions, (int*)&t41.SpectrumZoom,     0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    &IBZoomFollowup        }, // Zoom
-  { "NF Set:",     nfOptions,   (int*)&t41.LiveNoiseFloor,         0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
-  { "AutoNotch:",  onOff,       (int*)&ANR_notchOn,          0,        3,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Auto Notch
-  { "Compress:",   onOff,       &compressorFlag,             0,        6,      1,   IB_COL_2_X,    IB_ROW_5_Y,    &IBCompressionFollowup }, // Compress
+  { "NF Set:",     nfOptions,   (int*)&t41.LiveNoiseFloor,   0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
+  { "Notch:",      onOff,       (int*)&ANR_notchOn,          0,        3,      1,   IB_COL_2_X,    IB_ROW_5_Y,    NULL                   }, // Notch
 
-  // Noise needs to be in column 1
-  { "Noise:",      filter,      &nrOptionSelect,             0,        8,      1,   IB_COL_1_X,    IB_ROW_6_Y,    NULL                   }, // Noise Filter
+  // Compress and Noise need to be in column 1
+  { "Noise:",      filter,      (int*)&t41.NoiseFilter,      0,        8,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Noise Filter
+  { "Compress:",   onOff,       (int*)&t41.Compressor,             0,        6,      1,   IB_COL_1_X,    IB_ROW_6_Y,    &IBCompressionFollowup }, // Compress
   { "RF Gain:",    NULL,        NULL,                        0,        3,      0,   IB_COL_2_X,    IB_ROW_6_Y,    &IBRFGainFollowup      }, // RF Gain
 
   // Equalizers takes two columns
@@ -245,17 +246,17 @@ void UpdateInfoBox() {
   ShowVersion();
 
   // you can update each item individually if they need done in a particular order ...
-  //UpdateInfoBoxItem(IB_ITEM_VOL);
-  //UpdateInfoBoxItem(IB_ITEM_AGC);
-  //UpdateInfoBoxItem(IB_ITEM_TUNE);
-  //UpdateInfoBoxItem(IB_ITEM_FINE);
-  //UpdateInfoBoxItem(IB_ITEM_COMPRESS);
-  //UpdateInfoBoxItem(IB_ITEM_DECODER);
-  //UpdateInfoBoxItem(IB_ITEM_FILTER);
-  //UpdateInfoBoxItem(IB_ITEM_FLOOR);
-  //UpdateInfoBoxItem(IB_ITEM_NOTCH);
-  //UpdateInfoBoxItem(IB_ITEM_KEY);
-  //UpdateInfoBoxItem(IB_ITEM_ZOOM);
+  //UpdateInfoBoxItem(T41_ITEM_VOL);
+  //UpdateInfoBoxItem(T41_ITEM_AGC);
+  //UpdateInfoBoxItem(T41_ITEM_TUNE);
+  //UpdateInfoBoxItem(T41_ITEM_FINE);
+  //UpdateInfoBoxItem(T41_ITEM_COMPRESS);
+  //UpdateInfoBoxItem(T41_ITEM_DECODER);
+  //UpdateInfoBoxItem(T41_ITEM_FILTER);
+  //UpdateInfoBoxItem(T41_ITEM_FLOOR);
+  //UpdateInfoBoxItem(T41_ITEM_NOTCH);
+  //UpdateInfoBoxItem(T41_ITEM_KEY);
+  //UpdateInfoBoxItem(T41_ITEM_ZOOM);
 
   // ... or update them in order
   for(int i = 0; i < IB_NUM_ITEMS; i++) {
@@ -269,11 +270,11 @@ void ClearInfoBoxRow(int row) {
 
 void HighlightTuneInc() {
   if(t41.MouseCenterTuneActive) {
-    HighlightIBItem(IB_ITEM_TUNE, RA8875_GREEN);
-    HighlightIBItem(IB_ITEM_FINE, RA8875_WHITE);
+    HighlightIBItem(T41_ITEM_TUNE, RA8875_GREEN);
+    HighlightIBItem(T41_ITEM_FINE, RA8875_WHITE);
   } else {
-    HighlightIBItem(IB_ITEM_FINE, RA8875_GREEN);
-    HighlightIBItem(IB_ITEM_TUNE, RA8875_WHITE);
+    HighlightIBItem(T41_ITEM_FINE, RA8875_GREEN);
+    HighlightIBItem(T41_ITEM_TUNE, RA8875_WHITE);
   }
 }
 
@@ -300,7 +301,7 @@ void IBZoomFollowup(int row, int col) {
     int row, col  Row and column of info box item
 *****/
 void IBCompressionFollowup(int row, int col) {
-  if(compressorFlag == 1) {
+  if(t41.Compressor == 1) {
     tft.print(" ");
     tft.print(currentMicThreshold);
   }
@@ -354,7 +355,7 @@ void IBRFGainFollowup(int row, int col) {
   tft.setFontScale((enum RA8875tsize)0);
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(col, row);
-  tft.print(rfGainAllBands);
+  tft.print(t41.RFGain);
 }
 
 /*****
@@ -493,7 +494,7 @@ void IBFT8RxTxFollowup(int row, int col) {
 }
 
 void ClearInfoBoxKeyer() {
-  int row = infoBox[IB_ITEM_KEYER].row;
+  int row = infoBox[T41_ITEM_KEYER].row;
 
   ClearInfoBoxRow(row);
   ClearInfoBoxRow(row + 20);
@@ -553,7 +554,7 @@ void IBKeyerFollowup(int row, int col) {
            Assumes decoder is in column 1 row 9
 *****/
 void UpdateIBWPM() {
-  int yOffset = infoBox[IB_ITEM_DECODER].row;
+  int yOffset = infoBox[T41_ITEM_DECODER].row;
 
   tft.setFontScale((enum RA8875tsize)0);
   tft.setTextColor(RA8875_GREEN);
@@ -568,7 +569,7 @@ void UpdateIBWPM() {
   Purpose: Update CW decode lock indicator in information box
 *****/
 void UpdateDecodeLockIndicator() {
-  int yOffset = infoBox[IB_ITEM_DECODER].row;
+  int yOffset = infoBox[T41_ITEM_DECODER].row;
 
   // ==========  CW decode "lock" indicator
   if(combinedCoeff > 50)
@@ -695,19 +696,19 @@ void MouseButtonInfoBox(int button, int x, int y) {
   for(int i = 0; i < 5; i++) {
     switch(i) {
       case 0:
-        item = IB_ITEM_TUNE;
+        item = T41_ITEM_TUNE;
         break;
       case 1:
-        item = IB_ITEM_FINE;
+        item = T41_ITEM_FINE;
         break;
       case 2:
-        item = IB_ITEM_ZOOM;
+        item = T41_ITEM_ZOOM;
         break;
       case 3:
-        item = IB_ITEM_FLOOR;
+        item = T41_ITEM_FLOOR;
         break;
       case 4:
-        item = IB_ITEM_DECODER;
+        item = T41_ITEM_DECODER;
         break;
     }
 
@@ -721,19 +722,19 @@ void MouseButtonInfoBox(int button, int x, int y) {
     // allow action within a portion of label as well
     if(x > itemX - 50 && x < itemX + itemW && y > itemY && y < itemY + itemH) {
       switch(item) {
-        case IB_ITEM_TUNE:
+        case T41_ITEM_TUNE:
           if(button == 1) {
             t41.MouseCenterTuneActive = 1;
           }
           break;
 
-        case IB_ITEM_FINE:
+        case T41_ITEM_FINE:
           if(button == 1) {
             t41.MouseCenterTuneActive = 0;
           }
           break;
 
-        case IB_ITEM_ZOOM:
+        case T41_ITEM_ZOOM:
           if(button == 1) {
             t41.SpectrumZoom += 1;
           } else {
@@ -741,11 +742,11 @@ void MouseButtonInfoBox(int button, int x, int y) {
           }
           break;
 
-        case IB_ITEM_FLOOR:
+        case T41_ITEM_FLOOR:
           t41.LiveNoiseFloor += 1;
           break;
 
-        case IB_ITEM_DECODER:
+        case T41_ITEM_DECODER:
           ToggleCWDecoder();
           break;
 
@@ -763,34 +764,34 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
   for(int i = 0; i < 10; i++) {
     switch(i) {
       case 0:
-        item = IB_ITEM_VOL;
+        item = T41_ITEM_VOL;
         break;
       case 1:
-        item = IB_ITEM_AGC;
+        item = T41_ITEM_AGC;
         break;
       case 2:
-        item = IB_ITEM_TUNE;
+        item = T41_ITEM_TUNE;
         break;
       case 3:
-        item = IB_ITEM_FINE;
+        item = T41_ITEM_FINE;
         break;
       case 4:
-        item = IB_ITEM_ZOOM;
+        item = T41_ITEM_ZOOM;
         break;
       case 5:
-        item = IB_ITEM_FT8_TX;
+        item = T41_ITEM_FT8_TX;
         break;
       case 6:
-        item = IB_ITEM_FT8_TXF;
+        item = T41_ITEM_FT8_TXF;
         break;
       case 7:
-        item = IB_ITEM_FT8_RXF;
+        item = T41_ITEM_FT8_RXF;
         break;
       case 8:
-        item = IB_ITEM_FT8_INT;
+        item = T41_ITEM_FT8_INT;
         break;
       case 9:
-        item = IB_ITEM_FT8_CQ;
+        item = T41_ITEM_FT8_CQ;
         break;
     }
 
@@ -807,29 +808,29 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
       //  Serial.print("before: "); Serial.println(*(infoBox[item].option));
 
       switch(item) {
-        case IB_ITEM_VOL:
+        case T41_ITEM_VOL:
           t41.AudioVolume += wheel;
           break;
 
-        case IB_ITEM_AGC:
+        case T41_ITEM_AGC:
           t41.AGCMode += wheel;
           break;
 
-          case IB_ITEM_TUNE:
+          case T41_ITEM_TUNE:
           ChangeFreqIncrement(wheel);
           if(t41.MouseCenterTuneActive) {
-            HighlightIBItem(IB_ITEM_TUNE, RA8875_GREEN);
+            HighlightIBItem(T41_ITEM_TUNE, RA8875_GREEN);
           }
           break;
 
-        case IB_ITEM_FINE:
+        case T41_ITEM_FINE:
           ChangeFtIncrement(wheel);
           if(!t41.MouseCenterTuneActive) {
-            HighlightIBItem(IB_ITEM_FINE, RA8875_GREEN);
+            HighlightIBItem(T41_ITEM_FINE, RA8875_GREEN);
           }
           break;
 
-      case IB_ITEM_ZOOM:
+      case T41_ITEM_ZOOM:
           if(wheel == 1) {
             t41.SpectrumZoom += 1;
           } else {
@@ -837,19 +838,19 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
           }
           break;
 
-      case IB_ITEM_FT8_TX:
+      case T41_ITEM_FT8_TX:
         ChangeFt8TxState(wheel);
         break;
-      case IB_ITEM_FT8_TXF:
+      case T41_ITEM_FT8_TXF:
         ChangeFt8TxFreq(wheel);
         break;
-      case IB_ITEM_FT8_RXF:
+      case T41_ITEM_FT8_RXF:
         ChangeFt8RxFreq(wheel);
         break;
-      case IB_ITEM_FT8_INT:
+      case T41_ITEM_FT8_INT:
         ChangeFt8TxInterval(wheel);
         break;
-      case IB_ITEM_FT8_CQ:
+      case T41_ITEM_FT8_CQ:
         ChangeFt8CqState(wheel);
         break;
         default:

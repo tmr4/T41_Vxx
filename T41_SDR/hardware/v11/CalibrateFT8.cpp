@@ -76,9 +76,9 @@ FLASHMEM void FT8CalibratePreamble(int setZoom) {
   radioState = CW_TRANSMIT_STRAIGHT_STATE;
   //radioState = CW_RECEIVE_STATE;
   //radioState = CALIBRATE_TRANSMIT_STATE;
-  transmitPowerLevelTemp = transmitPowerLevel;
-  transmitPowerLevel = 5;
-  powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
+  transmitPowerLevelTemp = t41.TxPower;
+  t41.TxPower = 5;
+  powerOutCW[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
   userXmtMode = t41.RadioMode;          // Store the user's mode setting
   userZoomIndex = t41.SpectrumZoom;  // Save the zoom index so it can be reset at the conclusion
   //SetZoom(setZoom);
@@ -147,7 +147,7 @@ FLASHMEM void FT8CalibratePrologue() {
   currentScale = userScale;                     //  Restore vertical scale to user preference.  KF5N
   ShowSpectrumdBScale();
   //t41.RadioMode = userXmtMode;   // Restore the user's floor setting.  KF5N July 27, 2023
-  transmitPowerLevel = transmitPowerLevelTemp;  // Restore the user's transmit power level setting.  KF5N August 15, 2023
+  t41.TxPower = transmitPowerLevelTemp;  // Restore the user's transmit power level setting.  KF5N August 15, 2023
   EEPROMWrite();                                // Save calibration numbers and configuration.  KF5N August 12, 2023
   // Restore the user's zoom setting
   //SetZoom(userZoomIndex); // ... and zoom display
@@ -408,7 +408,7 @@ FLASHMEM bool FT8ProcessIQData2(bool updateSpectrumData) {
       Q_in_R.freeBuffer();
     }
 
-    rfGainValue = pow(10, (float)rfGainAllBands / 20);
+    rfGainValue = pow(10, (float)t41.RFGain / 20);
     arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, 256);
     arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 256);
 

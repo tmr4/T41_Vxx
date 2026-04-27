@@ -155,7 +155,7 @@ FLASHMEM void SaveRadioState() {
   userBand = t41.ActiveBand;
   userScale = currentScale;
   userVol = t41.AudioVolume;
-  userTransmitPowerLevel = transmitPowerLevel;
+  userTransmitPowerLevel = t41.TxPower;
 }
 
 /*****
@@ -171,9 +171,9 @@ FLASHMEM void CalibrationInit() {
   t41.NCOFreq = 0;
 
   t41.AudioVolume = 2;
-  //transmitPowerLevel = 5;
-  transmitPowerLevel = 1;
-  //powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
+  //t41.TxPower = 5;
+  t41.TxPower = 1;
+  //powerOutCW[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
 
   for(int i = 0; i < 256; i++) {
     // used in calibration
@@ -216,7 +216,7 @@ FLASHMEM void RestoreRadioState() {
 
   digitalWrite(RXTX, LOW);  // Turn off the transmitter.
 
-  transmitPowerLevel = userTransmitPowerLevel;  // Restore the user's transmit power level setting.  KF5N August 15, 2023
+  t41.TxPower = userTransmitPowerLevel;  // Restore the user's transmit power level setting.  KF5N August 15, 2023
 
   // restore screen
   tft.writeTo(L2);
@@ -447,7 +447,7 @@ FLASHMEM void UpdatePwrFactor(float factor) {
 }
 
 FLASHMEM void ShowPwr() {
-  ShowValue(10, transmitPowerLevel, 0);
+  ShowValue(10, t41.TxPower, 0);
 }
 
 //-------------------------------------------------------------------------------------------------------------
@@ -595,11 +595,11 @@ FLASHMEM bool AdjustPwrFactors() {
 
   // transmit power
   if(adjustVolEncoder != 0) {
-    transmitPowerLevel += adjustVolEncoder;
+    t41.TxPower += adjustVolEncoder;
 
     adjustVolEncoder = 0;
-    if(transmitPowerLevel > 20) transmitPowerLevel = 20;
-    if(transmitPowerLevel < 1) transmitPowerLevel = 1;
+    if(t41.TxPower > 20) t41.TxPower = 20;
+    if(t41.TxPower < 1) t41.TxPower = 1;
     ShowPwr();
     adjustFlag = true;
   }
@@ -1576,13 +1576,13 @@ FLASHMEM void SetupSignalStrengthSource(int source) {
       // set up this and external unit for calibration
       minSignalStrength = 0;
       signalStrengthSource = 1;
-      SendCenterFreq(t41.CenterFreq + intermediateFreq);
+      SendCommand(t41.CenterFreq + intermediateFreq, T41_ITEM_FREQ);
       if(t41.DemodMode == DEMOD_LSB) {
-        SendDemodMode(DEMOD_USB);
+        SendCommand(DEMOD_USB, T41_ITEM_DEMOD_MODE);
       } else {
-        SendDemodMode(DEMOD_LSB);
+        SendCommand(DEMOD_LSB, T41_ITEM_DEMOD_MODE);
       }
-      SendDisplayZoom(2);
+      SendCommand(2, T41_ITEM_ZOOM);
       SendNarrowFilter();
 
       // allow frequency to stabilize
@@ -2139,7 +2139,7 @@ FLASHMEM void PrepareTwoToneData() {
 }
 
 FLASHMEM void TwoToneTransmit() {
-  double tp = transmitPowerLevel;
+  double tp = t41.TxPower;
   double cwPwr;
 
   digitalWrite(RXTX, HIGH); // turn on TX relay

@@ -66,7 +66,7 @@ void PlayExciterIQData() {
     // scale to compensate for losses during interpolation
     //arm_scale_f32(audioBufferL_EX, 8.0, audioBufferL_EX, blocks * 128);
     //arm_scale_f32(audioBufferR_EX, 8.0, audioBufferR_EX, blocks * 128);
-    float pwr = pow(10, log10((float)transmitPowerLevel * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
+    float pwr = pow(10, log10((float)t41.TxPower * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
 
     // *** currently pwr cal for FT8 internal ***
     arm_scale_f32(audioBufferL_EX, pwr / 32.168 / 2.0, audioBufferL_EX, blocks * 128);
@@ -78,7 +78,7 @@ void PlayExciterIQData() {
     // 12x scaler gives 8.1dbm
     // scale to 1W = 30dBm, scaller = 4.0 * 1.0965
     // scale to 5W = 36.99dBm, scaller = 4.0 * 2.4519
-    float pwr = pow(10, log10((float)transmitPowerLevel * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
+    float pwr = pow(10, log10((float)t41.TxPower * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
     arm_scale_f32(audioBufferL_EX, pwr, audioBufferL_EX, 256);
     arm_scale_f32(audioBufferR_EX, pwr, audioBufferR_EX, 256);
   }

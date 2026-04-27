@@ -561,12 +561,20 @@ FLASHMEM void ShowCurrentPowerSetting() {
   //tft.setFontScale((enum RA8875tsize)0);
   tft.setFont(Arial_8);
 
-  //tft.fillRect(OPERATION_STATS_PWR, OPERATION_STATS_T, tft.getFontWidth() * 11, tft.getFontHeight(), ST7735_BLACK);
   tft.fillRect(OPERATION_STATS_PWR, OPERATION_STATS_T, 6 * 11, 8, ST7735_BLACK);
   tft.setCursor(OPERATION_STATS_PWR, OPERATION_STATS_T);
   tft.setTextColor(ST7735_RED);
-  tft.print(transmitPowerLevel, 1);  // Power output is a float
-  tft.print(" Watts");
+  if(t41.TxPower < 15) {
+    tft.setTextColor(ST7735_GREEN);
+  } else {
+    tft.setTextColor(ST7735_RED);
+  }
+  tft.print(t41.TxPower, 1);  // Power output is a float
+  if(t41.TxPower == 1) {
+    tft.print(" Watt");
+  } else {
+    tft.print(" Watts");
+  }
 }
 
 /*****

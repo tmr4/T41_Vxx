@@ -411,7 +411,7 @@ void WSJTLoop()
         if(cmd[1] == 'T' && cmd[3] == ';') {
           // update AGC
           t41.AGCMode.Update(atoi(&cmd[2]));
-          UpdateInfoBoxItem(IB_ITEM_AGC);
+          UpdateInfoBoxItem(T41_ITEM_AGC);
         }
         return;
         break;
@@ -510,7 +510,7 @@ void WSJTLoop()
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           // *** TODO: consider just toggling this through call to
           t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
-          UpdateInfoBoxItem(IB_ITEM_FLOOR);
+          UpdateInfoBoxItem(T41_ITEM_FLOOR);
           return;
         }
         break;
@@ -539,7 +539,7 @@ void WSJTLoop()
       case 'P': // PCxxx;
         if(cmd[1] == 'C' && cmd[5] == ';') {
           // set transmitter power level
-          transmitPowerLevel = atoi(&cmd[2]);
+          t41.TxPower.Update(atoi(&cmd[2]));
           ShowCurrentPowerSetting();
           return;
         } else if(cmd[1] == 'S' && cmd[2] == ';') {

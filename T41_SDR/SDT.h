@@ -62,31 +62,50 @@ typedef __uint8_t uint8_t;
 #define BAND_12M                  5
 #define BAND_10M                  6
 
-// radio status
-#define IB_ITEM_VOL       0
-#define IB_ITEM_AGC       1
-#define IB_ITEM_TUNE      2
-#define IB_ITEM_FINE      3
-#define IB_ITEM_ZOOM      4
-#define IB_ITEM_FLOOR     5
-#define IB_ITEM_NOTCH     6
-#define IB_ITEM_COMPRESS  7
-#define IB_ITEM_FILTER    8
-#define IB_ITEM_RFGAIN    9
-#define IB_ITEM_EQUALIZER 10
-#define IB_ITEM_DECODER   11
-#define IB_ITEM_KEY       12
-#define IB_ITEM_KEYER     13
-#define IB_ITEM_FT8       14
-#define IB_ITEM_FT8_INT   15
-#define IB_ITEM_FT8_TX    16
-#define IB_ITEM_FT8_CQ    17
-#define IB_ITEM_FT8_TXF   18
-#define IB_ITEM_FT8_RXF   19
-#define IB_ITEM_STACK     20
-#define IB_ITEM_HEAP      21
-#define IB_ITEM_TEMP      22
-#define IB_ITEM_LOAD      23
+// id for various radio elements
+// used mainly to identify element for display and remote updates
+// T41_ITEM_VOL to T41_ITEM_LOAD are info box items
+#define T41_ITEM_VOL          0
+#define T41_ITEM_AGC          1
+#define T41_ITEM_TUNE         2
+#define T41_ITEM_FINE         3
+#define T41_ITEM_ZOOM         4
+#define T41_ITEM_FLOOR        5
+#define T41_ITEM_NOTCH        6
+#define T41_ITEM_FILTER       7
+#define T41_ITEM_COMPRESS     8
+#define T41_ITEM_RFGAIN       9
+#define T41_ITEM_EQUALIZER    10
+#define T41_ITEM_DECODER      11
+#define T41_ITEM_KEY          12
+#define T41_ITEM_KEYER        13
+#define T41_ITEM_FT8          14
+#define T41_ITEM_FT8_INT      15
+#define T41_ITEM_FT8_TX       16
+#define T41_ITEM_FT8_CQ       17
+#define T41_ITEM_FT8_TXF      18
+#define T41_ITEM_FT8_RXF      19
+#define T41_ITEM_STACK        20
+#define T41_ITEM_HEAP         21
+#define T41_ITEM_TEMP         22
+#define T41_ITEM_LOAD         23
+// begin other T41 elements
+#define T41_ITEM_MOUSE        24 // MouseCenterTuneActive
+#define T41_ITEM_NOISE        25 // NoiseFloor
+#define T41_ITEM_RADIO_MODE   26
+#define T41_ITEM_DEMOD_MODE   27
+#define T41_ITEM_BAND         28 // ActiveBand
+#define T41_ITEM_POWER        29 // TxPower
+#define T41_ITEM_FREQ         30 // CenterFreq
+#define T41_ITEM_NCO          31 // NCOFreq
+#define T41_ITEM_FHI          32 // FilterHiCut
+#define T41_ITEM_FLO          33 // FilterLoCut
+//#define T41_ITEM_   34
+//#define T41_ITEM_   35
+//#define T41_ITEM_   36
+//#define T41_ITEM_   37
+//#define T41_ITEM_   38
+//#define T41_ITEM_   39
 
 // remote modes
 #define REMOTE_NOT_AVAIL      0

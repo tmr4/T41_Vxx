@@ -378,7 +378,7 @@ int ReadMessageKeys() {
 
 void KeyerSetup() {
   msgIndexIn = 0;
-  UpdateInfoBoxItem(IB_ITEM_KEYER);
+  UpdateInfoBoxItem(T41_ITEM_KEYER);
 
   // create raised cosine factors for 5 ms ramps
   // https://en.wikipedia.org/wiki/Raised-cosine_filter
@@ -521,5 +521,5 @@ void KeyerLoop() {
         break;
     }
   }
-  UpdateInfoBoxItem(IB_ITEM_KEYER);
+  UpdateInfoBoxItem(T41_ITEM_KEYER);
 }

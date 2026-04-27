@@ -197,6 +197,124 @@ void T41ControlGetCommand(char * cmd, int max) {
 }
 
 // Dual T41 master commands
+// for sending integer-based commands between T41 and remote
+void SendCommand(int value, int id) {
+  char cmd[30]; // 50 if we include IF
+
+  switch(id) {
+    case T41_ITEM_VOL:
+      sprintf(cmd, "VO%03d;", value);
+      break;
+    case T41_ITEM_AGC:
+      sprintf(cmd, "GT%d;", value);
+      break;
+    case T41_ITEM_TUNE:
+      sprintf(cmd, "FI0%1d;", value);
+      break;
+    case T41_ITEM_FINE:
+      sprintf(cmd, "FI1%1d;", value);
+      break;
+    case T41_ITEM_ZOOM:
+      sprintf(cmd, "ZM%d;", value);
+      break;
+    case T41_ITEM_FLOOR:
+      sprintf(cmd, "NG%d;", value);
+      break;
+    case T41_ITEM_NOTCH:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_FILTER:
+      sprintf(cmd, "N1%d;", value);
+      break;
+    case T41_ITEM_COMPRESS:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_RFGAIN:
+      sprintf(cmd, "PG%+03d;", value);
+      break;
+    case T41_ITEM_EQUALIZER:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_DECODER:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_KEY:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_KEYER:
+      cmd[0] = 0;
+      break;
+/*
+    case T41_ITEM_FT8:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_FT8_INT:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_FT8_TX:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_FT8_CQ:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_FT8_TXF:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_FT8_RXF:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_STACK:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_HEAP:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_TEMP:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_LOAD:
+      cmd[0] = 0;
+      break;
+*/
+    case T41_ITEM_MOUSE:
+      // *** FS is fine tune selected ***
+      sprintf(cmd, "FS%d;", !value);
+      break;
+    case T41_ITEM_NOISE:
+      sprintf(cmd, "NF%04d;", value);
+      break;
+    case T41_ITEM_RADIO_MODE:
+      sprintf(cmd, "ME%d;", value);
+      break;
+    case T41_ITEM_DEMOD_MODE:
+      sprintf(cmd, "MD%d;", value);
+      break;
+    case T41_ITEM_BAND:
+      sprintf(cmd, "BD%d;", value);
+      break;
+    case T41_ITEM_POWER:
+      sprintf(cmd, "PC%02d;", value);
+      break;
+    case T41_ITEM_FREQ:
+      sprintf(cmd, "FC%011d;", value);
+      break;
+    case T41_ITEM_NCO:
+      sprintf(cmd, "FF%011d;", value);
+      break;
+    case T41_ITEM_FHI:
+      sprintf(cmd, "NH%011d;", value);
+      break;
+    case T41_ITEM_FLO:
+      sprintf(cmd, "NL%011d;", value);
+      break;
+    //case :
+    //  break;
+    default:
+      return;
+  }
+  T41ControlSendCmd(cmd);
+}
+
 void SendID(bool request) {
   char cmd[7];
 
@@ -223,22 +341,6 @@ void SendFreqB(int freq) {
   T41ControlSendCmd(cmd);
 }
 
-void SendCenterFreq(int freq) {
-  char cmd[20];
-
-  // set center frequency
-  sprintf(cmd, "FC%011d;", freq);
-  T41ControlSendCmd(cmd);
-}
-
-void SendNCOFreq(int freq) {
-  char cmd[20];
-
-  // set NCO frequency
-  sprintf(cmd, "FF%011d;", freq);
-  T41ControlSendCmd(cmd);
-}
-
 void SendBandChange(int upDown) {
   char cmd[5];
 
@@ -248,32 +350,6 @@ void SendBandChange(int upDown) {
     sprintf(cmd, "BD;");
   }
 
-  T41ControlSendCmd(cmd);
-}
-
-void SendBand(int band) {
-  char cmd[5];
-
-  sprintf(cmd, "BD%d;", band);
-  T41ControlSendCmd(cmd);
-}
-
-void SendDemodMode(int mode) {
-  char cmd[5];
-  sprintf(cmd, "MD%d;", mode);
-  T41ControlSendCmd(cmd);
-}
-
-void SendMode(int mode) {
-  char cmd[5];
-  sprintf(cmd, "ME%d;", mode);
-  T41ControlSendCmd(cmd);
-}
-
-void SendDisplayZoom(int zoom) {
-  char cmd[5];
-
-  sprintf(cmd, "ZM%d;", zoom);
   T41ControlSendCmd(cmd);
 }
 
@@ -293,31 +369,10 @@ void SendSmeter(int smeterPad, float dbm) {
   T41ControlSendCmd(cmd);
 }
 
-void SendVolume(int volume) {
-  char cmd[7];
-
-  sprintf(cmd, "VO%03d;", volume);
-  T41ControlSendCmd(cmd);
-}
-
 void SendFilter() {
   char cmd[6];
 
   sprintf(cmd, "NS%+1d;", posFilterEncoder - lastFilterEncoder);
-  T41ControlSendCmd(cmd);
-}
-
-void SendFilterHi(int filter) {
-  char cmd[20];
-
-  sprintf(cmd, "NH%011d;", filter);
-  T41ControlSendCmd(cmd);
-}
-
-void SendFilterLo(int filter) {
-  char cmd[20];
-
-  sprintf(cmd, "NL%011d;", filter);
   T41ControlSendCmd(cmd);
 }
 
@@ -340,49 +395,6 @@ void SendNarrowFilter() {
   char cmd[4];
 
   sprintf(cmd, "NW;");
-  T41ControlSendCmd(cmd);
-}
-
-void SendFreqIncrement(int index) {
-  char cmd[6];
-
-  sprintf(cmd, "FI0%1d;", index);
-  T41ControlSendCmd(cmd);
-}
-
-void SendFtIncrement(int index) {
-  char cmd[6];
-
-  sprintf(cmd, "FI1%1d;", index);
-  T41ControlSendCmd(cmd);
-}
-
-void SendMouseCenterTuneActive(int val) {
-  char cmd[5];
-
-  // *** FS is fine tune selected ***
-  sprintf(cmd, "FS%d;", !val);
-  T41ControlSendCmd(cmd);
-}
-
-void SendAGC(int val) {
-  char cmd[5];
-
-  sprintf(cmd, "GT%d;", val);
-  T41ControlSendCmd(cmd);
-}
-
-void SendNFSetting(int val) {
-  char cmd[5];
-
-  sprintf(cmd, "NG%d;", val);
-  T41ControlSendCmd(cmd);
-}
-
-void SendNoiseFloor(int val) {
-  char cmd[8];
-
-  sprintf(cmd, "NF%04d;", val);
   T41ControlSendCmd(cmd);
 }
 
@@ -622,7 +634,7 @@ void T41ControlLoop() {
         if(cmd[1] == 'T' && cmd[3] == ';') {
           // update AGC
           t41.AGCMode.Update(atoi(&cmd[2]));
-          UpdateInfoBoxItem(IB_ITEM_AGC);
+          UpdateInfoBoxItem(T41_ITEM_AGC);
         }
         sendCommand = false;
         break;
@@ -692,7 +704,7 @@ void T41ControlLoop() {
           sendCommand = false;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
-          UpdateInfoBoxItem(IB_ITEM_FLOOR);
+          UpdateInfoBoxItem(T41_ITEM_FLOOR);
           sendCommand = false;
         } else if(cmd[1] == 'H' && cmd[13] == ';') {
           t41.FilterHiCut.Update(atol(&cmd[2]));
@@ -719,13 +731,17 @@ void T41ControlLoop() {
 
           CalcAudioFilters();
           sendCommand = false;
+        } else if(cmd[1] == '1' && cmd[3] == ';') {
+          t41.NoiseFilter.Update(atoi(&cmd[2]));
+          UpdateInfoBoxItem(T41_ITEM_FILTER);
+          sendCommand = false;
         }
         break;
 
       case 'P': // PCxxx;
-        if(cmd[1] == 'C' && cmd[5] == ';') {
+        if(cmd[1] == 'C' && cmd[4] == ';') {
           // set transmitter power level
-          transmitPowerLevel = atoi(&cmd[2]);
+          t41.TxPower.Update(atoi(&cmd[2]));
           ShowCurrentPowerSetting();
         }
         break;

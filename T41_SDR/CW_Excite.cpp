@@ -62,21 +62,21 @@ void KeyRingOn() {
     int timeAdjust  shorten the ramp block by timeAdjust ms
 *****/
 void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, float timeAdjust = 0.0) {
-  double tp = transmitPowerLevel;
+  double tp = t41.TxPower;
   double cwPwr;
   float fac;
-  //float cwPwr = (pwrScale ? (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand] / CWPowerCalibrationFactor[1] : 8.0);
-  //float cwPwr = (pwrScale ? (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) : 8.0);
+  //float cwPwr = (pwrScale ? (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand] / CWPowerCalibrationFactor[1] : 8.0);
+  //float cwPwr = (pwrScale ? (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) : 8.0);
   // using Pt=1W measurement
-  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel)) * 0.78938 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
+  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)t41.TxPower)) * 0.78938 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
   // using Pt=10W measurement
-  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel / 10.0)) * 3.5459 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
-  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)transmitPowerLevel / 10.0)) * 3.5459) : 8.0);
+  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)t41.TxPower / 10.0)) * 3.5459 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
+  //float cwPwr = (pwrScale ? ( pow(10.0, 0.5 * log10((float)t41.TxPower / 10.0)) * 3.5459) : 8.0);
   // using theoretical pwr to voltage formula
-  //float cwPwr = (pwrScale ? (.70711 * pow(transmitPowerLevel, 0.5)) : 8.0);
+  //float cwPwr = (pwrScale ? (.70711 * pow(t41.TxPower, 0.5)) : 8.0);
   // using empirical pwr to voltage formula
-  //float cwPwr = (pwrScale ? (.675 * pow(transmitPowerLevel, 0.5552) / 5.25 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
-  //float cwPwr = (pwrScale ? (7.0711 * pow(transmitPowerLevel, 0.5) * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
+  //float cwPwr = (pwrScale ? (.675 * pow(t41.TxPower, 0.5552) / 5.25 * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
+  //float cwPwr = (pwrScale ? (7.0711 * pow(t41.TxPower, 0.5) * CWPowerCalibrationFactor[t41.ActiveBand]) : 8.0);
   // empirical formula y = -0.0002x4 + 0.0062x3 - 0.0653x2 + 0.4673x + 0.2741
   // works well with dummy load at 7MHz considering the tap atten of -20dB
   //float cwPwr = (pwrScale ? (-.0002 * pow(tp, 4.0) + 0.0062 * pow(tp, 3.0) - 0.0653 * pow(tp, 2.0) + 0.4673 * tp + 0.2741) : 8.0);

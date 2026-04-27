@@ -2,99 +2,90 @@
 
 #include <Arduino.h>
 
+class T41Update {
+  typedef void (*FuncPtrInt)(int);
+  typedef void (*FuncPtr2Int)(int, int);
+
+public:
+  T41Update() {}
+
+  static void SetUpdateFunctions(FuncPtrInt ib, FuncPtr2Int rm) {
+    fPtrInfoBox = ib;
+    fPtrRemote = rm;
+  }
+
+protected:
+  static inline FuncPtrInt fPtrInfoBox = NULL;
+  static inline FuncPtr2Int fPtrRemote = NULL;
+
+private:
+};
+
 // *** FLASHMEM made no difference in code placement, couldn't verify placement in listing file  ***
 template<typename T>
-class Property {
+class Property : public T41Update {
   typedef void (*FuncPtr)();
   typedef void (*FuncPtrT)(T);
   typedef void (*FuncPtrInt)(int);
+  typedef void (*FuncPtr2Int)(int, int);
   typedef int (*BoundPtr)(int);
 
 public:
-  FLASHMEM Property(FuncPtrT npc = NULL) {
-    id = -1;
-  }
+  FLASHMEM Property() {}
 
   FLASHMEM void Init(T val) {
     value = val;
   }
 
-  //FLASHMEM void Init(T val, FuncPtrT npc = NULL) {
-  //  value = val;
-  //  for(int i = 0; i < 5; i++) {
-  //    NotifyChanged[i] = NULL;
-  //  }
-  //  notify = 0;
-  //  if(npc != NULL) {
-  //    NotifyChanged[notify++] = npc;
-  //  }
-  //}
-
-  // initialize property with 1 notification (set to NULL if not needed):
-  // not polled
-  // notify: void (*funcPtr)()
+  // fPtr called instead of fPtrInfoBox
   FLASHMEM void Init(T val, FuncPtr _fPtr) {
     value = val;
     fPtr = _fPtr;
   }
 
-  // initialize property with 2 notifications (set either to NULL if not needed):
-  // both polled unless specified otherwise
-  //   notify: void (*funcPtrT)(T) with copy of property
-  //   notify: void (*funcPtr)()
-  FLASHMEM void Init(T val, FuncPtrT _fPtrT, FuncPtr _fPtr, bool polled = true) {
+  // fPtr called instead of  fPtrInfoBox
+  FLASHMEM void Init(T val, FuncPtr _fPtr, int _id, bool polled = true) {
     value = val;
-    fPtrT = _fPtrT;
     fPtr = _fPtr;
-    notifyOnPoll = polled;
-  }
-
-  // same as above with max, min
-  FLASHMEM void Init(T val, T _min, T _max, bool circ, FuncPtrT _fPtrT, FuncPtrInt _fPtrInt, int _id, bool polled = true) {
-    value = val;
-    hasMinMax = true;
-    min = _min;
-    max = _max;
-    minmaxCircular = circ;
-    fPtrT = _fPtrT;
-    fPtrInt = _fPtrInt;
     id = _id;
     notifyOnPoll = polled;
   }
 
-  // same as above with max, min
-  FLASHMEM void Init(T val, T _min, T _max, bool circ, FuncPtrT _fPtrT, FuncPtr _fPtr, bool polled = true) {
+  // w/ min/max
+  // calls to T41Update
+  FLASHMEM void Init(T val, T _min, T _max, bool circ, int _id, bool polled = true) {
     value = val;
     hasMinMax = true;
     min = _min;
     max = _max;
     minmaxCircular = circ;
-    fPtrT = _fPtrT;
-    fPtr = _fPtr;
+    id = _id;
     notifyOnPoll = polled;
   }
 
-  // same as above with bounds check int (*bPtrInt)(T)
-  FLASHMEM void Init(T val, BoundPtr _bPtrInt, FuncPtrT _fPtrT, FuncPtr _fPtr, bool polled = true) {
+  // w/ min/max
+  // fPtr called instead of  fPtrInfoBox
+  FLASHMEM void Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr, int _id, bool polled = true) {
+    value = val;
+    hasMinMax = true;
+    min = _min;
+    max = _max;
+    minmaxCircular = circ;
+    fPtr = _fPtr;
+    id = _id;
+    notifyOnPoll = polled;
+  }
+
+  // with bounds check int (*bPtrInt)(T)
+  // fPtr called instead of  fPtrInfoBox
+  FLASHMEM void Init(T val, BoundPtr _bPtrInt, FuncPtr _fPtr, int _id, bool polled = true) {
     value = val;
     hasMinMax = true;
     bPtrInt = _bPtrInt;
-    fPtrT = _fPtrT;
     fPtr = _fPtr;
+    id = _id;
     notifyOnPoll = polled;
   }
-
-  //FLASHMEM void AddNotify(FuncPtrT npc = NULL) {
-  //  if(++notify >= 5) notify = 0; // just overwrite starting with oldest
-  //  if(npc != NULL) {
-  //    NotifyChanged[notify++] = npc;
-  //  }
-  //}
-
-  //FLASHMEM void NotifyOnPoll(bool val) {
-  //  notifyOnPoll = val;
-  //  hasChanged = false;
-  //}
 
   FLASHMEM bool Poll(bool updateDisplay, bool updateRemote, bool override = false) {
     bool tmp = hasChanged;
@@ -103,7 +94,7 @@ public:
       Notify();
     } else if((hasChanged && notifyOnPoll)) {
       if(updateDisplay) UpdateDisplay();
-      if(updateRemote && fPtrT != NULL) (*fPtrT)(value);
+      if(updateRemote && (T41Update::fPtrRemote != NULL) && (id >= 0)) (*T41Update::fPtrRemote)(value, id);
     } else if(updated) {
       if(updateDisplay) UpdateDisplay();
     }
@@ -140,15 +131,14 @@ public:
 protected:
   FLASHMEM void Notify() {
     UpdateDisplay();
-    if(fPtrT != NULL) (*fPtrT)(value);
+    if((T41Update::fPtrRemote != NULL) && (id >= 0)) (*T41Update::fPtrRemote)(value, id);
   }
 
   FLASHMEM void UpdateDisplay() {
     if(fPtr != NULL) {
       (*fPtr)();
-    }
-    if((fPtrInt != NULL) && (id >= 0)) {
-      (*fPtrInt)(id);
+    } else if((T41Update::fPtrInfoBox != NULL) && (id >= 0)) {
+      (*T41Update::fPtrInfoBox)(id);
     }
   }
 
@@ -193,7 +183,5 @@ private:
   }
 
   FuncPtr fPtr = NULL;
-  FuncPtrT fPtrT = NULL;
-  FuncPtrInt fPtrInt = NULL;
   BoundPtr bPtrInt = NULL;
 };

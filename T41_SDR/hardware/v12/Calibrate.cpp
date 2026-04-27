@@ -122,7 +122,7 @@ FLASHMEM void ButtonZoom() {
 
 #define CAL_POWER_LEVEL_W 10
 FLASHMEM int getPowerLevelAdjustmentDB() {
-  return (int)round(- 20*log10f_fast((float)transmitPowerLevel / (float)CAL_POWER_LEVEL_W));
+  return (int)round(- 20*log10f_fast((float)t41.TxPower / (float)CAL_POWER_LEVEL_W));
 }
 
 /*****
@@ -1864,7 +1864,7 @@ FLASHMEM void ProcessTransmitCalIQData() {
       Q_in_R.freeBuffer();
     }
 
-    //rfGainValue = pow(10, (float)rfGainAllBands / 20);
+    //rfGainValue = pow(10, (float)t41.RFGain / 20);
     //arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, 2048);
     //arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, 2048);
 
@@ -2309,13 +2309,13 @@ void SetupSignalStrengthSource(int source) {
       // set up this and external unit for calibration
       minSignalStrength = 0;
       signalStrengthSource = 1;
-      SendCenterFreq(t41.CenterFreq + intermediateFreq);
+      SendCommand(t41.CenterFreq + intermediateFreq, T41_ITEM_FREQ);
       if(t41.DemodMode == DEMOD_LSB) {
-        SendDemodMode(DEMOD_USB);
+        SendCommand(DEMOD_USB, T41_ITEM_DEMOD_MODE);
       } else {
-        SendDemodMode(DEMOD_LSB);
+        SendCommand(DEMOD_LSB, T41_ITEM_DEMOD_MODE);
       }
-      SendDisplayZoom(2);
+      SendCommand(2, T41_ITEM_ZOOM);
       SendNarrowFilter();
 
       // allow frequency to stabilize

@@ -54,7 +54,7 @@ FLASHMEM void CWOptions() {
     case 1:          // Type of key:
       SetKeyType();  // Straight key or keyer? Stored in EEPROMData.keyType; no heap/stack variable
       SetKeyPowerUp();
-      UpdateInfoBoxItem(IB_ITEM_KEY);
+      UpdateInfoBoxItem(T41_ITEM_KEY);
       break;
 
     case 2:              // CW Filter BW
@@ -84,24 +84,23 @@ FLASHMEM void CWOptions() {
 // *** TODO: T41EEE does this for each band ***
 FLASHMEM void RFPowerFollowup() {
   if(t41.RadioMode == CW_MODE) {                                                                                                                                      //AFP 10-13-22
-    powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];  //  afp 10-21-22
+    powerOutCW[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];  //  afp 10-21-22
 
     //EEPROMData.powerOutCW[t41.ActiveBand] = powerOutCW[t41.ActiveBand];
   } else {
     if(t41.RadioMode == SSB_MODE) {
-      powerOutSSB[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[t41.ActiveBand];  // afp 10-21-22
+      powerOutSSB[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * SSBPowerCalibrationFactor[t41.ActiveBand];  // afp 10-21-22
       //EEPROMData.powerOutSSB[t41.ActiveBand] = powerOutSSB[t41.ActiveBand];                                                                                                //AFP 10-21-22
     }
   }
-  //EEPROMData.transmitPowerLevel = transmitPowerLevel;
+  //EEPROMData.t41.TxPower = t41.TxPower;
   EEPROMWrite();
   ShowCurrentPowerSetting();
 }
 
 FLASHMEM void RFGainFollowup() {
-  //EEPROMData.rfGainAllBands = rfGainAllBands;
+  //EEPROMData.t41.RFGain = t41.RFGain;
   EEPROMWrite();
-  UpdateInfoBoxItem(IB_ITEM_RFGAIN);
 }
 
 /*****
@@ -140,7 +139,7 @@ FLASHMEM void VFOSelect(int32_t index) {
       case DEMOD_FT8_WAV:
         t41.DemodMode = DEMOD_FT8_INTERNAL;
         ft8SyncState = 0;
-        UpdateInfoBoxItem(IB_ITEM_FT8);
+        UpdateInfoBoxItem(T41_ITEM_FT8);
         break;
     }
   }
@@ -304,7 +303,7 @@ FLASHMEM void MicGainSet() {
 FLASHMEM void SetCompressionLevelFollowup() {
   //EEPROMData.currentMicThreshold = currentMicThreshold;
   EEPROMWrite();
-  UpdateInfoBoxItem(IB_ITEM_COMPRESS);
+  UpdateInfoBoxItem(T41_ITEM_COMPRESS);
 }
 
 /*
@@ -341,13 +340,11 @@ FLASHMEM void MicOptions() {
   //  const char *micChoices[] = { "On", "Off", "Set Threshold", "Set Comp_Ratio", "Set Attack", "Set Decay", "Cancel" };
   switch(secondaryMenuIndex) {
     case 0:                // On
-      compressorFlag = 1;
-      UpdateInfoBoxItem(IB_ITEM_COMPRESS);
+      t41.Compressor = 1;
       break;
 
     case 1:  // Off
-      compressorFlag = 0;
-      UpdateInfoBoxItem(IB_ITEM_COMPRESS);
+      t41.Compressor = 0;
       break;
 
     case 2:

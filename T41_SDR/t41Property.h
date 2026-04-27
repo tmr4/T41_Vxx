@@ -22,12 +22,13 @@ public:
   // polled properties
   Property<int> RadioMode;
   Property<int> DemodMode;
+  Property<int> ActiveBand;
+  Property<int> TxPower;
 
   Property<int> CenterFreq;
   Property<int> NCOFreq;
   Property<int> FilterHiCut;
   Property<int> FilterLoCut;
-  Property<int> ActiveBand;
 
   // infobox properties
   Property<int> AudioVolume;
@@ -36,6 +37,12 @@ public:
   Property<int> FineTuneIndex;
   Property<int> SpectrumZoom;
   Property<int> LiveNoiseFloor;
+  Property<int> NoiseFilter;
+  Property<int> AutoNotch;
+  Property<int> Compressor;
+  Property<int> RFGain;
+  Property<int> RxEqualizer;
+  Property<int> TxEqualizer;
 
   // properties w/o notifications or display updates
   Property<int> ActiveVFO;
@@ -84,15 +91,11 @@ extern T41Properties t41;
 from T41_Views (this is private data, first letter capitalized if property):
 
 next:
-  int transmitPowerLevel = 1;
-  int rfGainAllBands;
-  private int currentNF = 0;
 
 */
 /*
 // old EEPROMData
 typedef struct {
-  int nrOptionSelect;
   int currentScale;
   float spectrum_display_scale;
 
@@ -144,8 +147,6 @@ typedef struct {
 
   int paddleFlip;
   int sdCardPresent;
-
-  int compressorFlag;
 
   int buttonThresholdPressed;
   int buttonThresholdReleased;

@@ -444,9 +444,9 @@ void ConfigAudioState(int audioState) {
       //digitalWrite(MUTE, HIGH);  // mute audio
 
 #ifdef USE_MIC_COMPRESSION
-      if(compressorFlag == 1) {
+      if(t41.Compressor == 1) {
         SetupMicCompressors((float)currentMicThreshold, .1, 2.0);
-      } else if(compressorFlag == 0) {
+      } else if(t41.Compressor == 0) {
         SetupMicCompressors(0.0, 0.01, 0.01);
       }
 #endif

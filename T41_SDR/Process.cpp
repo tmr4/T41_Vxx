@@ -281,7 +281,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
     // *** TODO: consider if this is needed for FT8 ***
     // set RF gain for all bands
-    rfGainValue = pow(10, (float)rfGainAllBands / 20);
+    rfGainValue = pow(10, (float)t41.RFGain / 20);
     arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, blocks * 128);
     arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, blocks * 128);
 
@@ -721,7 +721,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       Spectral NR
       LMS variable leak NR
     **********************************************************************************/
-    switch(nrOptionSelect) {
+    switch(t41.NoiseFilter) {
       case 0:                               // NR Off
         break;
       case 1:                               // Kim NR

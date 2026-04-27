@@ -120,7 +120,7 @@ FLASHMEM void RFInAttenFollowup() {
   ShowAnalogGain();
 
   // *** TODO: set to EEPROM ***
-  //EEPROMData.rfGainAllBands = rfGainAllBands;
+  //EEPROMData.t41.RFGain = t41.RFGain;
   EEPROMWrite();
 }
 
@@ -134,7 +134,7 @@ FLASHMEM void SSBRFOutAttenFollowup() {
   XAttenSSB[t41.ActiveBand] = currentRF_OutAtten;
 
   // *** TODO: set to EEPROM ***
-  //EEPROMData.rfGainAllBands = rfGainAllBands;
+  //EEPROMData.t41.RFGain = t41.RFGain;
   EEPROMWrite();
 }
 
@@ -143,7 +143,7 @@ FLASHMEM void CWRFOutAttenFollowup() {
   XAttenCW[t41.ActiveBand] = currentRF_OutAtten;
 
   // *** TODO: set to EEPROM ***
-  //EEPROMData.rfGainAllBands = rfGainAllBands;
+  //EEPROMData.t41.RFGain = t41.RFGain;
   EEPROMWrite();
 }
 
@@ -154,13 +154,11 @@ FLASHMEM void RFOptions() {
   //  const char *rfOptions[] = { "Power level", "Gain", "Cancel" };
   switch(secondaryMenuIndex) {
     case 0: // Power Level
-      //transmitPowerLevel = (float)GetEncoderValue(1, 20, transmitPowerLevel, 1, (char *)"Power: ");
-      GetMenuValue(1, 20, &transmitPowerLevel, 1, "Power:", 200, NULL, NULL, &RFPowerFollowup);
+      GetMenuValue(1, 20, (int*)&t41.TxPower, 1, "Power:", 200, NULL, NULL, &RFPowerFollowup);
       break;
 
     case 1: // Gain
-      //rfGainAllBands = GetEncoderValue(-60, 10, rfGainAllBands, 5, (char *)"RF Gain dB: ");
-      GetMenuValue(-60, 10, &rfGainAllBands, 5, "Gain:", 200, NULL, NULL, &RFGainFollowup);
+      GetMenuValue(-60, 10, (int*)&t41.RFGain, 5, "Gain:", 200, NULL, NULL, &RFGainFollowup);
       break;
 
     case 2:  // RF In Atten
@@ -219,7 +217,7 @@ FLASHMEM void CalibrateOptions() {
       if(keyPressedOn == 1 && t41.RadioMode == CW_MODE) {
         //================  CW Transmit Mode Straight Key ===========
         if(digitalRead(KEYER_DIT_INPUT_TIP) == LOW && keyType == 0) {  //Straight Key
-          powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
+          powerOutCW[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
           CW_ExciterIQData();
           ShowTransmitReceiveStatus();
           SetFreq(t41.CenterFreq);
@@ -234,7 +232,7 @@ FLASHMEM void CalibrateOptions() {
         }
       }
       CWPowerCalibrationFactor[t41.ActiveBand] = GetEncoderValueLive(-2.0, 2.0, CWPowerCalibrationFactor[t41.ActiveBand], 0.001, (char *)"CW PA Cal: ");
-      powerOutCW[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];  // AFP 10-21-22
+      powerOutCW[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];  // AFP 10-21-22
       val = ReadSelectedPushButton();
       if(val != BOGUS_PIN_READ) {        // Any button press??
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
@@ -249,7 +247,7 @@ FLASHMEM void CalibrateOptions() {
 
     case 5:  // SSB PA Cal
       SSBPowerCalibrationFactor[t41.ActiveBand] = GetEncoderValueLive(-2.0, 2.0, SSBPowerCalibrationFactor[t41.ActiveBand], 0.001, (char *)"SSB PA Cal: ");
-      powerOutSSB[t41.ActiveBand] = (-.0133 * transmitPowerLevel * transmitPowerLevel + .7884 * transmitPowerLevel + 4.5146) * SSBPowerCalibrationFactor[t41.ActiveBand];  // AFP 10-21-22
+      powerOutSSB[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * SSBPowerCalibrationFactor[t41.ActiveBand];  // AFP 10-21-22
       val = ReadSelectedPushButton();
       if(val != BOGUS_PIN_READ) {        // Any button press??
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
@@ -299,11 +297,11 @@ float CalcSignalStrength() {
     //  dbm_calibration = 32 good for S9
     //  dbm_calibration = 24 good for S1
     // dbm_calibration set to 31; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
-    // rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10; rfGainAllBands is initialized to 0
-    //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
-    //dbm = 24.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
-    //dbm = 32.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
-    dbm = 38.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - rfGainAllBands;
+    // rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10; t41.RFGain is initialized to 0
+    //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    //dbm = 24.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    //dbm = 32.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    dbm = 38.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
 
     //if(std::isnan(dbm)) {
     //  dbm = -133.0;

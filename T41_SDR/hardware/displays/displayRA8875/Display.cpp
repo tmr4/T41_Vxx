@@ -932,11 +932,19 @@ FLASHMEM void ShowOperatingStats() {
 *****/
 FLASHMEM void ShowCurrentPowerSetting() {
   tft.setFontScale((enum RA8875tsize)0);
-  tft.fillRect(OPERATION_STATS_PWR, OPERATION_STATS_T, tft.getFontWidth() * 11, tft.getFontHeight(), RA8875_BLACK);
+  tft.fillRect(OPERATION_STATS_PWR, OPERATION_STATS_T, tft.getFontWidth() * 8, tft.getFontHeight(), RA8875_BLACK);
   tft.setCursor(OPERATION_STATS_PWR, OPERATION_STATS_T);
-  tft.setTextColor(RA8875_RED);
-  tft.print(transmitPowerLevel, 1);  // Power output is a float
-  tft.print(" Watts");
+  if(t41.TxPower < 15) {
+    tft.setTextColor(RA8875_GREEN);
+  } else {
+    tft.setTextColor(RA8875_RED);
+  }
+  tft.print(t41.TxPower, 1);  // Power output is a float
+  if(t41.TxPower == 1) {
+    tft.print(" Watt");
+  } else {
+    tft.print(" Watts");
+  }
 }
 
 /*****
@@ -1062,7 +1070,7 @@ FASTRUN void DrawSmeterBar() {
     Serial.print("gainCorrection: "); Serial.println(bands[t41.ActiveBand].gainCorrection);
     Serial.print("audioMaxSquaredAve: "); Serial.println(audioMaxSquaredAve);
     Serial.print("rfGain: "); Serial.println(bands[t41.ActiveBand].rfGain);
-    Serial.print("rfGainAllBands: "); Serial.println(rfGainAllBands);
+    Serial.print("t41.RFGain: "); Serial.println(t41.RFGain);
     Serial.print("currentRF_InAtten: "); Serial.println(currentRF_InAtten);
   }
 #endif

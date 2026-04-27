@@ -116,7 +116,7 @@ FLASHMEM void SetWPMFollowup() {
   SetTransmitDitLength();
   //.currentWPM = currentWPM;
   EEPROMWrite();
-  UpdateInfoBoxItem(IB_ITEM_KEY);
+  UpdateInfoBoxItem(T41_ITEM_KEY);
 }
 
 FLASHMEM void SetKeyTypeFollowup() {
@@ -210,7 +210,7 @@ FLASHMEM void DoPaddleFlipFollowup() {
 
   //EEPROMData.paddleDit = paddleDit;
   //EEPROMData.paddleDah = paddleDah;
-  UpdateInfoBoxItem(IB_ITEM_KEY);
+  UpdateInfoBoxItem(T41_ITEM_KEY);
 }
 
 /*****
@@ -386,7 +386,7 @@ FLASHMEM void ResetHistograms() {
   memset(signalHistogram, 0, HISTOGRAM_ELEMENTS * sizeof(uint32_t));
   memset(gapHistogram, 0, HISTOGRAM_ELEMENTS * sizeof(uint32_t));
   currentWPM = 1200 / ditLength;
-  UpdateInfoBoxItem(IB_ITEM_KEY);
+  UpdateInfoBoxItem(T41_ITEM_KEY);
 }
 
 // This function was re-factored into a state machine by KF5N October 29, 2023.
