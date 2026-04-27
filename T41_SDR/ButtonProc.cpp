@@ -27,6 +27,8 @@ bool lowerAudioFilterActive = false; // false - upper, true - lower audio filter
 
 bool nfmBWFilterActive = false; // false - audio filters active, true - NFM BW demod filter active
 
+int bandNoiseFloor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -37,12 +39,11 @@ int ValidateDemodMode(int demod);
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-// process band change without notifications
-// this is needed to prevent CAT reply on receiving change band command
-// *** t41.ActiveBand set to new band prior to calling ***
+// process band change
 // *** FilterHiCut and FilterLoCut will notify if changed ***
-FLASHMEM void UpdateBand(int from) {
+FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
   int vfo = t41.ActiveVFO;
+  int from = t41.ActiveBand;
 
   if(from < BAND_12M) {
     digitalWrite(bandswitchPins[from], LOW);
@@ -60,6 +61,12 @@ FLASHMEM void UpdateBand(int from) {
     t41.CenterFreq.Update(lastFrequencies[t41.ActiveBand][vfo]);
   }
   t41.NCOFreq.Update(0);
+
+  if(notify) {
+    t41.ActiveBand += change;
+  } else {
+    t41.ActiveBand.Update(from + change);
+  }
 
   // save band info if not calibrating
   // *** TODO: calibrate check from v12, validate for v11 calibration routines
@@ -98,22 +105,8 @@ FLASHMEM void UpdateBand(int from) {
   }
 }
 
-/*****
-  Process a band increase/decrease
-
-  *** radio mode and SSB/data demolation mode are unchanged across band changes ***
-*****/
-FLASHMEM void ChangeBand(int change) {
-  int from = t41.ActiveBand;
-
-  t41.ActiveBand += change;
-
-  UpdateBand(from);
-}
-
-/*****
-  Purpose: Make a band change if needed due to a frequency change
-*****/
+/*
+// make a band change if needed due to a frequency change
 FLASHMEM void ChangeBand(long newFreq) {
   int newBand = BAND_80M;
 
@@ -129,6 +122,7 @@ FLASHMEM void ChangeBand(long newFreq) {
     ChangeBand(newBand - t41.ActiveBand);
   }
 }
+*/
 
 /*****
   Purpose: Toggle which filter is adjusted by filter encoder

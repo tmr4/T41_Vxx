@@ -8,7 +8,6 @@
 
 //extern char versionSettings[];
 extern int rfGainAllBands;
-extern int spectrumNoiseFloor;
 extern int transmitPowerLevel;
 extern int nrOptionSelect;
 extern int currentScale;
@@ -66,8 +65,6 @@ extern int  separationCharacter;
 extern int paddleFlip;
 extern int sdCardPresent;
 
-extern float myLat;
-extern float myLong;
 extern int compressorFlag;
 
 extern int buttonThresholdPressed;

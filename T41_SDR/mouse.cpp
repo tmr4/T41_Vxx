@@ -223,7 +223,7 @@ void MouseLoop() {
         }
       } else if(CursorInInfoBox(cursorX, cursorY)) {
         if(t41.LiveNoiseFloor == 2) {
-          t41.NoiseFloor = currentNoiseFloor[t41.ActiveBand] += wheel;
+          t41.NoiseFloor += wheel;
         } else {
           MouseWheelInfoBox(wheel, cursorX + cursorW / 2, cursorY + cursorH / 2);
         }

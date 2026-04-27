@@ -482,7 +482,7 @@ FLASHMEM void FT8ShowSpectrum2() {
   //pixelnew[1] = 0;
 
   if(t41.LiveNoiseFloor != 1) {
-    currentNF = currentNoiseFloor[t41.ActiveBand];
+    currentNF = t41.NoiseFloor;
   }
 
   //  This is the "spectra scanning" for loop.  During calibration, only small areas of the spectrum need to be examined.
@@ -585,8 +585,8 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
   }
 
   // calculate the freq spectrum plot value; pixelnew spectrum is calculated in CalcZoomFreqSpec
-  //yPlot = spectrumNoiseFloor - pixelnew[x1] - currentNF + 50;
-  //y1Plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF + 50;
+  //yPlot = SPECTRUM_NOISE_FLOOR - pixelnew[x1] - currentNF + 50;
+  //y1Plot = SPECTRUM_NOISE_FLOOR - pixelnew[x1 + 1] - currentNF + 50;
 
   // create rough spectrum histogram if auto noise floor is active
   // the frequency spectrum is 150 pixels high, let's create
@@ -595,7 +595,7 @@ FLASHMEM float FT8PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins, int
   // but right shift of a negative number is implimentation specific
   // and I want to keep the negative numbers here
   if(t41.LiveNoiseFloor == 1) {
-    int specPlotY = spectrumNoiseFloor - yPlot; // actual spectrum value at current noise floor
+    int specPlotY = SPECTRUM_NOISE_FLOOR - yPlot; // actual spectrum value at current noise floor
     int bin = specPlotY / 5;                    // divide by 5 to get histogram bin
 
     // hLo and hHi capture spectrum at or outside the spectrum display extremes

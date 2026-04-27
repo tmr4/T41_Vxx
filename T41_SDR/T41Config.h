@@ -33,8 +33,6 @@
 #define DEFAULT_KEYER_WPM   			15              // Startup value for keyer wpm
 #define FREQ_SEP_CHARACTER  			'.'					    // Some may prefer period, space, or combo
 #define MAP_FILE_NAME   					"sf.bmp"        // Name you gave to BMP map file. Max is 50 chars
-#define MY_LAT										37.5            // Coordinates for QTH actually CM87
-#define MY_LON										-123.0
 #define MY_CALL										"Your Call"     // Default max is 10 chars
 #define MY_TIMEZONE          			"PST: "         // Default max is 10 chars
 #define TIME_24H                  1               // comment for 12h display

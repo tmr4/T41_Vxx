@@ -106,11 +106,6 @@ int centerLine = SPECTRUM_RES / 2 + SPECTRUM_LEFT_X;
 
 int wfHeight = WATERFALL_H;
 
-int currentNoiseFloor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
-
-// *** TODO: consider defining spectrumNoiseFloor here as well ***
-int audioSpectrumOffset;
-
 #define RA8875_CS TFT_CS
 #define RA8875_RESET TFT_DC  // any pin or nothing!
 RA8875 tft = RA8875(RA8875_CS, RA8875_RESET, TFT_MOSI, TFT_SCLK, TFT_MISO);
@@ -258,9 +253,6 @@ FLASHMEM void InitDisplay() {
   tft.clearMemory();
   tft.writeTo(L1);
   tft.clearMemory();
-
-  spectrumNoiseFloor = SPECTRUM_NOISE_FLOOR;
-  audioSpectrumOffset = AUDIO_SPEC_SHIFT;
 }
 
 int GetDisplayWidth() {
@@ -461,7 +453,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
   if(t41.LiveNoiseFloor != 1) {
-    currentNF = currentNoiseFloor[t41.ActiveBand];
+    currentNF = t41.NoiseFloor;
   }
 
   // initialize yOldPlot if this is a new spectrum
@@ -481,8 +473,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     pixelnew1 = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1]));
 
     // calculate the freq spectrum plot value
-    yPlot = spectrumNoiseFloor - pixelnew - currentNF;
-    y1Plot = spectrumNoiseFloor - pixelnew1 - currentNF;
+    yPlot = SPECTRUM_NOISE_FLOOR - pixelnew - currentNF;
+    y1Plot = SPECTRUM_NOISE_FLOOR - pixelnew1 - currentNF;
 
     // create rough spectrum histogram if auto noise floor is active
     // the frequency spectrum is 150 pixels high, let's create
@@ -491,7 +483,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     // but right shift of a negative number is implimentation specific
     // and I want to keep the negative numbers here
     if(t41.LiveNoiseFloor == 1) {
-      int specPlotY = spectrumNoiseFloor - yPlot; // actual spectrum value at current noise floor
+      int specPlotY = SPECTRUM_NOISE_FLOOR - yPlot; // actual spectrum value at current noise floor
       int bin = specPlotY / 5;                    // divide by 5 to get histogram bin
 
       // hLo and hHi capture spectrum at or outside the spectrum display extremes
@@ -643,9 +635,9 @@ FASTRUN void DrawAudioSpectrum() {
 
       // *** TODO: impliment auto level for audio spectrum ***
       if(t41.DemodMode == DEMOD_LSB) {
-        audioYPixel = audioSpectrumOffset + map(15 * log10f((audioSpectBuffer[i] + audioSpectBuffer[i + 1] + audioSpectBuffer[i + 2]) / 3), 0, 100, 0, AUDIO_SPEC_H);
+        audioYPixel = AUDIO_SPEC_SHIFT + map(15 * log10f((audioSpectBuffer[i] + audioSpectBuffer[i + 1] + audioSpectBuffer[i + 2]) / 3), 0, 100, 0, AUDIO_SPEC_H);
       } else {
-        audioYPixel = audioSpectrumOffset + map(15 * log10f((audioSpectBuffer[1021 - i] + audioSpectBuffer[1022 - i] + audioSpectBuffer[1023 - i]) / 3), 0, 100, 0, AUDIO_SPEC_H);
+        audioYPixel = AUDIO_SPEC_SHIFT + map(15 * log10f((audioSpectBuffer[1021 - i] + audioSpectBuffer[1022 - i] + audioSpectBuffer[1023 - i]) / 3), 0, 100, 0, AUDIO_SPEC_H);
       }
 
       // draw current audio spectrum line at this position

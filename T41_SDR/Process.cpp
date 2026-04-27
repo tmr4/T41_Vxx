@@ -151,10 +151,8 @@ void CalcAudioMax() {
   audioMaxSquaredAve = .5 * audioMaxSquared + .5 * audioMaxSquaredAve;  // Running averaged values
 }
 
-// offset: audio spectrum is move downward by this many pixels
 // imComp: FFT has an imaginary component (default: true)
 // reset:  reset FFT
-//void AudioDSP(bool updateSpectrumData, int offset, bool imComp = true) {
 void AudioDSP(bool updateSpectrumData, bool imComp = true) {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
   float32_t audioMaxSquared;
@@ -549,7 +547,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       //case DEMOD_FT8:
       //  // *** TODO: consider if AGC (in default below) for FT8 is desirable with WSJT-X ***
       //  // *** without AGC the T41 volume is less in this mode than equivalent SSB ***
-      //  AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
       //  AudioDSP(updateFreqSpec);
       //  break;
 
@@ -563,7 +560,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
       default:
         // prepare audio signals for all other modes
-        //AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT);
         AudioDSP(updateFreqSpec);
 
         // apply automatic gain control
@@ -631,7 +627,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, sampleRate / 8.0);
 
         // process audio for demodulated NFM and FT8 wave file
-        //AudioDSP(updateFreqSpec, AUDIO_SPEC_SHIFT_NFM, false); // no imaginary component for these
         AudioDSP(updateFreqSpec, false); // no imaginary component for these
 
         // apply automatic gain control
@@ -1216,9 +1211,6 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
         // hardwire for 10dB scale, 20 pixel offset, 20 dBScale
         int16_t pixelnew = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
 
-        // T41 spectrum equation: spectrumNoiseFloor - pixelnew[i] - currentNF;
-        //data[i] = spectrumNoiseFloor - pixelnew[i] - currentNF;
-        //data[i] = pixelnew + nf2PC;
         // *** control app data no longer has current noise floor as that is display dependent ***
         data[i] = pixelnew;
         if(data[i] < min) {
@@ -1239,7 +1231,7 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
     //  for(int i = 0; i < SPECTRUM_RES; i++) {
     //    // shift data so max = 255
     //    // *** TODO: consider scaling here fits data into a 0-255 range ***
-    //    tmp = spectrumNoiseFloor - pixelnew[i] - currentNF;
+    //    tmp = SPECTRUM_NOISE_FLOOR - pixelnew[i] - currentNF;
     //    // though unlikely, data can still be negative, limit it
     //    if(tmp < 0) {
     //      tmp = SPECTRUM_BOTTOM;

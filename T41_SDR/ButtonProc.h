@@ -11,9 +11,8 @@ extern bool nfmBWFilterActive;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void UpdateBand(int from);
-void ChangeBand(int change);
-void ChangeBand(long newFreq);
+void ChangeBand(int change, bool notify = true);
+//void ChangeBand(long newFreq);
 void ButtonFilter();
 void ButtonMode();
 void ButtonDemodMode();

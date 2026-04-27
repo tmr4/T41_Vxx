@@ -1185,10 +1185,10 @@ FLASHMEM float PlotCalSpectrum(int x1, int cal_bins[2], int capture_bins) {
   arm_max_q15(&pixelnew[(cal_bins[0] - capture_bins)], capture_bins * 2, &refAmplitude, &index_of_max);
   arm_max_q15(&pixelnew[(cal_bins[1] - capture_bins)], capture_bins * 2, &adjAmplitude, &index_of_max);
 
-  y_new = spectrumNoiseFloor + recCalNFAdjust - pixelnew[x1];
-  y1_new = spectrumNoiseFloor + recCalNFAdjust - pixelnew[x1 - 1];
-  y_old = spectrumNoiseFloor + oldNF - pixelold[x1];
-  y_old2 = spectrumNoiseFloor + oldNF - pixelold[x1 - 1];
+  y_new = SPECTRUM_NOISE_FLOOR + recCalNFAdjust - pixelnew[x1];
+  y1_new = SPECTRUM_NOISE_FLOOR + recCalNFAdjust - pixelnew[x1 - 1];
+  y_old = SPECTRUM_NOISE_FLOOR + oldNF - pixelold[x1];
+  y_old2 = SPECTRUM_NOISE_FLOOR + oldNF - pixelold[x1 - 1];
 
   if(y_new > SPECTRUM_BOTTOM) y_new = SPECTRUM_BOTTOM;
   if(y_old > SPECTRUM_BOTTOM) y_old = SPECTRUM_BOTTOM;
@@ -1919,7 +1919,7 @@ FLASHMEM void PlotSpectrum() {
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
   if(t41.LiveNoiseFloor != 1) {
-    currentNF = currentNoiseFloor[t41.ActiveBand];
+    currentNF = t41.NoiseFloor;
   }
 
   // initialize old noise floor if this is a new spectrum
@@ -1942,10 +1942,10 @@ FLASHMEM void PlotSpectrum() {
     }
 
     // pixelold spectrum is saved by the FFT function prior to a new FFT which generates the pixelnew spectrum
-    y_new_plot = spectrumNoiseFloor - pixelnew[x1] - currentNF;
-    y1_new_plot = spectrumNoiseFloor - pixelnew[x1 + 1] - currentNF;
-    y_old_plot = spectrumNoiseFloor - pixelold[x1] - oldNF;
-    y1_old_plot = spectrumNoiseFloor - pixelold[x1 + 1] - oldNF;
+    y_new_plot = SPECTRUM_NOISE_FLOOR - pixelnew[x1] - currentNF;
+    y1_new_plot = SPECTRUM_NOISE_FLOOR - pixelnew[x1 + 1] - currentNF;
+    y_old_plot = SPECTRUM_NOISE_FLOOR - pixelold[x1] - oldNF;
+    y1_old_plot = SPECTRUM_NOISE_FLOOR - pixelold[x1 + 1] - oldNF;
 
     // create rough spectrum histogram if auto noise floor is active
     // the frequency spectrum is 150 pixels high, let's create
@@ -1954,7 +1954,7 @@ FLASHMEM void PlotSpectrum() {
     // but right shift of a negative number is implimentation specific
     // and I want to keep the negative numbers here
     if(t41.LiveNoiseFloor == 1) {
-      int specPlotY = spectrumNoiseFloor - y_new_plot; // actual spectrum value at current noise floor
+      int specPlotY = SPECTRUM_NOISE_FLOOR - y_new_plot; // actual spectrum value at current noise floor
       int bin = specPlotY / 5;                         // divide by 5 to get histogram bin
 
       // hLo and hHi capture spectrum at or outside the spectrum display extremes

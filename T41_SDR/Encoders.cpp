@@ -55,7 +55,8 @@ void ProcessMenuEncoder() {
 
   if(t41.LiveNoiseFloor == 2) {
     // we're setting noise floor
-    t41.NoiseFloor = currentNoiseFloor[t41.ActiveBand] += menuEncoderMove;
+    //t41.NoiseFloor += menuEncoderMove; // *** compiler doesn't like property += with volatile ***
+    t41.NoiseFloor = t41.NoiseFloor + menuEncoderMove;
   } else {
     if(t41.DemodMode == DEMOD_NFM && nfmBWFilterActive) {
       // we're adjusting NFM demod bandwidth

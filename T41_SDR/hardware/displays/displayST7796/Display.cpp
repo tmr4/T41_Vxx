@@ -47,9 +47,6 @@ int centerLine = SPECTRUM_RES / 2 + SPECTRUM_LEFT_X;
 
 int wfHeight = WATERFALL_H;
 
-// *** TODO: consider defining spectrumNoiseFloor here as well ***
-int audioSpectrumOffset;
-
 // Current draw for T41 mock up on Mini Platform, 0.2 amps (ST7796 480x320)
 ST7796_t3 tft = ST7796_t3(TFT_CS, TFT_DC);
 
@@ -174,9 +171,6 @@ FLASHMEM void InitDisplay() {
 
   // test screen
   tft.fillScreen(ST7735_BLACK);
-
-  spectrumNoiseFloor = SPECTRUM_NOISE_FLOOR;
-  audioSpectrumOffset = AUDIO_SPEC_SHIFT;
 }
 
 /*****
@@ -202,7 +196,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
   if(t41.LiveNoiseFloor != 1) {
-    currentNF = currentNoiseFloor[t41.ActiveBand];
+    currentNF = t41.NoiseFloor;
   }
 
   // initialize yOldPlot if this is a new spectrum
@@ -222,8 +216,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     pixelnew1 = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1 + offset]));
 
     // calculate the freq spectrum plot value
-    yPlot = spectrumNoiseFloor - pixelnew - currentNF;
-    y1Plot = spectrumNoiseFloor - pixelnew1 - currentNF;
+    yPlot = SPECTRUM_NOISE_FLOOR - pixelnew - currentNF;
+    y1Plot = SPECTRUM_NOISE_FLOOR - pixelnew1 - currentNF;
 
     // create rough spectrum histogram if auto noise floor is active
     // the frequency spectrum is 150 pixels high, let's create
@@ -232,7 +226,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     // but right shift of a negative number is implimentation specific
     // and I want to keep the negative numbers here
     if(t41.LiveNoiseFloor == 1) {
-      int specPlotY = spectrumNoiseFloor - yPlot; // actual spectrum value at current noise floor
+      int specPlotY = SPECTRUM_NOISE_FLOOR - yPlot; // actual spectrum value at current noise floor
       int bin = specPlotY / 5;                    // divide by 5 to get histogram bin
 
       // hLo and hHi capture spectrum at or outside the spectrum display extremes

@@ -85,7 +85,6 @@ from T41_Views (this is private data, first letter capitalized if property):
 
 next:
   int transmitPowerLevel = 1;
-  int spectrumNoiseFloor;
   int rfGainAllBands;
   private int currentNF = 0;
 
@@ -146,8 +145,6 @@ typedef struct {
   int paddleFlip;
   int sdCardPresent;
 
-  float myLong;
-  float myLat;
   int compressorFlag;
 
   int buttonThresholdPressed;

@@ -16,16 +16,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-/*
-  #define MY_LON                      -84.42676671875002
-  #define MY_LAT                      39.074660204008886
-  #define CENTER_SCREEN_X             387
-  #define CENTER_SCREEN_Y             240
-  #define IMAGE_CORNER_X              211 // ImageWidth = 378 Therefore 800 - 378 = 422 / 2 = 211
-  #define IMAGE_CORNER_Y              89  // ImageHeight = 302 Therefore 480 - 302 = 178 / 2 = 89
-  #define RAY_LENGTH                  190
-*/
-
 #define DEGREES2RADIANS             0.01745329
 #define RADIANS2DEGREES             57.29578
 #define PI_BY_180                   0.01745329
@@ -98,8 +88,6 @@ char letters[] = { '\0',  // Make a 1's-based array
 
 int spacing[] = { 0, 70, 140, 210, 280, 350, 420, 490, 560, 630 };
 
-//float homeLat = MY_LAT;  // your QTH latitude
-//float homeLon = MY_LON;  // your QTH longitude
 float homeLat = myMapFiles[0].lat;
 float homeLon = myMapFiles[0].lon;  // your QTH longitude
 float dxLat;

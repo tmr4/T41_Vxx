@@ -500,9 +500,7 @@ void T41ControlLoop() {
           ChangeBand(-1);
           SendAS();
         } else if(cmd[1] == 'D' && cmd[3] == ';') {
-          int tmp = t41.ActiveBand;
-          t41.ActiveBand.Update(atoi(&cmd[2]));
-          UpdateBand(tmp);
+          ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
         }
         sendCommand = false; // *** TODO: or we can set cmd[0] to null
         break;
@@ -687,13 +685,10 @@ void T41ControlLoop() {
       case 'N':
         if(cmd[1] == 'F' && cmd[2] == ';') {
           // send noise floor
-          sprintf(cmd,"NF%04d;", currentNoiseFloor[t41.ActiveBand]);
+          sprintf(cmd,"NF%04d;", (int)t41.NoiseFloor);
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
-          int val = atoi(&cmd[2]);
-
           // set noise floor
-          currentNoiseFloor[t41.ActiveBand] = val;
-          t41.NoiseFloor.Update(val);
+          t41.NoiseFloor.Update(atoi(&cmd[2]));
           sendCommand = false;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
