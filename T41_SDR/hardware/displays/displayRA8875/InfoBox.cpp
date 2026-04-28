@@ -51,6 +51,9 @@ void ClearInfoBox();
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern int paddleFlip;
+extern int currentMicThreshold;
+
 Metro ms_500 = Metro(500); // display clock updates
 
 typedef  struct {

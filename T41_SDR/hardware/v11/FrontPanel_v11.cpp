@@ -90,6 +90,12 @@ const char *labels[] = { "Select", "Menu Up", "Band Up",
 // *** allow for v11 specific RA8875 code ***
 extern RA8875 tft;
 
+int buttonThresholdPressed = 944;   // switchValues[0] + WIGGLE_ROOM
+int buttonThresholdReleased = 964;  // buttonThresholdPressed + WIGGLE_ROOM
+int buttonRepeatDelay = 300000;     // Increased to 300000 from 200000 to better handle cheap, wornout buttons.
+
+int switchValues[NUMBER_OF_SWITCHES] = { 905, 853, 802, 752, 705, 653, 604, 556, 502, 451, 399, 344, 291, 237, 181, 124, 65, 4 };
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------

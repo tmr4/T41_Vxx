@@ -83,6 +83,12 @@ static unsigned long buttonFilterRegister;
 static int buttonState, buttonADCPressed, buttonElapsed;
 static volatile int buttonADCOut;
 
+int buttonThresholdPressed = 944;   // switchValues[0] + WIGGLE_ROOM
+int buttonThresholdReleased = 964;  // buttonThresholdPressed + WIGGLE_ROOM
+int buttonRepeatDelay = 300000;     // Increased to 300000 from 200000 to better handle cheap, wornout buttons.
+
+int switchValues[NUMBER_OF_SWITCHES] = { 922, 871, 818, 768, 716, 669, 612, 566, 515, 462, 406, 355, 300, 241, 187, 127, 67, 5 };
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------

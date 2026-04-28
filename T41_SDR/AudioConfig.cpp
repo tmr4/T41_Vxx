@@ -78,6 +78,8 @@ The use of mixers to control audio chain flow is inefficient:
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern int currentMicThreshold;
+
 static bool supportsTX = false;
 
 #ifdef AUDIO_STATS

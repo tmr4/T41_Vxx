@@ -1457,8 +1457,6 @@ FLASHMEM void BearingMaps() {
   homeLat = myMapFiles[selectedMapIndex].lat;
   homeLon = myMapFiles[selectedMapIndex].lon;  // your QTH longitude
 
-  strcpy(mapFileName, (const char *)myMapFiles[selectedMapIndex].mapNames);
-
   RedrawDisplayScreen();
 }
 

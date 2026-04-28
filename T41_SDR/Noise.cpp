@@ -141,9 +141,12 @@ void Kim1_NR() {
     float32_t uf_freq;
     float32_t NR_sum;
     float32_t NR_KIM_K = 1.0;
+    float NR_alpha = 0.95;
+    float NR_beta = 0.85;
     float32_t NR_onemalpha = (1.0 - NR_alpha);
     float32_t NR_onemtwobeta = (1.0 - (2.0 * NR_beta));
     float32_t NR_T;
+    float NR_PSI = 0.0;
 
     if(t41.FilterLoCut <= 0 && t41.FilterHiCut >= 0) {
       lf_freq = 0.0;
@@ -199,13 +202,13 @@ void Kim1_NR() {
         NR_FFT_buffer[idx * 2] *= temp_sample;
       }
 
-#if 0     // Odd way to comment something out. Not sure why they did this. JJP
+      #if 0     // Odd way to comment something out. Not sure why they did this. JJP
 
       // perform windowing on 256 real samples in the NR_FFT_buffer
       for(int idx = 0; idx < NR_FFT_L; idx++) { // sqrt Hann window
         NR_FFT_buffer[idx * 2] *= sqrtHann[idx];
       }
-#endif
+      #endif
 
       arm_cfft_f32(NR_FFT, NR_FFT_buffer, 0, 1);
       for(int i = 0; i < NR_FFT_L / 2; i++) { // take first 128 bin values of the FFT result
@@ -282,22 +285,22 @@ void Kim1_NR() {
       }
 
 
-#if 0
+      #if 0
       for(int idx = 1; idx < 20; idx++) {      // bins 2 to 29 attenuated set real values to 0.1 of their original value
         NR_iFFT_buffer[idx * 2] *= 0.1;
         NR_iFFT_buffer[NR_FFT_L * 2 - ((idx + 1) * 2)] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
         NR_iFFT_buffer[idx * 2 + 1] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
         NR_iFFT_buffer[NR_FFT_L * 2 - ((idx + 1) * 2) + 1] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
       }
-#endif
+      #endif
       arm_cfft_f32(NR_iFFT, NR_FFT_buffer, 1, 1);
 
-#if 0
+      #if 0
       // perform windowing on 256 real samples in the NR_FFT_buffer
       for(int idx = 0; idx < NR_FFT_L; idx++) { // sqrt Hann window
         NR_FFT_buffer[idx * 2] *= sqrtHann[idx];
       }
-#endif
+      #endif
       for(int i = 0; i < NR_FFT_L / 2; i++) { // take real part of first half of current iFFT result and add to 2nd half of last iFFT_result
         NR_output_audio_buffer[i + k * (NR_FFT_L / 2)] = NR_FFT_buffer[i * 2] + NR_last_iFFT_result[i];
       }
@@ -413,6 +416,7 @@ void SpectralNoiseReduction() {
   const float32_t power_threshold = 0.4;
   float32_t ph1y[NR_FFT_L / 2];
   static int NR_first_time_2 = 1;
+  float NR_alpha = 0.95;
 
   if(t41.FilterLoCut <= 0 && t41.FilterHiCut >= 0) {
     lf_freq = 0.0;
@@ -463,14 +467,14 @@ void SpectralNoiseReduction() {
       NR_FFT_buffer[NR_FFT_L + i * 2] = audioBufferL[i + k * (NR_FFT_L / 2)]; // real
       NR_FFT_buffer[NR_FFT_L + i * 2 + 1] = 0.0;
     }
-#if 1
+    #if 1
     // perform windowing on samples in the NR_FFT_buffer
     for(int idx = 0; idx < NR_FFT_L; idx++) { // sqrt Hann window
       //float32_t temp_sample = 0.5 * (float32_t)(1.0 - (cosf(PI * 2.0 * (float32_t)idx / (float32_t)((NR_FFT_L) - 1))));
       //NR_FFT_buffer[idx * 2] *= temp_sample;
       NR_FFT_buffer[idx * 2] *= sqrtHann[idx];
     }
-#endif
+    #endif
 
     // NR_FFT
     // calculation is performed in-place the FFT_buffer [re, im, re, im, re, im . . .]

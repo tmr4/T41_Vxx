@@ -17,6 +17,8 @@ float32_t SAM_carrier_freq_offset = 0.0;
 
 // new synchronous AM PLL & PHASE detector
 // wdsp Warren Pratt, 2016
+float omegaN = 200.0;                       // PLL bandwidth 50.0 - 1000.0
+float pll_fmax = 4000.0;
 int zeta_help = 65;
 float32_t zeta = (float32_t)zeta_help / 100.0;  // PLL step response: smaller, slower response 1.0 - 0.1
 float32_t omega_min = TWO_PI * -pll_fmax * 1 / 24000;

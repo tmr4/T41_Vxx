@@ -7,7 +7,6 @@
 // commented lines have no corresponding global extern
 
 extern int currentScale;
-extern float spectrum_display_scale;
 
 extern int cwFilterIndex;
 extern int paddleDit;
@@ -23,21 +22,6 @@ extern int freqCorrectionFactor;
 extern int equalizerRec[];
 extern int equalizerXmt[];
 
-extern int currentMicThreshold;
-extern float currentMicCompRatio;
-extern float currentMicAttack;
-extern float currentMicRelease;
-extern int currentMicGain;
-
-extern int switchValues[];
-
-extern float LPFcoeff;
-extern float NR_PSI;
-extern float NR_alpha;
-extern float NR_beta;
-extern float omegaN ;
-extern float pll_fmax;
-
 extern float powerOutCW[];
 extern float powerOutSSB[];
 extern float CWPowerCalibrationFactor[];
@@ -49,21 +33,6 @@ extern float IQXAmpCorrectionFactor[];
 extern float IQXPhaseCorrectionFactor[];
 
 extern float CWPowerEqnCalFactor[];
-
-extern long favoriteFreqs[13];
-extern int lastFrequencies[][2];
-
-extern char mapFileName[];
-extern char myCall[];
-extern char myTimeZone[];
-extern int  separationCharacter;
-
-extern int paddleFlip;
-extern int sdCardPresent;
-
-extern int buttonThresholdPressed;
-extern int buttonThresholdReleased;
-extern int buttonRepeatDelay;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

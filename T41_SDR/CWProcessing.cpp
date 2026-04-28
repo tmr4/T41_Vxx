@@ -55,6 +55,8 @@ float32_t aveCorrResultL;
 
 float goertzelMagnitude;
 
+int paddleFlip = PADDLE_FLIP;
+
 //------------------------- Local Variables ----------
 // *** looks like many of these should be function variables ***
 

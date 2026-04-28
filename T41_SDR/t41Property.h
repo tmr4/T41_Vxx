@@ -88,16 +88,9 @@ extern T41Properties t41;
 
 // *** possible T41 properties ***
 /*
-from T41_Views (this is private data, first letter capitalized if property):
-
-next:
-
-*/
-/*
 // old EEPROMData
 typedef struct {
   int currentScale;
-  float spectrum_display_scale;
 
   int cwFilterIndex;
   int paddleDit;
@@ -113,21 +106,6 @@ typedef struct {
   int equalizerRec[EQUALIZER_CELL_COUNT];
   int equalizerXmt[EQUALIZER_CELL_COUNT];
 
-  int currentMicThreshold;
-  float currentMicCompRatio;
-  float currentMicAttack;
-  float currentMicRelease;
-  int currentMicGain;
-
-  int switchValues[NUMBER_OF_SWITCHES];
-
-  float LPFcoeff;
-  float NR_PSI;
-  float NR_alpha;
-  float NR_beta;
-  float omegaN;
-  float pll_fmax;
-
   float powerOutCW[NUMBER_OF_BANDS];
   float powerOutSSB[NUMBER_OF_BANDS];
   float CWPowerCalibrationFactor[NUMBER_OF_BANDS];
@@ -137,20 +115,5 @@ typedef struct {
   float IQXAmpCorrectionFactor[NUMBER_OF_BANDS];
   float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS];
 
-  long favoriteFreqs[13];
-  int lastFrequencies[NUMBER_OF_BANDS][2];
-
-  char mapFileName[50];
-  char myCall[10];
-  char myTimeZone[10];
-  int  separationCharacter;
-
-  int paddleFlip;
-  int sdCardPresent;
-
-  int buttonThresholdPressed;
-  int buttonThresholdReleased;
-  int buttonRepeatDelay;
 } config_t;
 */
-//extern config_t EEPROMData;

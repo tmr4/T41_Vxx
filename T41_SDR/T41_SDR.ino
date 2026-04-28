@@ -270,7 +270,6 @@ FLASHMEM void setup() {
   //SaveAnalogSwitchValues();
 
   ClearScreen();
-  sdCardPresent = 1;
   EEPROMStartup();
 
 #ifdef DEBUG

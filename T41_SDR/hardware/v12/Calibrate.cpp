@@ -33,6 +33,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern int currentMicGain;
+
 #define RECIEVE_CAL_START_ATTEN 60.0
 
 // *** TODO: new defines help identify what calibration function is selected

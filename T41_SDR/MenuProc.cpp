@@ -26,6 +26,12 @@
 
 int calibrateItem = -1;
 
+int currentMicThreshold = -10;
+float currentMicCompRatio = 5.0;
+float currentMicAttack = 0.1;
+float currentMicRelease = 2.0;
+int currentMicGain = -10;
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
