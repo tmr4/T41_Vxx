@@ -64,7 +64,7 @@ public:
   }
 
   // w/ min/max
-  // fPtr called instead of  fPtrInfoBox
+  // fPtr called instead of fPtrInfoBox
   FLASHMEM void Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr, int _id, bool polled = true) {
     value = val;
     hasMinMax = true;

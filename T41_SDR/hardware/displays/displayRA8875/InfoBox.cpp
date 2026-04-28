@@ -163,10 +163,10 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "Equalizer:",  NULL,        NULL,                        0,       10,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBEQFollowup          }, // Equalizers
 
   // Decider takes two columns
-  { "Decoder:",    onOff,       &decoderFlag,                0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
+  { "Decoder:",    onOff,       (int*)&t41.CWDecoder,        0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
 
   // Key type takes two columns
-  { "Key Type:",   optionsWPM,  &keyType,                    0,        2,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
+  { "Key Type:",   optionsWPM,  (int*)&t41.KeyType,          0,        2,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
 
   // Memory keyer requires 3 rows
   { "Keyer     ",  keyerOpts,   &keyerState,                 0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer
@@ -318,14 +318,14 @@ void IBCompressionFollowup(int row, int col) {
     int row, col  Row and column of info box item
 *****/
 void IBWPMFollowup(int row, int col) {
-  if(keyType == 1) { // 1 = paddles
+  if(t41.KeyType == 1) { // 1 = paddles
     if(paddleFlip == 0) {
       tft.print("R");
     } else {
       tft.print("L");
     }
     tft.print(" ");
-    tft.print(currentWPM);
+    tft.print(t41.CurrentWPM);
   }
 }
 
@@ -514,7 +514,7 @@ void ClearInfoBoxKeyer() {
 void IBKeyerFollowup(int row, int col) {
   if(keyerState == 1) {
     tft.print(" ");
-    tft.print(currentWPM);
+    tft.print(t41.CurrentWPM);
 
     if(keyerMessagesActive) {
       if(keyerMessageEditMode) {

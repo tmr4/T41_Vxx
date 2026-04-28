@@ -167,9 +167,9 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
       userBand = t41.ActiveBand;
       userIQAmpFactor = IQAmpCorrectionFactor[t41.ActiveBand];
       userIQPhaseFactor = IQPhaseCorrectionFactor[t41.ActiveBand];
-      userScale = currentScale;
+      userScale = t41.FreqSpecScale;
 
-      currentScale = 1; // set vertical scale to 10 dB during calibration
+      t41.FreqSpecScale = 1; // set vertical scale to 10 dB during calibration
       displayState = DISPLAY_CALIBRATION;
       t41.SpectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
 
@@ -286,7 +286,7 @@ FLASHMEM void CalibratePost(int calType) {
       }
 
       si5351.output_enable(SI5351_CLK2, 0);
-      currentScale = userScale;
+      t41.FreqSpecScale = userScale;
       digitalWrite(RF_CAL_RELAY, OFF);
       digitalWrite(RF_CW_SIGNAL, OFF);
 

@@ -760,8 +760,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       DoCWReceiveProcessing();
 
       // ----------------------  CW Narrow band filters -------------------------
-      if(cwFilterIndex != 5) {
-        switch(cwFilterIndex) {
+      if(t41.CWFilterIndex != 5) {
+        switch(t41.CWFilterIndex) {
           case 0:  // 0.8 KHz
             arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter1, audioBufferL, audioBufferR, 256);
             arm_copy_f32(audioBufferR, audioBufferL, 256);
@@ -1202,12 +1202,8 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
       freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
       prevFreqSpecBuf[i] = freqSpecBuf[i];
 
-      // *** TODO: evaluate noise floor default setting for new v12 hardware ***
-      // *** TODO: some calibration routines need this adjustment because there is no noise floor adjustment ***
-      //pixelnew[i] = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i])) + 50;
-
       if(controlDataFlag) {
-        // pixelnew = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t)(displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[i]));
+        // *** TODO: reconsider transfers to PC control app ***
         // hardwire for 10dB scale, 20 pixel offset, 20 dBScale
         int16_t pixelnew = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
 

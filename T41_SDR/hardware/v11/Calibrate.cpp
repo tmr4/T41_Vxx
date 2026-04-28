@@ -153,7 +153,7 @@ FLASHMEM void SaveRadioState() {
   userDemodMode = t41.DemodMode;
   userZoomIndex = t41.SpectrumZoom;
   userBand = t41.ActiveBand;
-  userScale = currentScale;
+  userScale = t41.FreqSpecScale;
   userVol = t41.AudioVolume;
   userTransmitPowerLevel = t41.TxPower;
 }
@@ -198,7 +198,7 @@ FLASHMEM void RestoreRadioState() {
   //t41.RadioMode = userMode;
   t41.DemodMode = userDemodMode;
   t41.SpectrumZoom = userZoomIndex;
-  currentScale = userScale;
+  t41.FreqSpecScale = userScale;
   volSetting = userVol;
 
   if(t41.ActiveBand != userBand) {
@@ -2146,7 +2146,7 @@ FLASHMEM void TwoToneTransmit() {
 
   // start generating CW signal
   // *** TODO: don't really care here if we press a key or PTT. Somewhere else might??? ***
-  while(digitalRead(paddleDit) == LOW || digitalRead(PTT) == LOW) {
+  while(digitalRead(t41.PaddleDit) == LOW || digitalRead(PTT) == LOW) {
     // check for two-tone adjustment
     AdjustTwoToneScaler();
     AdjustPwrFactors();
@@ -2257,7 +2257,7 @@ FLASHMEM void CalibratePwr() {
 
     AdjustPwrFactors();
 
-    while(digitalRead(paddleDit) == LOW || digitalRead(PTT) == LOW) {
+    while(digitalRead(t41.PaddleDit) == LOW || digitalRead(PTT) == LOW) {
       // prepare radio
       switch(pwrIndex) {
         case 0: // CW

@@ -81,8 +81,13 @@ void T41Properties::SetPropertyDefaults() {
 
   // notify properties (not polled!)
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
-  MouseCenterTuneActive.Init(false, &HighlightTuneInc, T41_ITEM_MOUSE, false); // make it a notify property
-  NoiseFloor.Init(0, NULL, T41_ITEM_NOISE, false); // make it a notify property
+  // make these a notify property
+  MouseCenterTuneActive.Init(false, &HighlightTuneInc, T41_ITEM_MOUSE, false);
+  NoiseFloor.Init(0, NULL, T41_ITEM_NOISE, false);
+  FreqSpecScale.Init(1, &ShowSpectrumdBScale, T41_ITEM_SCALE, false); // 10 db/ scale
+
+  // CW related
+  CWFilterIndex.Init(5, 0, 5, true, &ShowOperatingStats, T41_ITEM_CW_FILTER, false);
 
   // polled properties
   RadioMode.Init(SSB_MODE, &UpdateModeDisplay, T41_ITEM_RADIO_MODE);
@@ -108,9 +113,16 @@ void T41Properties::SetPropertyDefaults() {
   RFGain.Init(0, -60, 10, false, T41_ITEM_RFGAIN);
   RxEqualizer.Init(0, 0, 1, true, T41_ITEM_EQUALIZER);
   TxEqualizer.Init(0, 0, 1, true, T41_ITEM_EQUALIZER);
+  CWDecoder.Init(DECODER_STATE, 0, 1, true, T41_ITEM_DECODER);
+  KeyType.Init(STRAIGHT_KEY_OR_PADDLES, 0, 1, true, T41_ITEM_KEY);
 
   // *** TODO: these need notifications/updates added ***
   ActiveVFO.Init(VFO_A);
+  PaddleDit.Init(KEYER_DIT_INPUT_TIP);
+  PaddleDah.Init(KEYER_DAH_INPUT_RING);
+  CurrentWPM.Init(DEFAULT_KEYER_WPM);
+  SidetoneVolume.Init(20);
+  CWTransmitDelay.Init(750);
 
   // properties w/o notifications or display updates
   InactiveFreq.Init(CURRENT_FREQ_B);
@@ -192,6 +204,18 @@ Project System:
 
 *** loop times are a rough average over 20 loops ***
 *** size on Audio Platform differs from PS due to mouse/keyboard support (and ? ... examine) ***
+
+4/28/26
+PS
+  FLASH: code:208724, data:78244, headers:8960   free for files:7830536
+   RAM1: variables:147808, code:173208, padding:23400   free for local variables:179872
+   RAM2: variables:334048  free for malloc/new:190240
+ EXTRAM: variables:1200320
+AP
+  FLASH: code:217572, data:79268, headers:8304   free for files:7821320
+   RAM1: variables:155904, code:182392, padding:14216   free for local variables:171776
+   RAM2: variables:334304  free for malloc/new:189984
+ EXTRAM: variables:480320
 
 4/27/2026
 PS

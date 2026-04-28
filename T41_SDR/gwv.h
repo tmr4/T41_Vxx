@@ -6,17 +6,6 @@
 // Configuration working global variables
 // commented lines have no corresponding global extern
 
-extern int currentScale;
-
-extern int cwFilterIndex;
-extern int paddleDit;
-extern int paddleDah;
-extern int decoderFlag;
-extern int keyType;
-extern int currentWPM;
-extern int sidetoneVolume;
-extern unsigned long cwTransmitDelay;
-
 extern int freqCorrectionFactor;
 
 extern int equalizerRec[];

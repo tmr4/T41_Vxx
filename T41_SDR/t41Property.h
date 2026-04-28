@@ -18,6 +18,10 @@ public:
   Property<int> RemoteStatus;
   Property<int> MouseCenterTuneActive;
   Property<int> NoiseFloor;
+  Property<int> FreqSpecScale;
+
+  // CW related
+  Property<int> CWFilterIndex;
 
   // polled properties
   Property<int> RadioMode;
@@ -43,9 +47,17 @@ public:
   Property<int> RFGain;
   Property<int> RxEqualizer;
   Property<int> TxEqualizer;
+  Property<int> CWDecoder;
+  Property<int> KeyType;
 
-  // properties w/o notifications or display updates
+  // properties currently w/o notifications or display updates
   Property<int> ActiveVFO;
+  Property<int> PaddleDit;
+  Property<int> PaddleDah;
+  Property<int> CurrentWPM;
+  Property<int> SidetoneVolume;
+  Property<unsigned long> CWTransmitDelay; // CW exciter stays active for this amount of time after last CW atom
+
   Property<int> InactiveFreq;
   Property<int> InactiveBand;
 
@@ -90,16 +102,6 @@ extern T41Properties t41;
 /*
 // old EEPROMData
 typedef struct {
-  int currentScale;
-
-  int cwFilterIndex;
-  int paddleDit;
-  int paddleDah;
-  int decoderFlag;
-  int keyType;
-  int currentWPM;
-  int sidetoneVolume;
-  unsigned long cwTransmitDelay;
 
   int freqCorrectionFactor;
 

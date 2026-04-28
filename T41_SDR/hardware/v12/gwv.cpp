@@ -14,18 +14,6 @@
 
 // Configuration working global variables
 
-//char versionSettings[10] = VERSION;
-int currentScale = 1;  // 20 dB/division
-
-int cwFilterIndex = 5;
-int paddleDit = KEYER_DIT_INPUT_TIP;
-int paddleDah = KEYER_DAH_INPUT_RING;
-int decoderFlag = DECODER_STATE;  // Startup state for decoder
-int keyType = STRAIGHT_KEY_OR_PADDLES;
-int currentWPM =  DEFAULT_KEYER_WPM;
-int sidetoneVolume = 20;
-unsigned long cwTransmitDelay = 750; // CW exciter stays active for this amount of time after last CW atom
-
 //int freqCorrectionFactor = 17578;   // AD3 source @ 5MHz
 int freqCorrectionFactor = 0;   // gives
 

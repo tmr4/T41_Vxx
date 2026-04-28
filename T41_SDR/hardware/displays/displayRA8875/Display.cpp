@@ -469,8 +469,11 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
 
     TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
-    pixelnew = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1]));
-    pixelnew1 = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1]));
+    // *** TODO: evaluate noise floor default setting for new v12 hardware ***
+    // *** TODO: some calibration routines need an adjustment because there is no noise floor adjustment ***
+
+    pixelnew = displayScale[t41.FreqSpecScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1]));
+    pixelnew1 = displayScale[t41.FreqSpecScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1]));
 
     // calculate the freq spectrum plot value
     yPlot = SPECTRUM_NOISE_FLOOR - pixelnew - currentNF;
@@ -760,7 +763,7 @@ FLASHMEM void ShowSpectrumdBScale() {
   tft.fillRect(SPECTRUM_LEFT_X + 1, FILTER_PARAMETERS_Y, 33, tft.getFontHeight(), RA8875_BLACK);
   tft.setCursor(SPECTRUM_LEFT_X + 5, FILTER_PARAMETERS_Y);
   tft.setTextColor(RA8875_WHITE);
-  tft.print(displayScale[currentScale].dbText);
+  tft.print(displayScale[t41.FreqSpecScale].dbText);
   tft.writeTo(L1);
 }
 
@@ -906,7 +909,7 @@ FLASHMEM void ShowOperatingStats() {
     case CW_MODE:
       tft.print("CW ");
       tft.setCursor(OPERATION_STATS_CWF, OPERATION_STATS_T);
-      tft.print(menuOptions[1][cwFilterIndex]);
+      tft.print(menuOptions[1][t41.CWFilterIndex]);
       break;
 
     case DSB_MODE:
@@ -958,7 +961,7 @@ FLASHMEM void DrawCWFilter() {
   if(t41.RadioMode == CW_MODE) {
     tft.writeTo(L2);
 
-    switch(cwFilterIndex) {
+    switch(t41.CWFilterIndex) {
       case 0:
         CWFilterPosition = 35.7;  // 0.84 * 42.5;
         break;
@@ -1435,7 +1438,7 @@ FLASHMEM void ShowTransmitReceiveStatus() {
 
     case CALIBRATE_TRANSMIT_STATE:
     case CALIBRATE_TWOTONE_STATE:
-      if((digitalRead(PTT) == LOW) || (digitalRead(paddleDit) == LOW)) {
+      if((digitalRead(PTT) == LOW) || (digitalRead(t41.PaddleDit) == LOW)) {
         tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 18, RA8875_RED);
         tft.setCursor(X_R_STATUS_X + 4, X_R_STATUS_Y);
         tft.print("XMT");

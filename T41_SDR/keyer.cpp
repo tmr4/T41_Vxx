@@ -110,7 +110,7 @@ int msgIndexIn = 0;
     int wpm
 *****/
 FLASHMEM void SetTransmitDitLength() {
-  transmitDitLength = 1200 / currentWPM;
+  transmitDitLength = 1200 / t41.CurrentWPM;
 }
 
 // *** TODO: consider more refined shaping with https://www.ivarc.org.uk/uploads/1/2/3/8/12380834/keyclicks_version_1.pdf ***
@@ -344,7 +344,7 @@ void SendMessage(char *msg) {
   }
 
   // continue CW exciter until we reach transmit delay
-  while(millis() - cwDelayTimer <= cwTransmitDelay) {
+  while(millis() - cwDelayTimer <= t41.CWTransmitDelay) {
     ;
   }
 

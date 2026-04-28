@@ -40,7 +40,7 @@ void KeyTipOn() {
   Purpose: CW key interrupt
 *****/
 void KeyRingOn() {
-  if(keyType == 1) {
+  if(t41.KeyType == 1) {
     if(digitalRead(KEYER_DAH_INPUT_RING) == LOW && t41.RadioMode == CW_MODE ) {
       keyPressedOn = 1;
     }
@@ -52,7 +52,7 @@ void KeyRingOn() {
            This creates a 10ms, 750 Hz sample at 192 kHz sample rate to the Teensy Audio Adapter line-out to
            the exciter board.  Function must be called again within that time for a continuous signal.  Prior to call
            Q_out_L_Ex, Q_out_R_Ex and Q_out_L (for sidetone) must be properly routed.  Sidetone signal adjusted for a gain of 1
-           at a volume of 30.  Signal level is controlled by powerOutCW[t41.ActiveBand] and volumeLog[sidetoneVolume] / 0.000100.
+           at a volume of 30.  Signal level is controlled by powerOutCW[t41.ActiveBand] and volumeLog[t41.SidetoneVolume] / 0.000100.
            This gives a reasonable volume with power level of 1-20 W.  This should be done prior to calling this function or CreateCWSignal.
 
   Parameter list:
@@ -290,8 +290,8 @@ void CWTransmit() {
   cwTransmitTimer = millis();
 
   // start generating CW signal
-  while(millis() - cwTransmitTimer <= cwTransmitDelay) {
-    valPin = digitalRead(paddleDit);
+  while(millis() - cwTransmitTimer <= t41.CWTransmitDelay) {
+    valPin = digitalRead(t41.PaddleDit);
 
     // start CW transmit, CW signal timer is on
     switch(valPin) {

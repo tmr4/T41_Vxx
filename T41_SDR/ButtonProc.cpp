@@ -275,7 +275,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
       UpdateInfoBoxItem(T41_ITEM_DECODER);
       UpdateInfoBoxItem(T41_ITEM_KEY);
 
-      if(decoderFlag == ON) {
+      if(t41.CWDecoder == ON) {
         ExitCWDecoder();
       }
 
@@ -324,7 +324,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
       UpdateInfoBoxItem(T41_ITEM_DECODER);
       UpdateInfoBoxItem(T41_ITEM_KEY);
 
-      if(decoderFlag == ON) {
+      if(t41.CWDecoder == ON) {
         // init if decoding CW
         InitCWDecoder();
 
@@ -447,11 +447,10 @@ FLASHMEM void ChangeFtIncrement(int change, bool notify /* = true */) {
   Purpose: To process a fine tune frequency increment button push
 *****/
 FLASHMEM void ToggleCWDecoder() {
-  decoderFlag = !decoderFlag;
-  UpdateInfoBoxItem(T41_ITEM_DECODER);
+  t41.CWDecoder = !t41.CWDecoder;
 
   if(t41.RadioMode == CW_MODE) {
-    if(decoderFlag == ON) {
+    if(t41.CWDecoder == ON) {
       InitCWDecoder();
     } else {
       ExitCWDecoder();

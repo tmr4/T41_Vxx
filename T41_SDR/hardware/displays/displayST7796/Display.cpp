@@ -212,8 +212,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
 
     TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
-    pixelnew = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + offset]));
-    pixelnew1 = displayScale[currentScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[currentScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1 + offset]));
+    pixelnew = displayScale[t41.FreqSpecScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1 + offset]));
+    pixelnew1 = displayScale[t41.FreqSpecScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1 + offset]));
 
     // calculate the freq spectrum plot value
     yPlot = SPECTRUM_NOISE_FLOOR - pixelnew - currentNF;
@@ -534,7 +534,7 @@ FLASHMEM void ShowOperatingStats() {
     case CW_MODE:
       tft.print("CW ");
       tft.setCursor(OPERATION_STATS_CWF, OPERATION_STATS_T);
-      tft.print(menuOptions[1][cwFilterIndex]);
+      tft.print(menuOptions[1][t41.CWFilterIndex]);
       break;
 
     case DSB_MODE:

@@ -100,8 +100,8 @@ FLASHMEM void FT8CalibratePreamble(int setZoom) {
   tft.print("Incr= ");
   tft.setCursor(400, 110);
   tft.print(correctionIncrement, 3);
-  userScale = currentScale;  //  Remember user preference so it can be reset when done.  KF5N
-  currentScale = 1;          //  Set vertical scale to 10 dB during calibration.  KF5N
+  userScale = t41.FreqSpecScale;  //  Remember user preference so it can be reset when done.  KF5N
+  t41.FreqSpecScale = 1;          //  Set vertical scale to 10 dB during calibration.  KF5N
   //updateSpectrumData = false;
   digitalWrite(MUTE, LOW);  //turn off mute
 
@@ -144,7 +144,7 @@ FLASHMEM void FT8CalibratePrologue() {
   Q_in_L.clear();
   Q_in_R.clear();
   t41.NCOFreq = 0L;
-  currentScale = userScale;                     //  Restore vertical scale to user preference.  KF5N
+  t41.FreqSpecScale = userScale;                     //  Restore vertical scale to user preference.  KF5N
   ShowSpectrumdBScale();
   //t41.RadioMode = userXmtMode;   // Restore the user's floor setting.  KF5N July 27, 2023
   t41.TxPower = transmitPowerLevelTemp;  // Restore the user's transmit power level setting.  KF5N August 15, 2023

@@ -100,9 +100,9 @@ typedef __uint8_t uint8_t;
 #define T41_ITEM_NCO          31 // NCOFreq
 #define T41_ITEM_FHI          32 // FilterHiCut
 #define T41_ITEM_FLO          33 // FilterLoCut
-//#define T41_ITEM_   34
-//#define T41_ITEM_   35
-//#define T41_ITEM_   36
+#define T41_ITEM_SCALE        34 // FreqSpecScale
+#define T41_ITEM_CW_FILTER    35 // CWFilterIndex
+#define T41_ITEM_CW_DECODER   36
 //#define T41_ITEM_   37
 //#define T41_ITEM_   38
 //#define T41_ITEM_   39

@@ -307,8 +307,27 @@ void SendCommand(int value, int id) {
     case T41_ITEM_FLO:
       sprintf(cmd, "NL%011d;", value);
       break;
-    //case :
-    //  break;
+    case T41_ITEM_SCALE:
+      cmd[0] = 0;
+      break;
+    case T41_ITEM_CW_FILTER:
+      cmd[0] = 0;
+      break;
+/*
+    case :
+      cmd[0] = 0;
+      break;
+    case :
+      cmd[0] = 0;
+      break;
+    case :
+      cmd[0] = 0;
+      break;
+    case :
+      break;
+    case :
+      break;
+*/
     default:
       return;
   }

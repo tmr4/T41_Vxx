@@ -54,11 +54,11 @@ FLASHMEM void CWOptions() {
     case 0:  // WPM
       //SetWPM();
       // GetMenuValue(minValue, maxValue, startValue, increment, prompt, valueOffset)
-      GetMenuValue(5, MAX_WPM, &currentWPM, 1, "WPM:", 200, NULL, NULL, &SetWPMFollowup);
+      GetMenuValue(5, MAX_WPM, (int*)&t41.CurrentWPM, 1, "WPM:", 200, NULL, NULL, &SetWPMFollowup);
       break;
 
     case 1:          // Type of key:
-      SetKeyType();  // Straight key or keyer? Stored in EEPROMData.keyType; no heap/stack variable
+      SetKeyType();  // Straight key or keyer?
       SetKeyPowerUp();
       UpdateInfoBoxItem(T41_ITEM_KEY);
       break;
@@ -68,18 +68,18 @@ FLASHMEM void CWOptions() {
       break;
 
     case 3:            // Flip paddles
-      DoPaddleFlip();  // Stored in EEPROM; variables paddleDit and paddleDah
+      DoPaddleFlip();
       break;
 
     case 4:  // Sidetone volume
       //SetSideToneVolume();
       // GetMenuValue(minValue, maxValue, startValue, increment, prompt, valueOffset)
-      GetMenuValue(0, 100, &sidetoneVolume, 1, "Volume:", 200, &SetSideToneVolumeSetup, &SetSideToneVolumeValue, &SetSideToneVolumeFollowup);
+      GetMenuValue(0, 100, (int*)&t41.SidetoneVolume, 1, "Volume:", 200, &SetSideToneVolumeSetup, &SetSideToneVolumeValue, &SetSideToneVolumeFollowup);
   break;
 
     case 5:                // Transmit relay hold delay
       //SetTransmitDelay();
-      GetMenuValue(0, 9750, (int*)&cwTransmitDelay, 250, "Delay:", 150, NULL, NULL, &SetTransmitDelayFollowup);
+      GetMenuValue(0, 9750, (int*)&t41.CWTransmitDelay, 250, "Delay:", 150, NULL, NULL, &SetTransmitDelayFollowup);
       break;
 
     default:  // Cancel
@@ -233,10 +233,9 @@ FLASHMEM void SpectrumOptions() {
   if(spectrumSet == 5) {
     return;
   }
-  currentScale = spectrumSet;  // Yep...
-  //EEPROMData.currentScale = currentScale;
+  t41.FreqSpecScale = spectrumSet;
+  //EEPROMData.t41.FreqSpecScale = t41.FreqSpecScale;
   EEPROMWrite();
-  ShowSpectrumdBScale();
 }
 
 /*****

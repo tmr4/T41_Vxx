@@ -187,8 +187,8 @@ FLASHMEM void SoftReset() {
   splitVFO = false;
   SoftResetHardware();
 
-  SetKeyPowerUp();  // Use keyType and paddleFlip to configure key GPIs
-  SetDitLength(currentWPM);
+  SetKeyPowerUp();  // Use t41.KeyType and paddleFlip to configure key GPIs
+  SetDitLength(t41.CurrentWPM);
   SetTransmitDitLength();
   menuEncoderMove = 0;
   fineTuneEncoderMove = 0L;
@@ -418,13 +418,13 @@ FASTRUN void loop() {
   if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == LOW) {
     radioState = SSB_TRANSMIT_STATE;
   }
-  if(t41.RadioMode == CW_MODE && (digitalRead(paddleDit) == HIGH && digitalRead(paddleDah) == HIGH)) {
+  if(t41.RadioMode == CW_MODE && (digitalRead(t41.PaddleDit) == HIGH && digitalRead(t41.PaddleDah) == HIGH)) {
     radioState = CW_RECEIVE_STATE;
   }
-  if(t41.RadioMode == CW_MODE && (digitalRead(paddleDit) == LOW && keyType == 0)) {
+  if(t41.RadioMode == CW_MODE && (digitalRead(t41.PaddleDit) == LOW && t41.KeyType == 0)) {
     radioState = CW_TRANSMIT_STRAIGHT_STATE;
   }
-  if(t41.RadioMode == CW_MODE && (keyPressedOn == 1 && keyType == 1)) {
+  if(t41.RadioMode == CW_MODE && (keyPressedOn == 1 && t41.KeyType == 1)) {
     radioState = CW_TRANSMIT_KEYER_STATE;
     keyPressedOn = 0;
   }
@@ -527,14 +527,14 @@ FASTRUN void loop() {
       cwTransmitTimer = millis();
 
       // start generating CW signal
-      while(millis() - cwTransmitTimer <= cwTransmitDelay) {
-        if(digitalRead(paddleDit) == LOW) {
+      while(millis() - cwTransmitTimer <= t41.CWTransmitDelay) {
+        if(digitalRead(t41.PaddleDit) == LOW) {
           Dit();
           cwTransmitTimer = millis();
 
           // pause for one dit length
           IntraSpace();
-        } else if(digitalRead(paddleDah) == LOW) {
+        } else if(digitalRead(t41.PaddleDah) == LOW) {
           Dah();
           cwTransmitTimer = millis();
 

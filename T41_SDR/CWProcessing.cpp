@@ -116,17 +116,17 @@ float goertzel_mag(int numSamples, int TARGET_FREQUENCY, int SAMPLING_RATE, floa
 *****/
 FLASHMEM void SetWPMFollowup() {
   SetTransmitDitLength();
-  //.currentWPM = currentWPM;
+  //.t41.CurrentWPM = t41.CurrentWPM;
   EEPROMWrite();
   UpdateInfoBoxItem(T41_ITEM_KEY);
 }
 
 FLASHMEM void SetKeyTypeFollowup() {
-  // Make sure the paddleDit and paddleDah variables are set correctly for straight key.
+  // Make sure the t41.PaddleDit and t41.PaddleDah variables are set correctly for straight key.
   // Paddle flip can reverse these, making the straight key inoperative.
-  if(keyType == 0) {
-    paddleDit = KEYER_DIT_INPUT_TIP;
-    paddleDah = KEYER_DAH_INPUT_RING;
+  if(t41.KeyType == 0) {
+    t41.PaddleDit = KEYER_DIT_INPUT_TIP;
+    t41.PaddleDah = KEYER_DAH_INPUT_RING;
   }
 }
 /*****
@@ -135,11 +135,11 @@ FLASHMEM void SetKeyTypeFollowup() {
 FLASHMEM void SetKeyType() {
   if(USE_FULL_MENU) {
     SetSecondaryMenuIndex();
-    keyType = secondaryMenuIndex;
+    t41.KeyType = secondaryMenuIndex;
     SetKeyTypeFollowup();
   } else {
     //GetMenuOption(optionIndex, *currentValue, *setup(), *getValue(), *followup());
-    GetMenuOption(0, &keyType, NULL, NULL, &SetKeyTypeFollowup);
+    GetMenuOption(0, (int*)&t41.KeyType, NULL, NULL, &SetKeyTypeFollowup);
   }
 }
 
@@ -147,24 +147,23 @@ FLASHMEM void SetKeyType() {
   Purpose: Set up key at power-up.
 *****/
 FLASHMEM void SetKeyPowerUp() {
-  if(keyType == 0) {
-    paddleDit = KEYER_DIT_INPUT_TIP;
-    paddleDah = KEYER_DAH_INPUT_RING;
+  if(t41.KeyType == 0) {
+    t41.PaddleDit = KEYER_DIT_INPUT_TIP;
+    t41.PaddleDah = KEYER_DAH_INPUT_RING;
     return;
   }
   if(paddleFlip) {  // Means right-paddle dit
-    paddleDit = KEYER_DAH_INPUT_RING;
-    paddleDah = KEYER_DIT_INPUT_TIP;
+    t41.PaddleDit = KEYER_DAH_INPUT_RING;
+    t41.PaddleDah = KEYER_DIT_INPUT_TIP;
   } else {
-    paddleDit = KEYER_DIT_INPUT_TIP;
-    paddleDah = KEYER_DAH_INPUT_RING;
+    t41.PaddleDit = KEYER_DIT_INPUT_TIP;
+    t41.PaddleDah = KEYER_DAH_INPUT_RING;
   }
 }
 
 FLASHMEM void SelectCWFilterFollowup() {
   // update CW filters if index is different
-  if(cwFilterIndex != getMenuInc) {
-    ShowOperatingStats();
+  if(t41.CWFilterIndex != getMenuInc) {
     if(t41.RadioMode == CW_MODE) {
       DrawCWFilter();
     }
@@ -173,17 +172,15 @@ FLASHMEM void SelectCWFilterFollowup() {
 
 FLASHMEM void ToggleCWFilter() {
   // save CW filter index for later
-  getMenuInc = cwFilterIndex;
-  ++cwFilterIndex;
-  if(cwFilterIndex > 5) {
-    cwFilterIndex = 0;
-  }
+  getMenuInc = t41.CWFilterIndex;
+
+  t41.CWFilterIndex += 1;
 
   SelectCWFilterFollowup();
 }
 
 /*****
-  Purpose: Select CW Filter. cwFilterIndex has these values:
+  Purpose: Select CW Filter. t41.CWFilterIndex has these values:
            0 = 840Hz
            1 = 1kHz
            2 = 1.3kHz
@@ -193,25 +190,25 @@ FLASHMEM void ToggleCWFilter() {
 *****/
 FLASHMEM void SelectCWFilter() {
   // save CW filter index for later
-  getMenuInc = cwFilterIndex;
+  getMenuInc = t41.CWFilterIndex;
 
   //GetMenuOption(optionIndex, *currentValue, *setup(), *getValue(), *followup());
-  GetMenuOption(1, &cwFilterIndex, NULL, NULL, &SelectCWFilterFollowup);
+  GetMenuOption(1, (int*)&t41.CWFilterIndex, NULL, NULL, &SelectCWFilterFollowup);
 }
 
 FLASHMEM void DoPaddleFlipFollowup() {
   if(getMenuInc) {  // right-paddle dit
-    paddleDit = KEYER_DAH_INPUT_RING;
-    paddleDah = KEYER_DIT_INPUT_TIP;
+    t41.PaddleDit = KEYER_DAH_INPUT_RING;
+    t41.PaddleDah = KEYER_DIT_INPUT_TIP;
     paddleFlip = 1;
   } else {
-    paddleDit = KEYER_DIT_INPUT_TIP;
-    paddleDah = KEYER_DAH_INPUT_RING;
+    t41.PaddleDit = KEYER_DIT_INPUT_TIP;
+    t41.PaddleDah = KEYER_DAH_INPUT_RING;
     paddleFlip = 0;
   }
 
-  //EEPROMData.paddleDit = paddleDit;
-  //EEPROMData.paddleDah = paddleDah;
+  //EEPROMData.t41.PaddleDit = t41.PaddleDit;
+  //EEPROMData.t41.PaddleDah = t41.PaddleDah;
   UpdateInfoBoxItem(T41_ITEM_KEY);
 }
 
@@ -219,7 +216,7 @@ FLASHMEM void DoPaddleFlipFollowup() {
   Purpose: This option reverses the dit and dah paddles on the keyer
 *****/
 FLASHMEM void DoPaddleFlip() {
-  getMenuInc = paddleDah == KEYER_DAH_INPUT_RING ? 0 : 1;
+  getMenuInc = t41.PaddleDah == KEYER_DAH_INPUT_RING ? 0 : 1;
 
   //GetMenuOption(optionIndex, *currentValue, *setup(), *getValue(), *followup());
   GetMenuOption(2, &getMenuInc, NULL, NULL, &DoPaddleFlipFollowup);
@@ -248,15 +245,15 @@ FLASHMEM void SetSideToneVolumeSetup() {
 }
 
 void SetSideToneVolumeValue() {
-  //if(digitalRead(paddleDit) == LOW || digitalRead(paddleDah) == LOW) {
+  //if(digitalRead(t41.PaddleDit) == LOW || digitalRead(t41.PaddleDah) == LOW) {
   //  CW_ExciterIQData();
   //}
   //
-  //modeSelectOutL.gain(1, volumeLog[sidetoneVolume]);
+  //modeSelectOutL.gain(1, volumeLog[t41.SidetoneVolume]);
 }
 
 FLASHMEM void SetSideToneVolumeFollowup() {
-  //EEPROMData.sidetoneVolume = sidetoneVolume;
+  //EEPROMData.t41.SidetoneVolume = t41.SidetoneVolume;
   EEPROMWrite();
   //lastState = -1;  // This is required due to the function deactivating the receiver.  This forces a pass through the receiver set-up code.  KF5N October 7, 2023
 }
@@ -265,7 +262,7 @@ FLASHMEM void SetSideToneVolumeFollowup() {
   Purpose: Determines how long the transmit relay remains on after last CW atom is sent.
 *****/
 FLASHMEM void SetTransmitDelayFollowup() {
-  //EEPROMData.cwTransmitDelay = cwTransmitDelay;
+  //EEPROMData.t41.CWTransmitDelay = t41.CWTransmitDelay;
   EEPROMWrite();
 }
 
@@ -277,7 +274,7 @@ void DoCWReceiveProcessing() {
   float goertzelMagnitude2;
   int audioTemp;
 
-  if(decoderFlag == ON) {
+  if(t41.CWDecoder == ON) {
     // left channel first
     arm_fir_f32(&FIR_CW_DecodeL, audioBufferL, cwDecodeBuffer, 256); // Park McClellan FIR filter const Group delay
 
@@ -387,7 +384,7 @@ FLASHMEM void ResetHistograms() {
   // Clear graph arrays
   memset(signalHistogram, 0, HISTOGRAM_ELEMENTS * sizeof(uint32_t));
   memset(gapHistogram, 0, HISTOGRAM_ELEMENTS * sizeof(uint32_t));
-  currentWPM = 1200 / ditLength;
+  t41.CurrentWPM = 1200 / ditLength;
   UpdateInfoBoxItem(T41_ITEM_KEY);
 }
 
@@ -725,7 +722,7 @@ FLASHMEM void InitCWDecoder(void) {
   cwDecodeBuffer = (float32_t *)extmem_malloc(256 * sizeof(float32_t));
 
   if((corrBuffer == NULL) || (gapHistogram == NULL) || (signalHistogram == NULL) || (cwDecodeBuffer == NULL)) {
-    decoderFlag = OFF;
+    t41.CWDecoder = OFF;
     ExitCWDecoder();
 
     Debug("InitCWDecoder failed");
