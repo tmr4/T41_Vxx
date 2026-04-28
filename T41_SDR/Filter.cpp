@@ -190,7 +190,7 @@ FLASHMEM void SetIIRCoeffs(float32_t *coefficient_set, float32_t f0, float32_t Q
 *****/
 void DoReceiveEQ() {
   for(int i = 0; i < 14; i++) {
-    recEQ_LevelScale[i] = (float)equalizerRec[i] / 100.0;
+    recEQ_LevelScale[i] = (float)t41.equalizerRx[i] / 100.0;
   }
   arm_biquad_cascade_df2T_f32(&S1_Rec, audioBufferL, EQ1_AudioBufferL, 256);
   arm_biquad_cascade_df2T_f32(&S2_Rec, audioBufferL, EQ2_AudioBufferL, 256);
@@ -243,7 +243,7 @@ void DoReceiveEQ() {
 *****/
 void DoExciterEQ() {
   for(int i = 0; i < 14; i++) {
-    equalizerXmt[i] = (float)equalizerXmt[i] / 100.0;
+    t41.equalizerTx[i] = (float)t41.equalizerTx[i] / 100.0;
   }
   arm_biquad_cascade_df2T_f32(&S1_Xmt,  audioBufferL_EX, EQ1_AudioBufferL, 256);
   arm_biquad_cascade_df2T_f32(&S2_Xmt,  audioBufferL_EX, EQ2_AudioBufferL, 256);
@@ -260,20 +260,20 @@ void DoExciterEQ() {
   arm_biquad_cascade_df2T_f32(&S13_Xmt, audioBufferL_EX, EQ13_AudioBufferL, 256);
   arm_biquad_cascade_df2T_f32(&S14_Xmt, audioBufferL_EX, EQ14_AudioBufferL, 256);
 
-  arm_scale_f32(EQ1_AudioBufferL,  -equalizerXmt[0],  EQ1_AudioBufferL, 256);
-  arm_scale_f32(EQ2_AudioBufferL,   equalizerXmt[1],  EQ2_AudioBufferL, 256);
-  arm_scale_f32(EQ3_AudioBufferL,  -equalizerXmt[2],  EQ3_AudioBufferL, 256);
-  arm_scale_f32(EQ4_AudioBufferL,   equalizerXmt[3],  EQ4_AudioBufferL, 256);
-  arm_scale_f32(EQ5_AudioBufferL,  -equalizerXmt[4],  EQ5_AudioBufferL, 256);
-  arm_scale_f32(EQ6_AudioBufferL,   equalizerXmt[5],  EQ6_AudioBufferL, 256);
-  arm_scale_f32(EQ7_AudioBufferL,  -equalizerXmt[6],  EQ7_AudioBufferL, 256);
-  arm_scale_f32(EQ8_AudioBufferL,   equalizerXmt[7],  EQ8_AudioBufferL, 256);
-  arm_scale_f32(EQ9_AudioBufferL,  -equalizerXmt[8],  EQ9_AudioBufferL, 256);
-  arm_scale_f32(EQ10_AudioBufferL,  equalizerXmt[9],  EQ10_AudioBufferL, 256);
-  arm_scale_f32(EQ11_AudioBufferL, -equalizerXmt[10], EQ11_AudioBufferL, 256);
-  arm_scale_f32(EQ12_AudioBufferL,  equalizerXmt[11], EQ12_AudioBufferL, 256);
-  arm_scale_f32(EQ13_AudioBufferL, -equalizerXmt[12], EQ13_AudioBufferL, 256);
-  arm_scale_f32(EQ14_AudioBufferL,  equalizerXmt[13], EQ14_AudioBufferL, 256);
+  arm_scale_f32(EQ1_AudioBufferL,  -t41.equalizerTx[0],  EQ1_AudioBufferL, 256);
+  arm_scale_f32(EQ2_AudioBufferL,   t41.equalizerTx[1],  EQ2_AudioBufferL, 256);
+  arm_scale_f32(EQ3_AudioBufferL,  -t41.equalizerTx[2],  EQ3_AudioBufferL, 256);
+  arm_scale_f32(EQ4_AudioBufferL,   t41.equalizerTx[3],  EQ4_AudioBufferL, 256);
+  arm_scale_f32(EQ5_AudioBufferL,  -t41.equalizerTx[4],  EQ5_AudioBufferL, 256);
+  arm_scale_f32(EQ6_AudioBufferL,   t41.equalizerTx[5],  EQ6_AudioBufferL, 256);
+  arm_scale_f32(EQ7_AudioBufferL,  -t41.equalizerTx[6],  EQ7_AudioBufferL, 256);
+  arm_scale_f32(EQ8_AudioBufferL,   t41.equalizerTx[7],  EQ8_AudioBufferL, 256);
+  arm_scale_f32(EQ9_AudioBufferL,  -t41.equalizerTx[8],  EQ9_AudioBufferL, 256);
+  arm_scale_f32(EQ10_AudioBufferL,  t41.equalizerTx[9],  EQ10_AudioBufferL, 256);
+  arm_scale_f32(EQ11_AudioBufferL, -t41.equalizerTx[10], EQ11_AudioBufferL, 256);
+  arm_scale_f32(EQ12_AudioBufferL,  t41.equalizerTx[11], EQ12_AudioBufferL, 256);
+  arm_scale_f32(EQ13_AudioBufferL, -t41.equalizerTx[12], EQ13_AudioBufferL, 256);
+  arm_scale_f32(EQ14_AudioBufferL,  t41.equalizerTx[13], EQ14_AudioBufferL, 256);
 
   arm_add_f32(EQ1_AudioBufferL , EQ2_AudioBufferL, audioBufferL_EX , 256 ) ;
 

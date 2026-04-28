@@ -13,7 +13,6 @@ int menuBarSelected = false;
 #include "Display.h"
 #include "Encoders.h"
 #include "ft8.h"
-#include "gwv.h"
 #include "Menu.h"
 #include "MenuProc.h"
 #include "mouse.h"

@@ -118,7 +118,6 @@ FLASHMEM void RFOptions() {
   Purpose: Present the Calibrate options available and return the selection
 *****/
 FLASHMEM void CalibrateOptions() {
-  //static long long freqCorrectionFactorOld = freqCorrectionFactor;
   //int val;
   //int32_t increment = 100L;
 

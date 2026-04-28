@@ -3,6 +3,7 @@
 
 #include "AudioConfig.h"
 #include "ButtonProc.h"
+#include "calibrate.h"
 #include "CW_Excite.h"
 #include "CWProcessing.h"
 #include "Demod.h"

@@ -3,6 +3,7 @@
 
 #include "Button.h"
 #include "ButtonProc.h"
+#include "calibrate.h"
 #include "CWProcessing.h"
 #include "CW_Excite.h"
 #include "Display.h"

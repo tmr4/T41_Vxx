@@ -207,13 +207,13 @@ Project System:
 
 4/28/26
 PS
-  FLASH: code:208724, data:78244, headers:8960   free for files:7830536
-   RAM1: variables:147808, code:173208, padding:23400   free for local variables:179872
+  FLASH: code:208820, data:78244, headers:8864   free for files:7830536
+   RAM1: variables:148000, code:173320, padding:23288   free for local variables:179680
    RAM2: variables:334048  free for malloc/new:190240
  EXTRAM: variables:1200320
 AP
-  FLASH: code:217572, data:79268, headers:8304   free for files:7821320
-   RAM1: variables:155904, code:182392, padding:14216   free for local variables:171776
+  FLASH: code:217668, data:79268, headers:8208   free for files:7821320
+   RAM1: variables:156064, code:182504, padding:14104   free for local variables:171616
    RAM2: variables:334304  free for malloc/new:189984
  EXTRAM: variables:480320
 

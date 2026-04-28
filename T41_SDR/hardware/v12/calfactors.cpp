@@ -1,24 +1,13 @@
-// v12 specific hardware file
+// v12 specific hardware calibratin file
 
 #include "..\SDT.h"
-
-#include "..\Display.h"
-#include "..\EEPROM.h"
-#include "..\Utility.h"
-
-#include "..\debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-// Configuration working global variables
-
 //int freqCorrectionFactor = 17578;   // AD3 source @ 5MHz
 int freqCorrectionFactor = 0;   // gives
-
-int equalizerRec[EQUALIZER_CELL_COUNT] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
-int equalizerXmt[EQUALIZER_CELL_COUNT] = {0, 0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0};   // Provide equalizer optimized for SSB voice based on Neville's tests.  KF5N November 2, 2023
 
 //float powerOutCW[NUMBER_OF_BANDS] = { 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02 };
 //float powerOutSSB[NUMBER_OF_BANDS] = { 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03 };

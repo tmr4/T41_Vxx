@@ -3,7 +3,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define EQUALIZER_CELL_COUNT     14
 #define NUMBER_OF_SWITCHES       18 // Number of push button switches
 
 #define EEPROM_BASE_ADDRESS      0U

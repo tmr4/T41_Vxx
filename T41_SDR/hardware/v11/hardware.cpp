@@ -12,6 +12,7 @@
 
 #include "..\AudioConfig.h"
 #include "..\Button.h"
+#include "..\calibrate.h"
 #include "..\CW_Excite.h"
 #include "..\CWProcessing.h"
 #include "..\Display.h"

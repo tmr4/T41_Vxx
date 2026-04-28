@@ -1,6 +1,7 @@
 
 #include "SDT.h"
 #include "AudioConfig.h"
+#include "calibrate.h"
 #include "Exciter.h"
 //#include "EEPROM.h"
 #include "Filter.h"

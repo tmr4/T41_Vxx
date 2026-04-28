@@ -5,6 +5,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+#define EQUALIZER_CELL_COUNT     14
+
 class T41Properties {
 public:
   T41Properties();
@@ -75,6 +77,9 @@ public:
   void SetFreqB(int f);
   void SwapActiveVFO();
 
+  int equalizerRx[EQUALIZER_CELL_COUNT] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
+  int equalizerTx[EQUALIZER_CELL_COUNT] = {0, 0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0};   // Provide equalizer optimized for SSB voice based on Neville's tests.  KF5N November 2, 2023
+
 protected:
   void SetPropertyDefaults();
 
@@ -96,26 +101,3 @@ extern T41Properties t41;
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-
-// *** possible T41 properties ***
-/*
-// old EEPROMData
-typedef struct {
-
-  int freqCorrectionFactor;
-
-  int equalizerRec[EQUALIZER_CELL_COUNT];
-  int equalizerXmt[EQUALIZER_CELL_COUNT];
-
-  float powerOutCW[NUMBER_OF_BANDS];
-  float powerOutSSB[NUMBER_OF_BANDS];
-  float CWPowerCalibrationFactor[NUMBER_OF_BANDS];
-  float SSBPowerCalibrationFactor[NUMBER_OF_BANDS];
-  float IQAmpCorrectionFactor[NUMBER_OF_BANDS];
-  float IQPhaseCorrectionFactor[NUMBER_OF_BANDS];
-  float IQXAmpCorrectionFactor[NUMBER_OF_BANDS];
-  float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS];
-
-} config_t;
-*/

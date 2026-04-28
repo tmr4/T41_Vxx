@@ -124,8 +124,6 @@ typedef __uint8_t uint8_t;
 #define CLEAR_VAR(x) memset(x, 0, sizeof(x))
 #define SET_VAR(x,y) memset(x, y, sizeof(x))
 
-// delete once we get rid of global working variables
-#include "gwv.h"
 #include "t41Property.h"
 
 // radio hardware and state global variables

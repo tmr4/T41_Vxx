@@ -1,6 +1,7 @@
 
 #include "SDT.h"
 #include "AudioConfig.h"
+#include "calibrate.h"
 #include "Exciter.h"
 #include "FIR.h"
 #include "keyer.h"
