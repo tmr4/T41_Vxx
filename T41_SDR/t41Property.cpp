@@ -85,8 +85,6 @@ void T41Properties::SetPropertyDefaults() {
   MouseCenterTuneActive.Init(false, &HighlightTuneInc, T41_ITEM_MOUSE, false);
   NoiseFloor.Init(0, NULL, T41_ITEM_NOISE, false);
   FreqSpecScale.Init(1, &ShowSpectrumdBScale, T41_ITEM_SCALE, false); // 10 db/ scale
-
-  // CW related
   CWFilterIndex.Init(5, 0, 5, true, &ShowOperatingStats, T41_ITEM_CW_FILTER, false);
 
   // polled properties
@@ -143,7 +141,7 @@ void T41Properties::Poll(bool updateDisplay) {
   CenterFreq.Poll(updateDisplay, updateRemote);
   NCOFreq.Poll(updateDisplay, updateRemote);
   FilterHiCut.Poll(updateDisplay, updateRemote);
-  FilterHiCut.Poll(updateDisplay, updateRemote);
+  FilterLoCut.Poll(updateDisplay, updateRemote);
 }
 
 void T41Properties::PollInfoBox(bool updateDisplay) {
@@ -161,6 +159,8 @@ void T41Properties::PollInfoBox(bool updateDisplay) {
   RFGain.Poll(updateDisplay, updateRemote);
   RxEqualizer.Poll(updateDisplay, updateRemote);
   TxEqualizer.Poll(updateDisplay, updateRemote);
+  CWDecoder.Init(DECODER_STATE, 0, 1, true, T41_ITEM_DECODER);
+  KeyType.Init(STRAIGHT_KEY_OR_PADDLES, 0, 1, true, T41_ITEM_KEY);
 }
 
 // these don't change NCOFreq
