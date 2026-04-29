@@ -582,9 +582,10 @@ bool ReadWav(float32_t *buf, int sizeBuf) {
 
 // T41 xmit/rec state: 1 = rec, 0 = xmt
 int GetXRState() {
-  switch(radioState) {
+  switch(t41.RadioState) {
     case SSB_TRANSMIT_STATE:
     case CW_TRANSMIT_STRAIGHT_STATE:
+    case CW_TRANSMIT_PADDLE_STATE:
     case CW_TRANSMIT_KEYER_STATE:
     case DATA_TRANSMIT_STATE:
       return 0;

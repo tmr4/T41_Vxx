@@ -333,3 +333,35 @@ void CWTransmit() {
   // the remaining buffer will be played next time it's connected
   CWPause(50);
 }
+
+void CWTransmitPaddle() {
+  unsigned long cwTransmitTimer = millis();
+
+  // turn on TX relay and initialize CW signal timer
+  digitalWrite(RXTX, HIGH); // turn on TX relay
+
+  // start generating CW signal
+  while(millis() - cwTransmitTimer <= t41.CWTransmitDelay) {
+    if(digitalRead(t41.PaddleDit) == LOW) {
+      Dit();
+      cwTransmitTimer = millis();
+
+      // pause for one dit length
+      IntraSpace();
+    } else if(digitalRead(t41.PaddleDah) == LOW) {
+      Dah();
+      cwTransmitTimer = millis();
+
+      // pause for one dit length
+      IntraSpace();
+    } else {
+      CW_ExciterIQData(OFF);
+    }
+  }
+
+  digitalWrite(RXTX, LOW);
+
+  // delay a bit to allow play buffer to empty, otherwise
+  // the remaining buffer will be played next time it's connected
+  CWPause(50);
+}

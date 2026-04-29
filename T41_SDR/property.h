@@ -2,6 +2,23 @@
 
 #include <Arduino.h>
 
+template<typename T>
+class ReadOnlyProperty {
+public:
+  ReadOnlyProperty() {}
+
+  operator T() { return value; }
+
+  void Set(T val) {
+    value = val;
+  }
+
+protected:
+
+private:
+  T value;
+};
+
 class T41Update {
   typedef void (*FuncPtrInt)(int);
   typedef void (*FuncPtr2Int)(int, int);
@@ -110,7 +127,8 @@ public:
     updated = true;
   }
 
-  operator T() { return get(); }
+  //operator T() { return get(); }
+  operator T() { return value; }
   const T& operator=(const T& val) { return set(val); }
   const T& operator+=(const T& val) { return set(value + val); }
   const T& operator-=(const T& val) { return set(value - val); }
@@ -155,7 +173,7 @@ private:
 
   int id = -1;
 
-  T get() { return value; }
+  //T get() { return value; }
 
   const T &set(const T &val) {
     T tmp = value;

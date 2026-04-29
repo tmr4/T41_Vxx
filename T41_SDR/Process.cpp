@@ -757,7 +757,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       arm_copy_f32(audioBufferR, audioBufferL, 256);
     }
 
-    if(radioState == CW_RECEIVE_STATE) {
+    if(t41.RadioState == RECEIVE_STATE) {
       DoCWReceiveProcessing();
 
       // ----------------------  CW Narrow band filters -------------------------

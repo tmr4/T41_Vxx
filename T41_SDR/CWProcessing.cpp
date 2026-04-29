@@ -255,7 +255,6 @@ void SetSideToneVolumeValue() {
 FLASHMEM void SetSideToneVolumeFollowup() {
   //EEPROMData.t41.SidetoneVolume = t41.SidetoneVolume;
   EEPROMWrite();
-  //lastState = -1;  // This is required due to the function deactivating the receiver.  This forces a pass through the receiver set-up code.  KF5N October 7, 2023
 }
 
 /*****

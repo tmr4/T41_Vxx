@@ -33,6 +33,10 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+// *** TODO: setup radio state for calibration ***
+int radioState = 0;
+int lastState = 0;
+
 extern int currentMicGain;
 
 #define RECIEVE_CAL_START_ATTEN 60.0
@@ -329,7 +333,7 @@ FLASHMEM void CalibratePost(int calType) {
 
   RedrawDisplayScreen();
 
-  lastState = -1; // force radio state reset
+  t41.RadioState.Set(RECONFIGURE_STATE);
 }
 
 FLASHMEM void DisplayIQAdjustIncrement(int adjChars) {
@@ -917,7 +921,7 @@ FLASHMEM void CalibrateFrequency() {
 
   // Save the current operating state to restore later
   // and configure radio state for frequency calibration
-  CalibratePreamble(0, SSB_RECEIVE_STATE, SSB_RECEIVE_STATE);
+  CalibratePreamble(0, RECEIVE_STATE, RECEIVE_STATE);
 
   // setup display for frequency calibration
   tft.writeTo(L2);
@@ -1536,7 +1540,7 @@ FLASHMEM void CalibrateReceiveIQ() {
 
   // Save the current operating state to restore later
   // and configure radio for receive calibration
-  CalibratePreamble(1, CW_TRANSMIT_STRAIGHT_STATE, CALIBRATE_RECEIVE_STATE);
+  CalibratePreamble(1, CW_TRANSMIT_STRAIGHT_STATE, RECEIVE_STATE);
 
   ShowReceiveCalibrationDisplay();
 

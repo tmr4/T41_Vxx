@@ -433,43 +433,10 @@ void ConfigAudioState(int audioState) {
   }
 
   switch(audioState) {
-    case SSB_RECEIVE_STATE:
-    case CW_RECEIVE_STATE:
-      //digitalWrite(MUTE, LOW);      // unmute audio
-
-      // start receive audio chain
-      Q_in_Start();
-      Q_out_Start();
-      break;
-
-    case SSB_TRANSMIT_STATE:
-      //digitalWrite(MUTE, HIGH);  // mute audio
-
-#ifdef USE_MIC_COMPRESSION
-      if(t41.Compressor == 1) {
-        SetupMicCompressors((float)currentMicThreshold, .1, 2.0);
-      } else if(t41.Compressor == 0) {
-        SetupMicCompressors(0.0, 0.01, 0.01);
-      }
-#endif
-      audioControl_1.micGain(10);
-
-      // start transmit audio chain
-      Q_in_Ex_Start();
-      Q_out_Ex_Start();
-      break;
-
-    case CW_TRANSMIT_STRAIGHT_STATE:
-    case CW_TRANSMIT_KEYER_STATE:
-      // start transmit audio chain and sidetone
-      Q_out_Ex_Start();
-      Q_out_Start(); // sidetone
-      break;
-
     // *** TODO: need to configure data states for both internal and external FT8
     // *** WSJT-X can still decode with audio sent over USB at 192kHz ***
     // *** TODO: consider passing audio to WSJT-X in internal FT8 mode ***
-    case DATA_RECEIVE_STATE:
+    case RECEIVE_STATE:
       switch(t41.DemodMode) {
         case DEMOD_FT8:
           //Q_out_Ex_Stop();
@@ -494,7 +461,34 @@ void ConfigAudioState(int audioState) {
 
       // start receive audio chain
       Q_in_Start();
+
+      // *** TODO: CALIBRATE_RECEIVE_STATE had this off ***
       Q_out_Start();
+      break;
+
+    case SSB_TRANSMIT_STATE:
+      //digitalWrite(MUTE, HIGH);  // mute audio
+
+      #ifdef USE_MIC_COMPRESSION
+      if(t41.Compressor == 1) {
+        SetupMicCompressors((float)currentMicThreshold, .1, 2.0);
+      } else if(t41.Compressor == 0) {
+        SetupMicCompressors(0.0, 0.01, 0.01);
+      }
+      #endif
+      audioControl_1.micGain(10);
+
+      // start transmit audio chain
+      Q_in_Ex_Start();
+      Q_out_Ex_Start();
+      break;
+
+    case CW_TRANSMIT_STRAIGHT_STATE:
+    case CW_TRANSMIT_PADDLE_STATE:
+    case CW_TRANSMIT_KEYER_STATE:
+      // start transmit audio chain and sidetone
+      Q_out_Ex_Start();
+      Q_out_Start(); // sidetone
       break;
 
     case DATA_TRANSMIT_STATE:
@@ -520,11 +514,6 @@ void ConfigAudioState(int audioState) {
       }
 
       Q_out_Ex_Start();
-      break;
-
-    case CALIBRATE_RECEIVE_STATE:
-      // set calibration state
-      Q_in_Start();
       break;
 
     case CALIBRATE_TRANSMIT_STATE:

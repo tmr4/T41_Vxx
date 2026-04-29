@@ -35,6 +35,10 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+// *** TODO: setup radio state for calibration ***
+int radioState = 0;
+int lastState = 0;
+
 extern Si5351 si5351;
 
 #define GAIN_COARSE_MAX 1.2
@@ -227,8 +231,7 @@ FLASHMEM void RestoreRadioState() {
   RedrawDisplayScreen();
 
   displayState = DISPLAY_T41;
-  //lastState = -1; // force radio state reset
-  lastState = CALIBRATE_TRANSMIT_STATE; // force radio state reset
+  t41.RadioState.Set(RECONFIGURE_STATE);
 }
 
 /*****
@@ -2092,7 +2095,7 @@ FLASHMEM void ChangeCalMode(int mode) {
       //t41.RadioMode = CW_MODE;
       //CalibrationSetup(3, CALIBRATE_TRANSMIT_STATE, CALIBRATE_TRANSMIT_STATE);
       //CalibrationSetup(3, CALIBRATE_TRANSMIT_STATE, CW_TRANSMIT_STRAIGHT_STATE);
-      CalibrationSetup(3, CW_RECEIVE_STATE, CW_RECEIVE_STATE);
+      CalibrationSetup(3, RECEIVE_STATE, RECEIVE_STATE);
       break;
 
     default:
@@ -2220,6 +2223,9 @@ FLASHMEM void TwoToneTransmit() {
 
 FLASHMEM void CalibratePwr() {
   int calFlag = 1; // 1 = do calibration, 0 = done
+  // *** TODO: this needs reworked ***
+  int radioState = t41.RadioState;
+  int lastState = radioState;
   int audioState = radioState;
 
 #ifdef USE_BPF_BOARD

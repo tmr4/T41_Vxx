@@ -15,6 +15,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+bool cwKeyerPTT = false; // flags keyer transmission state
+
 float cwRampUp[128], cwRampDown[128];
 unsigned long cwDelayTimer;       // used to keep transmitter keyed after CW transmission
 elapsedMillis cwAtomTimer = 0;    // used for CW signal timing, automatically increases as time passes
@@ -322,25 +324,15 @@ void Send(char chr) {
   }
 }
 
-/*****
-  Purpose: send a message in CW
-
-  Parameter list:
-    char *msg         message to send
-*****/
-void SendMessage(char *msg) {
+char *cwMessage;
+void CWTransmitMessage() {
   // configure radio for CW transmission
-  radioState = CW_TRANSMIT_KEYER_STATE;
-  ConfigAudioState(radioState);
-  SetFreq(t41.CenterFreq);
-  ShowTransmitReceiveStatus();
-
   digitalWrite(RXTX, HIGH);  // turn on xmit relay
 
   cwDelayTimer = millis();
 
-  while(*msg != '\0') {
-    Send(*msg++);
+  while(*cwMessage != '\0') {
+    Send(*cwMessage++);
   }
 
   // continue CW exciter until we reach transmit delay
@@ -350,7 +342,20 @@ void SendMessage(char *msg) {
 
   digitalWrite(RXTX, LOW);
 
-  lastState = -1;
+  // delay a bit to allow play buffer to empty, otherwise
+  // the remaining buffer will be played next time it's connected
+  CWPause(50);
+}
+
+/*****
+  Purpose: send a message in CW
+
+  Parameter list:
+    char *msg         message to send
+*****/
+void SendMessage(char *msg) {
+  cwMessage = msg;
+  cwKeyerPTT = true;
 }
 
 /*****

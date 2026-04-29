@@ -5,6 +5,8 @@
 #define MAX_MESSAGE_LENGTH       33     // Max size for each message
 #define MAX_MESSAGES             10
 
+extern bool cwKeyerPTT;
+
 extern char keyerMessages[MAX_MESSAGES][MAX_MESSAGE_LENGTH + 1];
 extern int selectedMsg;
 extern bool keyerMessagesActive;
@@ -34,3 +36,5 @@ void SendCode(char code);
 
 void KeyerSetup();
 void KeyerLoop();
+
+void CWTransmitMessage();

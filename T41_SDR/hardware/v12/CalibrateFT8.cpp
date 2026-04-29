@@ -20,6 +20,10 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+// *** TODO: setup radio state for calibration ***
+int radioState = 0;
+int lastState = 0;
+
 static int val;
 static int corrChange;
 static float correctionIncrement;
@@ -67,8 +71,6 @@ FLASHMEM void FT8CalibratePreamble(int setZoom) {
   //correctionIncrement = 0.1;
   IQCalType = 0;
   radioState = CW_TRANSMIT_STRAIGHT_STATE;
-  //radioState = CW_RECEIVE_STATE;
-  //radioState = CALIBRATE_TRANSMIT_STATE;
   transmitPowerLevelTemp = t41.TxPower;
   t41.TxPower = 5;
   powerOutCW[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];
@@ -150,7 +152,7 @@ FLASHMEM void FT8CalibratePrologue() {
   tft.writeTo(L1);  // Exit function in layer 1.  KF5N August 3, 2023
   RedrawDisplayScreen();
   calOnFlag = 0;
-  lastState = -1;  // This is required due to the function deactivating the receiver.  This forces a pass through the receiver set-up code.  KF5N October 16, 2023
+  t41.RadioState.Set(RECONFIGURE_STATE);
   return;
 }
 

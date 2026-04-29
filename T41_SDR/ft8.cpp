@@ -1165,7 +1165,7 @@ FLASHMEM void TXProcessing() {
 
 /*
 FT8 decoder state machine
-FT8DecoderLoop is called from the main loop on DATA_RECEIVE_STATE. This loop performs one chunk of processing according to the
+FT8DecoderLoop is called from the main loop on RECEIVE_STATE. This loop performs one chunk of processing according to the
 FT8 decoder state.  It then returns to the main loop to allow other radio operations to continue.  Similar to other transmission
 states, a flag, ft8PTT is used to activate FT8 transmission in main loop. ft8PTT is set in this loop in STATE_TX which is set at
 the top of an even/odd interval (as selected by ft8IntState) when FT8 transmission is enabled.  Transmission begins within 0.25

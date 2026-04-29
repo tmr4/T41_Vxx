@@ -17,3 +17,4 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
 void CreateCWSignal(unsigned long signalLength);
 
 void CWTransmit();
+void CWTransmitPaddle();

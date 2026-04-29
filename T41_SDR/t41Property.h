@@ -14,8 +14,15 @@ public:
   void begin();
 
   // T41 properties
-  // *** template doesn't decrement with unsigned int ***
+  /*
+    RadioState is a read-only property.  It's intended to be set only in the main loop
+    or in the execution loops of routines that bypass that loop, such as during
+    calibration. As a read-only property, RadioState can't be assigned a value directly.
+    The Set method must be used to assign a value.
+  */
+  ReadOnlyProperty<int> RadioState;
 
+  // *** Property template doesn't decrement with unsigned int ***
   // notify on change, not polled
   Property<int> RemoteStatus;
   Property<int> MouseCenterTuneActive;

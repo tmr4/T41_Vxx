@@ -79,6 +79,8 @@ void T41Properties::begin() {
 void T41Properties::SetPropertyDefaults() {
   int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
+  RadioState.Set(RECONFIGURE_STATE);
+
   // notify properties (not polled!)
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);
   // make these a notify property

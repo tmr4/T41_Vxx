@@ -358,8 +358,8 @@ void SoftResetHardware() {
 }
 
 void ConfigRadioStateHardware() {
-  switch(radioState) {
-    case SSB_RECEIVE_STATE:
+  switch(t41.RadioState) {
+    case RECEIVE_STATE:
       currentRF_InAtten = RAtten[t41.ActiveBand];
       SetRF_InAtten(currentRF_InAtten);
       break;
@@ -374,19 +374,10 @@ void ConfigRadioStateHardware() {
       t41.CenterFreq = t41.CenterFreq - intermediateFreq + t41.NCOFreq;
       break;
 
-    case CW_RECEIVE_STATE:
-      currentRF_InAtten = RAtten[t41.ActiveBand];
-      SetRF_InAtten(currentRF_InAtten);
-      break;
-
     case CW_TRANSMIT_STRAIGHT_STATE:
+    case CW_TRANSMIT_PADDLE_STATE:
     case CW_TRANSMIT_KEYER_STATE:
       digitalWrite(RF_XMIT_RELAY, XMIT_CW);
-      break;
-
-    case DATA_RECEIVE_STATE:
-      currentRF_InAtten = RAtten[t41.ActiveBand];
-      SetRF_InAtten(currentRF_InAtten);
       break;
 
     default:

@@ -20,17 +20,22 @@ typedef __uint8_t uint8_t;
 //-------------------------------------------------------------------------------------------------------------
 
 // Radio State
-#define SSB_RECEIVE_STATE 0
-#define SSB_TRANSMIT_STATE 1
-#define CW_RECEIVE_STATE 2
-#define CW_TRANSMIT_STRAIGHT_STATE 3
-#define CW_TRANSMIT_KEYER_STATE 4
-#define DATA_RECEIVE_STATE 5
-#define DATA_TRANSMIT_STATE 6
-#define CALIBRATE_RECEIVE_STATE 7
-#define CALIBRATE_TRANSMIT_STATE 8
-#define CALIBRATE_TWOTONE_STATE 9
-#define CALIBRATE_DONE_STATE 10
+#define RECONFIGURE_STATE           0
+#define RECEIVE_STATE               1
+#define SSB_TRANSMIT_STATE          2
+#define CW_TRANSMIT_STRAIGHT_STATE  3
+#define CW_TRANSMIT_PADDLE_STATE    4
+#define CW_TRANSMIT_KEYER_STATE     5
+#define DATA_TRANSMIT_STATE         6
+#define CALIBRATE_TRANSMIT_STATE    7
+#define CALIBRATE_TWOTONE_STATE     8
+#define CALIBRATE_DONE_STATE        9
+
+// separate receive states not currently needed
+//#define SSB_RECEIVE_STATE 0
+//#define CW_RECEIVE_STATE 2
+//#define DATA_RECEIVE_STATE 5
+//#define CALIBRATE_RECEIVE_STATE 7
 
 // radio modes                      // associated demod modes
 #define SSB_MODE                  0 // USB, LSB
@@ -129,8 +134,6 @@ typedef __uint8_t uint8_t;
 // radio hardware and state global variables
 
 extern float sampleRate, intermediateFreq;
-
-extern int radioState, lastState;  // used by the main loop to monitor current state
 
 extern int volSetting;
 

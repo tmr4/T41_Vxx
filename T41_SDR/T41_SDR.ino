@@ -58,8 +58,6 @@
 
 float sampleRate, intermediateFreq;
 
-int radioState, lastState;
-
 int volSetting = 0;
 
 float32_t DMAMEM audioBufferL[2048];
@@ -197,9 +195,6 @@ FLASHMEM void SoftReset() {
   secondaryMenuIndex = -1;       // -1 means haven't determined secondary menu
   menuStatus = NO_MENUS_ACTIVE;  // Blank menu field
 
-  // set T41 last state different from radio state indicating a state change
-  // so receiver will be configured on the first pass through loop()
-  lastState = -1;
   t41.DemodMode = bands[t41.ActiveBand].demod;
 
   // the following items in addition to the radio state change
@@ -347,21 +342,16 @@ int freeram() {
 void ConfigRadioState() {
   ConfigRadioStateHardware();
 
-  switch(radioState) {
-    case SSB_RECEIVE_STATE:
+  switch(t41.RadioState) {
+    case RECEIVE_STATE:
       break;
 
     case SSB_TRANSMIT_STATE:
       break;
 
-    case CW_RECEIVE_STATE:
-      break;
-
     case CW_TRANSMIT_STRAIGHT_STATE:
+    case CW_TRANSMIT_PADDLE_STATE:
     case CW_TRANSMIT_KEYER_STATE:
-      break;
-
-    case DATA_RECEIVE_STATE:
       break;
 
     default:
@@ -373,15 +363,17 @@ void ConfigRadioState() {
 FASTRUN void loop() {
   int pushButtonSwitchIndex = -1;
   int valPin;
-  unsigned long cwTransmitTimer;
+  bool reconfigureFlag = t41.RadioState == RECONFIGURE_STATE;
+  static int lastState = -1;
 
   // *** can't use set/reset here as it can be hard to catch with a quick loop ***
   //SETPROFILEPIN(PROFILER_MAINLOOP);
   TOGGLEPROFILEPIN(PROFILER_MAINLOOP);
 
+  // 1. run routines that may change the state of the radio
   HardwareLoopStart();
 
-#if T41_USB_AUDIO
+  #if T41_USB_AUDIO
   // *** There is only one USB serial object available with USB audio enabled.  The Serial object
   // is reserved for WSJT-X use.  Any other use could disrupt WSJT-X control of the T41.  The
   // wsjt module provides for to communication with the WSJT-X app and allows setting the T41 clock
@@ -411,40 +403,45 @@ FASTRUN void loop() {
     ExecuteButtonPress(pushButtonSwitchIndex);
   }
 
-  //  State detection
-  if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == HIGH) {
-    radioState = SSB_RECEIVE_STATE;
-  }
-  if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == LOW) {
-    radioState = SSB_TRANSMIT_STATE;
-  }
-  if(t41.RadioMode == CW_MODE && (digitalRead(t41.PaddleDit) == HIGH && digitalRead(t41.PaddleDah) == HIGH)) {
-    radioState = CW_RECEIVE_STATE;
-  }
-  if(t41.RadioMode == CW_MODE && (digitalRead(t41.PaddleDit) == LOW && t41.KeyType == 0)) {
-    radioState = CW_TRANSMIT_STRAIGHT_STATE;
-  }
-  if(t41.RadioMode == CW_MODE && (keyPressedOn == 1 && t41.KeyType == 1)) {
-    radioState = CW_TRANSMIT_KEYER_STATE;
-    keyPressedOn = 0;
+  // 2. state detection
+  switch(t41.RadioMode) {
+    case SSB_MODE:
+      if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == HIGH) {
+        t41.RadioState.Set(RECEIVE_STATE);
+      } else {
+        t41.RadioState.Set(SSB_TRANSMIT_STATE);
+      }
+      break;
+    case CW_MODE:
+      if((digitalRead(t41.PaddleDit) == HIGH) && (digitalRead(t41.PaddleDah) == HIGH)) {
+        t41.RadioState.Set(RECEIVE_STATE);
+      } else if((digitalRead(t41.PaddleDit) == LOW) && (t41.KeyType == 0)) {
+        t41.RadioState.Set(CW_TRANSMIT_STRAIGHT_STATE);
+      } else if((keyPressedOn == 1) && (t41.KeyType == 1)) {
+        t41.RadioState.Set(CW_TRANSMIT_PADDLE_STATE);
+        keyPressedOn = 0;
+      } else if(cwKeyerPTT) {
+        t41.RadioState.Set(CW_TRANSMIT_KEYER_STATE);
+      }
+      break;
+    case DSB_MODE:
+      t41.RadioState.Set(RECEIVE_STATE);
+      break;
+    case DATA_MODE:
+      //Serial.print("ft8PTT: "); Serial.println(ft8PTT);
+      if(ft8PTT) {
+        t41.RadioState.Set(DATA_TRANSMIT_STATE);
+      } else {
+        t41.RadioState.Set(RECEIVE_STATE);
+      }
+      break;
   }
 
-  if(t41.RadioMode == DATA_MODE) {
-    //Serial.print("ft8PTT: "); Serial.println(ft8PTT);
-    if(ft8PTT) {
-      radioState = DATA_TRANSMIT_STATE;
-    } else {
-      radioState = DATA_RECEIVE_STATE;
-    }
-  }
-
-  if(radioState != lastState) {
+  // 3. configure radio for current state
+  if(t41.RadioState != lastState || reconfigureFlag) {
     // cleanup last state
     switch(lastState) {
-      case CW_RECEIVE_STATE:
-        break;
-
-      case DATA_RECEIVE_STATE:
+      case RECEIVE_STATE:
         break;
 
       case DATA_TRANSMIT_STATE:
@@ -458,37 +455,22 @@ FASTRUN void loop() {
         break;
     }
 
-    ConfigAudioState(radioState);
+    ConfigAudioState(t41.RadioState);
     ConfigRadioStateHardware();
     SetFreq(t41.CenterFreq);  // Update frequencies if the radio state has changed
     ShowTransmitReceiveStatus();
   }
 
+  // save radio state for next loop
+  lastState = t41.RadioState;
+
   // *** TODO: consider if a control update is proper here ***
   ProcessControls();
 
-  // process radio state
-  //Serial.print(radioState); Serial.print(", "); Serial.println(displayState);
-  switch(radioState) {
-    case SSB_RECEIVE_STATE:
-    case CW_RECEIVE_STATE:
-      switch(displayState) {
-        case DISPLAY_T41:
-          DrawFreqSpectrum();
-          DrawAudioSpectrum();
-          break;
-
-        case DISPLAY_BEACON_MONITOR:
-        default:
-        // process control and IQ signals without updating display
-        // (other events may still update display, clock for example)
-        // *** TODO: many control tasks still update screen.  Fix this. ***
-        YieldToProcess();
-        break;
-      }
-      break;
-
-    case DATA_RECEIVE_STATE:
+  // 4. process radio state
+  //Serial.print(t41.RadioState); Serial.print(", "); Serial.println(displayState);
+  switch(t41.RadioState) {
+    case RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
           DrawFreqSpectrum();
@@ -499,7 +481,11 @@ FASTRUN void loop() {
           FT8DecoderLoop();
           break;
 
+        case DISPLAY_BEACON_MONITOR:
         default:
+        // process control and IQ signals without updating display
+        // (other events may still update display, clock for example)
+        // *** TODO: many control tasks still update screen.  Fix this. ***
         YieldToProcess();
         break;
       }
@@ -521,35 +507,12 @@ FASTRUN void loop() {
       CWTransmit();
       break;
 
+    case CW_TRANSMIT_PADDLE_STATE:
+      CWTransmitPaddle();
+      break;
+
     case CW_TRANSMIT_KEYER_STATE:
-      // turn on TX relay and initialize CW signal timer
-      digitalWrite(RXTX, HIGH); // turn on TX relay
-      cwTransmitTimer = millis();
-
-      // start generating CW signal
-      while(millis() - cwTransmitTimer <= t41.CWTransmitDelay) {
-        if(digitalRead(t41.PaddleDit) == LOW) {
-          Dit();
-          cwTransmitTimer = millis();
-
-          // pause for one dit length
-          IntraSpace();
-        } else if(digitalRead(t41.PaddleDah) == LOW) {
-          Dah();
-          cwTransmitTimer = millis();
-
-          // pause for one dit length
-          IntraSpace();
-        } else {
-          CW_ExciterIQData(OFF);
-        }
-      }
-
-      digitalWrite(RXTX, LOW);
-
-      // delay a bit to allow play buffer to empty, otherwise
-      // the remaining buffer will be played next time it's connected
-      CWPause(50);
+      CWTransmitMessage();
       break;
 
     case DATA_TRANSMIT_STATE:
@@ -601,15 +564,10 @@ FASTRUN void loop() {
       break;
   }
 
+  // 5. wrap up loop with other housekeeping
 #ifdef AUDIO_STATS
-  if(lastState != radioState) {
-    //EndAudioStats();
-  }
   EndAudioStats();
 #endif
-
-  // save radio state for next loop
-  lastState = radioState;
 
   UpdateClock();
   UpdateMemTempLoad();

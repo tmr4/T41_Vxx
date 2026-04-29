@@ -1426,9 +1426,10 @@ FLASHMEM void ShowTransmitReceiveStatus() {
   tft.setFontScale((enum RA8875tsize)1, (enum RA8875tsize)0);
   tft.setTextColor(RA8875_BLACK);
 
-  switch(radioState) {
+  switch(t41.RadioState) {
     case SSB_TRANSMIT_STATE:
     case CW_TRANSMIT_STRAIGHT_STATE:
+    case CW_TRANSMIT_PADDLE_STATE:
     case CW_TRANSMIT_KEYER_STATE:
     case DATA_TRANSMIT_STATE:
       tft.fillRect(X_R_STATUS_X, X_R_STATUS_Y, 55, 18, RA8875_RED);

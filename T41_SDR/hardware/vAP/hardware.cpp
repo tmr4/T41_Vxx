@@ -188,8 +188,8 @@ void SoftResetHardware() {
 }
 
 void ConfigRadioStateHardware() {
-  switch(radioState) {
-    case SSB_RECEIVE_STATE:
+  switch(t41.RadioState) {
+    case RECEIVE_STATE:
       break;
 
     case SSB_TRANSMIT_STATE:
@@ -197,14 +197,9 @@ void ConfigRadioStateHardware() {
       oldCenterFreq = t41.CenterFreq;
       break;
 
-    case CW_RECEIVE_STATE:
-      break;
-
     case CW_TRANSMIT_STRAIGHT_STATE:
+    case CW_TRANSMIT_PADDLE_STATE:
     case CW_TRANSMIT_KEYER_STATE:
-      break;
-
-    case DATA_RECEIVE_STATE:
       break;
 
     default:
