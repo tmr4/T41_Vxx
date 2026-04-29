@@ -11,6 +11,9 @@ extern bool signalStrengthReceived;
 extern float signalStrength;
 extern int signalStrengthReceivedIndex;
 
+extern bool newIQData;
+extern uint8_t iqData[];
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -18,6 +21,7 @@ extern int signalStrengthReceivedIndex;
 void T41ControlSetup();
 void T41ControlLoop();
 
+void T41ControlSendIQData(int16_t *pL, int16_t *pR);
 void T41PrepareSpectrumData(int16_t *data, int16_t max);
 void T41ControlSendData(uint8_t *data, int len);
 

@@ -100,6 +100,28 @@ void T41RemoteConnectCheck() {
   }
 }
 
+bool newIQData = false;
+uint8_t iqData[513];
+void T41ControlSendIQData(int16_t *pL, int16_t *pR) {
+  //controlSerial.flush(); // *** TODO: this will cause a freeze if PC stops receiving ***
+  int avail=controlSerial.availableForWrite();
+
+  memcpy(iqData, pL, 256);
+  memcpy(&iqData[256], pR, 256);
+
+  //if(avail > 0) Serial.println(avail);
+
+  //controlSerial.send_now(); // clear the queue
+  if(controlSerial.availableForWrite() >= 512) {
+    //if(sendGet) {
+    //  //iqData[512] = 0;
+    //  Serial.println("Sending IQ data");
+    //  //Serial.println(iqData);
+    //}
+    controlSerial.write(iqData, 512);
+  }
+}
+
 void T41ControlSendData(uint8_t *data, int len) {
   //int len = strlen(cmd);
   //int sizeBuf = SerialUSB1.availableForWrite();
@@ -158,6 +180,9 @@ void T41ControlSendCmd(char *cmd) {
     int len = strlen(cmd);
     //Serial.println(sizeBuf);
     if(controlSerial.availableForWrite() > len) {
+      //if(sendGet) {
+      //  Serial.println(len);
+      //}
       controlSerial.write(cmd, len);
 #if controlSerial != usbHostSerial
       controlSerial.send_now(); // we'll have a delay without this
@@ -170,6 +195,9 @@ void T41ControlSendCmd(char *cmd) {
           //SerialUSB1.print(cmd[i++]);
         } else {
           controlSerial.flush(); // *** TODO: this will cause a freeze if PC stops receiving ***
+          if(sendGet) {
+            Serial.println("flushing");
+          }
           controlDataFlag = false;
         }
       }
@@ -180,7 +208,7 @@ void T41ControlSendCmd(char *cmd) {
   RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
 }
 
-void T41ControlGetCommand(char * cmd, int max) {
+int T41ControlGetCommand(char * cmd, int max) {
   int i = 0;
 
   while(controlSerial.available() > 0) {
@@ -194,6 +222,7 @@ void T41ControlGetCommand(char * cmd, int max) {
     i++;
   }
   cmd[i+1] = 0; // *** TODO: this is currently needed by send command, revisit if that is changed ***
+  return i;
 }
 
 // Dual T41 master commands
@@ -508,11 +537,25 @@ void T41ControlLoop() {
 
   T41RemoteConnectCheck();
 
-  if(controlSerial.available()) {
-    char cmd[256];
-    int mode = GetMode();
+  if(t41.RemoteStatus != REMOTE_CONNECTED) return;
 
-    T41ControlGetCommand(cmd, 256);
+  if(controlSerial.available()) {
+    char cmd[513];
+    int mode = GetMode();
+    int recd = T41ControlGetCommand(cmd, 512);
+
+    if(recd == 512) {
+      Serial.print("Received 512");
+      memcpy(iqData, cmd, 512);
+      newIQData = true;
+      return;
+    } else {
+      if(sendGet) {
+        Serial.print("Received ");
+        Serial.println(recd);
+        Serial.print(" bytes");
+      }
+    }
     SETPROFILEPIN(PROFILER_FT8_CAT_RX);
     if(sendGet) {
       Serial.print("Received: ");

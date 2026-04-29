@@ -43,9 +43,14 @@
 
 // Remote control
 // set one line below to true to enable remote control
-#define CAT_CONTROL_HOST  true    // cable from USB host on this unit to serial on remote
-#define CAT_CONTROL       false  // cable from serial on this unit to USB host on remote
+// *** TODO: verify if control still works with connections reversed ***
+#define CAT_CONTROL_HOST  true   // cable from USB host on this unit (T41) to serial on remote
+#define CAT_CONTROL       false  // cable from serial on this unit (remote) to USB host on T41
 #define T41_USB_AUDIO     false  // *** for passing audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
+
+// set one line below to true to enable remote audio
+#define SEND_IQ_TO_HOST   true   // cable from USB host on this unit (T41) to serial on remote
+#define REC_IQ_FROM_HOST  false  // cable from serial on this unit (remote) to USB host on T41
 
 //#define T41_REMOTE_DISPLAY
 
