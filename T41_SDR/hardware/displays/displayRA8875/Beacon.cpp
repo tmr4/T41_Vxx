@@ -110,6 +110,8 @@ void DrawBeaconBearing(char *beaconPrefix, int color);
   Purpose: Initialize beacon monitor
 *****/
 void BeaconInit() {
+  beaconFlag = true;
+
   // clear screen and set display to beacon monitor
   tft.fillWindow();
   tft.writeTo(L2); // clear layer 2 as well
@@ -132,6 +134,7 @@ void BeaconInit() {
   if((BEACON_DISPLAY_OPTION > BEACON_DISPLAY_AZIMUTH)) {
     BeaconMapDraw((char *)myMapFiles[BEACON_DISPLAY_WORLD2].mapNames, 0, 0);
   }
+
   beaconInit = true;
 }
 
@@ -139,6 +142,8 @@ void BeaconInit() {
   Purpose: Restore T41 operating state
 *****/
 void BeaconExit() {
+  beaconFlag = false;
+
   // set display screen
   displayState = DISPLAY_T41;
 

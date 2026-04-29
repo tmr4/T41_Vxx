@@ -22,14 +22,15 @@ typedef __uint8_t uint8_t;
 // Radio State
 #define RECONFIGURE_STATE           0
 #define RECEIVE_STATE               1
-#define SSB_TRANSMIT_STATE          2
-#define CW_TRANSMIT_STRAIGHT_STATE  3
-#define CW_TRANSMIT_PADDLE_STATE    4
-#define CW_TRANSMIT_KEYER_STATE     5
-#define DATA_TRANSMIT_STATE         6
-#define CALIBRATE_TRANSMIT_STATE    7
-#define CALIBRATE_TWOTONE_STATE     8
-#define CALIBRATE_DONE_STATE        9
+#define BEACON_STATE                2
+#define SSB_TRANSMIT_STATE          3
+#define CW_TRANSMIT_STRAIGHT_STATE  4
+#define CW_TRANSMIT_PADDLE_STATE    5
+#define CW_TRANSMIT_KEYER_STATE     6
+#define DATA_TRANSMIT_STATE         7
+#define CALIBRATE_TRANSMIT_STATE    8
+#define CALIBRATE_TWOTONE_STATE     9
+#define CALIBRATE_DONE_STATE       10
 
 // separate receive states not currently needed
 //#define SSB_RECEIVE_STATE 0
@@ -131,12 +132,6 @@ typedef __uint8_t uint8_t;
 
 #include "t41Property.h"
 
-// radio hardware and state global variables
-
-extern float sampleRate, intermediateFreq;
-
-extern int volSetting;
-
 extern float32_t audioBufferL[];
 extern float32_t audioBufferR[];
 extern float32_t audioBufferL_EX[];
@@ -159,14 +154,6 @@ typedef struct {
 } band;
 
 extern band bands[];
-
-// *** TODO: move to appropriate front panel hardware ***
-extern int bandswitchPins[];
-
-// radio status
-// *** TODO: some display specific, needs generalized ***
-extern bool beaconFlag;
-extern bool infoBoxItemActive[];
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

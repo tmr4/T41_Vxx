@@ -245,7 +245,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
   if(calType == 2 || calType == 3) {
     // remove the IF offset
     // *** why? ***
-    t41.CenterFreq = t41.CenterFreq - intermediateFreq + t41.NCOFreq;
+    t41.CenterFreq = t41.CenterFreq - t41.IntermediateFreq + t41.NCOFreq;
 
   } else {
     t41.CenterFreq = t41.ActiveFreq();
@@ -1267,20 +1267,20 @@ FLASHMEM float ShowSpectrum2() {
              = 512 / 2 / 128 * 8
              = 16
   Therefore the bin width of each FFT bin is SAMPLE_RATE / FFT_LEN = 192000 / 512 = 375 Hz.
-  The frequency of the middle bin is t41.CenterFreq + intermediateFreq and our spectrum spans
-  (t41.CenterFreq + intermediateFreq - SAMPLE_RATE/2) to (t41.CenterFreq + intermediateFreq + SAMPLE_RATE/2).
+  The frequency of the middle bin is t41.CenterFreq + t41.IntermediateFreq and our spectrum spans
+  (t41.CenterFreq + t41.IntermediateFreq - SAMPLE_RATE/2) to (t41.CenterFreq + t41.IntermediateFreq + SAMPLE_RATE/2).
 
   So the equation for bin number n given frequency Clk2SetFreq is:
     n = (Clk2SetFreq - Clk1SetFreq)/375 + 256
-      = (Clk2SetFreq - (t41.CenterFreq + intermediateFreq))/375 + 256
+      = (Clk2SetFreq - (t41.CenterFreq + t41.IntermediateFreq))/375 + 256
 
-  In receive cal mode, we set Clk2SetFreq to t41.CenterFreq + 2*intermediateFreq
+  In receive cal mode, we set Clk2SetFreq to t41.CenterFreq + 2*t41.IntermediateFreq
   So we expect the desired tone to appear in bin
-    n_tone = intermediateFreq/375 + 256
+    n_tone = t41.IntermediateFreq/375 + 256
   while the undesired image product will be at
-    n_image= -intermediateFreq/375 + 256
+    n_image= -t41.IntermediateFreq/375 + 256
 
-  Which are, given intermediateFreq = 48000:
+  Which are, given t41.IntermediateFreq = 48000:
     n_tone = 384
     n_image= 128
   *********************************************/
@@ -1854,7 +1854,7 @@ FLASHMEM void ProcessTransmitCalIQData() {
   //float rfGainValue;
   static float theta = -2 * PI;
   float tmp;
-  const float thetaInc = 2.0 * PI * intermediateFreq / sampleRate;
+  const float thetaInc = 2.0 * PI * t41.IntermediateFreq / t41.SampleRate;
 
   if((uint32_t)Q_in_L.available() > 16 && (uint32_t)Q_in_R.available() > 16) {
     for(unsigned i = 0; i < 16; i++) {
@@ -2315,7 +2315,7 @@ void SetupSignalStrengthSource(int source) {
       // set up this and external unit for calibration
       minSignalStrength = 0;
       signalStrengthSource = 1;
-      SendCommand(t41.CenterFreq + intermediateFreq, T41_ITEM_FREQ);
+      SendCommand(t41.CenterFreq + t41.IntermediateFreq, T41_ITEM_FREQ);
       if(t41.DemodMode == DEMOD_LSB) {
         SendCommand(DEMOD_USB, T41_ITEM_DEMOD_MODE);
       } else {
@@ -2633,9 +2633,9 @@ FLASHMEM void DisplayTones(int cycles1, int cycles2) {
   tft.fillRect(680, 440, 150, tft.getFontHeight(), RA8875_BLACK);
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(680, 400);
-  tft.print(cycles1 * sampleRate / 8.0 / 256.0, 0);
+  tft.print(cycles1 * t41.SampleRate / 8.0 / 256.0, 0);
   tft.setCursor((float)680, 440);
-  tft.print((float)cycles2 * sampleRate / 8.0 / 256.0, 0);
+  tft.print((float)cycles2 * t41.SampleRate / 8.0 / 256.0, 0);
 }
 
 FLASHMEM void IncTone(int tone, int inc = 0) {
@@ -2795,8 +2795,8 @@ FLASHMEM void ShowTwoToneDisplay() {
   IncTone(0);
 }
 
-const float thetaInc1 = 2.0 * PI * 700.0 / (sampleRate / 8.0);
-const float thetaInc2 = 2.0 * PI * 1900.0 / (sampleRate / 8.0);
+const float thetaInc1 = 2.0 * PI * 700.0 / (t41.SampleRate / 8.0);
+const float thetaInc2 = 2.0 * PI * 1900.0 / (t41.SampleRate / 8.0);
 
 FLASHMEM void GetTwoToneData(float *bufI, float *bufQ, int len) {
   static float theta1, theta2;

@@ -160,8 +160,8 @@ void Kim1_NR() {
         lf_freq = -(float32_t)t41.FilterHiCut;
       }
     }
-    lf_freq /= (sampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
-    uf_freq /= (sampleRate / 8.0 / NR_FFT_L);
+    lf_freq /= (t41.SampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
+    uf_freq /= (t41.SampleRate / 8.0 / NR_FFT_L);
 
     VAD_low = (int)lf_freq;
     VAD_high = (int)uf_freq;
@@ -432,8 +432,8 @@ void SpectralNoiseReduction() {
   }
 
   // / rate 24k = 192k / 8
-  lf_freq /= (sampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
-  uf_freq /= (sampleRate / 8.0 / NR_FFT_L);
+  lf_freq /= (t41.SampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
+  uf_freq /= (t41.SampleRate / 8.0 / NR_FFT_L);
 
 
   // INITIALIZATION ONCE 1
@@ -630,7 +630,7 @@ void SpectralNoiseReduction() {
 }
 
 /*****
-  Purpose: InitLMSNoiseReduction()
+
 *****/
 FLASHMEM void InitLMSNoiseReduction() {
   uint16_t  calc_taps = 96;

@@ -57,7 +57,7 @@ void SetFreq(int freq, bool reset) {
   }
 
   //  The receive LO frequency is not dependent on mode or sideband.  CW frequency shift is done in DSP code.
-  Clk2SetFreq = ((t41.CenterFreq + intermediateFreq) * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
+  Clk2SetFreq = ((t41.CenterFreq + t41.IntermediateFreq) * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
 
   if(t41.RadioState == RECEIVE_STATE) {   //  Receive state
     si5351.set_freq(Clk2SetFreq, SI5351_CLK2);

@@ -113,7 +113,7 @@ void MouseButtonSpectrumWaterfall(int button) {
 
       ReplaceCursor(oldCursorX, oldCursorY);
 
-      t41.NCOFreq = (cursorX + cursorW / 2 - centerLine) * sampleRate / (1 << t41.SpectrumZoom) / SPECTRUM_RES;
+      t41.NCOFreq = (cursorX + cursorW / 2 - centerLine) * t41.SampleRate / (1 << t41.SpectrumZoom) / SPECTRUM_RES;
 
       switch(displayState) {
         case DISPLAY_T41:

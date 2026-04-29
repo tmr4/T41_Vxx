@@ -257,7 +257,7 @@ FLASHMEM int SetI2SFreq(int freq) {
   more memory to implement that delay.
 
 *****/
-void AudioSetup(bool _supportsTX /* = true */) {
+void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
   supportsTX = _supportsTX;
 
   // set I2S freq to sample rate

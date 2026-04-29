@@ -21,6 +21,17 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+#ifdef PROJECTSYSTEM_SWITCH_MATRIX
+int bandswitchPins[] = {
+  FILTERPIN80M,  // 80M
+  FILTERPIN40M,  // 40M
+  FILTERPIN20M,  // 20M
+  FILTERPIN15M,  // 17M
+  FILTERPIN15M,  // 15M
+  0,   // 12M  Note that 12M and 10M both use the 10M filter, which is always in (no relay).  KF5N September 27, 2023.
+  0    // 10M
+};
+#endif
 #ifdef PROJECTSYSTEM_VOLUME_ENCODER
 Rotary volumeEncoder = Rotary(VOLUME_ENCODER_A, VOLUME_ENCODER_B);        // ( 2,  3)
 Bounce encoderSwitch = Bounce(VOLUME_SWITCH, 10);  // 10 ms debounce
@@ -505,6 +516,17 @@ FLASHMEM void SaveAnalogSwitchValues() {
   }
 
   buttonRepeatDelay = origRepeatDelay;  // Restore original repeat delay
+}
+
+void PreChangeBandHardware() {
+  if(t41.ActiveBand < BAND_12M) {
+    digitalWrite(bandswitchPins[t41.ActiveBand], LOW);
+  }
+}
+void PostChangeBandHardware() {
+  if(t41.ActiveBand < BAND_12M) {
+    digitalWrite(bandswitchPins[t41.ActiveBand], HIGH);
+  }
 }
 #else
 // *** TODO: need empty functions back for hardwareless Project System ***

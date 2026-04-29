@@ -62,6 +62,9 @@ void CalibrateTransmitIQ();
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+void PreChangeBandHardware() {}
+void PostChangeBandHardware() {}
+
 //------------
 // Display.cpp
 
@@ -323,7 +326,7 @@ float CalcSignalStrength() {
 //------------
 // T41_SDR.ino
 
-void InitHardware() {
+void InitHardware(int sampleRate) {
 
   pinMode(ShutdownInPin, INPUT);
   pinMode(ShutdownOutPin, OUTPUT);
@@ -341,7 +344,7 @@ void InitHardware() {
   digitalWrite(RF_CAL_RELAY, OFF);
 
   InitSI5351();
-  AudioSetup();
+  AudioSetup(sampleRate);
 
   InitRFControl();
 
@@ -371,7 +374,7 @@ void ConfigRadioStateHardware() {
       SetRF_OutAtten(currentRF_OutAtten);
 
       oldCenterFreq = t41.CenterFreq;
-      t41.CenterFreq = t41.CenterFreq - intermediateFreq + t41.NCOFreq;
+      t41.CenterFreq = t41.CenterFreq - t41.IntermediateFreq + t41.NCOFreq;
       break;
 
     case CW_TRANSMIT_STRAIGHT_STATE:

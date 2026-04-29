@@ -234,16 +234,15 @@ int GetRow(int y);
 FLASHMEM bool InitFT8() {
   bool result = true;
 
-  if(sampleRate > 50000) {
-    sampleRate = 44100.0;
-    intermediateFreq = 11025.0;
+  if(t41.SampleRate > 50000) {
+    t41.SampleRate.Set(44100.0);
+    t41.IntermediateFreq.Set(11025.0);
     // using 48k sample rate doesn't change FT8 transmision
-    //sampleRate = 48000.0;
-    //intermediateFreq = 12000.0;
-    SetI2SFreq(sampleRate);
+    //t41.SampleRate = 48000.0;
+    //t41.IntermediateFreq = 12000.0;
+    SetI2SFreq(t41.SampleRate);
     InitFFTArrays();
     t41.SpectrumZoom = 1;
-    //InitZoomFFTFilter(); // *** TODO: can save some memory by specifying block size if will operate in FT8 a lot ***
     InitHilbertFilters();
     SetupDemodFilterBW();
     ResetTuning();
@@ -253,10 +252,10 @@ FLASHMEM bool InitFT8() {
 }
 
 FLASHMEM void ExitFT8() {
-  if(sampleRate < 50000) {
-    sampleRate = 192000.0;
-    intermediateFreq = 48000.0;
-    SetI2SFreq(sampleRate);
+  if(t41.SampleRate < 50000) {
+    t41.SampleRate.Set(192000.0);
+    t41.IntermediateFreq.Set(48000.0);
+    SetI2SFreq(t41.SampleRate);
     InitFFTArrays();
     t41.SpectrumZoom = 1;
     InitHilbertFilters();

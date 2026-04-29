@@ -60,10 +60,10 @@ extern float32_t /* DMAMEM */ FIR_int2_coeffs[32];
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void InitFIRFilters();
+void InitFIRFilters(int sampleRate);
 void InitHilbertFilters();
 
 void CalcFIRCoeffs(float *coeffs_I, int numCoeffs, float32_t fc, float32_t Astop, int type, float dfc, float Fsamprate);
 void CalcCplxFIRCoeffs(float *coeffs_I, float *coeffs_Q, int numCoeffs, float32_t fLoCut, float32_t fHiCut, float sampleRate);
 
-void InitZoomFFTFilter(uint32_t blockSize = 2048);
+void InitZoomFFTFilter(int sampleRate, uint32_t blockSize = 2048);

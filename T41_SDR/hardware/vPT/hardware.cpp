@@ -92,6 +92,9 @@ int ProcessButtonPress(int valPin) {
 }
 #endif
 
+void PreChangeBandHardware() {}
+void PostChangeBandHardware() {}
+
 //------------
 // Encoders.cpp
 
@@ -186,14 +189,14 @@ float CalcSignalStrength() {
 //------------
 // T41_SDR.ino
 
-void InitHardware() {
+void InitHardware(int sampleRate) {
   // set up hardware specific Teensy pins that aren't handled elsewhere
   pinMode(MUTE, OUTPUT);
   digitalWrite(MUTE, LOW);
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
-  AudioSetup(false);
+  AudioSetup(sampleRate, false);
 
 #if defined(PROJECTSYSTEM_ENCODER_1) || defined(PROJECTSYSTEM_ENCODER_2)
   EncodersInit();

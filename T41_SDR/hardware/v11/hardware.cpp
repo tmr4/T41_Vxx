@@ -46,6 +46,16 @@ arm_biquad_cascade_df2T_instance_f32 s1_Receive2 = { 1, HP_DC_Butter_state2, HP_
 //------------
 // T41_SDR.ino
 
+int bandswitchPins[] = {
+  FILTERPIN80M,  // 80M
+  FILTERPIN40M,  // 40M
+  FILTERPIN20M,  // 20M
+  FILTERPIN15M,  // 17M
+  FILTERPIN15M,  // 15M
+  0,   // 12M  Note that 12M and 10M both use the 10M filter, which is always in (no relay).  KF5N September 27, 2023.
+  0    // 10M
+};
+
 extern int oldCenterFreq;
 
 // *** allow for v11 specific RA8875 code ***
@@ -91,6 +101,25 @@ FLASHMEM void SetupBPF() {
   mcpBPF.writeGPIOAB(GPAB_state);
 }
 #endif
+
+//------------
+// Exciter.cpp
+
+/*****
+  Purpose: Set the current band relay ON or OFF
+
+  Parameter list:
+    int state             OFF = 0, ON = 1
+*****/
+void SetBandRelay(int state) {
+  // There are 4 physical relays.  Turn all of them off.
+  for(int i = 0; i < 4; i = i + 1) {
+    digitalWrite(bandswitchPins[i], LOW); // set ALL band relays low
+  }
+
+  // Set current band relay "on".  Ignore 12M and 10M.  15M and 17M use the same relay.
+  if(t41.ActiveBand < BAND_12M) digitalWrite(bandswitchPins[t41.ActiveBand], state);
+}
 
 //------------
 // MenuProc.cpp
@@ -251,7 +280,7 @@ float CalcSignalStrength() {
 //------------
 // T41_SDR.ino
 
-void InitHardware() {
+void InitHardware(int sampleRate) {
   // set up hardware specific Teensy pins that aren't handled elsewhere
   pinMode(FILTERPIN15M, OUTPUT);
   pinMode(FILTERPIN20M, OUTPUT);
@@ -265,7 +294,7 @@ void InitHardware() {
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
   InitSI5351();
-  AudioSetup();
+  AudioSetup(sampleRate);
 
   InitFrontPanel();
 

@@ -56,9 +56,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-float sampleRate, intermediateFreq;
-
-int volSetting = 0;
+extern bool beaconFlag;
 
 float32_t DMAMEM audioBufferL[2048];
 float32_t DMAMEM audioBufferR[2048];
@@ -98,16 +96,6 @@ band bands[NUMBER_OF_BANDS] = {
     28350000, 28000000, 29700000,  "10M",  DEMOD_USB,   200, 3000,  1,           0,    GAIN_CORRECTION_10M,    20,    20 // auto calibration not performed on this band
 };
 
-int bandswitchPins[] = {
-  FILTERPIN80M,  // 80M
-  FILTERPIN40M,  // 40M
-  FILTERPIN20M,  // 20M
-  FILTERPIN15M,  // 17M
-  FILTERPIN15M,  // 15M
-  0,   // 12M  Note that 12M and 10M both use the 10M filter, which is always in (no relay).  KF5N September 27, 2023.
-  0    // 10M
-};
-
 int oldCenterFreq;
 
 //-------------------------------------------------------------------------------------------------------------
@@ -120,7 +108,7 @@ int SetI2SFreq(int freq);
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-FLASHMEM void InitializeDataArrays() {
+FLASHMEM void InitializeDataArrays(int sampleRate) {
   InitFFTArrays();
 
   CLEAR_VAR(NR_FFT_buffer);
@@ -145,13 +133,13 @@ FLASHMEM void InitializeDataArrays() {
   CLEAR_VAR(LMS_nr_delay);
 
   // initialize various filters
-  InitFIRFilters();
-  InitZoomFFTFilter();
+  InitFIRFilters(sampleRate);
+  InitZoomFFTFilter(sampleRate);
   InitSpectralNoiseReduction();
   InitLMSNoiseReduction();
 
   // this needs to come after above
-  InitAMDemodBiquadFilter();
+  InitAMDemodBiquadFilter(sampleRate);
 
   // prepare 750Hz signal buffer
   GenSineToneBuffers(8);
@@ -176,11 +164,11 @@ FLASHMEM void Splash() {
               This resets the user modifiable radio settings to the startup state
 *****/
 FLASHMEM void SoftReset() {
-  LoadOpVarsFromEEPROM(LOAD_VARS_FROM_EEPROM);
-
-  // reset sample rate and IF
-  sampleRate = 192000.0;
-  intermediateFreq = 48000.0;
+  if(LOAD_VARS_FROM_EEPROM) {
+    LoadOpVarsFromEEPROM(LOAD_VARS_FROM_EEPROM);
+  } else {
+    t41.SetPropertyDefaults();
+  }
 
   splitVFO = false;
   SoftResetHardware();
@@ -219,6 +207,8 @@ FLASHMEM void SoftReset() {
 //extern "C" uint8_t external_psram_size;
 
 FLASHMEM void setup() {
+  int sampleRate = 192000.0;
+
   Serial.begin(9600);
 
   delay(1000);
@@ -273,12 +263,9 @@ FLASHMEM void setup() {
 
   delay(100L);
 
-  sampleRate = 192000.0;
-  intermediateFreq = 48000.0;
+  InitializeDataArrays(sampleRate);
 
-  InitializeDataArrays();
-
-  InitHardware();
+  InitHardware(sampleRate);
   SoftReset();
 
 #ifdef USB_HOST_SUPPORT
@@ -396,6 +383,19 @@ FASTRUN void loop() {
     BeaconLoop();
   }
 
+#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+  if(keyerState == 1) {
+    KeyerLoop();
+  }
+#endif
+
+  // *** need PC control without a display ***
+  //T41ControlLoop();
+
+#if CAT_CONTROL
+  T41ControlLoop();
+#endif
+
   // check for UI button press and process accordingly
   valPin = ReadSelectedPushButton();
   if(valPin != BOGUS_PIN_READ) {
@@ -413,15 +413,17 @@ FASTRUN void loop() {
       }
       break;
     case CW_MODE:
-      if((digitalRead(t41.PaddleDit) == HIGH) && (digitalRead(t41.PaddleDah) == HIGH)) {
+      if(cwKeyerPTT) {
+        t41.RadioState.Set(CW_TRANSMIT_KEYER_STATE);
+      } else if(beaconFlag) {
+        t41.RadioState.Set(BEACON_STATE);
+      } else if((digitalRead(t41.PaddleDit) == HIGH) && (digitalRead(t41.PaddleDah) == HIGH)) {
         t41.RadioState.Set(RECEIVE_STATE);
       } else if((digitalRead(t41.PaddleDit) == LOW) && (t41.KeyType == 0)) {
         t41.RadioState.Set(CW_TRANSMIT_STRAIGHT_STATE);
       } else if((keyPressedOn == 1) && (t41.KeyType == 1)) {
         t41.RadioState.Set(CW_TRANSMIT_PADDLE_STATE);
         keyPressedOn = 0;
-      } else if(cwKeyerPTT) {
-        t41.RadioState.Set(CW_TRANSMIT_KEYER_STATE);
       }
       break;
     case DSB_MODE:
@@ -572,34 +574,7 @@ FASTRUN void loop() {
   UpdateClock();
   UpdateMemTempLoad();
 
-  // slowly raise volume to avoid artifacts
-  if(volSetting > 0) {
-    if(t41.AudioVolume < volSetting) {
-      t41.AudioVolume++;
-    } else {
-      volSetting = 0;
-    }
-  }
-
 #ifdef T41_REMOTE_DISPLAY
   RemoteLoop();
-#endif
-
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
-  // just for testing
-  if(elapsed_micros_idx_t > 200) {
-    //PrintKeyboardBuffer();
-  }
-
-  if(keyerState == 1) {
-    KeyerLoop();
-  }
-#endif
-
-  // *** need PC control without a display ***
-  //T41ControlLoop();
-
-#if CAT_CONTROL
-  T41ControlLoop();
 #endif
 }

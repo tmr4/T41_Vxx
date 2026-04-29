@@ -64,22 +64,21 @@ void NotifyPropertyChanged(T val) {
 //T41Properties* T41Properties::instance = NULL;
 
 T41Properties::T41Properties() {
-  //if(instance == NULL) {
-  //  instance = this;
-  //}
   begin();
 }
 
 void T41Properties::begin() {
-  // initialize properties
+  // initialize static callback functions
   T41Update::SetUpdateFunctions(UpdateInfoBoxItem, SendCommand);
-  SetPropertyDefaults();
 }
 
 void T41Properties::SetPropertyDefaults() {
   int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
   RadioState.Set(RECONFIGURE_STATE);
+
+  SampleRate.Set(192000.0);
+  IntermediateFreq.Set(48000.0);
 
   // notify properties (not polled!)
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);

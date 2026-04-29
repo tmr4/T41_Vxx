@@ -22,6 +22,9 @@ public:
   */
   ReadOnlyProperty<int> RadioState;
 
+  ReadOnlyProperty<float> SampleRate;
+  ReadOnlyProperty<float> IntermediateFreq;
+
   // *** Property template doesn't decrement with unsigned int ***
   // notify on change, not polled
   Property<int> RemoteStatus;
@@ -71,6 +74,8 @@ public:
   Property<int> InactiveBand;
 
   // helper functions
+  void SetPropertyDefaults();
+
   void Poll(bool updateDisplay);
   void PollInfoBox(bool updateDisplay);
 
@@ -88,7 +93,6 @@ public:
   int equalizerTx[EQUALIZER_CELL_COUNT] = {0, 0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0};   // Provide equalizer optimized for SSB voice based on Neville's tests.  KF5N November 2, 2023
 
 protected:
-  void SetPropertyDefaults();
 
 private:
   static constexpr int maxFreqIncIndex = 8;

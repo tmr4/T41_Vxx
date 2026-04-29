@@ -40,6 +40,8 @@ float CalcSignalStrength();
 
 // Button.cpp
 int ReadSelectedPushButton();
+void PreChangeBandHardware();
+void PostChangeBandHardware();
 
 // Encoder.cpp
 int ReadTuneEncoder();
@@ -48,7 +50,7 @@ int ReadTuneEncoder();
 void RemoveDCBias();
 
 // T41_SDR.ino
-void InitHardware();
+void InitHardware(int sampleRate);
 void SoftResetHardware();
 void ConfigRadioStateHardware();
 void HardwareLoopStart();

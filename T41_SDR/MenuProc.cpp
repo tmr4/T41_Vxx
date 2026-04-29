@@ -155,7 +155,8 @@ FLASHMEM void VFOSelect(int32_t index) {
   bands[t41.ActiveBand].freq = t41.CenterFreq;
 
   SetupBandFreq(t41.CenterFreq);
-  SetBandRelay(HIGH); // Required when switching VFOs
+  // *** TODO: this seems oddly placed and specific to only v11, investigate ***
+  //SetBandRelay(HIGH); // Required when switching VFOs
 
   //EEPROMData.t41.ActiveVFO = t41.ActiveVFO;
   EEPROMWrite();
@@ -411,11 +412,9 @@ FLASHMEM void BeaconOptions() {
   switch(secondaryMenuIndex) {
      case 0: // on
       BeaconInit();
-      beaconFlag = true;
       break;
     case 1: // off
       BeaconExit();
-      beaconFlag = false;
       break;
     case 2:
       break;

@@ -385,7 +385,7 @@ FLASHMEM void GetFavoriteFrequency() {
       //ResetTuning();
       //ShowOperatingStats();
       //t41.NCOFreq = 0L;
-      //DrawBandwidthBar();  // AFP 10-20-22
+      //DrawBandwidthBar();
       //digitalWrite(bandswitchPins[t41.ActiveBand], LOW);
       //ShowSpectrumdBScale();
       //DrawFreqSpectrum();

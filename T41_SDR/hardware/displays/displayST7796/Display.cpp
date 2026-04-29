@@ -377,7 +377,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
   int tunedInx = 0;
   float cFreq = (float)t41.CenterFreq;
   float tunedFreq, lFreq;
-  float fInc =  sampleRate / (float)(1 << t41.SpectrumZoom) / 4.0;
+  float fInc =  t41.SampleRate / (float)(1 << t41.SpectrumZoom) / 4.0;
   // positions for graticules: first for t41.SpectrumZoom < 3, then for t41.SpectrumZoom > 2
   //const static int idx2pos[2][9] = {
   //  { -43, 21, 50, 250, 140, 250, 232, 250, 315 },
@@ -388,7 +388,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
     { 0,0,0,0,0,0,0,0,0 }
   };
   float xExpand = 1.4;
-  float32_t pixel_per_hz = (1 << t41.SpectrumZoom) * SPECTRUM_RES / sampleRate;
+  float32_t pixel_per_hz = (1 << t41.SpectrumZoom) * SPECTRUM_RES / t41.SampleRate;
 
   //tft.setFontScale((enum RA8875tsize)0);
   //tft.setFont(Arial_12);
@@ -400,7 +400,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
 
   if(t41.SpectrumZoom == 0) {
     tunedInx = -1;
-    cFreq += intermediateFreq;
+    cFreq += t41.IntermediateFreq;
     tft.setCursor(centerLine - 140, SPEC_BOX_LABELS);
   } else {
     //tft.setCursor(centerLine - 20, SPEC_BOX_LABELS);
@@ -418,7 +418,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
   tunedFreq = (cFreq + (float)tunedInx * fInc);
   lFreq = round((cFreq + (float)tunedInx * fInc) / 1000.0) * 1000.0;
   ultoa(lFreq / 1000.0, txt, DEC);
-  tickX = (tunedFreq - lFreq - intermediateFreq * tunedInx) * pixel_per_hz;
+  tickX = (tunedFreq - lFreq - t41.IntermediateFreq * tunedInx) * pixel_per_hz;
 
   // print label and tick mark
   tft.setTextColor(ST7735_GREEN);
@@ -436,7 +436,7 @@ FLASHMEM void ShowSpectrumFreqValues() {
       // calculate label freq (always a whole number) and the exact position of its tick mark
       lFreq = round((cFreq +  (float)idx * fInc) / 1000.0) * 1000.0;
       ultoa(lFreq / 1000.0, txt, DEC);
-      tickX = (tunedFreq - lFreq - intermediateFreq * tunedInx) * pixel_per_hz;
+      tickX = (tunedFreq - lFreq - t41.IntermediateFreq * tunedInx) * pixel_per_hz;
 
       // print freq label (always in the same position for visual)
       if(idx < 2) {
@@ -512,7 +512,7 @@ FLASHMEM void ShowOperatingStats() {
   //tft.setTextColor(ST7735_ORANGE);
   tft.setTextColor(ST7735_RED);
   if(t41.SpectrumZoom == 0) {
-    tft.print(t41.CenterFreq + (long)intermediateFreq);
+    tft.print(t41.CenterFreq + (long)t41.IntermediateFreq);
   } else {
     tft.print(t41.CenterFreq);
   }

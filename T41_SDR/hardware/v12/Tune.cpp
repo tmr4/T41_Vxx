@@ -111,7 +111,7 @@ void SetFreq(int f, bool reset) {
 
   // NEVER USE AUDIONOINTERRUPTS HERE: that introduces annoying clicking noise with every frequency change
 
-  Clk1SetFreq = ((f * SI5351_FREQ_MULT) + ((int)intermediateFreq) * SI5351_FREQ_MULT);
+  Clk1SetFreq = ((f * SI5351_FREQ_MULT) + ((int)t41.IntermediateFreq) * SI5351_FREQ_MULT);
   multiple = EvenDivisor(Clk1SetFreq / SI5351_FREQ_MULT);
   pll_freq = Clk1SetFreq * multiple;
   freq = pll_freq / multiple;     // is this equal to Clk1SetFreq?

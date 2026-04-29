@@ -10,6 +10,7 @@
 #include "Encoders.h"
 #include "Filter.h"
 #include "ft8.h"
+#include "hardware.h"
 #include "keyer.h"
 #include "Menu.h"
 #include "MenuProc.h"
@@ -49,9 +50,7 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
   int vfo = t41.ActiveVFO;
   int from = t41.ActiveBand;
 
-  if(from < BAND_12M) {
-    digitalWrite(bandswitchPins[from], LOW);
-  }
+  PreChangeBandHardware();
 
   // *** SSB/data demolation mode are unchanged across band changes ***
   if((t41.RadioMode == SSB_MODE) || (t41.RadioMode == CW_MODE)) {
@@ -104,9 +103,7 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
 
   SetupBandFreq(t41.CenterFreq);
 
-  if(t41.ActiveBand < BAND_12M) {
-    digitalWrite(bandswitchPins[t41.ActiveBand], HIGH);
-  }
+  PostChangeBandHardware();
 }
 
 /*

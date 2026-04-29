@@ -19,7 +19,7 @@ extern AudioPlayQueue Q_out_R_Ex;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void AudioSetup(bool supportsTX = true);
+void AudioSetup(int sampleRate, bool supportsTX = true);
 void ConfigAudioState(int audioState);
 
 void SetupMicCompressors(boolean use_HP_filter, float knee_dBFS, float comp_ratio, float attack_sec, float release_sec);

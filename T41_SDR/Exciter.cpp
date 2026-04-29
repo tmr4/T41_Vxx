@@ -239,22 +239,6 @@ void PrepareMicExciterData() {
   }
 }
 
-/*****
-  Purpose: Set the current band relay ON or OFF
-
-  Parameter list:
-    int state             OFF = 0, ON = 1
-*****/
-void SetBandRelay(int state) {
-  // There are 4 physical relays.  Turn all of them off.
-  for(int i = 0; i < 4; i = i + 1) {
-    digitalWrite(bandswitchPins[i], LOW); // set ALL band relays low
-  }
-
-  // Set current band relay "on".  Ignore 12M and 10M.  15M and 17M use the same relay.
-  if(t41.ActiveBand < BAND_12M) digitalWrite(bandswitchPins[t41.ActiveBand], state);
-}
-
 // *** TODO: see if this can be refactored from above ***
 void PrepareFT8ExciterIQData(float *sig) {
   // *** we're at 12kHz sample rate here ***

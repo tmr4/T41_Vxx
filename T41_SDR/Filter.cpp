@@ -349,17 +349,17 @@ void SetDecIntFIRFilters(int decFilterBW = 0) {
   }
 
   if(decFilterBW > 0) {
-    CalcFIRCoeffs(FIR_dec1_coeffs, 27, decFilterBW, 90.0, 0, 0.0, sampleRate);
-    CalcFIRCoeffs(FIR_dec2_coeffs, 33, decFilterBW, 90.0, 0, 0.0, sampleRate / 4.0);
-    CalcFIRCoeffs(FIR_dec3_coeffs, 50, decFilterBW, 90.0, 0, 0.0, sampleRate / 4.0);
+    CalcFIRCoeffs(FIR_dec1_coeffs, 27, decFilterBW, 90.0, 0, 0.0, t41.SampleRate);
+    CalcFIRCoeffs(FIR_dec2_coeffs, 33, decFilterBW, 90.0, 0, 0.0, t41.SampleRate / 4.0);
+    CalcFIRCoeffs(FIR_dec3_coeffs, 50, decFilterBW, 90.0, 0, 0.0, t41.SampleRate / 4.0);
   } else {
-    CalcFIRCoeffs(FIR_dec1_coeffs, 27, limit, 90.0, 0, 0.0, sampleRate);
-    CalcFIRCoeffs(FIR_dec2_coeffs, 33, limit, 90.0, 0, 0.0, sampleRate / 4.0);
-    CalcFIRCoeffs(FIR_dec3_coeffs, 50, limit, 90.0, 0, 0.0, sampleRate / 4.0);
+    CalcFIRCoeffs(FIR_dec1_coeffs, 27, limit, 90.0, 0, 0.0, t41.SampleRate);
+    CalcFIRCoeffs(FIR_dec2_coeffs, 33, limit, 90.0, 0, 0.0, t41.SampleRate / 4.0);
+    CalcFIRCoeffs(FIR_dec3_coeffs, 50, limit, 90.0, 0, 0.0, t41.SampleRate / 4.0);
   }
 
-  CalcFIRCoeffs(FIR_int1_coeffs, 48, limit, 90.0, 0, 0.0, sampleRate / 4.0);
-  CalcFIRCoeffs(FIR_int2_coeffs, 32, limit, 90.0, 0, 0.0, sampleRate);
+  CalcFIRCoeffs(FIR_int1_coeffs, 48, limit, 90.0, 0, 0.0, t41.SampleRate / 4.0);
+  CalcFIRCoeffs(FIR_int2_coeffs, 32, limit, 90.0, 0, 0.0, t41.SampleRate);
 }
 
 /*****
@@ -367,7 +367,7 @@ void SetDecIntFIRFilters(int decFilterBW = 0) {
 *****/
 void CalcAudioFilters() {
   int loCut = 0, hiCut = 0;
-  float sr = sampleRate / (t41.DemodMode == DEMOD_FT8 ? 1.0 : 8.0);
+  float sr = t41.SampleRate / (t41.DemodMode == DEMOD_FT8 ? 1.0 : 8.0);
 
   switch(t41.DemodMode) {
     case DEMOD_USB:

@@ -119,7 +119,7 @@ void InitHilbertFilters() {
   }
 }
 
-void InitFIRFilters() {
+void InitFIRFilters(int sampleRate) {
   /****************************************************************************************
      Receive decimation and interpolation FIR filters design
 
@@ -365,7 +365,7 @@ void CalcCplxFIRCoeffs(float * coeffs_I, float * coeffs_Q, int numCoeffs, float3
 /*****
   Purpose: change IIR and decimation filters for altered frequency spectrum badwidth.
 *****/
-FLASHMEM void ZoomFFTFilterUpdate() {
+FLASHMEM void ZoomFFTFilterUpdate(int sampleRate) {
   float32_t Fstop_Zoom = 0.5 * sampleRate / (1 << t41.SpectrumZoom);
   int factor1 = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
 
@@ -378,11 +378,11 @@ FLASHMEM void ZoomFFTFilterUpdate() {
   zoom_sample_ptr = 0;
 }
 
-FLASHMEM void InitZoomFFTFilter(uint32_t blockSize /* = 2048 */) {
+FLASHMEM void InitZoomFFTFilter(int sampleRate, uint32_t blockSize /* = 2048 */) {
   int factor1 = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
   int factor2 = t41.SpectrumZoom < 2 ? 1 : 2;
 
-  ZoomFFTFilterUpdate();
+  ZoomFFTFilterUpdate(sampleRate);
 
   // 1st decimation stage
   arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I1, 12, factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_I1_state, blockSize);

@@ -23,7 +23,7 @@ extern float32_t audioMaxSquaredAve;
 //-------------------------------------------------------------------------------------------------------------
 
 void InitFFTArrays();
-void InitAMDemodBiquadFilter();
+void InitAMDemodBiquadFilter(int sampleRate);
 
 int ProcessReceiverData(bool updateSpectrumData = false);
 void ProcessControls();

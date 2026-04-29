@@ -90,7 +90,7 @@ void InitFFTArrays() {
   CLEAR_VAR(prevFreqSpecBuf);
 }
 
-FLASHMEM void InitAMDemodBiquadFilter() {
+FLASHMEM void InitAMDemodBiquadFilter(int sampleRate) {
   // *** TODO: seems this should be calc on filter BW change, but isn't ***
 /*
   int LP_F_help = bands[t41.ActiveBand].fHiCut;
@@ -1088,7 +1088,7 @@ void FreqShift2() {
     }
   }
 
-  NCO_INC = 2.0 * PI * (t41.NCOFreq + sideToneShift) / sampleRate;
+  NCO_INC = 2.0 * PI * (t41.NCOFreq + sideToneShift) / t41.SampleRate;
 
   OSC_COS = cos(NCO_INC);
   OSC_SIN = sin(NCO_INC);

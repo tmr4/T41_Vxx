@@ -292,7 +292,7 @@ void IBTuneIncFollowup(int row, int col) {
 }
 
 void IBZoomFollowup(int row, int col) {
-  InitZoomFFTFilter();
+  InitZoomFFTFilter(t41.SampleRate);
   UpdateDisplayZoom();
 }
 
@@ -429,7 +429,7 @@ void IBLoadFollowup(int row, int col) {
 
   elapsed_micros_mean = elapsed_micros_sum / elapsed_micros_idx_t;
 
-  block_time = 128.0 / sampleRate;  // one audio block is 128 samples and uses this in seconds
+  block_time = 128.0 / t41.SampleRate;  // one audio block is 128 samples and uses this in seconds
   block_time = block_time * 16;
 
   block_time *= 1000000.0;                                  // now in µseconds

@@ -53,6 +53,8 @@ extern Si5351 si5351;
 
 #define SIG_STRENGTH_MAX 8
 
+int volSetting = 0;
+
 // preserve/restore radio state
 int userFilterLowCut, userFilterHiCut, userMode, userDemodMode, userRadioState;
 int userScale, userZoomIndex, userXmtMode, userBand, userVol;
@@ -204,6 +206,16 @@ FLASHMEM void RestoreRadioState() {
   t41.SpectrumZoom = userZoomIndex;
   t41.FreqSpecScale = userScale;
   volSetting = userVol;
+
+  // slowly raise volume during calibration to avoid artifacts
+  while(volSetting > 0) {
+    if(t41.AudioVolume < volSetting) {
+      t41.AudioVolume++;
+    } else {
+      volSetting = 0;
+    }
+    delay(10);
+  }
 
   if(t41.ActiveBand != userBand) {
     ChangeBand(userBand - t41.ActiveBand);
@@ -1579,7 +1591,7 @@ FLASHMEM void SetupSignalStrengthSource(int source) {
       // set up this and external unit for calibration
       minSignalStrength = 0;
       signalStrengthSource = 1;
-      SendCommand(t41.CenterFreq + intermediateFreq, T41_ITEM_FREQ);
+      SendCommand(t41.CenterFreq + t41.IntermediateFreq, T41_ITEM_FREQ);
       if(t41.DemodMode == DEMOD_LSB) {
         SendCommand(DEMOD_USB, T41_ITEM_DEMOD_MODE);
       } else {
@@ -2341,7 +2353,7 @@ FLASHMEM void SetFreqCal(long calFreqShift) {
   }
 
   //  The receive LO frequency is not dependent on mode or sideband.  CW frequency shift is done in DSP code.
-  Clk2SetFreq = (t41.CenterFreq  + intermediateFreq) * SI5351_FREQ_MULT * MASTER_CLK_MULT;
+  Clk2SetFreq = (t41.CenterFreq  + t41.IntermediateFreq) * SI5351_FREQ_MULT * MASTER_CLK_MULT;
 
   //  Set and enable both RX and TX local oscillator outputs.
   si5351.set_freq(Clk2SetFreq, SI5351_CLK2);

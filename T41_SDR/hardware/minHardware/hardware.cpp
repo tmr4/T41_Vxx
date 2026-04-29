@@ -22,6 +22,9 @@ float CalcSignalStrength() { return 0.0; }
 // Button.cpp
 int ReadSelectedPushButton() { return -1; }
 
+void PreChangeBandHardware() {}
+void PostChangeBandHardware() {}
+
 // Encoders.cpp
 int ReadTuneEncoder() { return 0; }
 
@@ -36,7 +39,7 @@ FLASHMEM void CalibrateOptions() {}
 void RemoveDCBias() {}
 
 // T41_SDR.ino
-void InitHardware() { AudioSetup(false); }
+void InitHardware(int sampleRate) { AudioSetup(sampleRate, false); }
 
 //void SoftResetHardware() {}
 void SoftResetHardware() {

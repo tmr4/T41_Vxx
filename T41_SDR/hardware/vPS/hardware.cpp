@@ -155,14 +155,14 @@ float CalcSignalStrength() {
 //------------
 // T41_SDR.ino
 
-void InitHardware() {
+void InitHardware(int sampleRate) {
   // set up hardware specific Teensy pins that aren't handled elsewhere
   pinMode(MUTE, OUTPUT);
   digitalWrite(MUTE, LOW);
 
   pinMode(BUSY_ANALOG_PIN, INPUT);
 
-  AudioSetup();
+  AudioSetup(sampleRate);
 
 #if defined(PROJECTSYSTEM_VOLUME_ENCODER) || defined(PROJECTSYSTEM_FILTER_ENCODER)
   EncodersInit();

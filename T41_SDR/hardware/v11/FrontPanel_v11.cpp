@@ -22,6 +22,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern int bandswitchPins[];
+
 // Pin assignments
 // volumeEncoder      (2,  3)
 // tuneEncoder        (16, 17)
@@ -447,6 +449,17 @@ FLASHMEM void SaveAnalogSwitchValues() {
   }
 
   buttonRepeatDelay = origRepeatDelay;  // Restore original repeat delay
+}
+
+void PreChangeBandHardware() {
+  if(t41.ActiveBand < BAND_12M) {
+    digitalWrite(bandswitchPins[t41.ActiveBand], LOW);
+  }
+}
+void PostChangeBandHardware() {
+  if(t41.ActiveBand < BAND_12M) {
+    digitalWrite(bandswitchPins[t41.ActiveBand], HIGH);
+  }
 }
 
 // General Front Panel Stuff
