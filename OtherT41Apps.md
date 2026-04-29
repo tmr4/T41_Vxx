@@ -12,7 +12,7 @@
 
 ### PC control app
 
-![PC Control App](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_pcControlApp.png)
+![PC Control App](https://github.com/tmr4/T41_Vxx/blob/main/images/T41_pcControlApp.png)
 
 Adds communications with PC control app over SerialUSB1 (must select `Dual` or `Triple` USB Type when compiling).  A separate control app running on your PC is required [T41_Views](https://github.com/tmr4/T41_Views).  The control app has the following features:
 
@@ -38,9 +38,9 @@ Adds communications with PC control app over SerialUSB1 (must select `Dual` or `
 
 Windows console apps designed to facilitate communication between the T41 and multiple PC applications over a single USB serial connection.  Multiple debug windows can be open at the same time.
 
-![T41Server](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41Server.png)
+![T41Server](https://github.com/tmr4/T41_Vxx/blob/main/images/T41Server.png)
 
-![T41Debug](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/t41Server_Debug.png)
+![T41Debug](https://github.com/tmr4/T41_Vxx/blob/main/images/t41Server_Debug.png)
 
  See [T41Server](https://github.com/tmr4/T41Server) and [T41Debug](https://github.com/tmr4/T41Debug).
 

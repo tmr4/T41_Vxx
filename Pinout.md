@@ -10,24 +10,24 @@ Here are the Teensy 4.1 pinout digrams for the various T41 hardware versions sup
 
 ### v11 (4SQRP version)
 
-![v11 pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/4SQRP_Teensy_Pin_Usage.png)
+![v11 pin usage](https://github.com/tmr4/T41_Vxx/blob/main/images/4SQRP_Teensy_Pin_Usage.png)
 
 ### v12
 
-![v12 pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/V12_Teensy_Pin_Usage.jpg)
+![v12 pin usage](https://github.com/tmr4/T41_Vxx/blob/main/images/V12_Teensy_Pin_Usage.jpg)
 
 ### Project System
 
-![ps pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/ProjectSystem_Teensy_Pin_Usage.png)
+![ps pin usage](https://github.com/tmr4/T41_Vxx/blob/main/images/ProjectSystem_Teensy_Pin_Usage.png)
 
 ### Prototyping System
 
-![pt pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/PrototypingSystem_Teensy_Pin_Usage.png)
+![pt pin usage](https://github.com/tmr4/T41_Vxx/blob/main/images/PrototypingSystem_Teensy_Pin_Usage.png)
 
 ### Mini Platform
 
-![mp pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/Mini_Platform_Pin_Usage.png)
+![mp pin usage](https://github.com/tmr4/T41_Vxx/blob/main/images/Mini_Platform_Pin_Usage.png)
 
 ### Audio Platform
 
-![ap pin usage](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/AudioPlatformPinUsage.png)
+![ap pin usage](https://github.com/tmr4/T41_Vxx/blob/main/images/AudioPlatformPinUsage.png)

@@ -14,7 +14,7 @@ A handy Arduino feature makes maintaining the common project easy. The Arduino c
 
 In anticipation of the T41 Mini, I've extracted the remaining hardware specific routines core code.  I've also added a few hardware specific folders (vPS and vPT) for the ProtoSupplies.com [Project System](https://protosupplies.com/product/project-system-for-teensy-4-1/) and [Prototyping System](https://protosupplies.com/product/prototyping-system-for-teensy-4-1//).  I use these boards frequently in tests where I don't want to load the updated T41 software onto an actual radio.
 
-![Project folder structure](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/CommonCodeFolderStructure.png)
+![Project folder structure](https://github.com/tmr4/T41_Vxx/blob/main/images/CommonCodeFolderStructure.png)
 
 The T41 sketch and common code files are placed in the *T41_SDR* folder. The hardware specific files are place in the *v11*, *v12*, *vMini*, *vPS*, or *vPT* folders respectively. Then, if you want to compile for a specific hardware version, you copy the files from the desired hardware version folder into the *src* folder, select the proper Teensy in the IDE and compile.  You can't copy the hardware specific folder as the common code in the sketch folder references commonly named hardware specific files in the src folder.
 

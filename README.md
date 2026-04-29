@@ -8,11 +8,11 @@ The driver for this project was to leverage all of the work I put into adding fe
 * new modes (NFM demodulation and some data modes)
 * new features (beacon monitor, CW message keyer, CAT control, remote display, USB host connection to another T41)
 
-![T41 new display layout](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/T41_newDisplayLayout.jpg)
+![T41 new display layout](https://github.com/tmr4/T41_Vxx/blob/main/images/T41_newDisplayLayout.jpg)
 
 ## Ongoing and Recent Work
 
-See [Ongoing and Recent Work](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/RecentWork.md).
+See [Ongoing and Recent Work](https://github.com/tmr4/T41_Vxx/blob/main/RecentWork.md).
 
 ## Use
 
@@ -22,7 +22,7 @@ Support for the T41 display is handled differently. To add support for a specifi
 
 When managing the project, it's best to keep the *src* folder free of hardware specific files when committing changes.  Just copy any changed hardware files back to their specific hardware version folders, delete the hardware files in the *src* folder and proceed as normal.  Note that the *ft8_lib* folder should remain in the *src* folder.
 
-For more detail see [Accomodating Hardware Differences](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/hardware.md).
+For more detail see [Accomodating Hardware Differences](https://github.com/tmr4/T41_Vxx/blob/main/hardware.md).
 
 ### Caution
 
@@ -32,7 +32,7 @@ This is a work in progress.  Some functions may be broken and will likely remain
 
 ## Pin Usage
 
-See [pinout](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/Pinout.md).
+See [pinout](https://github.com/tmr4/T41_Vxx/blob/main/Pinout.md).
 
 ## Features Available to All Hardware Versions
 
@@ -107,7 +107,7 @@ Adds narrow-band FM demodulation. Adds separate, adjustable demodulation filter 
 
 ### T41 beacon monitor
 
-![Beacon Monitor](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/beacon_monitor.jpg)
+![Beacon Monitor](https://github.com/tmr4/T41_Vxx/blob/main/images/beacon_monitor.jpg)
 
 * a world map view with the SNR for each frequency located in a small colored square below the call sign for each beacon location (image below with random SNR values to show effect).  I've only show three bands above but all five bands could be displayed with a bit of fiddling.  This view includes some monitor info at the bottom left of the display (band and beacon currently being monitored and the audio volume).  The information, including any volume changes, is currently only updated every 10 seconds. There is room for other information.
 * the beacon monitor can be accessed via button 18 (sorry Bearing map!) or the *Beacon Monitor* menu item.  You can exit the Beacon Monitor by pressing button 18 again or via the menu.
@@ -124,11 +124,11 @@ Adds narrow-band FM demodulation. Adds separate, adjustable demodulation filter 
   * an azimuthal map showing the bearing to the currently active beacons
   * a world map view with the call sign highlighted according to the SNR for the frequency shown (cycles through the five bands, one every 10 seconds)
 
-![Beacon Monitor with random SNR](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/images/bm_random_snr.jpg)
+![Beacon Monitor with random SNR](https://github.com/tmr4/T41_Vxx/blob/main/images/bm_random_snr.jpg)
 
 ## Other T41 Related Apps
 
-See [Other apps](https://github.com/tmr4/T41_Vxx/blob/dev/v0.01/OtherT41Apps.md)
+See [Other apps](https://github.com/tmr4/T41_Vxx/blob/main/OtherT41Apps.md)
 
   * PC beacon monitor
   * PC control
