@@ -206,7 +206,37 @@ Project System:
 *** loop times are a rough average over 20 loops ***
 *** size on Audio Platform differs from PS due to mouse/keyboard support (and ? ... examine) ***
 
-4/28/26
+5/1/2026
+PS
+w/ 500* (w/ profiler)
+  FLASH: code:217428, data:78768, headers:8948   free for files:7821320
+   RAM1: variables:160480, code:181784, padding:14824   free for local variables:167200
+   RAM2: variables:328544  free for malloc/new:195744
+ EXTRAM: variables:5296320
+w/o profiler
+  FLASH: code:216932, data:78768, headers:8420   free for files:7822344
+   RAM1: variables:160480, code:181560, padding:15048   free for local variables:167200
+   RAM2: variables:328544  free for malloc/new:195744
+ EXTRAM: variables:5296320
+
+AP
+w/ 1000*
+  FLASH: code:212324, data:77832, headers:8844   free for files:7827464
+   RAM1: variables:146624, code:177304, padding:19304   free for local variables:181056
+   RAM2: variables:340864  free for malloc/new:183424
+ EXTRAM: variables:8672320
+w/ 500* (w/ profiler)
+  FLASH: code:212324, data:77832, headers:8844   free for files:7827464
+   RAM1: variables:146624, code:177304, padding:19304   free for local variables:181056
+   RAM2: variables:340864  free for malloc/new:183424
+ EXTRAM: variables:4576320
+w/o profiler
+  FLASH: code:211884, data:77832, headers:8260   free for files:7828488
+   RAM1: variables:146624, code:177128, padding:19480   free for local variables:181056
+   RAM2: variables:340864  free for malloc/new:183424
+ EXTRAM: variables:4576320
+
+4/28/2026
 PS
   FLASH: code:208820, data:78244, headers:8864   free for files:7830536
    RAM1: variables:148000, code:173320, padding:23288   free for local variables:179680

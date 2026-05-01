@@ -18,9 +18,7 @@ extern int signalStrengthReceivedIndex;
 void T41ControlSetup();
 
 void T41ControlLoop();
-void T41RemoteAudioLoop();
 
-void T41ControlSendIQData(int16_t *pL, int16_t *pR);
 void T41PrepareSpectrumData(int16_t *data, int16_t max);
 void T41ControlSendData(uint8_t *data, int len);
 
@@ -37,8 +35,12 @@ void SendSignalStrengthRequest(int index);
 
 void SendNarrowFilter();
 
+void T41ControlBufferIQData(int16_t *pL, int16_t *pR);
+bool T41RemoteReceiveIQData();
+bool T41ControlSendIQData();
 int T41ControlBlocksAvailable();
-int16_t *T41ControlReadBufferL(int block);
-int16_t *T41ControlReadBufferR(int block);
+int16_t *T41ControlReadBuffer();
+//int16_t *T41ControlReadBufferL(int block);
+//int16_t *T41ControlReadBufferR(int block);
 void T41ControlFreeBufferL();
 void T41ControlFreeBufferR();

@@ -32,6 +32,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern bool sendGet;
+
 // *** TODO: this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
 
@@ -278,8 +280,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       int16_t *pL, *pR;
 
       #if REC_IQ_FROM_T41
-      pL = T41ControlReadBufferL(i);
-      pR = T41ControlReadBufferR(i);
+      //pL = T41ControlReadBufferL(i);
+      //pR = T41ControlReadBufferR(i);
+      pL = T41ControlReadBuffer();
+      pR = T41ControlReadBuffer();
       #else
       pL = Q_in_L.readBuffer();
       pR = Q_in_R.readBuffer();
@@ -294,8 +298,9 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
       #if SEND_IQ_TO_REMOTE
       if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        //Serial.println("calling T41ControlSendIQData...");
-        T41ControlSendIQData(pL, pR);
+        SETPROFILEPIN(PROFILER_PROCESS_FT8);
+        T41ControlBufferIQData(pL, pR);
+        RESETPROFILEPIN(PROFILER_PROCESS_FT8);
       }
       #endif
 
@@ -345,7 +350,9 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     // this is still helpful for troubleshooting at times when the audio process isn't working correctly
     // *** TODO: needed for current state of internal FT8 decoding, DEMOD_FT8_INTERNAL, hangs otherwise, though interrupts work ***
     if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
-      Serial.println("clearing @ ProcessReceiverData ...");
+      if(sendGet) {
+        Serial.println("clearing @ ProcessReceiverData ...");
+      }
       Q_in_L.clear();
       Q_in_R.clear();
     }
@@ -1311,9 +1318,9 @@ void Calc1xFreqSpec() {
 
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static long prevUpdate = 0;
+  int count = 0;
 
   if(updateSpectrum) {
-    int count = 0;
     // wait for spectrum data update
     while(ProcessReceiverData(true) != 2) {
       // process controls if 10ms has passed since last update
@@ -1329,12 +1336,41 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
       }
       #if REC_IQ_FROM_T41
       if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        T41RemoteAudioLoop();
+        while(T41RemoteReceiveIQData()) {
+          if(++count > 16) {
+            // prevent freeze when no input is present
+            // *** TODO: revisit this ***
+            count = 0;
+            break;
+          }
+        }
+      }
+      #endif
+      #if SEND_IQ_TO_REMOTE
+      if(t41.RemoteStatus == REMOTE_CONNECTED) {
+        while(T41ControlSendIQData()) ;
       }
       #endif
     }
   } else {
     while(true) {
+      #if REC_IQ_FROM_T41
+      if(t41.RemoteStatus == REMOTE_CONNECTED) {
+        while(T41RemoteReceiveIQData()) {
+          if(++count > 16) {
+            // prevent freeze when no input is present
+            // *** TODO: revisit this ***
+            count = 0;
+            break;
+          }
+        }
+      }
+      #endif
+      #if SEND_IQ_TO_REMOTE
+      if(t41.RemoteStatus == REMOTE_CONNECTED) {
+        while(T41ControlSendIQData()) ;
+      }
+      #endif
       // process IQ data while sufficient data exists
       // This allows the process to catch up after longer tasks
       // such as the waterfall update. Failing to do this can
@@ -1348,11 +1384,6 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
         ProcessControls();
         prevUpdate = millis();
       }
-      #if REC_IQ_FROM_T41
-      if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        T41RemoteAudioLoop();
-      }
-      #endif
     }
   }
 }

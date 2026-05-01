@@ -53,7 +53,6 @@ void EncodersInit();
 
 void RFPowerFollowup();
 void RFGainFollowup();
-void T41ControlSendCmd(char *cmd);
 
 void CalibrateReceiveIQ();
 void CalibrateTransmitIQ();

@@ -30,7 +30,8 @@ extern USBSerial_BigBuffer usbHostSerial1;
 //-------------------------------------------------------------------------------------------------------------
 
 // for testing
-volatile bool sendGet = false;
+//volatile bool sendGet = false;
+bool sendGet = false;
 
 // *** this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
@@ -45,16 +46,22 @@ int signalStrengthReceivedIndex = -1;
 
 bool checkingConnection = false;
 
-#define BUF_SIZE 2048
+#define IQ_BUF_SIZE 8192 // in bytes = 16 blocks * 128 int16_t per block * 2 bytes / integer * 2 (I and Q)
+//#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 1000) // store enough data for one frame
+#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 500) // store enough data for one frame
+EXTMEM char iqBuffer[IQ_CIRC_BUF_SIZE];
+int head = 0;
+int tail = 0;
+
 // ProcessReceiverData expects 2k IQ buffers or 4k bytes total (16 * 128 * 2)
-uint8_t iqData[512];
+char iqData[512];
 int16_t *iData, *qData;
 
 // IQ audio data buffer, ping/pong structure
-uint8_t bufferPing[BUF_SIZE*2*2];
-uint8_t bufferPong[BUF_SIZE*2*2];
-uint8_t *activeBuffer = bufferPing; // this buffer is being filled
-uint8_t *readyBuffer = bufferPong;
+char ping[IQ_BUF_SIZE];
+char pong[IQ_BUF_SIZE];
+char *activeBuffer = ping; // this buffer is being filled
+char *readyBuffer = pong;  // this buffer is being transfered
 
 bool dataReady = false;
 
@@ -111,21 +118,6 @@ void T41RemoteConnectCheck() {
         last = now;
       }
     }
-  }
-}
-
-void T41ControlSendIQData(int16_t *pL, int16_t *pR) {
-  memcpy(iqData, pL, 256);
-  memcpy(&iqData[256], pR, 256);
-
-  //if(controlSerial.availableForWrite() >= 512) {
-  if(controlSerial.availableForWrite()) {
-    //if(sendGet) {
-    //  //iqData[512] = 0;
-    //  Serial.println("Sending IQ data");
-    //  //Serial.println(iqData);
-    //}
-    controlSerial.write(iqData, 512);
   }
 }
 
@@ -539,25 +531,23 @@ int GetMode() {
 
 */
 void T41ControlLoop() {
-  char cmd[51];
   float32_t dbm;
-  bool sendCommand = true;
 
   T41RemoteConnectCheck();
 
-  if(t41.RemoteStatus != REMOTE_CONNECTED) return;
-
   if(controlSerial.available()) {
+    char cmd[256];
     int mode = GetMode();
-    T41ControlGetCommand(cmd, 50);
+
+    T41ControlGetCommand(cmd, 256);
 
     SETPROFILEPIN(PROFILER_FT8_CAT_RX);
+
     if(sendGet) {
       Serial.print("Received: ");
       Serial.println(cmd);
     }
-    //int sizeBuf = SerialUSB1.availableForWrite();
-    //Serial.println(sizeBuf);
+
     switch(cmd[0]) {
       case 'B':
         if(cmd[1] == 'U' && cmd[2] == ';') {
@@ -571,7 +561,6 @@ void T41ControlLoop() {
         } else if(cmd[1] == 'D' && cmd[3] == ';') {
           ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
         }
-        sendCommand = false; // *** TODO: or we can set cmd[0] to null
         break;
 
       case 'D':
@@ -582,7 +571,6 @@ void T41ControlLoop() {
           // stop sending spectrum data
           controlDataFlag = false;
         }
-        sendCommand = false; // *** TODO: or we can set cmd[0] to null
         break;
 
       case 'F':
@@ -599,10 +587,10 @@ void T41ControlLoop() {
                 t41.NCOFreq.Update(f); // *** verify ***
               }
               //Serial.print("Set VFO A to "); Serial.println(f);
-              sendCommand = false;
             } else if(cmd[2] == ';') {
               // read VFO A frequency
               sprintf(cmd, "FA%011d;", t41.GetFreqA());
+              T41ControlSendCmd(cmd);
             }
             break;
 
@@ -616,11 +604,11 @@ void T41ControlLoop() {
               } else {
                 t41.NCOFreq.Update(f); // *** verify ***
               }
-             // Serial.print("Set VFO B to "); Serial.println(f);
-              sendCommand = false;
+              // Serial.print("Set VFO B to "); Serial.println(f);
             } else if(cmd[2] == ';') {
               // read VFO B frequency
               sprintf(cmd, "FA%011d;", t41.GetFreqB());
+              T41ControlSendCmd(cmd);
             }
             break;
 
@@ -631,10 +619,10 @@ void T41ControlLoop() {
               t41.CenterFreq.Update(f);
               SetFreq(f);
               //Serial.print("Center freq set to "); Serial.println(f);
-              sendCommand = false;
             } else if(cmd[2] == ';') {
               // read center frequency
               sprintf(cmd,"FC%011d;", (int)t41.CenterFreq);
+              T41ControlSendCmd(cmd);
             }
             break;
 
@@ -642,10 +630,10 @@ void T41ControlLoop() {
             if(cmd[13] == ';') {
               // set NCO frequency offset
               t41.NCOFreq.Update(atol(&cmd[2]));
-              sendCommand = false;
             } else if(cmd[2] == ';') {
               // read NCO frequency offset
               sprintf(cmd, "FF%011d;", (int)t41.NCOFreq);
+              T41ControlSendCmd(cmd);
             }
             break;
 
@@ -658,7 +646,6 @@ void T41ControlLoop() {
                 ChangeFtIncrement(atol(&cmd[3]) - t41.FineTuneIndex, false);
               }
             }
-            sendCommand = false;
             break;
 
           case 'S':
@@ -666,7 +653,6 @@ void T41ControlLoop() {
               // fine tune on or off
               t41.MouseCenterTuneActive.Update(!atoi(&cmd[2]));
               HighlightTuneInc();
-              sendCommand = false;
             }
             break;
 
@@ -675,14 +661,13 @@ void T41ControlLoop() {
               // select VFO
               VFOSelect(atoi(&cmd[2]));
               SendAS();
-              sendCommand = false;
             }
             break;
 
           default:
-            cmd[0] = '?';
-            cmd[1] = ';';
-            cmd[2] = 0;
+            //cmd[0] = '?';
+            //cmd[1] = ';';
+            //cmd[2] = 0;
             break;
         }
         break;
@@ -693,7 +678,6 @@ void T41ControlLoop() {
           t41.AGCMode.Update(atoi(&cmd[2]));
           UpdateInfoBoxItem(T41_ITEM_AGC);
         }
-        sendCommand = false;
         break;
 
       case 'I':
@@ -701,12 +685,12 @@ void T41ControlLoop() {
           // reply with the TS-890S id
           sprintf(cmd,"ID024;");
           //sprintf(cmd,"ID019;"); // TS-2000
+          T41ControlSendCmd(cmd);
         } else if(cmd[1] == 'D' && cmd[5] == ';') { // IDxxx;
           if(checkingConnection) {
             checkingConnection = false;
           }
           t41.RemoteStatus = REMOTE_CONNECTED;
-          sendCommand = false;
         } else if(cmd[1] == 'F' && cmd[2] == ';') {
           // retrieves transceiver status
           if(useKenwoodIF) {
@@ -727,9 +711,9 @@ void T41ControlLoop() {
               0,            // CTCSS tone frequency
               0             // shift status
             );
+            T41ControlSendCmd(cmd);
           } else {
             SendIF();
-            sendCommand = false;
           }
         }
         break;
@@ -738,16 +722,15 @@ void T41ControlLoop() {
         if(cmd[1] == 'D' && cmd[2] == ';') {
           // send demod mode
           sprintf(cmd,"MD%d;", useKenwoodIF ? mode : t41.DemodMode);
+          T41ControlSendCmd(cmd);
         } else if(cmd[1] == 'D' && cmd[3] == ';') {
           // set demod mode status
           ChangeDemodMode(atoi(&cmd[2]), false);
           //SendAS();
-          sendCommand = false;
         } else if(cmd[1] == 'E' && cmd[3] == ';') {
           // set operating mode
           ChangeMode(atoi(&cmd[2]), -1, false);
           //SendAS();
-          sendCommand = false;
         }
         break;
 
@@ -755,24 +738,21 @@ void T41ControlLoop() {
         if(cmd[1] == 'F' && cmd[2] == ';') {
           // send noise floor
           sprintf(cmd,"NF%04d;", (int)t41.NoiseFloor);
+          T41ControlSendCmd(cmd);
         } else if(cmd[1] == 'F' && cmd[6] == ';') {
           // set noise floor
           t41.NoiseFloor.Update(atoi(&cmd[2]));
-          sendCommand = false;
         } else if(cmd[1] == 'G' && cmd[3] == ';') {
           t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
           UpdateInfoBoxItem(T41_ITEM_FLOOR);
-          sendCommand = false;
         } else if(cmd[1] == 'H' && cmd[13] == ';') {
           t41.FilterHiCut.Update(atol(&cmd[2]));
 
           CalcAudioFilters();
-          sendCommand = false;
         } else if(cmd[1] == 'L' && cmd[13] == ';') {
           t41.FilterLoCut.Update(atol(&cmd[2]));
 
           CalcAudioFilters();
-          sendCommand = false;
         } else if(cmd[1] == 'S' && cmd[4] == ';') {
           // inc/dec audio filter
           posFilterEncoder += atoi(&cmd[2]);
@@ -780,18 +760,15 @@ void T41ControlLoop() {
 
           CalcAudioFilters();
           UpdateDisplayFilters();
-          sendCommand = false;
         } else if(cmd[1] == 'W' && cmd[2] == ';') {
           // sets 0.5kHz-1.5kHz audio filter
           t41.FilterLoCut.Update(500);
           t41.FilterHiCut.Update(1500);
 
           CalcAudioFilters();
-          sendCommand = false;
         } else if(cmd[1] == '1' && cmd[3] == ';') {
           t41.NoiseFilter.Update(atoi(&cmd[2]));
           UpdateInfoBoxItem(T41_ITEM_FILTER);
-          sendCommand = false;
         }
         break;
 
@@ -835,7 +812,6 @@ void T41ControlLoop() {
           signalStrengthReceived = true;
           //Serial.println(signalStrength);
         }
-        sendCommand = false;
         break;
 
       case 'T':
@@ -846,7 +822,6 @@ void T41ControlLoop() {
           Teensy3Clock.set(atol(&cmd[2]));
           setTime(atol(&cmd[2]));
         }
-        sendCommand = false;
         break;
 
       case 'V': // VOxxx;
@@ -854,7 +829,6 @@ void T41ControlLoop() {
           // set volume (without notify chain)
           t41.AudioVolume.Update(atoi(&cmd[2]));
         }
-        sendCommand = false;
         break;
 
       case 'Z': // ZMx;
@@ -862,30 +836,19 @@ void T41ControlLoop() {
           // set spectrum zoom
           t41.SpectrumZoom.Update(atoi(&cmd[2]));
         }
-        sendCommand = false;
         break;
 
       case '?': // unknow command
-        sendCommand = false; // do nothing for now
+        // do nothing for now
         break;
 
       default:
         // what was received in not handled or recognized
-#if controlSerial == Serial
-        // ignore if the control line is Serial ...
-        sendCommand = false;
-#else
         // ... otherwise send back a question
-        cmd[0] = '?';
-        cmd[1] = ';';
-        cmd[2] = 0;
-#endif
+        //cmd[0] = '?';
+        //cmd[1] = ';';
+        //cmd[2] = 0;
         break;
-    }
-
-    if(sendCommand) {
-      T41ControlSendCmd(cmd);
-      //Serial.print("Responded with: "); Serial.println(cmd);
     }
 
     RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
@@ -902,6 +865,7 @@ void T41ControlLoop() {
 //  return true; // end of string so show as match
 //}
 
+/*
 // T41/Remote IQ audio data stream processing
 // 16 blocks of IQ data is sent to the remote from the T41 over USB host
 // these are put in ping/pong buffer and consumed by ProcessReceiverData
@@ -929,8 +893,8 @@ void T41RemoteAudioLoop() {
   // need 16 successful loops to fill a ping/pongbuffer
   if(block >= 16) {
     // ping/pong swap
-    activeBuffer = (activeBuffer == bufferPing) ? bufferPong : bufferPing;
-    readyBuffer = (activeBuffer == bufferPing) ? bufferPong : bufferPing;
+    activeBuffer = (activeBuffer == ping) ? pong : ping;
+    readyBuffer = (activeBuffer == ping) ? pong : ping;
     dataReady = true;
     // set pointers to data ready to be processed
     iData = (int16_t*)readyBuffer;
@@ -938,27 +902,60 @@ void T41RemoteAudioLoop() {
     block = 0;
   }
 }
+*/
 
-int16_t *T41ControlReadBufferL(int block) {
-  int blockOffset = 128 * block;
-  if(block >= 15) dataReady = false;
-  return iData + blockOffset;
+// *** TODO: set up on connect and disconnect ***
+static int bufCount = 0;
+
+bool T41RemoteReceiveIQData() {
+  bool result = false;
+  // *** TODO: need to impliment PacketSerial to maintain packet integrity ***
+  if(controlAudio.available()) {
+    controlAudio.readBytes(&iqBuffer[head], 512);
+    head = (head + 512) % IQ_CIRC_BUF_SIZE;
+    bufCount += 512;
+    result = controlAudio.available() > 512;
+  }
+  return result;
 }
-int16_t *T41ControlReadBufferR(int block) {
-  int blockOffset = 128 * block;
-  if(block >= 15) dataReady = false;
-  return qData + blockOffset;
+
+// I on first call, Q on next
+int16_t *T41ControlReadBuffer() {
+  int16_t *block = (int16_t*)&iqBuffer[tail];
+  tail = (tail + 256) % IQ_CIRC_BUF_SIZE;
+  bufCount -= 256;
+  return block;
 }
 void T41ControlFreeBufferL() {
 }
 void T41ControlFreeBufferR() {
 }
 int T41ControlBlocksAvailable() {
-  int result = 0;
-
-  if(dataReady && t41.RemoteStatus == REMOTE_CONNECTED) {
-    result = 16;
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    return bufCount / 128 / 2 / 2;
+  } else {
+    return 0;
   }
+}
 
+bool T41ControlSendIQData() {
+  bool result = false;
+  if((bufCount > 0)) {
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+    if(controlAudio.availableForWrite() >= 512) {
+      TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+      controlAudio.write(&iqBuffer[tail], 512);
+      tail = (tail + 512) % IQ_CIRC_BUF_SIZE;
+      bufCount -= 512;
+      result = bufCount > 0;
+    }
+  }
   return result;
+}
+
+void T41ControlBufferIQData(int16_t *pL, int16_t *pR) {
+  memcpy(&iqBuffer[head], pL, 256);
+  memcpy(&iqBuffer[head+256], pR, 256);
+  head = (head + 512) % IQ_CIRC_BUF_SIZE;
+  bufCount += 512;
 }
