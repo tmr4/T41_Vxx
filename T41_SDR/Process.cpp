@@ -235,6 +235,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static int passes = 20;
   bool updateFreqSpec = false; // true: spectrums updated, otherwise false
   bool success = false; // true: enough data to process, otherwise false
+  bool dataAvailable = false;
 
   /**********************************************************************************
         Get samples from queue buffers
@@ -259,7 +260,12 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // even with reenabling interrupts during the idle loop.  Perhaps the low priority of the update interrupt was affecting this.
   //
   // we allow input buffer availability to regulate FT8 wav file decoding otherwise we'll process the wav file too fast
-  if(((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) || newIQData) {
+  #if REC_IQ_FROM_T41
+    dataAvailable = T41ControlBlocksAvailable() >= blocks;
+  #else
+    dataAvailable = (Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks);
+  #endif
+  if(dataAvailable) {
     success = true;
 
     SETPROFILEPIN(PROFILER_PROCESS_RX);
@@ -271,19 +277,9 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     for(int i = 0; i < blocks; i++) {
       int16_t *pL, *pR;
 
-      #if REC_IQ_FROM_HOST
-      if(t41.RemoteStatus != REMOTE_CONNECTED) {
-        pL = Q_in_L.readBuffer();
-        pR = Q_in_R.readBuffer();
-      } else {
-        if(newIQData) {
-          pL = (int16_t*)iqData;
-          pR = (int16_t*)&iqData[256];
-          newIQData = false;
-        }
-        pL = (int16_t*)iqData;
-        pR = (int16_t*)&iqData[256];
-      }
+      #if REC_IQ_FROM_T41
+      pL = T41ControlReadBufferL(i);
+      pR = T41ControlReadBufferR(i);
       #else
       pL = Q_in_L.readBuffer();
       pR = Q_in_R.readBuffer();
@@ -296,22 +292,19 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       arm_q15_to_float(pR, &audioBufferL[128 * i], 128);
       arm_q15_to_float(pL, &audioBufferR[128 * i], 128);
 
-      #if SEND_IQ_TO_HOST
-      //Serial.println("calling T41ControlSendIQData...");
-      T41ControlSendIQData(pL, pR);
+      #if SEND_IQ_TO_REMOTE
+      if(t41.RemoteStatus == REMOTE_CONNECTED) {
+        //Serial.println("calling T41ControlSendIQData...");
+        T41ControlSendIQData(pL, pR);
+      }
       #endif
 
+      #if REC_IQ_FROM_T41
+      T41ControlFreeBufferL();
+      T41ControlFreeBufferR();
+      #else
       Q_in_L.freeBuffer();
       Q_in_R.freeBuffer();
-
-      #if REC_IQ_FROM_HOST
-      if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        while(!newIQData) {
-          T41ControlLoop();
-          Q_in_L.clear();
-          Q_in_R.clear();
-        }
-      }
       #endif
     }
 
@@ -1325,10 +1318,20 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
     while(ProcessReceiverData(true) != 2) {
       // process controls if 10ms has passed since last update
       if(millis() - prevUpdate > 10) {
-        if(++count > 10) break;
+        if(++count > 10) {
+          // prevent freeze when no input is present
+          // *** TODO: revisit this ***
+          count = 0;
+          break;
+        }
         ProcessControls();
         prevUpdate = millis();
       }
+      #if REC_IQ_FROM_T41
+      if(t41.RemoteStatus == REMOTE_CONNECTED) {
+        T41RemoteAudioLoop();
+      }
+      #endif
     }
   } else {
     while(true) {
@@ -1345,6 +1348,11 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
         ProcessControls();
         prevUpdate = millis();
       }
+      #if REC_IQ_FROM_T41
+      if(t41.RemoteStatus == REMOTE_CONNECTED) {
+        T41RemoteAudioLoop();
+      }
+      #endif
     }
   }
 }

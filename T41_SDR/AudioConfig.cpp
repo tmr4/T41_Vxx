@@ -132,7 +132,7 @@ AudioConnection pc_Q_in_L, pc_Q_in_R, pc_Q_in_L_Ex, pc_Q_out_L, pc_Q_out_L_Ex, p
 
 // currently USB Audio only used with WSJT-X FT8
 // *** TODO: put these in the proper place for setup ***
-#if T41_USB_AUDIO
+#if T41_WSJT_CAT_AUDIO
 AudioOutputUSB usbOut;
 AudioAmplifier amp1; // WSJT-X needs some amplification to detect signal *** TODO: this needs refined with PC input volume adjustment ***
 AudioConnection pc_amp1(Q_out_L, amp1);
@@ -356,7 +356,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
   comp2.setPreGain_dB(-10);
 #endif
 
-#if T41_USB_AUDIO
+#if T41_WSJT_CAT_AUDIO
   // *** TODO: revisit gain needed for WSJT-X ***
   amp1.gain(100);
   pc_usb2.disconnect(); // USB
@@ -441,7 +441,7 @@ void ConfigAudioState(int audioState) {
         case DEMOD_FT8:
           //Q_out_Ex_Stop();
 
-          #if T41_USB_AUDIO
+          #if T41_WSJT_CAT_AUDIO
             pc_usb2.disconnect(); // USB
             //Q_in_L_Ex.end();
             //Q_in_L_Ex.clear();
@@ -495,7 +495,7 @@ void ConfigAudioState(int audioState) {
       switch(t41.DemodMode) {
         case DEMOD_FT8:
           // start USB audio transmit chain
-          #if T41_USB_AUDIO
+          #if T41_WSJT_CAT_AUDIO
             pc_usb2.connect(); // USB
             Q_in_L_Ex.begin();
 

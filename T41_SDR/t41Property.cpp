@@ -73,7 +73,7 @@ void T41Properties::begin() {
 }
 
 void T41Properties::SetPropertyDefaults() {
-  int remoteStatus = CAT_CONTROL_HOST || CAT_CONTROL ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
+  int remoteStatus = CAT_CONTROL_T41_USB_HOST || CAT_CONTROL_REMOTE_USB ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
   RadioState.Set(RECONFIGURE_STATE);
 
@@ -251,7 +251,7 @@ Added hi/lo filter properties
 
 4/21/2026
 Working volume property callbacks and remote status
-Set T41_USB_AUDIO to false, excluding some code and data though still compiling w/ Serial+MIDI+Audio
+Set T41_WSJT_CAT_AUDIO to false, excluding some code and data though still compiling w/ Serial+MIDI+Audio
 
 4/20/2026
 ActiveFreq eliminated (8 byte FLASH code reduction only! obviously the compiler already optimized this away)

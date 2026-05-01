@@ -282,7 +282,7 @@ FLASHMEM void setup() {
   //T41BeaconSetup();
   //WSJTControlSetup();
 
-#if CAT_CONTROL || CAT_CONTROL_HOST
+#if CAT_CONTROL_REMOTE_USB || CAT_CONTROL_T41_USB_HOST
   T41ControlSetup();
 #endif
 
@@ -360,7 +360,7 @@ FASTRUN void loop() {
   // 1. run routines that may change the state of the radio
   HardwareLoopStart();
 
-  #if T41_USB_AUDIO
+  #if T41_WSJT_CAT_AUDIO
   // *** There is only one USB serial object available with USB audio enabled.  The Serial object
   // is reserved for WSJT-X use.  Any other use could disrupt WSJT-X control of the T41.  The
   // wsjt module provides for to communication with the WSJT-X app and allows setting the T41 clock
@@ -392,7 +392,7 @@ FASTRUN void loop() {
   // *** need PC control without a display ***
   //T41ControlLoop();
 
-#if CAT_CONTROL
+#if CAT_CONTROL_REMOTE_USB
   T41ControlLoop();
 #endif
 

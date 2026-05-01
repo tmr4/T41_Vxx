@@ -11,15 +11,14 @@ extern bool signalStrengthReceived;
 extern float signalStrength;
 extern int signalStrengthReceivedIndex;
 
-extern bool newIQData;
-extern uint8_t iqData[];
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
 void T41ControlSetup();
+
 void T41ControlLoop();
+void T41RemoteAudioLoop();
 
 void T41ControlSendIQData(int16_t *pL, int16_t *pR);
 void T41PrepareSpectrumData(int16_t *data, int16_t max);
@@ -37,3 +36,9 @@ void SendSignalStrengthRequest();
 void SendSignalStrengthRequest(int index);
 
 void SendNarrowFilter();
+
+int T41ControlBlocksAvailable();
+int16_t *T41ControlReadBufferL(int block);
+int16_t *T41ControlReadBufferR(int block);
+void T41ControlFreeBufferL();
+void T41ControlFreeBufferR();

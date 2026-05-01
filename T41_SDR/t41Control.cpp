@@ -17,9 +17,10 @@
 #include "Tune.h"
 #include "Utility.h"
 
-#if CAT_CONTROL_HOST
+#if CAT_CONTROL_T41_USB_HOST
 #include <USBHost_t36.h>
 extern USBSerial_BigBuffer usbHostSerial;
+extern USBSerial_BigBuffer usbHostSerial1;
 #endif
 
 #include "debug.h"
@@ -44,6 +45,19 @@ int signalStrengthReceivedIndex = -1;
 
 bool checkingConnection = false;
 
+#define BUF_SIZE 2048
+// ProcessReceiverData expects 2k IQ buffers or 4k bytes total (16 * 128 * 2)
+uint8_t iqData[512];
+int16_t *iData, *qData;
+
+// IQ audio data buffer, ping/pong structure
+uint8_t bufferPing[BUF_SIZE*2*2];
+uint8_t bufferPong[BUF_SIZE*2*2];
+uint8_t *activeBuffer = bufferPing; // this buffer is being filled
+uint8_t *readyBuffer = bufferPong;
+
+bool dataReady = false;
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -59,7 +73,7 @@ void SendID(bool request);
 // void T41ControlSetup(Stream& serial) { serial.begin(); }.  As such might as well duplicate these functions for both the T41 control app and Beacon monitor
 void T41ControlSetup() {
   //controlSerial.begin(19200);
-  if(CAT_CONTROL) {
+  if(CAT_CONTROL_REMOTE_USB) {
     sendGet = false;
   } else {
     sendGet = true;
@@ -100,19 +114,12 @@ void T41RemoteConnectCheck() {
   }
 }
 
-bool newIQData = false;
-uint8_t iqData[513];
 void T41ControlSendIQData(int16_t *pL, int16_t *pR) {
-  //controlSerial.flush(); // *** TODO: this will cause a freeze if PC stops receiving ***
-  int avail=controlSerial.availableForWrite();
-
   memcpy(iqData, pL, 256);
   memcpy(&iqData[256], pR, 256);
 
-  //if(avail > 0) Serial.println(avail);
-
-  //controlSerial.send_now(); // clear the queue
-  if(controlSerial.availableForWrite() >= 512) {
+  //if(controlSerial.availableForWrite() >= 512) {
+  if(controlSerial.availableForWrite()) {
     //if(sendGet) {
     //  //iqData[512] = 0;
     //  Serial.println("Sending IQ data");
@@ -211,7 +218,7 @@ void T41ControlSendCmd(char *cmd) {
 int T41ControlGetCommand(char * cmd, int max) {
   int i = 0;
 
-  while(controlSerial.available() > 0) {
+  while(controlSerial.available()) {
     cmd[i] = (char) controlSerial.read();
 
     // there might be multiple commands in the serial buffer
@@ -532,6 +539,7 @@ int GetMode() {
 
 */
 void T41ControlLoop() {
+  char cmd[51];
   float32_t dbm;
   bool sendCommand = true;
 
@@ -540,22 +548,9 @@ void T41ControlLoop() {
   if(t41.RemoteStatus != REMOTE_CONNECTED) return;
 
   if(controlSerial.available()) {
-    char cmd[513];
     int mode = GetMode();
-    int recd = T41ControlGetCommand(cmd, 512);
+    T41ControlGetCommand(cmd, 50);
 
-    if(recd == 512) {
-      Serial.print("Received 512");
-      memcpy(iqData, cmd, 512);
-      newIQData = true;
-      return;
-    } else {
-      if(sendGet) {
-        Serial.print("Received ");
-        Serial.println(recd);
-        Serial.print(" bytes");
-      }
-    }
     SETPROFILEPIN(PROFILER_FT8_CAT_RX);
     if(sendGet) {
       Serial.print("Received: ");
@@ -906,3 +901,64 @@ void T41ControlLoop() {
 //  }
 //  return true; // end of string so show as match
 //}
+
+// T41/Remote IQ audio data stream processing
+// 16 blocks of IQ data is sent to the remote from the T41 over USB host
+// these are put in ping/pong buffer and consumed by ProcessReceiverData
+// this should happen very quickly with the dataReady toggling as appropriate.
+
+// IQ data comes interleaved in 128 int16_t blocks (512 bytes)
+void PrepIQData(uint8_t *data, int block) {
+  memcpy(&activeBuffer[block * 256], data, 256);
+  memcpy(&activeBuffer[2048 + block * 256], &data[256], 256);
+}
+
+void T41RemoteAudioLoop() {
+  //uint8_t data[512];
+  char data[512];
+  static int block = 0;
+
+  // *** TODO: need to impliment PacketSerial to maintain packet integrity ***
+  if(controlAudio.available()) {
+    int read = controlAudio.readBytes(data, 512);
+    if(read == 512) {
+      PrepIQData((uint8_t *)data, block);
+      ++block;
+    }
+  }
+  // need 16 successful loops to fill a ping/pongbuffer
+  if(block >= 16) {
+    // ping/pong swap
+    activeBuffer = (activeBuffer == bufferPing) ? bufferPong : bufferPing;
+    readyBuffer = (activeBuffer == bufferPing) ? bufferPong : bufferPing;
+    dataReady = true;
+    // set pointers to data ready to be processed
+    iData = (int16_t*)readyBuffer;
+    qData = (int16_t*)&readyBuffer[4096];
+    block = 0;
+  }
+}
+
+int16_t *T41ControlReadBufferL(int block) {
+  int blockOffset = 128 * block;
+  if(block >= 15) dataReady = false;
+  return iData + blockOffset;
+}
+int16_t *T41ControlReadBufferR(int block) {
+  int blockOffset = 128 * block;
+  if(block >= 15) dataReady = false;
+  return qData + blockOffset;
+}
+void T41ControlFreeBufferL() {
+}
+void T41ControlFreeBufferR() {
+}
+int T41ControlBlocksAvailable() {
+  int result = 0;
+
+  if(dataReady && t41.RemoteStatus == REMOTE_CONNECTED) {
+    result = 16;
+  }
+
+  return result;
+}

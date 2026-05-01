@@ -6,9 +6,7 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "t41Control.h"
-
-//#include "T41Config.h"
-//#include "src\hardwareConfig.h"
+#include "t41USBHost.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -18,7 +16,7 @@
     but both USBHost and USBHIDParser are needed to automatically detect
     a new devise so we don't really save that much.  Doing this manually
     is a possibility if we need to save memory when not using a keyboard. */
-#if defined(HOST_KEYBOARD_MOUSE_SUPPORT) || defined(HOST_SERIAL_SUPPORT)
+#if USB_HOST_SUPPORT
 USBHost usbHost;
 USBHub usbHub(usbHost);
 #endif
@@ -40,7 +38,9 @@ MouseController mouseController(usbHost);
 // available when the device unit is compiled with USB Type: Serial, Dual Serial or Triple Serial
 // these do not work in DMAMEM
 USBSerial_BigBuffer usbHostSerial(usbHost, 1);
-//USBSerial_BigBuffer usbHostSerial1(usbHost, 1); // USB device must compiled with Dual or Triple serial
+#if SEND_IQ_TO_REMOTE
+USBSerial_BigBuffer usbHostSerial1(usbHost, 1); // USB device must compiled with Dual or Triple serial
+#endif
 //USBSerial_BigBuffer usbHostSerial2(usbHost, 1); // USB device must be compiled with Triple serial
 
 /*
@@ -91,9 +91,6 @@ FLASHMEM void UsbHostSetup() {
   KeyboardSetup();
 #endif
 
-#ifdef HOST_SERIAL_SUPPORT
-#endif
-
   delay(1000);
 }
 
@@ -106,7 +103,7 @@ void UsbHostLoop() {
   MouseLoop();
 #endif
 
-#if CAT_CONTROL_HOST
+#if CAT_CONTROL_T41_USB_HOST
   T41ControlLoop();
 #endif
 
