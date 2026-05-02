@@ -94,6 +94,12 @@ FLASHMEM void UsbHostSetup() {
   delay(1000);
 }
 
+void UsbHostTask() {
+#ifdef USB_HOST_SUPPORT
+  usbHost.Task();
+#endif
+}
+
 void UsbHostLoop() {
 #ifdef USB_HOST_SUPPORT
   usbHost.Task();

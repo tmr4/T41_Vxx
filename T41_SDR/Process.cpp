@@ -298,9 +298,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
       #if SEND_IQ_TO_REMOTE
       if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        SETPROFILEPIN(PROFILER_PROCESS_FT8);
         T41ControlBufferIQData(pL, pR);
-        RESETPROFILEPIN(PROFILER_PROCESS_FT8);
       }
       #endif
 

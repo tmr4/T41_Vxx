@@ -206,6 +206,13 @@ Project System:
 *** loop times are a rough average over 20 loops ***
 *** size on Audio Platform differs from PS due to mouse/keyboard support (and ? ... examine) ***
 
+5/2/2026
+PS (w/o mouse/keyboard support)
+  FLASH: code:169464, data:42160, headers:8532   free for files:7906308
+   RAM1: variables:144576, code:149240, padding:14600   free for local variables:215872
+   RAM2: variables:328544  free for malloc/new:195744
+ EXTRAM: variables:5296320
+
 5/1/2026
 PS
 w/ 500* (w/ profiler)

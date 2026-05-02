@@ -69,7 +69,7 @@ void MyDrawFloatP(float val, int decimals, int x, int y, char *buff, int width) 
 
 // info box
 void UpdateInfoBox() {}
-void UpdateInfoBoxItem(unsigned char) {}
+void UpdateInfoBoxItem(int) {}
 void HighlightIBItem(unsigned char, int) {}
 void UpdateIBWPM() {}
 void ClearInfoBoxKeyer() {}

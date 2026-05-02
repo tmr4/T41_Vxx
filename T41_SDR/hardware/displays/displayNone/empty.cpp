@@ -11,6 +11,12 @@ int displayState = -1; // no display
 int centerLine;
 
 //-------------------------------------------------------------------------------------------------------------
+// Forwards
+//-------------------------------------------------------------------------------------------------------------
+
+void YieldToProcess(bool updateSpectrum = false);
+
+//-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------
@@ -38,18 +44,20 @@ void ShowSplash(char const*, char const*, char const*, char const*, char const*)
 void ShowNoSD() {}
 void ShowDot() {}
 
+void ShowRemoteStatus() {}
+
 // main T41 display
 void DrawStaticDisplayItems() {}
 void EraseSpectrumWindow() {}
 void RedrawDisplayScreen() {}
-void ShowFrequency() {}
+void ShowFrequency(bool) {}
 void ShowOperatingStats() {}
 void ShowSAM(float) {}
 void ShowCurrentPowerSetting() {}
 void DrawSpectrumFrame() {}
 void EraseSpectrumDisplayContainer() {}
 void ShowSpectrumFreqValues() {}
-void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {}
+void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) { YieldToProcess(); }
 void ShowSpectrumdBScale() {}
 void ShowBandwidthBarValues() {}
 void DrawBandwidthBar() {}
@@ -58,7 +66,7 @@ void ResetWaterfallHeight() {}
 void ShowTransmitReceiveStatus() {}
 void DrawSmeterBar() {}
 void DrawAudioSpectContainer() {}
-void DrawAudioSpectrum() {}
+void DrawAudioSpectrum() { YieldToProcess(); }
 void DrawCWFilter() {}
 void DrawAudioFilterLines() {}
 void DrawCWDecoderLines(int) {}
@@ -69,12 +77,13 @@ void MyDrawFloatP(float val, int decimals, int x, int y, char *buff, int width) 
 
 // info box
 void UpdateInfoBox() {}
-void UpdateInfoBoxItem(unsigned char) {}
+void UpdateInfoBoxItem(int) {}
 void HighlightIBItem(unsigned char, int) {}
 void UpdateIBWPM() {}
 void ClearInfoBoxKeyer() {}
 void UpdateDecodeLockIndicator() {}
 void UpdateClock() {}
+void HighlightTuneInc() {}
 
 // menu
 void ShowMenu(char const**, int) {}

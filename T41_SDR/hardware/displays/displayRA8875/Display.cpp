@@ -622,7 +622,7 @@ FASTRUN void DrawAudioSpectrum() {
   int audioYPixel;
   static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
 
-  YieldToProcess();
+  //YieldToProcess();
 
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
@@ -660,11 +660,12 @@ FASTRUN void DrawAudioSpectrum() {
     }
 
     // *** some timely placed yields smooths audio processing, but doesn't reduce loop time
-    if((filterHiPosition > 150) && (i < filterHiPosition)) {
-      if((i == 75) || ((filterHiPosition > 225) && (i == 150))) {
-        YieldToProcess();
-      }
-    }
+    //if((filterHiPosition > 150) && (i < filterHiPosition)) {
+    //  if((i == 75) || ((filterHiPosition > 225) && (i == 150))) {
+    //    YieldToProcess();
+    //  }
+    //}
+    YieldToProcess();
   }
 
   RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC);

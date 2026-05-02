@@ -168,7 +168,7 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   // Key type takes two columns
   { "Key Type:",   optionsWPM,  (int*)&t41.KeyType,          0,        2,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
 
-  // Memory keyer requires 3 rows
+  // Memory keyer requires 3 rows (10-12)
   { "Keyer     ",  keyerOpts,   &keyerState,                 0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer
 
   { "FT8       ",  ft8Opts,     &ft8SyncState,               0,        8,      1,   IB_COL_1_X,    IB_ROW_10_Y,   NULL                   }, // FT8 sync

@@ -70,6 +70,7 @@ bool dataReady = false;
 //-------------------------------------------------------------------------------------------------------------
 
 void SendID(bool request);
+void UsbHostTask();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -907,10 +908,24 @@ void T41RemoteAudioLoop() {
 // *** TODO: set up on connect and disconnect ***
 static int bufCount = 0;
 
+/*
+  Remote timing (w/ T41 standard input and display disabled; Remote w/ Auto NF):
+    * ~3ms to receive 16 blocks of IQ data from T41
+    * ~1.5-2ms to process this data in ProcessReceiverData
+    * ~85ms to complete one update of display (~12 frames/sec)
+*/
 bool T41RemoteReceiveIQData() {
   bool result = false;
-  // *** TODO: need to impliment PacketSerial to maintain packet integrity ***
+
+// *** TODO: the frequent call here may cause some lag in mouse and CAT response
+//           as successive calls overwrite available data. Verify ***
+#if CAT_CONTROL_T41_USB_HOST
+  UsbHostTask();
+#endif
+
+  // *** TODO: need to implement PacketSerial to maintain packet integrity ***
   if(controlAudio.available()) {
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     controlAudio.readBytes(&iqBuffer[head], 512);
     head = (head + 512) % IQ_CIRC_BUF_SIZE;
     bufCount += 512;
@@ -921,6 +936,7 @@ bool T41RemoteReceiveIQData() {
 
 // I on first call, Q on next
 int16_t *T41ControlReadBuffer() {
+  TOGGLEPROFILEPIN(PROFILER_PROCESS_FT8);
   int16_t *block = (int16_t*)&iqBuffer[tail];
   tail = (tail + 256) % IQ_CIRC_BUF_SIZE;
   bufCount -= 256;
@@ -938,24 +954,49 @@ int T41ControlBlocksAvailable() {
   }
 }
 
+/*
+  T41 timing (w/ T41 standard input and display disabled; Remote w/ Auto NF):
+    * ~350us to buffer IQ data
+    * ~2ms to process this data in ProcessReceiverData (extra time compared to remote is buffering)
+    * ~3ms to transmit 16 blocks of IQ data to remote
+    * loop time isn't meaningful as the T41 is continuously processing/transmitting IQ data every ~10ms
+*/
 bool T41ControlSendIQData() {
   bool result = false;
-  if((bufCount > 0)) {
+
+// *** TODO: the frequent call here may cause some lag in mouse and CAT response
+//           as successive calls overwrite available data. Verify ***
+#if CAT_CONTROL_T41_USB_HOST
+  UsbHostTask();
+#endif
+
+  if((bufCount >= 512)) {
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+    // *** continuing on here when there is room to write gives more uniform transfer ***
+    // *** however, without a T41 display to slow things down, transfer to the remote
+    //     occur all at once with a disruption in audio (buffer overflow?). Transfering
+    //     a single block smooths things out ***
     if(controlAudio.availableForWrite() >= 512) {
+    //while(controlAudio.availableForWrite() >= 512) {
       TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+      // *** trying to write more than 512 bytes at a time slows things down ***
       controlAudio.write(&iqBuffer[tail], 512);
       tail = (tail + 512) % IQ_CIRC_BUF_SIZE;
       bufCount -= 512;
       result = bufCount > 0;
+#if CAT_CONTROL_T41_USB_HOST
+  //UsbHostTask();
+#endif
     }
   }
   return result;
 }
 
 void T41ControlBufferIQData(int16_t *pL, int16_t *pR) {
+  SETPROFILEPIN(PROFILER_PROCESS_FT8);
   memcpy(&iqBuffer[head], pL, 256);
   memcpy(&iqBuffer[head+256], pR, 256);
   head = (head + 512) % IQ_CIRC_BUF_SIZE;
   bufCount += 512;
+  RESETPROFILEPIN(PROFILER_PROCESS_FT8);
 }
