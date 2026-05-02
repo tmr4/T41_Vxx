@@ -51,6 +51,8 @@ void ClearInfoBox();
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern long loopTimeSum;
+extern long loopCount;
 extern int paddleFlip;
 extern int currentMicThreshold;
 
@@ -171,17 +173,17 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   // Memory keyer requires 3 rows (10-12)
   { "Keyer     ",  keyerOpts,   &keyerState,                 0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer
 
-  { "FT8       ",  ft8Opts,     &ft8SyncState,               0,        8,      1,   IB_COL_1_X,    IB_ROW_10_Y,   NULL                   }, // FT8 sync
-  { "Tx Int:",     ft8IntOpts,  &ft8IntState,                0,        4,      0,   IB_COL_2_X,    IB_ROW_10_Y,   NULL                   }, // FT8 Tx interval
-  { "Tx:",         ft8TxOpts,   &ft8TxState,                 0,        7,      1,   IB_COL_1_X,    IB_ROW_11_Y,   NULL                   }, // FT8 Tx enabled
-  { "CQ resp:",    ft8CqOpts,   &ft8CqState,                 0,        4,      1,   IB_COL_2_X,    IB_ROW_11_Y,   NULL                   }, // FT8 Tx interval
-  { "Tx Freq:",    NULL,        &ft8TxFreq,                  0,        5,      0,   IB_COL_1_X,    IB_ROW_12_Y,   &IBFT8RxTxFollowup     }, // FT8 Tx freq
-  { "Rx Freq:",    NULL,        &ft8RxFreq,                  0,        5,      0,   IB_COL_2_X,    IB_ROW_12_Y,   &IBFT8RxTxFollowup     }, // FT8 Rx freq
+  { "FT8       ",  ft8Opts,     &ft8SyncState,               0,        8,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   }, // FT8 sync
+  { "Tx Int:",     ft8IntOpts,  &ft8IntState,                0,        4,      0,   IB_COL_2_X,    IB_ROW_9_Y,    NULL                   }, // FT8 Tx interval
+  { "Tx:",         ft8TxOpts,   &ft8TxState,                 0,        7,      1,   IB_COL_1_X,    IB_ROW_10_Y,   NULL                   }, // FT8 Tx enabled
+  { "CQ resp:",    ft8CqOpts,   &ft8CqState,                 0,        4,      1,   IB_COL_2_X,    IB_ROW_10_Y,   NULL                   }, // FT8 Tx interval
+  { "Tx Freq:",    NULL,        &ft8TxFreq,                  0,        5,      0,   IB_COL_1_X,    IB_ROW_11_Y,   &IBFT8RxTxFollowup     }, // FT8 Tx freq
+  { "Rx Freq:",    NULL,        &ft8RxFreq,                  0,        5,      0,   IB_COL_2_X,    IB_ROW_11_Y,   &IBFT8RxTxFollowup     }, // FT8 Rx freq
 
   { "Stack:",      NULL,        NULL,                        0,        4,      2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBStackFollowup       }, // Stack
   { "Heap:",       NULL,        NULL,                        0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBHeapFollowup        }, // Heap
-  { "Temp:",       NULL,        NULL,                        0,        3,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
-  { "Load:",       NULL,        NULL,                        0,        4,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBLoadFollowup        }  // Teensy Load
+  { "Temp:",       NULL,        NULL,                        0,        3,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
+  { "Load:",       NULL,        NULL,                        0,        8,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBLoadFollowup        }  // Teensy Load
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -422,30 +424,47 @@ void IBTempFollowup(int row, int col) {
 *****/
 void IBLoadFollowup(int row, int col) {
   char buff[10];
+  float value = 0.0;
   int valueColor = RA8875_GREEN;
-  double block_time;
-  double processor_load;
-  double elapsed_micros_mean;
-
-  elapsed_micros_mean = elapsed_micros_sum / elapsed_micros_idx_t;
-
-  block_time = 128.0 / t41.SampleRate;  // one audio block is 128 samples and uses this in seconds
-  block_time = block_time * 16;
-
-  block_time *= 1000000.0;                                  // now in µseconds
-  processor_load = elapsed_micros_mean / block_time * 100;  // take audio processing time divide by block_time, convert to %
-
-  if(processor_load >= 100.0) {
-    processor_load = 100.0;
-    valueColor = RA8875_RED;
-  }
+  static bool showFPS = false; // alternate between load % and fps
+  int digits = showFPS ? 1 : 0;
 
   tft.setFontScale((enum RA8875tsize)0);
+  if(showFPS) {
+    // calc FPS
+    if(loopTimeSum != 0) value = (float)loopCount / (float)loopTimeSum * 1000.0;
+    loopTimeSum = 0;
+    loopCount = 0;
+  } else {
+    // calc processor_load
+    float block_time, mean = 0.0;
+
+    if(elapsed_micros_idx_t != 0) mean = elapsed_micros_sum / elapsed_micros_idx_t;
+
+    block_time = 128.0 / t41.SampleRate;  // one audio block is 128 samples and uses this in seconds
+    block_time = block_time * 16;
+
+    block_time *= 1000000.0;          // now in µseconds
+    value = mean / block_time * 100;  // take audio processing time divide by block_time, convert to %
+
+    if(value >= 100.0) {
+      value = 100.0;
+      valueColor = RA8875_RED;
+    }
+
+    elapsed_micros_idx_t = 0;
+    elapsed_micros_sum = 0;
+  }
+
   tft.setTextColor(valueColor);
-  MyDrawFloatP(processor_load, 0, col, row, buff, 2);
-  tft.print("%");
-  elapsed_micros_idx_t = 0;
-  elapsed_micros_sum = 0;
+  MyDrawFloatP(value, digits, col, row, buff, 2);
+  if(showFPS) {
+    tft.print(" fps");
+  } else {
+    tft.print("%");
+  }
+
+  showFPS = !showFPS; // show the other one next time
 }
 
 /*****

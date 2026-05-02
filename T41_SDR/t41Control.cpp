@@ -48,8 +48,11 @@ bool checkingConnection = false;
 
 #define IQ_BUF_SIZE 8192 // in bytes = 16 blocks * 128 int16_t per block * 2 bytes / integer * 2 (I and Q)
 //#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 1000) // store enough data for one frame
-#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 500) // store enough data for one frame
-EXTMEM char iqBuffer[IQ_CIRC_BUF_SIZE];
+#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 3) // store enough data for one frame
+//#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 500) // store enough data for one frame
+//EXTMEM char iqBuffer[IQ_CIRC_BUF_SIZE];
+//EXTMEM char iqBuffer[IQ_CIRC_BUF_SIZE];
+DMAMEM char iqBuffer[IQ_CIRC_BUF_SIZE];
 int head = 0;
 int tail = 0;
 
@@ -58,12 +61,12 @@ char iqData[512];
 int16_t *iData, *qData;
 
 // IQ audio data buffer, ping/pong structure
-char ping[IQ_BUF_SIZE];
-char pong[IQ_BUF_SIZE];
-char *activeBuffer = ping; // this buffer is being filled
-char *readyBuffer = pong;  // this buffer is being transfered
-
-bool dataReady = false;
+//char ping[IQ_BUF_SIZE];
+//char pong[IQ_BUF_SIZE];
+//char *activeBuffer = ping; // this buffer is being filled
+//char *readyBuffer = pong;  // this buffer is being transfered
+//
+//bool dataReady = false;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards

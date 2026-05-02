@@ -347,7 +347,10 @@ void ConfigRadioState() {
 }
 */
 
+long loopTimeSum, loopCount;
+
 FASTRUN void loop() {
+  elapsedMillis loopTime;
   int pushButtonSwitchIndex = -1;
   int valPin;
   bool reconfigureFlag = t41.RadioState == RECONFIGURE_STATE;
@@ -475,8 +478,10 @@ FASTRUN void loop() {
     case RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
           DrawFreqSpectrum();
           DrawAudioSpectrum();
+  }
           break;
 
         case DISPLAY_T41_FT8_DECODE:
@@ -577,4 +582,6 @@ FASTRUN void loop() {
 #ifdef T41_REMOTE_DISPLAY
   RemoteLoop();
 #endif
+  loopTimeSum += loopTime;
+  ++loopCount;
 }
