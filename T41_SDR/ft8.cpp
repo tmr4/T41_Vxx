@@ -874,12 +874,12 @@ FLASHMEM bool ProcessFT8Frame() {
   // process a frame of data
   // there are 79 frames in a FT8 message
   // but can be more within an interval depending on timing errors
-  SETPROFILEPIN(PROFILER_PROCESS_FT8);
+  SETPROFILEPIN(PROFILER_PROCESS_FRAME);
   // processing takes about 16ms
   if(ft8lib_ProcessFrame(frameCount)) {
     result = true;
   }
-  RESETPROFILEPIN(PROFILER_PROCESS_FT8);
+  RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
 
   return result;
 }
@@ -1431,7 +1431,7 @@ FLASHMEM void FT8DecoderLoop() {
             ft8DecoderState = STATE_TX;
           }
 
-          SETPROFILEPIN(PROFILER_FT8_CAT_RX);
+          SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
         }
 #ifdef TX_TESTING
       } else {
@@ -1447,7 +1447,7 @@ FLASHMEM void FT8DecoderLoop() {
     case STATE_TX:
       DEBUG_RXTX("at STATE_TX...");
 
-      TOGGLEPROFILEPIN(PROFILER_FT8_CAT_RX);
+      TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
 
       if(!ft8PTT) {
         // we continue looping through here until start of interval to transmit
@@ -1486,7 +1486,7 @@ FLASHMEM void FT8DecoderLoop() {
       Q_in_L.begin();
       Q_in_R.begin();
 
-      RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
+      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
       break;
   }
 

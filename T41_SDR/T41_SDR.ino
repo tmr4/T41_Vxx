@@ -57,7 +57,7 @@
 //-------------------------------------------------------------------------------------------------------------
 
 extern bool beaconFlag;
-extern bool iqSync;
+extern bool iqSyncSearch;
 
 float32_t DMAMEM audioBufferL[2048];
 float32_t DMAMEM audioBufferR[2048];
@@ -211,8 +211,13 @@ FLASHMEM void setup() {
   int sampleRate = 192000.0;
 
   Serial.begin(9600);
-
-  delay(1000);
+  /* check for CrashReport stored from previous run */
+  if (CrashReport) {
+    while (!Serial && millis() < 10000) ; /* wait up to 10 sec */
+    /* print info (hope Serial Monitor windows is open) */
+    Serial.print(CrashReport);
+  }
+  //delay(1000);
 
   // Check for PSRAM chip(s) installed
   //uint8_t size = external_psram_size;
@@ -306,10 +311,10 @@ FLASHMEM void setup() {
   digitalWrite(PROFILER_DRAWFREQSPEC, LOW);
   pinMode(PROFILER_DRAWAUDIOSPEC, OUTPUT);
   digitalWrite(PROFILER_DRAWAUDIOSPEC, LOW);
-  pinMode(PROFILER_PROCESS_FT8, OUTPUT);
-  digitalWrite(PROFILER_PROCESS_FT8, LOW);
-  pinMode(PROFILER_FT8_CAT_RX, OUTPUT);
-  digitalWrite(PROFILER_FT8_CAT_RX, LOW);
+  pinMode(PROFILER_PROCESS_FRAME, OUTPUT);
+  digitalWrite(PROFILER_PROCESS_FRAME, LOW);
+  pinMode(PROFILER_FT8_REMOTE_RX, OUTPUT);
+  digitalWrite(PROFILER_FT8_REMOTE_RX, LOW);
   pinMode(PROFILER_DECODE_FT8, OUTPUT);
   digitalWrite(PROFILER_DECODE_FT8, LOW);
   pinMode(PROFILER_FT8_CAT_TX, OUTPUT);
@@ -479,13 +484,18 @@ FASTRUN void loop() {
     case RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
-  //if(t41.RemoteStatus == REMOTE_CONNECTED) {
-  if(iqSync) {
+#if REC_IQ_FROM_T41
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+  //if(!iqSyncSearch) {
           DrawFreqSpectrum();
           DrawAudioSpectrum();
   } else {
           YieldToProcess();
   }
+#else
+          DrawFreqSpectrum();
+          DrawAudioSpectrum();
+#endif
           break;
 
         case DISPLAY_T41_FT8_DECODE:

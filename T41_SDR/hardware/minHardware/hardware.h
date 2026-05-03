@@ -75,8 +75,8 @@ Minimum hardware assumes a T41 main board or equivalent so that RX signal can be
 #define PROFILER_PROCESS_RX          34
 #define PROFILER_DRAWFREQSPEC     41
 #define PROFILER_DRAWAUDIOSPEC    14
-#define PROFILER_PROCESS_FT8  35
-#define PROFILER_FT8_CAT_RX       36
+#define PROFILER_PROCESS_FRAME  35
+#define PROFILER_FT8_REMOTE_RX       36
 #define PROFILER_DECODE_FT8        38
 #define PROFILER_FT8_CAT_TX           16
 

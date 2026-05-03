@@ -35,12 +35,11 @@ void SendSignalStrengthRequest(int index);
 
 void SendNarrowFilter();
 
-void T41ControlBufferIQData(int16_t *pL, int16_t *pR);
+void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block);
 bool T41RemoteReceiveIQData();
 bool T41ControlSendIQData();
 int T41ControlBlocksAvailable();
-int16_t *T41ControlReadBuffer();
-//int16_t *T41ControlReadBufferL(int block);
-//int16_t *T41ControlReadBufferR(int block);
-void T41ControlFreeBufferL();
-void T41ControlFreeBufferR();
+int16_t *T41ControlReadBufferL(int block);
+int16_t *T41ControlReadBufferR(int block);
+//void T41ControlFreeBufferL();
+//void T41ControlFreeBufferR();

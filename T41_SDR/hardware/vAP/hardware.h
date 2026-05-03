@@ -85,8 +85,8 @@
 #define PROFILER_PROCESS_RX       41 // GPIO #2
 #define PROFILER_DRAWFREQSPEC     14 // GPIO #3
 #define PROFILER_DRAWAUDIOSPEC    40 // GPIO #4
-#define PROFILER_PROCESS_FT8      15 // GPIO #5
-#define PROFILER_FT8_CAT_RX       32 // GPIO #6
+#define PROFILER_PROCESS_FRAME      15 // GPIO #5
+#define PROFILER_FT8_REMOTE_RX       32 // GPIO #6
 #define PROFILER_DECODE_FT8       16 // GPIO #7
 #define PROFILER_FT8_CAT_TX       29 // GPIO #8
 

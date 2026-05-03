@@ -280,10 +280,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       int16_t *pL, *pR;
 
       #if REC_IQ_FROM_T41
-      //pL = T41ControlReadBufferL(i);
-      //pR = T41ControlReadBufferR(i);
-      pL = T41ControlReadBuffer();
-      pR = T41ControlReadBuffer();
+      pL = T41ControlReadBufferL(i);
+      pR = T41ControlReadBufferR(i);
+      // verify sync
+      if((pL == NULL) || (pR == NULL)) return 0;
       #else
       pL = Q_in_L.readBuffer();
       pR = Q_in_R.readBuffer();
@@ -298,13 +298,13 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
       #if SEND_IQ_TO_REMOTE
       if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        T41ControlBufferIQData(pL, pR);
+        T41ControlBufferIQData(pL, pR, i);
       }
       #endif
 
       #if REC_IQ_FROM_T41
-      T41ControlFreeBufferL();
-      T41ControlFreeBufferR();
+      //T41ControlFreeBufferL();
+      //T41ControlFreeBufferR();
       #else
       Q_in_L.freeBuffer();
       Q_in_R.freeBuffer();
@@ -498,7 +498,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
       #ifdef USE_BUFFERED_FT8_WAV
       case DEMOD_FT8_INTERNAL:
-        SETPROFILEPIN(PROFILER_FT8_CAT_RX);
+        SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
         // transfer to wav buffer to audio buffers
         // and interpolate to 24 kHz to get audio signal for T41
         // *** TODO: evaluate if use of CMISS_DSP library is better ***
@@ -513,7 +513,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
             audioBufferL[2*i] = audioBufferR[i];
           }
         }
-        RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
+        RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
         break;
       #endif
 
@@ -524,7 +524,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // wav file sample rate is 12 kHz
         // get a half sized sample and interpolate to the proper size/rate
         // wav FT8 signal data to audioBufferR, audio to audioBufferL
-        SETPROFILEPIN(PROFILER_FT8_CAT_RX);
+        SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
         if(ReadFT8Wav(audioBufferR, 128)) {
           // interpolate to 24 kHz to get audio signal for T41
           // *** TODO: evaluate if use of CMISS_DSP library is better ***
@@ -545,7 +545,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
           //  Q_in_R.clear();
           //}
         }
-        RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
+        RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
         break;
 
       default:

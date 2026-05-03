@@ -23,6 +23,11 @@ extern USBSerial_BigBuffer usbHostSerial;
 extern USBSerial_BigBuffer usbHostSerial1;
 #endif
 
+#if SEND_IQ_TO_REMOTE || REC_IQ_FROM_T41
+#define XXH_INLINE_ALL
+#include "xxhash.h"
+#endif
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -46,27 +51,15 @@ int signalStrengthReceivedIndex = -1;
 
 bool checkingConnection = false;
 
-#define IQ_BUF_SIZE 8192 // in bytes = 16 blocks * 128 int16_t per block * 2 bytes / integer * 2 (I and Q)
-//#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 1000) // store enough data for one frame
-#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 3) // store enough data for one frame
-//#define IQ_CIRC_BUF_SIZE (IQ_BUF_SIZE * 500) // store enough data for one frame
-//EXTMEM char iqBuffer[IQ_CIRC_BUF_SIZE];
-//EXTMEM char iqBuffer[IQ_CIRC_BUF_SIZE];
-DMAMEM char iqBuffer[IQ_CIRC_BUF_SIZE];
-int head = 0;
-int tail = 0;
-
-// ProcessReceiverData expects 2k IQ buffers or 4k bytes total (16 * 128 * 2)
-char iqData[512];
-int16_t *iData, *qData;
-
-// IQ audio data buffer, ping/pong structure
-//char ping[IQ_BUF_SIZE];
-//char pong[IQ_BUF_SIZE];
-//char *activeBuffer = ping; // this buffer is being filled
-//char *readyBuffer = pong;  // this buffer is being transfered
-//
-//bool dataReady = false;
+#define IQ_BUF_SIZE 8704 // w/ 256-byte start/end sync blocks; 8192 + 512; 8192 bytes = 16 blocks * 128 int16_t per block * 2 bytes / integer * 2 (I and Q)
+EXTMEM uint8_t iqBuffer[IQ_BUF_SIZE] __attribute__((aligned (32))); // *** IQQuickHash needs this aligned ***
+//DMAMEM uint8_t iqBuffer[IQ_BUF_SIZE] __attribute__((aligned (32))); // *** IQQuickHash needs this aligned ***
+int iqBufIndex = 0;
+bool iqDataReady = false;
+int iqDataBlock; // track of IQ data blocks sent to remote (+start/end sync for 17 in total)
+uint64_t startHash, endHash, startQuickHash, endQuickHash;
+bool iqSyncSearch = true; // true=searching for start sync block, false=in-frame
+uint8_t *iqFrameHead = iqBuffer; // track location of sync'd IQ data blocks
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -74,6 +67,8 @@ int16_t *iData, *qData;
 
 void SendID(bool request);
 void UsbHostTask();
+void GenerateStartEndSyncBlock(uint8_t* buf, uint64_t salt);
+uint64_t IQQuickHash(uint8_t *buf);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -90,6 +85,72 @@ void T41ControlSetup() {
     sendGet = true;
     //sendGet = false;
   }
+#if SEND_IQ_TO_REMOTE
+  const uint64_t seed = 0x9E3779B97F4A7C15ULL; // fractional part of the Golden Ratio (2^64 / phi)
+
+  // set up start/end sync blocks in iqBuffer
+  GenerateStartEndSyncBlock(iqBuffer, 0x1234567890123456ULL);
+  startHash = XXH3_64bits_withSeed(iqBuffer, 256, seed);
+  startQuickHash = IQQuickHash(iqBuffer);
+
+  GenerateStartEndSyncBlock(&iqBuffer[IQ_BUF_SIZE - 256], 0x9876543210987654ULL);
+  endHash = XXH3_64bits_withSeed(&iqBuffer[IQ_BUF_SIZE - 256], 256, seed);
+  endQuickHash = IQQuickHash(&iqBuffer[IQ_BUF_SIZE - 256]);
+/*
+  Serial.println();
+  Serial.println();
+  Serial.println("XXH3 has on T41:");
+  Serial.print("startHash:      0x");
+  Serial.print((uint32_t)(startHash >> 32), HEX);
+  Serial.println((uint32_t)startHash, HEX);
+  Serial.print("startQuickHash: 0x");
+  Serial.print((uint32_t)(startQuickHash >> 32), HEX);
+  Serial.println((uint32_t)startQuickHash, HEX);
+  Serial.println();
+
+  Serial.print("endHash:        0x");
+  Serial.print((uint32_t)(endHash >> 32), HEX);
+  Serial.println((uint32_t)endHash, HEX);
+  Serial.print("endQuickHash:   0x");
+  Serial.print((uint32_t)(endQuickHash >> 32), HEX);
+  Serial.println((uint32_t)endQuickHash, HEX);
+  Serial.println();
+  Serial.println();
+*/
+#endif
+#if REC_IQ_FROM_T41
+  const uint64_t seed = 0x9E3779B97F4A7C15ULL; // fractional part of the Golden Ratio (2^64 / phi)
+
+  GenerateStartEndSyncBlock(iqBuffer, 0x1234567890123456ULL);
+  startHash = XXH3_64bits_withSeed(iqBuffer, 256, seed);
+  startQuickHash = IQQuickHash(iqBuffer);
+
+  GenerateStartEndSyncBlock(iqBuffer, 0x9876543210987654ULL);
+  endHash = XXH3_64bits_withSeed(iqBuffer, 256, seed);
+  endQuickHash = IQQuickHash(iqBuffer);
+
+/*
+  Serial.println();
+  Serial.println();
+  Serial.println("XXH3 has on Remote:");
+  Serial.print("startHash:      0x");
+  Serial.print((uint32_t)(startHash >> 32), HEX);
+  Serial.println((uint32_t)startHash, HEX);
+  Serial.print("startQuickHash: 0x");
+  Serial.print((uint32_t)(startQuickHash >> 32), HEX);
+  Serial.println((uint32_t)startQuickHash, HEX);
+  Serial.println();
+
+  Serial.print("endHash:        0x");
+  Serial.print((uint32_t)(endHash >> 32), HEX);
+  Serial.println((uint32_t)endHash, HEX);
+  Serial.print("endQuickHash:   0x");
+  Serial.print((uint32_t)(endQuickHash >> 32), HEX);
+  Serial.println((uint32_t)endQuickHash, HEX);
+  Serial.println();
+  Serial.println();
+*/
+#endif
 }
 
 void T41RemoteConnectCheck() {
@@ -545,7 +606,7 @@ void T41ControlLoop() {
 
     T41ControlGetCommand(cmd, 256);
 
-    SETPROFILEPIN(PROFILER_FT8_CAT_RX);
+    SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
 
     if(sendGet) {
       Serial.print("Received: ");
@@ -855,92 +916,40 @@ void T41ControlLoop() {
         break;
     }
 
-    RESETPROFILEPIN(PROFILER_FT8_CAT_RX);
+    RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
   }
 }
 
-//bool CompareStrings(const char *sz1, const char *sz2) {
-//  while(*sz2 != 0) {
-//    if(toupper(*sz1) != toupper(*sz2))
-//      return false;
-//    sz1++;
-//    sz2++;
-//  }
-//  return true; // end of string so show as match
-//}
-
-/*
-// T41/Remote IQ audio data stream processing
-// 16 blocks of IQ data is sent to the remote from the T41 over USB host
-// these are put in ping/pong buffer and consumed by ProcessReceiverData
-// this should happen very quickly with the dataReady toggling as appropriate.
-
-// IQ data comes interleaved in 128 int16_t blocks (512 bytes)
-void PrepIQData(uint8_t *data, int block) {
-  memcpy(&activeBuffer[block * 256], data, 256);
-  memcpy(&activeBuffer[2048 + block * 256], &data[256], 256);
-}
-
-void T41RemoteAudioLoop() {
-  //uint8_t data[512];
-  char data[512];
-  static int block = 0;
-
-  // *** TODO: need to impliment PacketSerial to maintain packet integrity ***
-  if(controlAudio.available()) {
-    int read = controlAudio.readBytes(data, 512);
-    if(read == 512) {
-      PrepIQData((uint8_t *)data, block);
-      ++block;
-    }
-  }
-  // need 16 successful loops to fill a ping/pongbuffer
-  if(block >= 16) {
-    // ping/pong swap
-    activeBuffer = (activeBuffer == ping) ? pong : ping;
-    readyBuffer = (activeBuffer == ping) ? pong : ping;
-    dataReady = true;
-    // set pointers to data ready to be processed
-    iData = (int16_t*)readyBuffer;
-    qData = (int16_t*)&readyBuffer[4096];
-    block = 0;
-  }
-}
-*/
-
-// *** TODO: set up on connect and disconnect ***
-static int bufCount;
-bool iqSync = false;
-
-/*
-bool CheckIQSync() {
-  bool sync = false;
-  long now = millis();
-
-  return sync;
-}
-*/
-
-void ResetIQDataStream() {
-  head = 0;
-  tail = 0;
-  bufCount = 0;
-}
-
-void SyncIQDataStream() {
-  long start = millis();
-  ResetIQDataStream();
-  while(!iqSync) {
-    T41ControlLoop();
-    ProcessControls();
-    if(controlAudio.available()) {
+void ProcessBlock(uint8_t *blk) {
+  if(iqSyncSearch) {
+    // check for start sync block
+    if(IQQuickHash(blk) == startQuickHash) {
       TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
-      controlAudio.readBytes(&iqBuffer[head], 512);
-      if((millis() - start) < 6) {
-        start = millis();
-      } else {
-        iqSync = true;
-      }
+
+      // *** TODO: add full hash to be sure ***
+      iqSyncSearch = false;
+      iqDataBlock = 0;
+      iqFrameHead = &blk[256]; // IQ data begins after the start sync block
+      iqDataReady = false;
+    }
+  } else {
+    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+
+    // check for end sync block
+    // *** end sync block is the last 256-bytes of received block ***
+    if(IQQuickHash(&blk[256]) == endQuickHash) {
+      iqSyncSearch = true;
+      iqDataBlock = 0;
+      iqDataReady = true;
+      return;
+    }
+
+    ++iqDataBlock;
+    if(iqDataBlock >= 16) {
+      // shouldn't get here, start over
+      iqSyncSearch = true;
+      iqDataBlock = 0;
+      iqDataReady = false;
     }
   }
 }
@@ -956,54 +965,93 @@ void SyncIQDataStream() {
   than this.  Currently, we'll get back in sync by resetting the IQ buffer.
 */
 bool T41RemoteReceiveIQData() {
-  bool result = false;
-
-// *** TODO: the frequent call here may cause some lag in mouse and CAT response
-//           as successive calls overwrite available data. Verify ***
-//#if CAT_CONTROL_T41_USB_HOST
-//  UsbHostTask();
-//#endif
-
-  // *** TODO: need to implement PacketSerial to maintain packet integrity ***
-  if(controlAudio.available()) {
-    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
-    if(!iqSync) {
-      SyncIQDataStream();
-    } else {
-      controlAudio.readBytes(&iqBuffer[head], 512);
-    }
-
-    head = (head + 512) % IQ_CIRC_BUF_SIZE;
-    bufCount += 512;
-    result = controlAudio.available() > 512;
-  }
-  return result;
-}
-
-// I on first call, Q on next
-int16_t *T41ControlReadBuffer() {
-  TOGGLEPROFILEPIN(PROFILER_PROCESS_FT8);
-  int16_t *block = (int16_t*)&iqBuffer[tail];
-  tail = (tail + 256) % IQ_CIRC_BUF_SIZE;
-  bufCount -= 256;
-  return block;
-}
-void T41ControlFreeBufferL() {
-}
-void T41ControlFreeBufferR() {
-}
-int T41ControlBlocksAvailable() {
   int avail = 0;
-  if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    if(iqSync) {
-      avail = bufCount / 128 / 2 / 2;
-    } else {
-      ResetIQDataStream();
-    }
+  char cmd[256];
+
+
+  // *** currently remote is running on USB serial not USB host ***
+  // *** might need to revisit if this is reversed ***
+  // *** TODO: the frequent call here may cause some lag in mouse and CAT response
+  //           as successive calls overwrite available data. Verify ***
+  //#if CAT_CONTROL_T41_USB_HOST
+  //  UsbHostTask();
+  //#endif
+
+  avail = controlAudio.available();
+  if(avail > 0) {
+    uint8_t *blk = &iqBuffer[iqBufIndex];
+
+    TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+
+    controlAudio.readBytes((char*)blk, 512);
+
+    sprintf(cmd, "0x%lu%lu;", (uint32_t)(IQQuickHash(iqBuffer) >> 32), (uint32_t)IQQuickHash(iqBuffer));
+    T41ControlSendCmd(cmd);
+    sprintf(cmd, "0x%lu%lu;", (uint32_t)(IQQuickHash(&iqBuffer[IQ_BUF_SIZE - 256]) >> 32), (uint32_t)IQQuickHash(&iqBuffer[IQ_BUF_SIZE - 256]));
+    T41ControlSendCmd(cmd);
+
+    avail -= 512;
+    iqBufIndex = (iqBufIndex + 512) % IQ_BUF_SIZE;
+    ProcessBlock(blk);
   }
 
-  return avail;
+  return avail >= 512;
 }
+
+int16_t *T41ControlReadBufferL(int block) {
+  int16_t *tmp = (int16_t *)iqFrameHead;
+
+  TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+
+  iqFrameHead = &iqFrameHead[256];
+  if(iqFrameHead >= &iqBuffer[IQ_BUF_SIZE]) {
+    // at end of circular buffer reset frame head
+    iqFrameHead = iqBuffer;
+  }
+
+  if(!iqDataReady || iqDataBlock != block) {
+    // out of sync
+    tmp = NULL; // signal bad data
+    iqDataReady = false;
+  }
+
+  return tmp;
+}
+
+int16_t *T41ControlReadBufferR(int block) {
+  int16_t *tmp = (int16_t *)iqFrameHead;
+
+  TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+
+  iqFrameHead = &iqFrameHead[256];
+  if(iqFrameHead >= &iqBuffer[IQ_BUF_SIZE]) {
+    // at end of circular buffer reset frame head
+    iqFrameHead = iqBuffer;
+  }
+
+  if(!iqDataReady || iqDataBlock != block) {
+    // out of sync
+    tmp = NULL; // signal bad data
+    iqDataReady = false;
+  }
+
+  ++iqDataBlock;
+  if(iqDataBlock >= 16) {
+    // end of data
+    iqDataReady = false;
+  }
+
+  return tmp;
+}
+
+int T41ControlBlocksAvailable() {
+  return iqDataReady && (t41.RemoteStatus == REMOTE_CONNECTED);
+}
+
+//void T41ControlFreeBufferL() {
+//}
+//void T41ControlFreeBufferR() {
+//}
 
 /*
   T41 timing (w/ T41 standard input and display disabled; Remote w/ Auto NF):
@@ -1015,39 +1063,65 @@ int T41ControlBlocksAvailable() {
 bool T41ControlSendIQData() {
   bool result = false;
 
-// *** TODO: the frequent call here may cause some lag in mouse and CAT response
-//           as successive calls overwrite available data. Verify ***
-//#if CAT_CONTROL_T41_USB_HOST
-//  UsbHostTask();
-//#endif
-
-  if((bufCount >= 512)) {
+  if(iqDataReady) {
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+
     // *** continuing on here when there is room to write gives more uniform transfer ***
     // *** however, without a T41 display to slow things down, transfer to the remote
     //     occur all at once with a disruption in audio (buffer overflow?). Transfering
     //     a single block smooths things out ***
     if(controlAudio.availableForWrite() >= 512) {
-    //while(controlAudio.availableForWrite() >= 512) {
+    //while(avail >= 512) {
+      int offset = iqDataBlock * 512 + 256; // includes offset for start sync block
+/*
+      if(iqDataBlock == 0) {
+        Serial.println();
+        Serial.print((uint32_t)(IQQuickHash(iqBuffer) >> 32), HEX);
+        Serial.println((uint32_t)IQQuickHash(iqBuffer), HEX);
+        Serial.println();
+      }
+      if(iqDataBlock == 0) {
+        Serial.println();
+        Serial.print((uint32_t)(IQQuickHash(&iqBuffer[IQ_BUF_SIZE - 256]) >> 32), HEX);
+        Serial.println((uint32_t)IQQuickHash(&iqBuffer[IQ_BUF_SIZE - 256]), HEX);
+        Serial.println();
+      }
+*/
       TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+
       // *** trying to write more than 512 bytes at a time slows things down ***
-      controlAudio.write(&iqBuffer[tail], 512);
-      tail = (tail + 512) % IQ_CIRC_BUF_SIZE;
-      bufCount -= 512;
-      result = bufCount > 0;
-#if CAT_CONTROL_T41_USB_HOST
-  //UsbHostTask();
-#endif
+      controlAudio.write(&iqBuffer[offset], 512);
+      ++iqDataBlock;
+      result = iqDataBlock < 17;
+      if(iqDataBlock >= 17) {
+        iqDataBlock = 0;
+        iqDataReady = false;
+      }
     }
   }
+
   return result;
 }
 
-void T41ControlBufferIQData(int16_t *pL, int16_t *pR) {
-  SETPROFILEPIN(PROFILER_PROCESS_FT8);
-  memcpy(&iqBuffer[head], pL, 256);
-  memcpy(&iqBuffer[head+256], pR, 256);
-  head = (head + 512) % IQ_CIRC_BUF_SIZE;
-  bufCount += 512;
-  RESETPROFILEPIN(PROFILER_PROCESS_FT8);
+// Buffer the IQ data from ProcessReceiverData.  The buffer has a preset 256-byte
+// start/end sync block that the remote will use to stay in sync.  The use of a circular
+// buffer can preserve data during sync issues, but complicates streaming the IQ data
+// as the head and end of each frame needs to be maintained here.  This doesn't add much
+// value as the data will be tossed if the stream is out of sync.  Thus checking the data
+// ready flag isn't necessary. Similarly, a ping/pong structure doesn't add any value either.
+void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block) {
+  int offset = block * 512 + 256; // includes offset for start sync block
+
+  SETPROFILEPIN(PROFILER_PROCESS_FRAME);
+  memcpy(&iqBuffer[offset], pL, 256);
+  memcpy(&iqBuffer[offset + 256], pR, 256);
+  if(block == 15) {
+    // if we got here without having fully transmitted IQ data then stream is out of sync
+    // might as well start over
+    // *** TODO: could consider sending an out-of-sync msg to the remote, but it will know
+    //     it on receipt of start sync block unless that is garbled as well! ***
+    iqDataBlock = 0;
+    iqDataReady = true;
+  }
+  RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
 }
