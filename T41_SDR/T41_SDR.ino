@@ -57,6 +57,7 @@
 //-------------------------------------------------------------------------------------------------------------
 
 extern bool beaconFlag;
+extern bool iqSync;
 
 float32_t DMAMEM audioBufferL[2048];
 float32_t DMAMEM audioBufferR[2048];
@@ -478,9 +479,12 @@ FASTRUN void loop() {
     case RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
-  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+  //if(t41.RemoteStatus == REMOTE_CONNECTED) {
+  if(iqSync) {
           DrawFreqSpectrum();
           DrawAudioSpectrum();
+  } else {
+          YieldToProcess();
   }
           break;
 

@@ -433,6 +433,9 @@ void IBLoadFollowup(int row, int col) {
   if(showFPS) {
     // calc FPS
     if(loopTimeSum != 0) value = (float)loopCount / (float)loopTimeSum * 1000.0;
+    // limit fps for infobox
+    if(value >= 100) value = 99.9;
+    if(value < 0) value = 0.0;
     loopTimeSum = 0;
     loopCount = 0;
   } else {

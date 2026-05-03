@@ -909,27 +909,70 @@ void T41RemoteAudioLoop() {
 */
 
 // *** TODO: set up on connect and disconnect ***
-static int bufCount = 0;
+static int bufCount;
+bool iqSync = false;
+
+/*
+bool CheckIQSync() {
+  bool sync = false;
+  long now = millis();
+
+  return sync;
+}
+*/
+
+void ResetIQDataStream() {
+  head = 0;
+  tail = 0;
+  bufCount = 0;
+}
+
+void SyncIQDataStream() {
+  long start = millis();
+  ResetIQDataStream();
+  while(!iqSync) {
+    T41ControlLoop();
+    ProcessControls();
+    if(controlAudio.available()) {
+      TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+      controlAudio.readBytes(&iqBuffer[head], 512);
+      if((millis() - start) < 6) {
+        start = millis();
+      } else {
+        iqSync = true;
+      }
+    }
+  }
+}
 
 /*
   Remote timing (w/ T41 standard input and display disabled; Remote w/ Auto NF):
     * ~3ms to receive 16 blocks of IQ data from T41
     * ~1.5-2ms to process this data in ProcessReceiverData
     * ~85ms to complete one update of display (~12 frames/sec)
+
+  Barring a slowdown in the T41, we expect to receive 16 blocks in ~3ms.  The
+  IQ data stream between the two units is out of sync if the time is much greater
+  than this.  Currently, we'll get back in sync by resetting the IQ buffer.
 */
 bool T41RemoteReceiveIQData() {
   bool result = false;
 
 // *** TODO: the frequent call here may cause some lag in mouse and CAT response
 //           as successive calls overwrite available data. Verify ***
-#if CAT_CONTROL_T41_USB_HOST
-  UsbHostTask();
-#endif
+//#if CAT_CONTROL_T41_USB_HOST
+//  UsbHostTask();
+//#endif
 
   // *** TODO: need to implement PacketSerial to maintain packet integrity ***
   if(controlAudio.available()) {
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
-    controlAudio.readBytes(&iqBuffer[head], 512);
+    if(!iqSync) {
+      SyncIQDataStream();
+    } else {
+      controlAudio.readBytes(&iqBuffer[head], 512);
+    }
+
     head = (head + 512) % IQ_CIRC_BUF_SIZE;
     bufCount += 512;
     result = controlAudio.available() > 512;
@@ -950,11 +993,16 @@ void T41ControlFreeBufferL() {
 void T41ControlFreeBufferR() {
 }
 int T41ControlBlocksAvailable() {
+  int avail = 0;
   if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    return bufCount / 128 / 2 / 2;
-  } else {
-    return 0;
+    if(iqSync) {
+      avail = bufCount / 128 / 2 / 2;
+    } else {
+      ResetIQDataStream();
+    }
   }
+
+  return avail;
 }
 
 /*
@@ -969,9 +1017,9 @@ bool T41ControlSendIQData() {
 
 // *** TODO: the frequent call here may cause some lag in mouse and CAT response
 //           as successive calls overwrite available data. Verify ***
-#if CAT_CONTROL_T41_USB_HOST
-  UsbHostTask();
-#endif
+//#if CAT_CONTROL_T41_USB_HOST
+//  UsbHostTask();
+//#endif
 
   if((bufCount >= 512)) {
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
