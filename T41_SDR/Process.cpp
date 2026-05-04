@@ -283,7 +283,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       pL = T41ControlReadBufferL(i);
       pR = T41ControlReadBufferR(i);
       // verify sync
-      if((pL == NULL) || (pR == NULL)) return 0;
+      if((pL == NULL) || (pR == NULL)) {
+        RESETPROFILEPIN(PROFILER_PROCESS_RX);
+        return 0;
+      }
       #else
       pL = Q_in_L.readBuffer();
       pR = Q_in_R.readBuffer();
@@ -1314,73 +1317,52 @@ void Calc1xFreqSpec() {
   }
 }
 
+void ProcessRemoteData() {
+  #if REC_IQ_FROM_T41
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    while(T41RemoteReceiveIQData()) ;
+    //{
+    //  if(++count > 16) {
+    //    // prevent freeze when no input is present
+    //    // *** TODO: revisit this ***
+    //    count = 0;
+    //    break;
+    //  }
+    //}
+  }
+  #endif
+  #if SEND_IQ_TO_REMOTE
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    while(T41ControlSendIQData()) ;
+  }
+  #endif
+}
+
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static long prevUpdate = 0;
   int count = 0;
 
-  if(updateSpectrum) {
-    // wait for spectrum data update
-    while(ProcessReceiverData(true) != 2) {
-      // process controls if 10ms has passed since last update
-      if(millis() - prevUpdate > 10) {
-        if(++count > 10) {
-          // prevent freeze when no input is present
-          // *** TODO: revisit this ***
-          count = 0;
-          break;
-        }
-        ProcessControls();
-        prevUpdate = millis();
-      }
-      #if REC_IQ_FROM_T41
-      if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        while(T41RemoteReceiveIQData()) {
-          if(++count > 16) {
-            // prevent freeze when no input is present
-            // *** TODO: revisit this ***
-            count = 0;
-            break;
-          }
-        }
-      }
-      #endif
-      #if SEND_IQ_TO_REMOTE
-      if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        while(T41ControlSendIQData()) ;
-      }
-      #endif
-    }
-  } else {
-    while(true) {
-      #if REC_IQ_FROM_T41
-      if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        while(T41RemoteReceiveIQData()) {
-          if(++count > 16) {
-            // prevent freeze when no input is present
-            // *** TODO: revisit this ***
-            count = 0;
-            break;
-          }
-        }
-      }
-      #endif
-      #if SEND_IQ_TO_REMOTE
-      if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        while(T41ControlSendIQData()) ;
-      }
-      #endif
+  while(true) {
+    ProcessRemoteData();
+    if(updateSpectrum) {
+      // wait for spectrum data update
+      if(ProcessReceiverData(true) == 2) break;
+    } else {
       // process IQ data while sufficient data exists
       // This allows the process to catch up after longer tasks
       // such as the waterfall update. Failing to do this can
       // result in poor audio.
-      if(ProcessReceiverData() != 1) {
+      if(ProcessReceiverData() != 1) break;
+    }
+    // process controls if 10ms has passed since last update
+    if(millis() - prevUpdate > 10) {
+      ProcessControls();
+      prevUpdate = millis();
+      if(++count > 10) {
+        // prevent freeze when no input is present
+        // *** TODO: revisit this ***
+        count = 0;
         break;
-      }
-
-      // process controls aif 10ms has passed since last update
-      if(millis() - prevUpdate > 10) {
-        ProcessControls();
-        prevUpdate = millis();
       }
     }
   }

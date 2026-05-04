@@ -484,18 +484,20 @@ FASTRUN void loop() {
     case RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
-#if REC_IQ_FROM_T41
-  if(t41.RemoteStatus == REMOTE_CONNECTED) {
-  //if(!iqSyncSearch) {
           DrawFreqSpectrum();
           DrawAudioSpectrum();
-  } else {
-          YieldToProcess();
-  }
-#else
-          DrawFreqSpectrum();
-          DrawAudioSpectrum();
-#endif
+//#if REC_IQ_FROM_T41
+//  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+//  //if(!iqSyncSearch) {
+//          DrawFreqSpectrum();
+//          DrawAudioSpectrum();
+//  } else {
+//          YieldToProcess();
+//  }
+//#else
+//          DrawFreqSpectrum();
+//          DrawAudioSpectrum();
+//#endif
           break;
 
         case DISPLAY_T41_FT8_DECODE:

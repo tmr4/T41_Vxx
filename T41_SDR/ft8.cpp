@@ -743,8 +743,8 @@ FLASHMEM bool InitFT8Decoder(const char *call, const char *grid) {
 
     if(result) {
       //SetStationCoordinates(call);
-      strncpy(baseCall, call, 14);
-      strncpy(baseGrid, grid, 5);
+      strncpy(baseCall, call, 13);
+      strncpy(baseGrid, grid, 4);
       InitDecoderState();
     }
   }
