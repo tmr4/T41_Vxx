@@ -1181,7 +1181,7 @@ void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block) {
     Serial.println("*** IQ buffer is full, increase BLOCKS ***");
   }
   memcpy(iqBuffer[head], pL, 256);
-  memcpy(iqBuffer[head + 256], pR, 256);
+  memcpy(&iqBuffer[head][256], pR, 256);
   head = (head + 1) & BLOCK_MASK;
 
   if(block == 15) {
