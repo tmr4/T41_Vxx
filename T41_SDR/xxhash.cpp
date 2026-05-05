@@ -5,7 +5,7 @@ void GenerateStartEndSyncBlock(uint8_t *buf, uint64_t salt) {
   uint64_t blockData;
   uint64_t value = seed + salt;
 
-  for (int i = 0; i < 256; i += 8) {
+  for (int i = 0; i < 512; i += 8) {
     // simple Xorshift-style transform
     value ^= (value << 13);
     value ^= (value >> 7);
@@ -20,9 +20,9 @@ uint64_t IQQuickHash(uint8_t *buf) {
   uint64_t h = 0;
 
   h ^= *(uint64_t*)(buf + 0);
-  h ^= *(uint64_t*)(buf + 64);
   h ^= *(uint64_t*)(buf + 128);
-  h ^= *(uint64_t*)(buf + 192);
+  h ^= *(uint64_t*)(buf + 256);
+  h ^= *(uint64_t*)(buf + 384);
 
   return h;
  }
