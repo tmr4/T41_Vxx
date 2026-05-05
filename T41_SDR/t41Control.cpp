@@ -961,6 +961,16 @@ void CheckSlip(uint8_t *blk) {
   }
 }
 
+void FindStart() {
+  while(!BufEmpty()) {
+    if(IQQuickHash(iqBuffer[tail]) == startQuickHash) {
+      break;
+      tail = (tail + 1) & BLOCK_MASK; // consume it
+    }
+    tail = (tail + 1) & BLOCK_MASK;
+  }
+}
+
 /*
 //TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
 //TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
@@ -1036,6 +1046,8 @@ bool T41RemoteReceiveIQData() {
   while(avail > 0) {
     //uint8_t *blk = &iqBuffer[head];
 
+    if(BufFull()) break;
+
     //controlAudio.readBytes((char*)blk, 512);
     controlAudio.readBytes((char*)&iqBuffer[head], 512);
     //ProcessBlock(blk);
@@ -1052,13 +1064,27 @@ int T41ControlBlocksAvailable() {
 
   if(t41.RemoteStatus == REMOTE_CONNECTED) {
     if(!BufEmpty()) {
-      if(IQQuickHash(iqBuffer[tail]) == startQuickHash) {
-        if(((head - tail) & BLOCK_MASK) >= 18) { // 16 data + start/end blocks
-          tail = (tail + 1) & BLOCK_MASK; // consume sync block
-          blocks = 16;
+      if(((head - tail) & BLOCK_MASK) >= 18) { // 16 data + start/end blocks
+        if(IQQuickHash(iqBuffer[tail]) == startQuickHash) {
+          // sync start verified, look at end
+          //if(IQQuickHash(iqBuffer[tail+17]) == endQuickHash)
+          {
+          // sync end verified, consume start sync block
+            tail = (tail + 1) & BLOCK_MASK;
+            blocks = 16;
+          //} else {
+          //  T41ControlSendCmd((char*)"Avail check: bad end;");
+          //  // look for end
+          }
+        } else {
+          T41ControlSendCmd((char*)"Avail check: bad start;");
+          // search for start
+          tail = (tail + 1) & BLOCK_MASK;
+          FindStart();
         }
       } else {
-        T41ControlSendCmd((char*)"T41ControlBlocksAvailable wants data with tail not at start;");
+        //T41ControlSendCmd((char*)"Avail check: not enough data;");
+        // wait for more
       }
     }
   }
@@ -1111,48 +1137,27 @@ int16_t *T41ControlReadBufferR(int block) {
 */
 bool T41ControlSendIQData() {
   bool result = false;
+  static int count = 0;
 
-  //if(iqDataReady)
-  {
-    // *** continuing on here when there is room to write gives more uniform transfer ***
-    // *** however, without a T41 display to slow things down, transfer to the remote
-    //     occur all at once with a disruption in audio (buffer overflow?). Transfering
-    //     a single block smooths things out ***
-    //if(controlAudio.availableForWrite() >= 512) {
+  // *** continuing on here when there is room to write gives more uniform transfer ***
+  // *** however, without a T41 display to slow things down, transfer to the remote
+  //     occur all at once with a disruption in audio (buffer overflow?). Transfering
+  //     a single block smooths things out ***
+  //if(controlAudio.availableForWrite() >= 512) {
+  if(BufEmpty() || (count >= 18)) {
+    count = 0;
+    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+  } else {
     int avail = controlAudio.availableForWrite();
-    while(avail >= 512) {
-      /*
-      if(iqBufferCount == 0) {
-        Serial.println();
-        Serial.print((uint32_t)(IQQuickHash(iqBuffer) >> 32), HEX);
-        Serial.println((uint32_t)IQQuickHash(iqBuffer), HEX);
-        Serial.println();
-      }
-      if(iqBufferCount == 0) {
-        Serial.println();
-        Serial.print((uint32_t)(IQQuickHash(&iqBuffer[IQ_BUF_SIZE - 256]) >> 32), HEX);
-        Serial.println((uint32_t)IQQuickHash(&iqBuffer[IQ_BUF_SIZE - 256]), HEX);
-        Serial.println();
-      }
-      */
-
-      if(BufEmpty()) {
-        Serial.println("*** IQ buffer is empty, increase BLOCKS ***");
-      }
-
+    //while(avail >= 512) {
+    if(avail >= 512) {
       // *** trying to write more than 512 bytes at a time slows things down ***
       controlAudio.write(iqBuffer[tail], 512);
       // *** a USB time-out could write less than 512, but just proceed, remote will have to resync ***
       tail = (tail + 1) & BLOCK_MASK;
-
-      //++iqBufferCount;
-      //result = iqBufferCount < 17;
-      //if(iqBufferCount >= 17) {
-      //  iqDataReady = false;
-      //  RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
-      //  break;
-      //}
+      count++;
       avail -= 512;
+      result = avail >= 512;
     }
   }
 
@@ -1177,17 +1182,12 @@ void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block) {
     memcpy(iqBuffer[head], start, BLOCK_SIZE);
     head = (head + 1) & BLOCK_MASK;
   }
-  if(BufFull()) {
-    Serial.println("*** IQ buffer is full, increase BLOCKS ***");
-  }
+
   memcpy(iqBuffer[head], pL, 256);
   memcpy(&iqBuffer[head][256], pR, 256);
   head = (head + 1) & BLOCK_MASK;
 
   if(block == 15) {
-    if(BufFull()) {
-      Serial.println("*** IQ buffer is full, increase BLOCKS ***");
-    }
     // set up sync end
     memcpy(iqBuffer[head], end, BLOCK_SIZE);
     head = (head + 1) & BLOCK_MASK;

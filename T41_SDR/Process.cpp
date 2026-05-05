@@ -1320,20 +1320,14 @@ void Calc1xFreqSpec() {
 void ProcessRemoteData() {
   #if REC_IQ_FROM_T41
   if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    while(T41RemoteReceiveIQData()) ;
-    //{
-    //  if(++count > 16) {
-    //    // prevent freeze when no input is present
-    //    // *** TODO: revisit this ***
-    //    count = 0;
-    //    break;
-    //  }
-    //}
+    //while(T41RemoteReceiveIQData()) ;
+    T41RemoteReceiveIQData();
   }
   #endif
   #if SEND_IQ_TO_REMOTE
   if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    while(T41ControlSendIQData()) ;
+    //while(T41ControlSendIQData()) ;
+    T41ControlSendIQData();
   }
   #endif
 }
