@@ -205,6 +205,18 @@ Project System:
 
 *** loop times are a rough average over 20 loops ***
 *** size on Audio Platform differs from PS due to mouse/keyboard support (and ? ... examine) ***
+5/5/2026 (64 block IQ buffer)
+PS
+  FLASH: code:220188, data:80816, headers:8236   free for files:7817224
+   RAM1: variables:161568, code:183080, padding:13528   free for local variables:166112
+   RAM2: variables:361312  free for malloc/new:162976
+ EXTRAM: variables:1200320
+AP
+  FLASH: code:215196, data:80904, headers:9044   free for files:7821320
+   RAM1: variables:151808, code:178712, padding:17896   free for local variables:175872
+   RAM2: variables:373632  free for malloc/new:150656
+ EXTRAM: variables:480320
+
 5/3/2026
 PS (w/ hash sync)
   FLASH: code:219980, data:80816, headers:8444   free for files:7817224

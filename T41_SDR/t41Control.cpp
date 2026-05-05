@@ -51,32 +51,134 @@ int signalStrengthReceivedIndex = -1;
 
 bool checkingConnection = false;
 
-//#define IQ_DATA 8192        // 16 blocks * 128 int16_t per block * 2 bytes / integer * 2 streams (I and Q)
-//#define IQ_SYNC_BLOCK 512   // 256-byte start/end sync blocks
-//#define IQ_BUF_PAD 0        // extra 512 blocks to create circular buffer
-//#define IQ_BUF_SIZE (IQ_DATA + IQ_SYNC_BLOCK + IQ_BUF_PAD * 512)
+/*
 
-// circular buffer needs to be greater than data + sync block
-#define BLOCK_SIZE  512
-//#define BLOCKS      32      // 1.7 sets (16 data + 1 start sync + 1 end sync) + 1 sentinel
-//#define BLOCK_MASK  0x1f    // 31
-#define BLOCKS      64
-#define BLOCK_MASK  63
+Remote IQ data stream transfer:
+The T41 IQ data stream is transfered to a remote unit over USB Host. The remote
+unit receives the data on USB serial. The specific USB objects are specified
+in the hardware config file, hardwareConfig.h, for each unit. The transfer is
+performed as follows:
 
-//EXTMEM uint8_t iqBuffer[IQ_BUF_SIZE] __attribute__((aligned (32)));
-DMAMEM uint8_t iqBuffer[BLOCKS][BLOCK_SIZE] __attribute__((aligned (32))); // *** IQQuickHash needs this aligned ***
+T41:
+  1. ProcessReceiverData pulls IQ data from Q_in_L and Q_in_R input queues.
+  2. T41ControlBufferIQData buffers IQ data in iqBuffer.
+  3. T41ControlSendIQData sends buffered IQ data to remote unit over USB Host.
+
+Remote:
+  1. T41RemoteReceiveIQData buffers IQ data from T41 over USB serial in iqBuffer.
+  2. ProcessReceiverData calls T41ControlBlocksAvailable for available IQ data blocks.
+  3. T41ControlBlocksAvailable aligns IQ data stream using start/end sync blocks.
+  4. ProcessReceiverData calls T41ControlReadBufferL and T41ControlReadBufferR for pointers to IQ data blocks.
+
+The transfer of IQ data into/from the buffer is very quick.  The transfer
+over USB is much slower, but still well within the 10ms DSP loop processing time.
+Usually, the IQ data is transfered from the T41 to the remote unit immediately after
+ProcessReceiverData completes on the T41 and immediately before ProcessReceiverData starts
+on the remote.  Occassionally, the USB transfer is a bottleneck and the next set of IQ
+data will be produced on the T41 before all of the data from the previous loop has been
+transfered.  While not critical for remote operation, an audio artifact will occur if
+this data is lost. To avoid this, extra IQ data must be buffered.
+
+To avoid unneeded memory copies, IQ data is copied into a circular buffer as it is produced,
+block by block, first a block of I data, followed by a block of Q data.  Each DSP loop produces
+8192 bytes of IQ data (16 blocks * 128 int16_t per block * 2 bytes / int16_t * 2 streams (I and Q)).
+
+The transfer between the T41 and remote must be syncronized because of the interleaved IQ data.
+The USB transfer is done in 512-byte chunks, the size used by Teensy 4.1.  This is also,
+by coincidence, the size of one block of IQ data. The data stream is syncronized by adding
+unique 512-byte sync blocks to the start and end of the IQ data, or 9216-bytes total.
+This increases the data transfer by 12.5%, but keeps the data aligned to enable the use of
+efficient pointers and indexing to process the IQ data.
+
+The circular buffer size is set to a power of 2 to allow fast a fast indexing mask rather
+than the typical modulo operation for wrapping at the end of the circular buffer. An extra
+"sentinel" block is added to aid full/empty buffer logic.
+
+The smallest power-of-2 buffer size to fit the 16 block IQ data, 2 block sync data and sentinel
+block is 32. A 32-block buffer (16k) holds about 1.7 DSP loops of IQ data plus one sentinel
+block. A 64-block buffer (32k) holds 3.5 DSP loops of IQ data plus one sentinel block. Testing
+is needed to determine the best fit for various operating conditions.
+
+Circular buffer placement in DMAMEM and EXTMEM has been tested with no material difference in
+processing speed. Variablility in the USB transfer overwhelms any difference in these.
+The buffer must be aligned for efficient pointer and syncing operations.
+
+A hash of the start/end sync blocks is used to increase the speed of syncing the data stream
+between the two units.  The start/end sync blocks are stored, but could be more generated
+in place if memory is very tight.  Or they could be precomputed and place in flash.
+*** TODO: test this *** Some memory efficiency can be gained by refining the common code
+base for the two different hardware versions.
+
+Efficient USB transfer between the two units requires that the data is pushed/pulled from
+the USB pipeline consisently. This is done with calls to ProcessRemoteData from YieldToProcess
+which is called periodically and by long running processes. This is important for proper
+remote operation, though the T41 will continue to operated normally if a problem arises.
+*** TODO: check that the CAT connection status is updated in this case ***
+
+The remote renders the display at about 12 fps even with the T41 display on. The T41 frame rate
+is about half of that, likely due to the USB Host overhead of scheduling the data packets.
+The remote doesn't have that overhead and consumes the available data very rapidly. The
+T41 requires at least a 64 block buffer, 32 blocks is insufficient and results in distortion
+at the remote.
+
+A very occasional glitch occurs in the data stream on the remote. The cause may be external.
+Increasing the T41 buffer size to 128 blocks may help, but that's a big memory price for a small
+glitch.
+*** TODO: needs more investigation ***.
+
+The circular buffer in DMAMEM is about a half a frame per second faster on the T41 than with
+it in EXTMEM.
+
+*** TODO: verify timing with new update ***
+
+T41 timing (w/ T41 standard input and display disabled; Remote w/ Auto NF):
+  * ~350us to buffer IQ data
+  * ~2ms to process this data in ProcessReceiverData (extra time compared to remote is buffering)
+  * ~3ms to transmit 16 blocks of IQ data to remote
+  * loop time isn't meaningful as the T41 is continuously processing/transmitting IQ data every ~10ms
+
+Remote timing (w/ T41 standard input and display disabled; Remote w/ Auto NF):
+  * ~3ms to receive 16 blocks of IQ data from T41
+  * ~1.5-2ms to process this data in ProcessReceiverData
+  * ~85ms to complete one update of display (~12 frames/sec)
+
+The flow of IQ data over USB doesn't begin until a remote connection between the units is
+confirmed. This is polled periodically. *** TODO: refine this *** Data flow begins when
+the connection is verified. While complete data sets are always buffered, the start up
+data flow may exceed the circular buffer size, resulting in an incomplete data set at the
+head of the circular buffer (the T41 T41ControlBufferIQData dumps to the circular buffer
+regardless of a full buffer, though a warning is sent to Serial).  The remote accommodates
+this by verifying a start sync block at the buffer tail and searching for one if not found.
+This is fast with precomputed sync block hashes.
+
+*** The remote T41RemoteReceiveIQData blocks USB receipt on full buffer. This is
+inconsistent with above. ***
+*** TODO: verify that this can be relaxed ***
+
+During testing so far, a slip in the data stream hasn't been observed. That is, the start
+sync block has stayed on the 512-byte boundary. A function to check for slippage is
+available.
+
+*/
+
+#define BLOCK_SIZE    512
+//#define BLOCKS      32
+//#define BLOCK_MASK  31
+//#define BLOCKS        64
+//#define BLOCK_MASK    63
+#define BLOCKS        128
+#define BLOCK_MASK    127
+
+// *** buffer and hash blocks need to be aligned ***
+//EXTMEM uint8_t iqBuffer[BLOCKS][BLOCK_SIZE] __attribute__((aligned (32)));
+DMAMEM uint8_t iqBuffer[BLOCKS][BLOCK_SIZE] __attribute__((aligned (32)));
 static size_t head, tail;
 
-//bool iqDataReady = false;
-
-// track of IQ data blocks sent to remote (+start/end sync for 17 in total)
-//int iqDataCount, iqBufferCount;
-
-static uint8_t start[BLOCK_SIZE] __attribute__((aligned (32))); // *** IQQuickHash needs this aligned ***
-static uint8_t end[BLOCK_SIZE] __attribute__((aligned (32))); // *** IQQuickHash needs this aligned ***
+//static uint8_t start[BLOCK_SIZE] __attribute__((aligned (32)));
+//static uint8_t end[BLOCK_SIZE] __attribute__((aligned (32)));
+static DMAMEM uint8_t start[BLOCK_SIZE] __attribute__((aligned (32)));
+static DMAMEM uint8_t end[BLOCK_SIZE] __attribute__((aligned (32)));
 uint64_t startFirst, endFirst, startHash, endHash, startQuickHash, endQuickHash;
-//bool iqSyncSearch = true; // true=searching for start sync block, false=in-frame
-//uint8_t *iqFrameHead = iqBuffer; // track location of sync'd IQ data blocks
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -925,22 +1027,6 @@ void SendMsg(const char *msg, int value) {
   T41ControlSendCmd(cmd);
 }
 
-void VerifyTrans(uint8_t *blk, bool start) {
-    uint64_t val;
-
-  if(start) {
-    val = *(uint64_t*)(blk);
-    if(val == startFirst) {
-      Serial.println("Found startFirst");
-    }
-  } else {
-    val = *(uint64_t*)(blk + 256);
-    if(val == endFirst) {
-      Serial.println("Found endFirst");
-    }
-  }
-}
-
 void CheckSlip(uint8_t *blk) {
   char cmd[256];
   //sprintf(cmd, "%d: 0x%lu%lu, 0x%lu%lu;", count, (uint32_t)(IQQuickHash(blk) >> 32), (uint32_t)IQQuickHash(blk), (uint32_t)(IQQuickHash(&blk[256]) >> 32), (uint32_t)IQQuickHash(&blk[256]));
@@ -971,91 +1057,24 @@ void FindStart() {
   }
 }
 
-/*
 //TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
 //TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-void ProcessBlock(uint8_t *blk) {
-  uint64_t h = IQQuickHash(blk);
 
-  //CheckSlip(blk);
-
-  if(iqSyncSearch) {
-    // check for start sync block
-    if(h == startQuickHash) {
-      SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-
-      // *** TODO: add full hash to be sure ***
-      iqSyncSearch = false;
-      iqBufferCount = 1;
-      iqFrameHead = head; // IQ data begins after the start sync block
-      iqDataReady = false;
-    }
-  } else {
-    ++iqBufferCount;
-
-    // check for end sync block
-    // *** end sync block is the last 256-bytes of received block ***
-    if(h == endQuickHash) {
-      if(iqBufferCount != 17) {
-        SendMsg("End sync problem at ProcessBlock: %d;", iqBufferCount);
-        //T41ControlSendCmd((char*)"end sync problem at ProcessBlock;");
-      //} else {
-      //  //T41ControlSendCmd((char*)"end sync ok;");
-      //  SendMsg("End sync ok: %d;", iqBufferCount);
-      }
-      //iqSyncSearch = true;
-      iqDataCount = 0;
-      iqDataReady = true;
-      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-      return;
-    }
-
-    //if(iqBufferCount >= 17) {
-    //  // shouldn't get here, start over
-    //  T41ControlSendCmd((char*)"Reset at ProcessBlock;");
-    //  iqSyncSearch = true;
-    //  iqBufferCount = 0;
-    //  iqDataReady = false;
-    //}
-  }
-}
-*/
-/*
-  Remote timing (w/ T41 standard input and display disabled; Remote w/ Auto NF):
-    * ~3ms to receive 16 blocks of IQ data from T41
-    * ~1.5-2ms to process this data in ProcessReceiverData
-    * ~85ms to complete one update of display (~12 frames/sec)
-
-  Barring a slowdown in the T41, we expect to receive 16 blocks in ~3ms.  The
-  IQ data stream between the two units is out of sync if the time is much greater
-  than this.  Currently, we'll get back in sync by resetting the IQ buffer.
-*/
 bool T41RemoteReceiveIQData() {
-  int avail = 0;
+  int avail = controlAudio.available();
 
-  // *** currently remote is running on USB serial not USB host ***
-  // *** might need to revisit if this is reversed ***
-  // *** TODO: the frequent call here may cause some lag in mouse and CAT response
-  //           as successive calls overwrite available data. Verify ***
-  //#if CAT_CONTROL_T41_USB_HOST
-  //  UsbHostTask();
-  //#endif
-
-  avail = controlAudio.available();
   //if(avail > 0) {
   while(avail > 0) {
-    //uint8_t *blk = &iqBuffer[head];
-
+    TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
     if(BufFull()) break;
 
-    //controlAudio.readBytes((char*)blk, 512);
     controlAudio.readBytes((char*)&iqBuffer[head], 512);
-    //ProcessBlock(blk);
     head = (head + 1) & BLOCK_MASK;
 
     avail -= 512;
   }
 
+  RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
   return avail >= 512;
 }
 
@@ -1099,12 +1118,6 @@ int16_t *T41ControlReadBufferL(int block) {
   TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
 
   // *** error checking??? ***
-  //if(!iqDataReady || iqDataCount != block) {
-  //  // out of sync
-  //  tmp = NULL; // signal bad data
-  //  iqDataReady = false;
-  //  T41ControlSendCmd((char*)"Reset at T41ControlReadBufferL;");
-  //}
 
   return tmp;
 }
@@ -1128,48 +1141,42 @@ int16_t *T41ControlReadBufferR(int block) {
 //void T41ControlFreeBufferR() {
 //}
 
-/*
-  T41 timing (w/ T41 standard input and display disabled; Remote w/ Auto NF):
-    * ~350us to buffer IQ data
-    * ~2ms to process this data in ProcessReceiverData (extra time compared to remote is buffering)
-    * ~3ms to transmit 16 blocks of IQ data to remote
-    * loop time isn't meaningful as the T41 is continuously processing/transmitting IQ data every ~10ms
-*/
 bool T41ControlSendIQData() {
   bool result = false;
   static int count = 0;
 
-  // *** continuing on here when there is room to write gives more uniform transfer ***
-  // *** however, without a T41 display to slow things down, transfer to the remote
-  //     occur all at once with a disruption in audio (buffer overflow?). Transfering
-  //     a single block smooths things out ***
-  //if(controlAudio.availableForWrite() >= 512) {
   if(BufEmpty() || (count >= 18)) {
     count = 0;
     RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
   } else {
-    int avail = controlAudio.availableForWrite();
+    //int avail = controlAudio.availableForWrite();
     //while(avail >= 512) {
-    if(avail >= 512) {
+    while(controlAudio.availableForWrite() >= 512) {
+    //if(avail >= 512) {
+    //while(avail >= 512) {
+      //avail = controlAudio.availableForWrite();
+      //avail = (avail / 512) * 512;
+      //if(avail > 2048) avail = 2048;
+      //if(avail > 1536) avail = 1536;
+      //if(avail > 1024) avail = 1024;
+      //if(avail > 512) avail = 512;
+      TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
       // *** trying to write more than 512 bytes at a time slows things down ***
-      controlAudio.write(iqBuffer[tail], 512);
+      controlAudio.write((char*)&iqBuffer[tail], 512);
+      //controlAudio.write((char*)&iqBuffer[tail], avail);
       // *** a USB time-out could write less than 512, but just proceed, remote will have to resync ***
       tail = (tail + 1) & BLOCK_MASK;
+      //tail = (tail + avail / 512) & BLOCK_MASK;
       count++;
-      avail -= 512;
-      result = avail >= 512;
+      //count += avail / 512;
+      //avail -= 512;
+      //result = avail >= 512;
     }
   }
 
   return result;
 }
 
-// Buffer the IQ data from ProcessReceiverData.  The buffer has a preset 256-byte
-// start/end sync block that the remote will use to stay in sync.  The use of a circular
-// buffer can preserve data during sync issues, but complicates streaming the IQ data
-// as the head and end of each frame needs to be maintained here.  This doesn't add much
-// value as the data will be tossed if the stream is out of sync.  Thus checking the data
-// ready flag isn't necessary. Similarly, a ping/pong structure doesn't add any value either.
 void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block) {
   SETPROFILEPIN(PROFILER_PROCESS_FRAME);
 
@@ -1192,9 +1199,7 @@ void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block) {
     memcpy(iqBuffer[head], end, BLOCK_SIZE);
     head = (head + 1) & BLOCK_MASK;
 
-    //iqBufferCount = 0;
-    //iqDataReady = true;
-    SETPROFILEPIN(PROFILER_FT8_CAT_TX);
+    //SETPROFILEPIN(PROFILER_FT8_CAT_TX);
   }
   RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
 }
