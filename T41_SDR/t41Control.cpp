@@ -172,13 +172,20 @@ available.
 // *** buffer and hash blocks need to be aligned ***
 //EXTMEM uint8_t iqBuffer[BLOCKS][BLOCK_SIZE] __attribute__((aligned (32)));
 DMAMEM uint8_t iqBuffer[BLOCKS][BLOCK_SIZE] __attribute__((aligned (32)));
-static size_t head, tail;
+//static size_t head, tail;
+static size_t tail;
+static volatile size_t head;
 
 //static uint8_t start[BLOCK_SIZE] __attribute__((aligned (32)));
 //static uint8_t end[BLOCK_SIZE] __attribute__((aligned (32)));
 static DMAMEM uint8_t start[BLOCK_SIZE] __attribute__((aligned (32)));
 static DMAMEM uint8_t end[BLOCK_SIZE] __attribute__((aligned (32)));
 uint64_t startFirst, endFirst, startHash, endHash, startQuickHash, endQuickHash;
+
+//bool remoteReady = false;
+bool remoteReady = true;
+
+IntervalTimer remoteTimer;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -188,6 +195,8 @@ void SendID(bool request);
 void UsbHostTask();
 void GenerateStartEndSyncBlock(uint8_t* buf, uint64_t salt);
 uint64_t IQQuickHash(uint8_t *buf);
+
+void ReceiveRemoteIQDataISR();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -240,6 +249,12 @@ void T41ControlSetup() {
   Serial.println();
 */
 #endif
+#if REC_IQ_FROM_T41
+  remoteTimer.begin(ReceiveRemoteIQDataISR, 50);
+  //remoteTimer.begin(ReceiveRemoteIQDataISR, 75);
+  //remoteTimer.begin(ReceiveRemoteIQDataISR, 100);
+  //remoteTimer.begin(ReceiveRemoteIQDataISR, 125);
+#endif
 }
 
 void T41RemoteConnectCheck() {
@@ -261,6 +276,7 @@ void T41RemoteConnectCheck() {
       if(lasped > 5000) {
         // connection lost
         t41.RemoteStatus = REMOTE_LOST;
+        remoteReady = false;
         checkingConnection = false;
         last = now;
       }
@@ -268,6 +284,7 @@ void T41RemoteConnectCheck() {
       // check connection every 30s
       if(lasped > 30000) {
         checkingConnection = true;
+        remoteReady = true;
         SendID(true);
         last = now;
       }
@@ -840,6 +857,7 @@ void T41ControlLoop() {
           sprintf(cmd,"ID024;");
           //sprintf(cmd,"ID019;"); // TS-2000
           T41ControlSendCmd(cmd);
+          t41.RemoteStatus = REMOTE_CONNECTED;
         } else if(cmd[1] == 'D' && cmd[5] == ';') { // IDxxx;
           if(checkingConnection) {
             checkingConnection = false;
@@ -1010,15 +1028,22 @@ void T41ControlLoop() {
 }
 
 // Remote data
+bool noAccess = false;
 
 // room to add another block
 bool BufFull() {
-    return ((head + 1) & BLOCK_MASK) == tail;
+  noAccess = true;
+  bool result = ((head + 1) & BLOCK_MASK) == tail;
+  noAccess = false;
+  return result;
 }
 
 // data to read
 bool BufEmpty() {
-    return head == tail;
+  noAccess = true;
+  bool result = head == tail;
+  noAccess = false;
+  return result;
 }
 
 void SendMsg(const char *msg, int value) {
@@ -1047,68 +1072,111 @@ void CheckSlip(uint8_t *blk) {
   }
 }
 
-void FindStart() {
+void ReceiveRemoteIQDataISR() {
+  static int count = 0;
+  //if(noAccess) return;
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    if(BufFull()) {
+      if(count == 0) {
+        // zero everything first time buffer is full
+        ++count;
+        tail=head=0;
+      }
+      return;
+    }
+    //if(BufFull()) { return; }
+    //SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+    int avail = controlAudio.available();
+    if(avail >= 512) {
+      SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      //while(avail >= 512 && ++count < 10)
+      {
+        TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+        controlAudio.readBytes((char*)&iqBuffer[head], 512);
+        head = (head + 1) & BLOCK_MASK;
+        avail -= 512;
+      }
+    }
+    RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+  }
+}
+
+void T41RemoteReceiveIQData() {
+/*
+  int avail = controlAudio.available();
+  //while(!BufFull()) {
+  //while(controlAudio.available() >= 512) {
+  while(avail >= 512) {
+    SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+    if(controlAudio.readBytes((char*)&iqBuffer[head], 512) == 0) return;
+    head = (head + 1) & BLOCK_MASK;
+    avail -= 512;
+  }
+
+  RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+*/
+}
+
+void CheckBlocksAvailable() {
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    if(controlAudio.available() >= 512) {
+      T41RemoteReceiveIQData();
+    }
+  }
+}
+
+bool FindStart() {
+  bool result = false;
+  SETPROFILEPIN(PROFILER_DECODE_FT8);
   while(!BufEmpty()) {
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     if(IQQuickHash(iqBuffer[tail]) == startQuickHash) {
+      result = true;
       break;
-      tail = (tail + 1) & BLOCK_MASK; // consume it
     }
     tail = (tail + 1) & BLOCK_MASK;
   }
+  RESETPROFILEPIN(PROFILER_DECODE_FT8);
+  return result;
 }
 
 //TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
 //TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
 
-bool T41RemoteReceiveIQData() {
-  int avail = controlAudio.available();
-
-  //if(avail > 0) {
-  while(avail > 0) {
-    TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-    if(BufFull()) break;
-
-    controlAudio.readBytes((char*)&iqBuffer[head], 512);
-    head = (head + 1) & BLOCK_MASK;
-
-    avail -= 512;
-  }
-
-  RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-  return avail >= 512;
-}
-
 int T41ControlBlocksAvailable() {
   int blocks = 0;
 
   if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    if(!BufEmpty()) {
+    while(!BufEmpty()) {
+      noAccess = true;
       if(((head - tail) & BLOCK_MASK) >= 18) { // 16 data + start/end blocks
+        noAccess = false;
         if(IQQuickHash(iqBuffer[tail]) == startQuickHash) {
-          // sync start verified, look at end
-          //if(IQQuickHash(iqBuffer[tail+17]) == endQuickHash)
-          {
-          // sync end verified, consume start sync block
-            tail = (tail + 1) & BLOCK_MASK;
+          // sync start verified, consume it
+          tail = (tail + 1) & BLOCK_MASK;
+
+          // look at end
+          if(IQQuickHash(iqBuffer[tail+16]) == endQuickHash) {
+            // sync end verified
             blocks = 16;
-          //} else {
-          //  T41ControlSendCmd((char*)"Avail check: bad end;");
-          //  // look for end
+            break;
+          } else {
+            // search for start
+            if(!FindStart()) break;
           }
         } else {
-          T41ControlSendCmd((char*)"Avail check: bad start;");
-          // search for start
+          // current block isn't start, consume it
           tail = (tail + 1) & BLOCK_MASK;
-          FindStart();
+          // search for start
+          if(!FindStart()) break;
         }
       } else {
-        //T41ControlSendCmd((char*)"Avail check: not enough data;");
-        // wait for more
+        break;
       }
     }
   }
 
-  //return iqDataReady && (t41.RemoteStatus == REMOTE_CONNECTED) ? 16 : 0;
+  noAccess = false;
   return blocks;
 }
 
@@ -1141,47 +1209,68 @@ int16_t *T41ControlReadBufferR(int block) {
 //void T41ControlFreeBufferR() {
 //}
 
-bool T41ControlSendIQData() {
-  bool result = false;
-  static int count = 0;
+void T41ControlSendIQData() {
+  int avail;
+  //static long prevUpdate = 0;
+  long maxTime = micros();
+  int count = 0;
+  static int count2 = 0;
 
-  if(BufEmpty() || (count >= 18)) {
-    count = 0;
-    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
-  } else {
-    //int avail = controlAudio.availableForWrite();
-    //while(avail >= 512) {
-    while(controlAudio.availableForWrite() >= 512) {
-    //if(avail >= 512) {
-    //while(avail >= 512) {
-      //avail = controlAudio.availableForWrite();
-      //avail = (avail / 512) * 512;
-      //if(avail > 2048) avail = 2048;
-      //if(avail > 1536) avail = 1536;
-      //if(avail > 1024) avail = 1024;
-      //if(avail > 512) avail = 512;
-      TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
-      // *** trying to write more than 512 bytes at a time slows things down ***
+  SETPROFILEPIN(PROFILER_FT8_CAT_TX);
+  UsbHostTask();
+  if(++count2 < 10) Serial.println("starting transfer...");
+  while(true) {
+    if(BufEmpty() || count > 18) {
+      if(count2 < 10) Serial.println("...transfer done");
+      break;
+    }
+    //if(t41.RemoteStatus != REMOTE_CONNECTED) break;
+    //while(controlAudio.availableForWrite() < 512) {
+    //  //TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+    //  TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+    //  UsbHostTask();
+    //  T41ControlLoop();
+    //  if(t41.RemoteStatus != REMOTE_CONNECTED) break;
+    //  //delayMicroseconds(50);
+    //  if(micros() - maxTime > 300) break;
+    //}
+    avail = controlAudio.availableForWrite();
+    if(avail >= 512) {
+      if(count2 < 10) Serial.printf("Avail to write (%d): %d\n", count, avail);
       controlAudio.write((char*)&iqBuffer[tail], 512);
-      //controlAudio.write((char*)&iqBuffer[tail], avail);
-      // *** a USB time-out could write less than 512, but just proceed, remote will have to resync ***
       tail = (tail + 1) & BLOCK_MASK;
-      //tail = (tail + avail / 512) & BLOCK_MASK;
-      count++;
-      //count += avail / 512;
       //avail -= 512;
-      //result = avail >= 512;
+      //controlAudio.write((char*)&iqBuffer[tail], (head-tail)*512);
+      //Serial.printf("Avail to write: %d\n", controlAudio.availableForWrite());
+      ++count;
+    }
+    UsbHostTask();
+    //if(micros() - maxTime > 3000) {
+    if(micros() - maxTime > 5000) {
+      if(count2 < 10) Serial.println("...transfer time out");
+      break;
     }
   }
+  RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+}
 
-  return result;
+void CheckBlocksToSend() {
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    if(!BufEmpty() && (controlAudio.availableForWrite() >= 512)) {
+      T41ControlSendIQData();
+    }
+  }
 }
 
 void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block) {
   SETPROFILEPIN(PROFILER_PROCESS_FRAME);
 
+  if(!remoteReady) return;
+
   if(BufFull()) {
-    Serial.println("*** IQ buffer is full, increase BLOCKS ***");
+    //Serial.println("*** IQ buffer is full, increase BLOCKS ***");
+    // reset buf
+    head = tail = 0;
   }
 
   if(block == 0) {
@@ -1199,7 +1288,9 @@ void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block) {
     memcpy(iqBuffer[head], end, BLOCK_SIZE);
     head = (head + 1) & BLOCK_MASK;
 
-    //SETPROFILEPIN(PROFILER_FT8_CAT_TX);
+    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    // send data
+    T41ControlSendIQData();
   }
   RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
 }

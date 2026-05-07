@@ -37,9 +37,12 @@ MouseController mouseController(usbHost);
 // support three host serial object corresponding to Serial, SerialUSB1 and SerialUSB2
 // available when the device unit is compiled with USB Type: Serial, Dual Serial or Triple Serial
 // these do not work in DMAMEM
-USBSerial_BigBuffer usbHostSerial(usbHost, 1);
+USBSerial_BigBuffer usbHostSerial(usbHost, 1); // most CAT commands are small
 #if SEND_IQ_TO_REMOTE
-USBSerial_BigBuffer usbHostSerial1(usbHost, 1); // USB device must compiled with Dual or Triple serial
+// USB device must compiled with Dual or Triple serial
+//USBSerial_BigBuffer usbHostSerial1(usbHost, 1);
+USBSerial_BigBuffer usbHostSerial1(usbHost);
+//USBSerial_BigBuffer usbHostSerial1(usbHost, 512); // all audio packets are 512 bytes
 #endif
 //USBSerial_BigBuffer usbHostSerial2(usbHost, 1); // USB device must be compiled with Triple serial
 
@@ -85,6 +88,14 @@ void check_for_usbhost_device_changes() {
 FLASHMEM void UsbHostSetup() {
 #ifdef USB_HOST_SUPPORT
   usbHost.begin();
+#endif
+
+#if HOST_SERIAL_SUPPORT
+  usbHostSerial.begin(1000000);
+#endif
+
+#if SEND_IQ_TO_REMOTE
+  usbHostSerial1.begin(1000000);
 #endif
 
 #ifdef HOST_KEYBOARD_MOUSE_SUPPORT

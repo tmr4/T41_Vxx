@@ -592,9 +592,6 @@ FASTRUN void loop() {
   EndAudioStats();
 #endif
 
-  UpdateClock();
-  UpdateMemTempLoad();
-
 #ifdef T41_REMOTE_DISPLAY
   RemoteLoop();
 #endif

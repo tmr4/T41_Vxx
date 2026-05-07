@@ -1,0 +1,272 @@
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 8191
+Avail to write (12): 8191
+Avail to write (13): 8191
+Avail to write (14): 8191
+Avail to write (15): 8191
+Avail to write (16): 8191
+Avail to write (17): 8191
+...transfer done
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 7679
+Avail to write (12): 7167
+Avail to write (13): 6655
+Avail to write (14): 6143
+Avail to write (15): 5631
+Avail to write (16): 5119
+Avail to write (17): 4607
+...transfer done
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 7679
+Avail to write (12): 7167
+Avail to write (13): 6655
+Avail to write (14): 6143
+Avail to write (15): 5631
+Avail to write (16): 5119
+Avail to write (17): 4607
+...transfer done
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 7679
+Avail to write (5): 7167
+Avail to write (6): 6655
+Avail to write (7): 6143
+Avail to write (8): 5631
+Avail to write (9): 5119
+Avail to write (10): 4607
+Avail to write (11): 4095
+Avail to write (12): 3583
+Avail to write (13): 3071
+Avail to write (14): 2559
+Avail to write (15): 2047
+Avail to write (16): 1535
+Avail to write (17): 1023
+...transfer done
+
+// current
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 7679
+Avail to write (12): 7167
+Avail to write (13): 6655
+Avail to write (14): 6143
+Avail to write (15): 5631
+Avail to write (16): 5119
+Avail to write (17): 4607
+...transfer done
+starting transfer...
+Avail to write (0): 4095
+Avail to write (1): 3583
+Avail to write (2): 3071
+Avail to write (3): 2559
+Avail to write (4): 2047
+Avail to write (5): 1535
+Avail to write (6): 1023
+...transfer time out
+starting transfer...
+...transfer time out
+starting transfer...
+...transfer time out
+starting transfer...
+...transfer time out
+starting transfer...
+...transfer time out
+starting transfer...
+...transfer time out
+starting transfer...
+...transfer time out
+starting transfer...
+Avail to write (0): 1535
+Avail to write (1): 3071
+Avail to write (2): 4607
+Avail to write (3): 5119
+Avail to write (4): 6655
+Avail to write (5): 8184
+Avail to write (6): 8184
+Avail to write (7): 8184
+Avail to write (8): 8184
+Avail to write (9): 8184
+Avail to write (10): 8184
+Avail to write (11): 8184
+Avail to write (12): 8184
+Avail to write (13): 8184
+Avail to write (14): 8184
+Avail to write (15): 8184
+Avail to write (16): 8184
+Avail to write (17): 8184
+Avail to write (18): 8184
+...transfer done
+
+// fresh start both units
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 7679
+Avail to write (12): 7167
+Avail to write (13): 6655
+Avail to write (14): 6143
+Avail to write (15): 5631
+Avail to write (16): 5119
+Avail to write (17): 4607
+...transfer done
+starting transfer...
+Avail to write (0): 4095
+Avail to write (1): 3583
+Avail to write (2): 3071
+Avail to write (3): 2559
+Avail to write (4): 2047
+Avail to write (5): 1535
+Avail to write (6): 1023
+...transfer time out
+starting transfer...
+...transfer time out
+starting transfer...
+...transfer time out
+starting transfer...
+Avail to write (0): 1535
+...transfer time out
+starting transfer...
+starting transfer...
+...transfer time out
+starting transfer...
+Avail to write (0): 1535
+...transfer time out
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 8191
+Avail to write (12): 8191
+Avail to write (13): 8191
+Avail to write (14): 8191
+Avail to write (15): 8191
+Avail to write (16): 8191
+Avail to write (17): 8191
+Avail to write (18): 8191
+...transfer done
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 8191
+Avail to write (12): 8191
+Avail to write (13): 8191
+Avail to write (14): 8191
+Avail to write (15): 8191
+Avail to write (16): 8191
+Avail to write (17): 8191
+Avail to write (18): 8191
+...transfer done
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 8191
+Avail to write (12): 8191
+Avail to write (13): 8191
+Avail to write (14): 8191
+Avail to write (15): 8191
+Avail to write (16): 8191
+Avail to write (17): 8191
+Avail to write (18): 8191
+...transfer done
+starting transfer...
+Avail to write (0): 8191
+Avail to write (1): 8191
+Avail to write (2): 8191
+Avail to write (3): 8191
+Avail to write (4): 8191
+Avail to write (5): 8191
+Avail to write (6): 8191
+Avail to write (7): 8191
+Avail to write (8): 8191
+Avail to write (9): 8191
+Avail to write (10): 8191
+Avail to write (11): 7679
+Avail to write (12): 7167
+Avail to write (13): 6655
+Avail to write (14): 6143
+Avail to write (15): 5631
+Avail to write (16): 5119
+Avail to write (17): 4607
+Avail to write (18): 4095
+...transfer done
