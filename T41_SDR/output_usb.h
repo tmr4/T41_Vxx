@@ -27,15 +27,23 @@
 
 #include "debug.h"
 
-extern void SendMsg(const char *msg, int value);
+//-------------------------------------------------------------------------------------------------------------
+// Forwards
+//-------------------------------------------------------------------------------------------------------------
+
+void SendMsg(const char *msg, int value);
+void UsbHostTask();
+
+//-------------------------------------------------------------------------------------------------------------
+// Code
+//-------------------------------------------------------------------------------------------------------------
 
 //template<typename USBSerial_BigBuffer>
 class AudioUSBSender : public AudioStream {
 public:
   AudioUSBSender(USBSerial_BigBuffer& serial) : AudioStream(2, inputQueueArray), _serial(serial) {}
 
-  void update(void) override
-  {
+  void update(void) override {
     audio_block_t *blockL = receiveReadOnly(0);
     audio_block_t *blockR = receiveReadOnly(1);
 
@@ -45,6 +53,7 @@ public:
       return;
     }
 
+    UsbHostTask();
     if(!_serial || _serial.availableForWrite() < 512) {
       release(blockL);
       release(blockR);
@@ -70,6 +79,7 @@ public:
 
     release(blockL);
     release(blockR);
+    UsbHostTask();
   }
 
 private:
