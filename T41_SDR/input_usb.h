@@ -53,27 +53,32 @@ public:
 
   void update(void) override {
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
     if(t41.RemoteStatus != REMOTE_CONNECTED) {
       while(available() > 0) read(buffer[head], 1);
       return;
     }
     //if(bufFull()) return;
-    if(available() < blockSize) return;
+    if(available() < blockSize) {
+      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+      return;
+    }
 
-    TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
     // put block in buffer
     int received = read(buffer[head], blockSize);
     if(received == blockSize) {
+      TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
       head = (head + 1) & blockMask;
     } else {
       // didn't receive a full block
       // do some partial processing
       // *** TODO: what exactly? ***
     }
-    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
 
     if(state == LOCKED) {
-      if(!checkSync()) return;
+      //if(!checkSync()) return;
 
       audio_block_t *blockL = receiveReadOnly(0);
       audio_block_t *blockR = receiveReadOnly(1);
@@ -97,8 +102,11 @@ public:
       tail = (tail + 1) & blockMask;
       remaining--;
     } else {
-      sync();
+      //sync();
     }
+    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    RESETPROFILEPIN(PROFILER_DECODE_FT8);
+    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
   }
 
 private:

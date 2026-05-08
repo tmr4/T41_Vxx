@@ -303,11 +303,11 @@ void T41RemoteConnectCheck() {
       last = now;
     }
   } else {
-    // send a heartbeat every 250ms
-    if(lasped > 250) {
+    // send a heartbeat every 500ms
+    if(lasped > 500) {
       SendID(true);
     }
-    if(millis() - lastHeartbeat > 600) {
+    if(millis() - lastHeartbeat > 2000) {
       t41.RemoteStatus = REMOTE_LOST;
     } else {
       t41.RemoteStatus = REMOTE_CONNECTED;
@@ -361,8 +361,8 @@ void T41PrepareSpectrumData(int16_t *data, int16_t max) {
 }
 
 void T41ControlSendCmd(char *cmd) {
-  SETPROFILEPIN(PROFILER_FT8_CAT_TX);
   if(sendGet) {
+    SETPROFILEPIN(PROFILER_FT8_CAT_TX);
     Serial.print("Sending: ");
     Serial.println(cmd);
   }
@@ -773,9 +773,9 @@ void T41ControlLoop() {
     T41ControlGetCommand(cmd, 256);
     lastHeartbeat = millis();
 
-    SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
 
     if(sendGet) {
+      SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
       Serial.print("Received: ");
       Serial.println(cmd);
     }

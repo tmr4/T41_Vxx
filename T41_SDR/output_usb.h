@@ -41,11 +41,14 @@ void UsbHostTask();
 //template<typename USBSerial_BigBuffer>
 class AudioUSBSender : public AudioStream {
 public:
-  //AudioUSBSender(USBSerial_BigBuffer& serial) : AudioStream(2, inputQueueArray), _serial(serial) {}
-  AudioUSBSender() : AudioStream(2, inputQueueArray) {}
+  AudioUSBSender(USBSerial_BigBuffer& serial) : AudioStream(2, inputQueueArray), _serial(serial) {
+  //  enabled = true;
+  }
+  //AudioUSBSender() : AudioStream(2, inputQueueArray) {}
 
   void update(void) override {
-    SETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
     audio_block_t *blockL = receiveReadOnly(0);
     audio_block_t *blockR = receiveReadOnly(1);
 
@@ -61,20 +64,26 @@ public:
 
       release(blockL);
       release(blockR);
-      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+      //RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
       return;
     }
 
     UsbHostTask();
-    //if(_serial.availableForWrite() < 512) {
-    //  // *** TODO: buffer data, wait until next time to continue ***
-    //
-    //  release(blockL);
-    //  release(blockR);
-    //  RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-    //  return;
-    //}
+    //if(enabled)
+    {
+      if(_serial.availableForWrite() < 512) {
+        // *** TODO: buffer data, wait until next time to continue ***
+        release(blockL);
+        release(blockR);
+        RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+        RESETPROFILEPIN(PROFILER_DECODE_FT8);
+        RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+        return;
+      }
+    }
 
+    TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+    /*
     if(blocks >= frameBlocks) {
       alignas(32) uint8_t syncBlock[512];
 
@@ -82,13 +91,16 @@ public:
       ((uint32_t *)syncBlock)[0] = syncWord;
       ((uint32_t *)syncBlock)[1] = frameCounter++;
 
-      //_serial.write(syncBlock, 512);
+      //if(enabled)
+      _serial.write(syncBlock, 512);
       blocks = 0;
     }
-    TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
-
-    //_serial.write((uint8_t *)blockL->data, 256);
-    //_serial.write((uint8_t *)blockR->data, 256);
+    */
+    //if(enabled)
+    {
+      _serial.write((uint8_t *)blockL->data, 256);
+      _serial.write((uint8_t *)blockR->data, 256);
+    }
 
     blocks++;
 
@@ -96,10 +108,13 @@ public:
     release(blockR);
     UsbHostTask();
     RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    RESETPROFILEPIN(PROFILER_DECODE_FT8);
+    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
   }
 
 private:
-  //USBSerial_BigBuffer& _serial;
+  USBSerial_BigBuffer& _serial;
+  //bool enabled = false;
 
   static constexpr uint32_t syncWord = 0xA55AA55A;
   static constexpr int frameBlocks = 16;
