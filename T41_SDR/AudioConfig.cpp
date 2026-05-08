@@ -347,8 +347,8 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 #if SEND_IQ_TO_REMOTE
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
-    pc_Q_in_L.connect(Q_in_L, 0, hostSerial, 0);
-    pc_Q_in_R.connect(Q_in_R, 0, hostSerial, 1);
+    pc_Q_in_L.connect(i2s_quadIn, 0, hostSerial, 0);
+    pc_Q_in_R.connect(i2s_quadIn, 1, hostSerial, 1);
 #endif
     // RX output on I2S channel 1(left)
     // I2S on pin 7 (also headphone and line out)

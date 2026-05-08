@@ -1,32 +1,31 @@
 #pragma once
 
 /*
- AudioUSBSender
 
- Teensy AudioStream object
+ AudioUSBSender - Teensy AudioStream object
 
  Sends:
-   16 x 512-byte IQ payload blocks followed by 1 x 512-byte sync block
+   16 x 512-byte IQ blocks followed by 1 x 512-byte sync block
 
- Payload block format:
+ IQ block format:
    256 bytes I
    256 bytes Q
 
  Sync block format:
-   uint32_t magic
+   uint32_t sync word
    uint32_t frameCounter
    remaining bytes unused
   *** TODO: consider unique block and hash to make more robust ***
 
  Nonblocking USBSerial_BigBuffer writes
- No payload corruption
- No packet assembly copies
 
 */
 
 #include <Arduino.h>
 #include <AudioStream.h>
 #include <USBHost_t36.h>
+
+#include "debug.h"
 
 extern void SendMsg(const char *msg, int value);
 
@@ -62,6 +61,7 @@ public:
       _serial.write(syncBlock, 512);
       blocks = 0;
     }
+    TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
 
     _serial.write((uint8_t *)blockL->data, 256);
     _serial.write((uint8_t *)blockR->data, 256);

@@ -1,22 +1,17 @@
 #pragma once
 
 /*
- AudioUSBReceiver
-
- Teensy AudioStream object
+ AudioUSBReceiver - Teensy AudioStream object
 
  Receives:
-   16 x IQ payload frameBlocks
-   1 x sync block
+   16 x 512-byte IQ blocks
+   1 x 512-byte sync block
 
- Uses:
-   LOCKED
-   SCAN
-   RESYNC
+ State driven
 
  Nonblocking
- Audio-driven ingestion
- Power-of-2 ring buffer
+ I2S Audio-driven
+ Circular buffer
 
 */
 
