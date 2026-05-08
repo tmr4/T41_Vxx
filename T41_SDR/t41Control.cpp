@@ -160,7 +160,7 @@ sync block has stayed on the 512-byte boundary. A function to check for slippage
 available.
 
 */
-
+/*
 #define BLOCK_SIZE    512
 //#define BLOCKS      32
 //#define BLOCK_MASK  31
@@ -186,7 +186,7 @@ uint64_t startFirst, endFirst, startHash, endHash, startQuickHash, endQuickHash;
 bool remoteReady = true;
 
 IntervalTimer remoteTimer;
-
+*/
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -213,6 +213,7 @@ void T41ControlSetup() {
     sendGet = true;
     //sendGet = false;
   }
+  /*
 #if SEND_IQ_TO_REMOTE || REC_IQ_FROM_T41
   const uint64_t seed = 0x9E3779B97F4A7C15ULL; // fractional part of the Golden Ratio (2^64 / phi)
 
@@ -227,7 +228,6 @@ void T41ControlSetup() {
   endQuickHash = IQQuickHash(end);
   endFirst = *(uint64_t*)(end);
 
-/*
   Serial.println();
   Serial.println();
   Serial.println("XXH3 has on T41:");
@@ -247,16 +247,15 @@ void T41ControlSetup() {
   Serial.println((uint32_t)endQuickHash, HEX);
   Serial.println();
   Serial.println();
-*/
 #endif
 #if REC_IQ_FROM_T41
-  remoteTimer.begin(ReceiveRemoteIQDataISR, 50);
+  //remoteTimer.begin(ReceiveRemoteIQDataISR, 50);
   //remoteTimer.begin(ReceiveRemoteIQDataISR, 75);
   //remoteTimer.begin(ReceiveRemoteIQDataISR, 100);
   //remoteTimer.begin(ReceiveRemoteIQDataISR, 125);
 #endif
+*/
 }
-
 void T41RemoteConnectCheck() {
   static unsigned long last = 0;
   unsigned long now = millis();
@@ -276,7 +275,7 @@ void T41RemoteConnectCheck() {
       if(lasped > 5000) {
         // connection lost
         t41.RemoteStatus = REMOTE_LOST;
-        remoteReady = false;
+        //remoteReady = false;
         checkingConnection = false;
         last = now;
       }
@@ -284,7 +283,7 @@ void T41RemoteConnectCheck() {
       // check connection every 30s
       if(lasped > 30000) {
         checkingConnection = true;
-        remoteReady = true;
+        //remoteReady = true;
         SendID(true);
         last = now;
       }
@@ -1027,6 +1026,13 @@ void T41ControlLoop() {
   }
 }
 
+void SendMsg(const char *msg, int value) {
+  char cmd[256];
+  sprintf(cmd, msg, value);
+  T41ControlSendCmd(cmd);
+}
+
+/*
 // Remote data
 bool noAccess = false;
 
@@ -1044,12 +1050,6 @@ bool BufEmpty() {
   bool result = head == tail;
   noAccess = false;
   return result;
-}
-
-void SendMsg(const char *msg, int value) {
-  char cmd[256];
-  sprintf(cmd, msg, value);
-  T41ControlSendCmd(cmd);
 }
 
 void CheckSlip(uint8_t *blk) {
@@ -1102,7 +1102,6 @@ void ReceiveRemoteIQDataISR() {
 }
 
 void T41RemoteReceiveIQData() {
-/*
   int avail = controlAudio.available();
   //while(!BufFull()) {
   //while(controlAudio.available() >= 512) {
@@ -1114,7 +1113,6 @@ void T41RemoteReceiveIQData() {
   }
 
   RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-*/
 }
 
 void CheckBlocksAvailable() {
@@ -1294,3 +1292,4 @@ void T41ControlBufferIQData(int16_t *pL, int16_t *pR, int block) {
   }
   RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
 }
+*/

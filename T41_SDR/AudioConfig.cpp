@@ -9,6 +9,10 @@
 
 #include "AudioConfig.h"
 
+#include <USBHost_t36.h>
+#include "input_usb.h"
+#include "output_usb.h"
+
 /**************************************************************
 T41 audio chain:
   Software supports both RX/TX and RX only versions. RX support is alway assumed. But because v11/v12 hardware
@@ -92,6 +96,16 @@ AudioControlSGTL5000 audioControl_1; // controller for the Teensy Audio Board mi
 AudioControlSGTL5000 audioControl_2; // control object PCM1808 ADC (doesn't actually control ADC) https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
 
 // Audio inputs
+#if REMOTE_REC_IQ_FROM_T41UDIO_DATA
+// new audio library object to stream usb serial to Q_in_L and Q_in_R on remote
+AudioInputUSBSerial1 usbSerial;
+#endif
+#if SEND_IQ_TO_REMOTE
+// new audio library object to stream Q_in_L and Q_in_R to usb host serial on T41
+extern USBSerial_BigBuffer usbHostSerial1;
+AudioUSBSender hostSerial(usbHostSerial1);
+#endif
+
 // I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
 // See https://www.pjrc.com/teensy/gui/?info=AudioInputI2SQuad
 AudioInputI2SQuad i2s_quadIn;
@@ -326,9 +340,16 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
     // establish audio connections
     // RX input on I2S channels 1, 2 (pin 8)
+#if REMOTE_REC_IQ_FROM_T41UDIO_DATA
+    pc_Q_in_L.connect(usbSerial, 0, Q_in_L, 0);
+    pc_Q_in_R.connect(usbSerial, 1, Q_in_R, 0);
+#endif
+#if SEND_IQ_TO_REMOTE
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
-
+    pc_Q_in_L.connect(Q_in_L, 0, hostSerial, 0);
+    pc_Q_in_R.connect(Q_in_R, 0, hostSerial, 1);
+#endif
     // RX output on I2S channel 1(left)
     // I2S on pin 7 (also headphone and line out)
     pc_Q_out_L.connect(Q_out_L, 0, i2s_quadOut, 0);

@@ -237,7 +237,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static int passes = 20;
   bool updateFreqSpec = false; // true: spectrums updated, otherwise false
   bool success = false; // true: enough data to process, otherwise false
-  bool dataAvailable = false;
 
   /**********************************************************************************
         Get samples from queue buffers
@@ -262,16 +261,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // even with reenabling interrupts during the idle loop.  Perhaps the low priority of the update interrupt was affecting this.
   //
   // we allow input buffer availability to regulate FT8 wav file decoding otherwise we'll process the wav file too fast
-  #if REC_IQ_FROM_T41
-    if(t41.RemoteStatus == REMOTE_CONNECTED) {
-      dataAvailable = T41ControlBlocksAvailable() >= blocks;
-    } else {
-      dataAvailable = 0;
-    }
-  #else
-    dataAvailable = (Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks);
-  #endif
-  if(dataAvailable) {
+  if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) {
     success = true;
 
     SETPROFILEPIN(PROFILER_PROCESS_RX);
@@ -281,45 +271,15 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     // get audio samples from the audio buffers and convert them to float
     // read I and Q blocks into buffers (128 samples each)
     for(int i = 0; i < blocks; i++) {
-      int16_t *pL, *pR;
-
-      #if REC_IQ_FROM_T41
-      if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        pL = T41ControlReadBufferL(i);
-        pR = T41ControlReadBufferR(i);
-        // verify sync
-        if((pL == NULL) || (pR == NULL)) {
-          RESETPROFILEPIN(PROFILER_PROCESS_RX);
-          return 0;
-        }
-      } else {
-        return 0;
-      }
-      #else
-      pL = Q_in_L.readBuffer();
-      pR = Q_in_R.readBuffer();
-      #endif
-
-      #if SEND_IQ_TO_REMOTE
-      if(t41.RemoteStatus == REMOTE_CONNECTED) {
-        T41ControlBufferIQData(pL, pR, i);
-      }
-      #endif
-
       /**********************************************************************************
           Using arm_Math library, convert to float one buffer_size.
           Float_buffer samples are now standardized from > -1.0 to < 1.0
       **********************************************************************************/
-      arm_q15_to_float(pR, &audioBufferL[128 * i], 128);
-      arm_q15_to_float(pL, &audioBufferR[128 * i], 128);
+      arm_q15_to_float(Q_in_R.readBuffer(), &audioBufferL[128 * i], 128);
+      arm_q15_to_float(Q_in_L.readBuffer(), &audioBufferR[128 * i], 128);
 
-      #if REC_IQ_FROM_T41
-      //T41ControlFreeBufferL();
-      //T41ControlFreeBufferR();
-      #else
       Q_in_L.freeBuffer();
       Q_in_R.freeBuffer();
-      #endif
     }
 
     // *** TODO: consider if this is needed for FT8 ***
@@ -1330,14 +1290,7 @@ void Calc1xFreqSpec() {
 
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static long prevUpdate = 0;
-  int count = 0;
 
-  #if REC_IQ_FROM_T41
-    //CheckBlocksAvailable();
-  #endif
-  #if SEND_IQ_TO_REMOTE
-    CheckBlocksToSend();
-  #endif
   while(true) {
     if(updateSpectrum) {
       // wait for spectrum data update
@@ -1364,12 +1317,6 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
       //}
     }
   }
-  #if REC_IQ_FROM_T41
-    //CheckBlocksAvailable();
-  #endif
-  #if SEND_IQ_TO_REMOTE
-    CheckBlocksToSend();
-  #endif
 }
 
 void YieldForProcess(int ms) {
