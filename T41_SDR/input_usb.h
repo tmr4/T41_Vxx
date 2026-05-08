@@ -18,6 +18,8 @@
 #include <Arduino.h>
 #include <AudioStream.h>
 
+#include "debug.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -50,9 +52,15 @@ public:
   void begin() {}
 
   void update(void) override {
-    if(bufFull()) return;
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+    if(t41.RemoteStatus != REMOTE_CONNECTED) {
+      while(available() > 0) read(buffer[head], 1);
+      return;
+    }
+    //if(bufFull()) return;
     if(available() < blockSize) return;
 
+    TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
     // put block in buffer
     int received = read(buffer[head], blockSize);
     if(received == blockSize) {
@@ -62,6 +70,7 @@ public:
       // do some partial processing
       // *** TODO: what exactly? ***
     }
+    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
 
     if(state == LOCKED) {
       if(!checkSync()) return;

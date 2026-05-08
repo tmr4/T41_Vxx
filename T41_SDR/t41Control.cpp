@@ -38,6 +38,8 @@ extern USBSerial_BigBuffer usbHostSerial1;
 //volatile bool sendGet = false;
 bool sendGet = false;
 
+unsigned long lastHeartbeat = 0;
+
 // *** this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
 
@@ -210,8 +212,8 @@ void T41ControlSetup() {
   if(CAT_CONTROL_REMOTE_USB) {
     sendGet = false;
   } else {
-    sendGet = true;
-    //sendGet = false;
+    //sendGet = true;
+    sendGet = false;
   }
   /*
 #if SEND_IQ_TO_REMOTE || REC_IQ_FROM_T41
@@ -257,6 +259,38 @@ void T41ControlSetup() {
 */
 }
 void T41RemoteConnectCheck() {
+#if REC_IQ_FROM_T41
+  static bool wasConnected = false;
+  static bool connectionLost = false;
+
+  // *** remote can detect dtr on connect but doesn't catch cable disconnect ***
+  if(wasConnected) {
+    if(millis() - lastHeartbeat > 600) {
+      t41.RemoteStatus = REMOTE_LOST;
+    } else {
+      t41.RemoteStatus = REMOTE_CONNECTED;
+    }
+  }
+  if(Serial.dtr()) {
+    if(!wasConnected) {
+      t41.RemoteStatus = REMOTE_CONNECTED;
+      wasConnected = true;
+    }
+  } else {
+    if(wasConnected) {
+      if(connectionLost) {
+        t41.RemoteStatus = REMOTE_WAITING;
+        connectionLost = false;
+      } else {
+        t41.RemoteStatus = REMOTE_LOST;
+        connectionLost = true;
+      }
+    } else {
+      t41.RemoteStatus = REMOTE_WAITING;
+    }
+  }
+#endif
+#if SEND_IQ_TO_REMOTE
   static unsigned long last = 0;
   unsigned long now = millis();
   int lasped = now - last;
@@ -269,26 +303,17 @@ void T41RemoteConnectCheck() {
       last = now;
     }
   } else {
-    // check for lost connection
-    if(checkingConnection) {
-      // check if response received within 5s
-      if(lasped > 5000) {
-        // connection lost
-        t41.RemoteStatus = REMOTE_LOST;
-        //remoteReady = false;
-        checkingConnection = false;
-        last = now;
-      }
+    // send a heartbeat every 250ms
+    if(lasped > 250) {
+      SendID(true);
+    }
+    if(millis() - lastHeartbeat > 600) {
+      t41.RemoteStatus = REMOTE_LOST;
     } else {
-      // check connection every 30s
-      if(lasped > 30000) {
-        checkingConnection = true;
-        //remoteReady = true;
-        SendID(true);
-        last = now;
-      }
+      t41.RemoteStatus = REMOTE_CONNECTED;
     }
   }
+#endif
 }
 
 void T41ControlSendData(uint8_t *data, int len) {
@@ -394,6 +419,41 @@ int T41ControlGetCommand(char * cmd, int max) {
   return i;
 }
 
+void TogglePins() {
+  static int count = 0;
+  for(int i = 0; i < 10; i++) {
+    switch(count) {
+      case 0:
+        TOGGLEPROFILEPIN(PROFILER_MAINLOOP);
+        break;
+      case 1:
+        TOGGLEPROFILEPIN(PROFILER_PROCESS_RX);
+        break;
+      case 2:
+        TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
+        break;
+      case 3:
+        TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
+        break;
+      case 4:
+        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+        break;
+      case 5:
+        TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+        break;
+      case 6:
+        TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+        break;
+      case 7:
+        TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+        break;
+    }
+    delay(1);
+  }
+  ++count;
+  if(count >= 8) count = 0;
+}
+
 // Dual T41 master commands
 // for sending integer-based commands between T41 and remote
 void SendCommand(int value, int id) {
@@ -401,6 +461,7 @@ void SendCommand(int value, int id) {
 
   switch(id) {
     case T41_ITEM_VOL:
+      TogglePins();
       sprintf(cmd, "VO%03d;", value);
       break;
     case T41_ITEM_AGC:
@@ -710,6 +771,7 @@ void T41ControlLoop() {
     int mode = GetMode();
 
     T41ControlGetCommand(cmd, 256);
+    lastHeartbeat = millis();
 
     SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
 
@@ -856,7 +918,7 @@ void T41ControlLoop() {
           sprintf(cmd,"ID024;");
           //sprintf(cmd,"ID019;"); // TS-2000
           T41ControlSendCmd(cmd);
-          t41.RemoteStatus = REMOTE_CONNECTED;
+          //t41.RemoteStatus = REMOTE_CONNECTED;
         } else if(cmd[1] == 'D' && cmd[5] == ';') { // IDxxx;
           if(checkingConnection) {
             checkingConnection = false;

@@ -17,8 +17,10 @@
     a new devise so we don't really save that much.  Doing this manually
     is a possibility if we need to save memory when not using a keyboard. */
 #if USB_HOST_SUPPORT
-USBHost usbHost;
-USBHub usbHub(usbHost);
+extern USBHost usbHost;
+extern USBHub usbHub;
+//USBHost usbHost;
+//USBHub usbHub(usbHost);
 #endif
 
 #ifdef HOST_KEYBOARD_MOUSE_SUPPORT
@@ -37,12 +39,14 @@ MouseController mouseController(usbHost);
 // support three host serial object corresponding to Serial, SerialUSB1 and SerialUSB2
 // available when the device unit is compiled with USB Type: Serial, Dual Serial or Triple Serial
 // these do not work in DMAMEM
-USBSerial_BigBuffer usbHostSerial(usbHost, 1); // most CAT commands are small
+//USBSerial_BigBuffer usbHostSerial(usbHost, 1); // most CAT commands are small
+extern USBSerial_BigBuffer usbHostSerial;
 #if SEND_IQ_TO_REMOTE
 // USB device must compiled with Dual or Triple serial
 //USBSerial_BigBuffer usbHostSerial1(usbHost, 1);
-USBSerial_BigBuffer usbHostSerial1(usbHost);
+//USBSerial_BigBuffer usbHostSerial1(usbHost);
 //USBSerial_BigBuffer usbHostSerial1(usbHost, 512); // all audio packets are 512 bytes
+extern USBSerial_BigBuffer usbHostSerial1;
 #endif
 //USBSerial_BigBuffer usbHostSerial2(usbHost, 1); // USB device must be compiled with Triple serial
 

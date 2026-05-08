@@ -27,7 +27,7 @@
 
 // Audio chain configuration options
 //#define USE_MIC_COMPRESSION 1
-//#define AUDIO_STATS         1
+#define AUDIO_STATS         1
 
 #define DECODER_STATE							0						    // 0 = off, 1 = on
 #define DEFAULT_KEYER_WPM   			15              // Startup value for keyer wpm

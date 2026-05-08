@@ -102,8 +102,13 @@ AudioInputUSBSerial1 usbSerial;
 #endif
 #if SEND_IQ_TO_REMOTE
 // new audio library object to stream Q_in_L and Q_in_R to usb host serial on T41
-extern USBSerial_BigBuffer usbHostSerial1;
-AudioUSBSender hostSerial(usbHostSerial1);
+//extern USBSerial_BigBuffer usbHostSerial1;
+USBHost usbHost;
+USBHub usbHub(usbHost);
+USBSerial_BigBuffer usbHostSerial(usbHost, 1); // most CAT commands are small
+USBSerial_BigBuffer usbHostSerial1(usbHost);
+//AudioUSBSender hostSerial(usbHostSerial1);
+AudioUSBSender hostSerial;
 #endif
 
 // I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
@@ -142,7 +147,7 @@ AudioPlayQueue Q_out_L;
 // audio connections are created empty
 // source/destination set in AudioSetup
 // see audio connection guidelines at: https://www.pjrc.com/teensy/td_libs_AudioConnection.html
-AudioConnection pc_Q_in_L, pc_Q_in_R, pc_Q_in_L_Ex, pc_Q_out_L, pc_Q_out_L_Ex, pc_Q_out_R_Ex;
+AudioConnection pc_Q_in_L, pc_Q_in_R, pc_Q_in_L_Ex, pc_Q_out_L, pc_Q_out_L_Ex, pc_Q_out_R_Ex, pc_HostSerialL, pc_HostSerialR;
 
 // currently USB Audio only used with WSJT-X FT8
 // *** TODO: put these in the proper place for setup ***
@@ -324,6 +329,10 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     // RX input on I2S channels 3, 4 (pin 6)
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
+#if SEND_IQ_TO_REMOTE
+    pc_HostSerialL.connect(i2s_quadIn, 2, hostSerial, 0);
+    pc_HostSerialR.connect(i2s_quadIn, 3, hostSerial, 1);
+#endif
 
     // RX output and sidetone on I2S channel 3(left)
     // I2S on pin 32 (also headphone and line out w/ 2nd audio adapter)
@@ -347,8 +356,8 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 #if SEND_IQ_TO_REMOTE
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
-    pc_Q_in_L.connect(i2s_quadIn, 0, hostSerial, 0);
-    pc_Q_in_R.connect(i2s_quadIn, 1, hostSerial, 1);
+    pc_HostSerialL.connect(i2s_quadIn, 0, hostSerial, 0);
+    pc_HostSerialR.connect(i2s_quadIn, 1, hostSerial, 1);
 #endif
     // RX output on I2S channel 1(left)
     // I2S on pin 7 (also headphone and line out)
