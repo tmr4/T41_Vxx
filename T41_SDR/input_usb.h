@@ -49,20 +49,61 @@ class AudioUSBReceiver : public AudioStream {
 public:
   AudioUSBReceiver() : AudioStream(0, nullptr) {}
 
-  void begin() {}
+	void begin() {
+		clear();
+		enabled = true;
+	}
+	//int available() {}
+	void clear() {}
+	void end() {
+		enabled = false;
+	}
 
-  void update(void) override {
+  void update() override {
+    static uint8_t buf[512];
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
-    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+    if(t41.RemoteStatus != REMOTE_CONNECTED) {
+      while(available()) read(buffer[head], 1);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      return;
+    }
+    if(available() < blockSize) {
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      return;
+    }
+    audio_block_t *blockL = allocate();
+    audio_block_t *blockR = allocate();
+    if(!blockL || !blockR) {
+      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+      if(blockL) release(blockL);
+      if(blockR) release(blockR);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      return;
+    }
+    if(read(buf, blockSize) == blockSize) {
+      TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+      memcpy((void *)blockL->data, buf, blockSize / 2);
+      memcpy((void *)blockR->data, &buf[blockSize / 2], blockSize / 2);
+      transmit(blockL, 0);
+      transmit(blockR, 1);
+    }
+    release(blockL);
+    release(blockR);
+    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    RESETPROFILEPIN(PROFILER_DECODE_FT8);
+    RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+
+    /*
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     if(t41.RemoteStatus != REMOTE_CONNECTED) {
       while(available() > 0) read(buffer[head], 1);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
     //if(bufFull()) return;
     if(available() < blockSize) {
-      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
       RESETPROFILEPIN(PROFILER_DECODE_FT8);
-      RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
       return;
     }
 
@@ -80,17 +121,20 @@ public:
     if(state == LOCKED) {
       //if(!checkSync()) return;
 
-      audio_block_t *blockL = receiveReadOnly(0);
-      audio_block_t *blockR = receiveReadOnly(1);
+      audio_block_t *blockL = allocate();
+      audio_block_t *blockR = allocate();
 
       if(!blockL || !blockR) {
         if(blockL) release(blockL);
         if(blockR) release(blockR);
+        RESETPROFILEPIN(PROFILER_DECODE_FT8);
+        RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
         return;
       }
+      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
 
-      memcpy(blockL, buffer[tail], blockSize);
-      memcpy(blockR, &buffer[tail][256], blockSize);
+      memcpy(blockL, buffer[tail], blockSize / 2);
+      memcpy(blockR, &buffer[tail][blockSize / 2], blockSize / 2);
 
       transmit(blockL, 0);
       transmit(blockR, 1);
@@ -106,13 +150,15 @@ public:
     }
     RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
     RESETPROFILEPIN(PROFILER_DECODE_FT8);
-    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+    RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+    */
   }
 
 private:
+  bool enabled = false;
   static constexpr uint32_t syncWord = 0xA55AA55A;
 
-  static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t);
+  static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   static constexpr int frameBlocks = 16;
 
   static constexpr int bufferBlocks = 32;

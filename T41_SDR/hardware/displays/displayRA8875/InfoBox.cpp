@@ -1,4 +1,5 @@
 
+#include <Audio.h>
 #include <malloc.h>
 #include <Metro.h>
 #include <TimeLib.h>                   // Part of Teensy Time library
@@ -180,9 +181,11 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
   { "Tx Freq:",    NULL,        &ft8TxFreq,                  0,        5,      0,   IB_COL_1_X,    IB_ROW_11_Y,   &IBFT8RxTxFollowup     }, // FT8 Tx freq
   { "Rx Freq:",    NULL,        &ft8RxFreq,                  0,        5,      0,   IB_COL_2_X,    IB_ROW_11_Y,   &IBFT8RxTxFollowup     }, // FT8 Rx freq
 
-  { "Stack:",      NULL,        NULL,                        0,        4,      2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBStackFollowup       }, // Stack
-  { "Heap:",       NULL,        NULL,                        0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBHeapFollowup        }, // Heap
+  { "Stack:",      NULL,        NULL,                        0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBStackFollowup       }, // Stack
+  // Heap should be in column 1
+  { "Heap:",       NULL,        NULL,                        0,        10,     2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBHeapFollowup        }, // Heap
   { "Temp:",       NULL,        NULL,                        0,        3,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
+  // Load should be in column 1
   { "Load:",       NULL,        NULL,                        0,        8,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBLoadFollowup        }  // Teensy Load
 };
 
@@ -668,38 +671,68 @@ void IBStackFollowup(int row, int col) {
     int row, col  Row and column of info box item
 *****/
 void IBHeapFollowup(int row, int col) {
-  // note: these values are defined by the linker, they are not valid memory
-  // locations in all cases - by defining them as arrays, the C++ compiler
-  // will use the address of these definitions - it's a big hack, but there's
-  // really no clean way to get at linker-defined symbols from the .ld file
+  static bool showAudioBlocks = false; // alternate between heap and audio mem
+  static bool showMaxBlocks = false; // alternate between last and max audio mem
+  static uint32_t maxBlocks = 0;
+  //size_t value = 0;
+  uint32_t value = 0;
 
-  //extern char _heap_end[], *__brkval; // this is only useful at startup
+  if(showAudioBlocks) {
+    if(showMaxBlocks) {
+      value = AudioMemoryUsageMax();
+      if(value > maxBlocks) {
+        maxBlocks = value;
+      } else {
+        value = maxBlocks;
+      }
+      AudioMemoryUsageMaxReset(); // reset max audio mem usage
+    } else {
+      value = AudioMemoryUsage();
+    }
+    showMaxBlocks = !showMaxBlocks; // show the other one next time
+  } else {
+    // note: these values are defined by the linker, they are not valid memory
+    // locations in all cases - by defining them as arrays, the C++ compiler
+    // will use the address of these definitions - it's a big hack, but there's
+    // really no clean way to get at linker-defined symbols from the .ld file
 
-  //struct mallinfo mi = mallinfo();
+    //extern char _heap_end[], *__brkval; // this is only useful at startup
 
-  //Serial.println(mi.arena);
-  //Serial.println(mi.ordblks);
-  //Serial.println(mi.smblks);
-  //Serial.println(mi.hblks);
-  //Serial.println(mi.hblkhd);
-  //Serial.println(mi.usmblks);
-  //Serial.println(mi.fsmblks);
-  //Serial.println(mi.uordblks);
-  //Serial.println(mi.fordblks);
-  //Serial.println(mi.keepcost);
+    //struct mallinfo mi = mallinfo();
 
-  size_t heap = mallinfo().fordblks;
+    //Serial.println(mi.arena);
+    //Serial.println(mi.ordblks);
+    //Serial.println(mi.smblks);
+    //Serial.println(mi.hblks);
+    //Serial.println(mi.hblkhd);
+    //Serial.println(mi.usmblks);
+    //Serial.println(mi.fsmblks);
+    //Serial.println(mi.uordblks);
+    //Serial.println(mi.fordblks);
+    //Serial.println(mi.keepcost);
 
-  //Serial.println(mallinfo().fordblks);
-  //Serial.println(heap);
+    //value = mallinfo().fordblks;
 
-  heap = mallinfo().fordblks >> 10;
+    //Serial.println(mallinfo().fordblks);
+    //Serial.println(heap);
+
+    value = mallinfo().fordblks >> 10;
+  }
 
   tft.setFontScale((enum RA8875tsize)0);
   tft.setTextColor(RA8875_GREEN);
   tft.setCursor(col, row);
-  tft.print(heap);
-  tft.print("k");
+  tft.print(value);
+  if(showAudioBlocks) {
+    if(showMaxBlocks) {
+      tft.print("bk cur");
+    } else {
+      tft.print("bk max");
+    }
+  } else {
+    tft.print("k");
+  }
+  showAudioBlocks = !showAudioBlocks; // show the other one next time
 }
 
 // mouse actions

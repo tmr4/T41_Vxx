@@ -46,7 +46,14 @@ public:
   }
   //AudioUSBSender() : AudioStream(2, inputQueueArray) {}
 
-  void update(void) override {
+	void begin() {
+		enabled = true;
+	}
+	void end() {
+		enabled = false;
+	}
+
+  void update() override {
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
     audio_block_t *blockL = receiveReadOnly(0);
@@ -113,6 +120,7 @@ public:
   }
 
 private:
+  bool enabled = false;
   USBSerial_BigBuffer& _serial;
   //bool enabled = false;
 

@@ -328,10 +328,10 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     // RX input on I2S channels 3, 4 (pin 6)
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
-#if SEND_IQ_TO_REMOTE
+    #if SEND_IQ_TO_REMOTE
     pc_HostSerialL.connect(i2s_quadIn, 2, hostSerial, 0);
     pc_HostSerialR.connect(i2s_quadIn, 3, hostSerial, 1);
-#endif
+    #endif
 
     // RX output and sidetone on I2S channel 3(left)
     // I2S on pin 32 (also headphone and line out w/ 2nd audio adapter)
@@ -348,16 +348,16 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
     // establish audio connections
     // RX input on I2S channels 1, 2 (pin 8)
-#if REC_IQ_FROM_T41
+    #if REC_IQ_FROM_T41
     pc_Q_in_L.connect(usbSerial, 0, Q_in_L, 0);
     pc_Q_in_R.connect(usbSerial, 1, Q_in_R, 0);
-#endif
-#if SEND_IQ_TO_REMOTE
+    #endif
+    #if SEND_IQ_TO_REMOTE
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
     pc_HostSerialL.connect(i2s_quadIn, 0, hostSerial, 0);
     pc_HostSerialR.connect(i2s_quadIn, 1, hostSerial, 1);
-#endif
+    #endif
     // RX output on I2S channel 1(left)
     // I2S on pin 7 (also headphone and line out)
     pc_Q_out_L.connect(Q_out_L, 0, i2s_quadOut, 0);

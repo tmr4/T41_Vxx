@@ -461,7 +461,7 @@ void SendCommand(int value, int id) {
 
   switch(id) {
     case T41_ITEM_VOL:
-      TogglePins();
+      //TogglePins();
       sprintf(cmd, "VO%03d;", value);
       break;
     case T41_ITEM_AGC:
