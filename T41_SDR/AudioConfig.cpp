@@ -98,16 +98,13 @@ AudioControlSGTL5000 audioControl_2; // control object PCM1808 ADC (doesn't actu
 // Audio inputs
 #if REC_IQ_FROM_T41
 // new audio library object to stream usb serial to Q_in_L and Q_in_R on remote
-AudioInputUSBSerial1 usbSerial;
+AudioInputSerial1 usbSerial;
 #endif
 #if SEND_IQ_TO_REMOTE
 // new audio library object to stream Q_in_L and Q_in_R to usb host serial on T41
+extern USBHost usbHost;
 extern USBSerial_BigBuffer usbHostSerial1;
-// *** this needs a low priority attribute to ensure usbHostSerial1 is crated first ***
-// *** without this it's possible the code will run but hostSerial will not be active ***
-// *** you can confirm the problem by using the higher priority line ***
-AudioUSBSender hostSerial __attribute__((init_priority(65535))) (usbHostSerial1);
-//AudioUSBSender hostSerial __attribute__((init_priority(101))) (usbHostSerial1);
+AudioOutputHostSerial hostSerial;
 #endif
 
 // I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
@@ -329,6 +326,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
     #if SEND_IQ_TO_REMOTE
+    hostSerial.init(&usbHost, &controlAudio);
     pc_HostSerialL.connect(i2s_quadIn, 2, hostSerial, 0);
     pc_HostSerialR.connect(i2s_quadIn, 3, hostSerial, 1);
     #endif
@@ -355,6 +353,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     #if SEND_IQ_TO_REMOTE
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
+    hostSerial.init(&usbHost, &controlAudio);
     pc_HostSerialL.connect(i2s_quadIn, 0, hostSerial, 0);
     pc_HostSerialR.connect(i2s_quadIn, 1, hostSerial, 1);
     #endif

@@ -725,9 +725,9 @@ void IBHeapFollowup(int row, int col) {
   tft.print(value);
   if(showAudioBlocks) {
     if(showMaxBlocks) {
-      tft.print("bk cur");
+      tft.print(" bk cur");
     } else {
-      tft.print("bk max");
+      tft.print(" bk max");
     }
   } else {
     tft.print("k");

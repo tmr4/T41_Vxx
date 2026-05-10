@@ -1,25 +1,13 @@
 #pragma once
 
 /*
+ AudioOutputHostSerial - Streams 2-channels to specified USB Host serial object
 
- AudioUSBSender - Teensy AudioStream object
+ Works with AudioInputSerial
 
- Sends:
-   16 x 512-byte IQ blocks followed by 1 x 512-byte sync block
-
- IQ block format:
-   256 bytes I
-   256 bytes Q
-
- Sync block format:
-   uint32_t sync word
-   uint32_t frameCounter
-   remaining bytes unused
-  *** TODO: consider unique block and hash to make more robust ***
-
- Nonblocking USBSerial_BigBuffer writes
-
-*/
+ *** This object could be made more robust with a buffer and syncing but
+     early testing hasn't shown a need for this ***
+ */
 
 #include <Arduino.h>
 #include <AudioStream.h>
@@ -28,92 +16,57 @@
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
-// Forwards
-//-------------------------------------------------------------------------------------------------------------
-
-void SendMsg(const char *msg, int value);
-void UsbHostTask();
-
-//-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-//template<typename USBSerial_BigBuffer>
-class AudioUSBSender : public AudioStream {
+class AudioOutputHostSerial : public AudioStream {
 public:
-  AudioUSBSender(USBSerial_BigBuffer& serial) : AudioStream(2, inputQueueArray), _serial(serial) {
-  //  enabled = true;
-  }
-  //AudioUSBSender() : AudioStream(2, inputQueueArray) {}
+  AudioOutputHostSerial() : AudioStream(2, inputQueueArray) {}
 
+  void init(USBHost* host, USBSerial_BigBuffer* serial) {
+    _host = host;
+    _serial = serial;
+  }
 	void begin() {
-		enabled = true;
-	}
-	void end() {
-		enabled = false;
-	}
+    if(!_host || !_serial) {
+      enabled = false;
+    } else {
+      enabled = true;
+    }
+  }
+	void end() { enabled = false;	}
 
   void update() override {
-    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
-    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-    audio_block_t *blockL = receiveReadOnly(0);
-    audio_block_t *blockR = receiveReadOnly(1);
+    audio_block_t *blockL, *blockR;
 
-    if(!blockL || !blockR) {
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+    blockL = receiveReadOnly(0);
+    blockR = receiveReadOnly(1);
+
+    if(!enabled || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
-      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
 
-    if(t41.RemoteStatus != REMOTE_CONNECTED) {
-      // *** TODO: do other buffer cleanup work ***
-
+    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+    _host->Task();
+    if(_serial->availableForWrite() < blockSize) {
       release(blockL);
       release(blockR);
-      //RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
-    }
-
-    UsbHostTask();
-    //if(enabled)
-    {
-      if(_serial.availableForWrite() < 512) {
-        // *** TODO: buffer data, wait until next time to continue ***
-        release(blockL);
-        release(blockR);
-        RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-        RESETPROFILEPIN(PROFILER_DECODE_FT8);
-        RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
-        return;
-      }
     }
 
     TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
-    /*
-    if(blocks >= frameBlocks) {
-      alignas(32) uint8_t syncBlock[512];
-
-      memset(syncBlock, 0, sizeof(syncBlock));
-      ((uint32_t *)syncBlock)[0] = syncWord;
-      ((uint32_t *)syncBlock)[1] = frameCounter++;
-
-      //if(enabled)
-      _serial.write(syncBlock, 512);
-      blocks = 0;
-    }
-    */
-    //if(enabled)
-    {
-      _serial.write((uint8_t *)blockL->data, 256);
-      _serial.write((uint8_t *)blockR->data, 256);
-    }
-
-    blocks++;
+    _serial->write((uint8_t *)blockL->data, blockSize / 2);
+    _serial->write((uint8_t *)blockR->data, blockSize / 2);
+    _host->Task();
 
     release(blockL);
     release(blockR);
-    UsbHostTask();
     RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
     RESETPROFILEPIN(PROFILER_DECODE_FT8);
     RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
@@ -121,14 +74,10 @@ public:
 
 private:
   bool enabled = false;
-  USBSerial_BigBuffer& _serial;
-  //bool enabled = false;
 
-  static constexpr uint32_t syncWord = 0xA55AA55A;
-  static constexpr int frameBlocks = 16;
+  USBHost* _host = nullptr;
+  USBSerial_BigBuffer* _serial = nullptr;
 
-  uint32_t frameCounter = 0;
-  uint32_t blocks = 0;
-
+  static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   audio_block_t *inputQueueArray[2];
 };
