@@ -2,7 +2,8 @@
 #include "..\..\T41Config.h"
 
 #include <SPI.h>
-#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
+//#include <RA8875.h>          // https://github.com/mjs513/RA8875/tree/RA8875_t4
+#include "RA8875\src\RA8875.h" // based on: https://github.com/mjs513/RA8875/tree/RA8875_t4 (adds yield to BTE_move)
 
 //-------------------------------------------------------------------------------------------------------------
 // Data

@@ -150,3 +150,33 @@ END OF Pocket_FT8 NOTICES AND INFORMATION
 
 =========================================
 END OF Si5351Arduino NOTICES AND INFORMATION
+
+
+8. RA8875 (https://github.com/sumotoy/RA8875)
+
+%% RA8875 NOTICES AND INFORMATION BEGIN HERE
+=========================================
+
+*** as included in Teensyduino 1.60 RA8875.cpp ***
+
+Part of RA8875 library from https://github.com/sumotoy/RA8875
+License:GNU General Public License v3.0
+
+    RA8875 fast SPI library for RAiO SPI RA8875 drived TFT
+    Copyright (C) 2014  egidio massimo costa sumotoy (a t) gmail.com
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+=========================================
+END OF RA8875 NOTICES AND INFORMATION

@@ -151,7 +151,7 @@ void CalcAudioMax() {
   }
 
   arm_max_f32(audioNFMBuffer, 1024, &audioMaxSquared, &audioMaxIndex);  // Max value of squared bin magnitued in audio
-  audioMaxSquaredAve = .5 * audioMaxSquared + .5 * audioMaxSquaredAve;  // Running averaged values
+  audioMaxSquaredAve = .5 * audioMaxSquared + .5 * audioMaxSquaredAve;  // running averaged values
 }
 
 // imComp: FFT has an imaginary component (default: true)
@@ -194,7 +194,7 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
     if(t41.DemodMode != DEMOD_NFM)
     {
       arm_max_f32(audioSpectBuffer, 1024, &audioMaxSquared, &audioMaxIndex);  // Max value of squared bin magnitued in audio
-      audioMaxSquaredAve = .5 * audioMaxSquared + .5 * audioMaxSquaredAve;  // Running averaged values
+      audioMaxSquaredAve = .5 * audioMaxSquared + .5 * audioMaxSquaredAve;  // running averaged values
     }
 
     // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
@@ -223,6 +223,8 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
       0: false: not enough data to process
       1: input stream was processed
       2: spectrums updates
+
+    *** Call only when the required number of blocks is available or use CheckReceiverData ***
  *****/
 int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static float32_t audiotmp = 0.0f;
@@ -261,7 +263,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // even with reenabling interrupts during the idle loop.  Perhaps the low priority of the update interrupt was affecting this.
   //
   // we allow input buffer availability to regulate FT8 wav file decoding otherwise we'll process the wav file too fast
-  if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) {
+  //if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks))
+  {
     success = true;
 
     SETPROFILEPIN(PROFILER_PROCESS_RX);
@@ -1290,17 +1293,20 @@ void Calc1xFreqSpec() {
 
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static long prevUpdate = 0;
+	static uint8_t dspRunning=0;
+	if (dspRunning) return; // TODO: does this need to be atomic?
+	dspRunning = 1;
 
   while(true) {
     if(updateSpectrum) {
       // wait for spectrum data update
-      if(ProcessReceiverData(true) == 2) break;
+      if(CheckReceiverData(true) == 2) break;
     } else {
       // process IQ data while sufficient data exists
       // This allows the process to catch up after longer tasks
       // such as the waterfall update. Failing to do this can
       // result in poor audio.
-      if(ProcessReceiverData() != 1) break;
+      if(CheckReceiverData() != 1) break;
     }
     // process controls if 10ms has passed since last update
     if(millis() - prevUpdate > 10) {
@@ -1317,6 +1323,7 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
       //}
     }
   }
+	dspRunning = 0;
 }
 
 void YieldForProcess(int ms) {
