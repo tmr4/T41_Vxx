@@ -111,7 +111,7 @@ FLASHMEM void UsbHostSetup() {
   KeyboardSetup();
 #endif
 
-  delay(1000);
+  //delay(1000);
 }
 
 void UsbHostTask() {

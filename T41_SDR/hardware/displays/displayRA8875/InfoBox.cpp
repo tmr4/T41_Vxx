@@ -672,24 +672,37 @@ void IBStackFollowup(int row, int col) {
 *****/
 void IBHeapFollowup(int row, int col) {
   static bool showAudioBlocks = false; // alternate between heap and audio mem
-  static bool showMaxBlocks = false; // alternate between last and max audio mem
+  static int showAudioItem = 0; // 0=current usage, 1=max usage, 2=dropped block
   static uint32_t maxBlocks = 0;
   //size_t value = 0;
   uint32_t value = 0;
+  int color = RA8875_GREEN;
 
   if(showAudioBlocks) {
-    if(showMaxBlocks) {
-      value = AudioMemoryUsageMax();
-      if(value > maxBlocks) {
-        maxBlocks = value;
-      } else {
-        value = maxBlocks;
-      }
-      AudioMemoryUsageMaxReset(); // reset max audio mem usage
-    } else {
-      value = AudioMemoryUsage();
+    // skip drop block notice if there is none
+    if(showAudioItem == 2 && !t41.DroppedBlock) showAudioItem = 0;
+    switch(showAudioItem) {
+      case 0:
+        value = AudioMemoryUsage();
+        break;
+      case 1:
+        value = AudioMemoryUsageMax();
+        if(value > maxBlocks) {
+          maxBlocks = value;
+        } else {
+          value = maxBlocks;
+        }
+        AudioMemoryUsageMaxReset(); // reset max audio mem usage
+        break;
+      case 2:
+        if(t41.DroppedBlock) {
+          color = RA8875_RED;
+          t41.DroppedBlock = 0;
+        }
+        break;
     }
-    showMaxBlocks = !showMaxBlocks; // show the other one next time
+    // highlight high audio memory usage
+    if(value > 75) color = RA8875_RED;
   } else {
     // note: these values are defined by the linker, they are not valid memory
     // locations in all cases - by defining them as arrays, the C++ compiler
@@ -720,19 +733,28 @@ void IBHeapFollowup(int row, int col) {
   }
 
   tft.setFontScale((enum RA8875tsize)0);
-  tft.setTextColor(RA8875_GREEN);
+  tft.setTextColor(color);
   tft.setCursor(col, row);
-  tft.print(value);
-  if(showAudioBlocks) {
-    if(showMaxBlocks) {
-      tft.print(" bk cur");
-    } else {
-      tft.print(" bk max");
-    }
+  if(showAudioBlocks && showAudioItem == 2) {
+    if(t41.DroppedBlock) tft.print("bk dropped");
   } else {
-    tft.print("k");
+    tft.print(value);
+    if(showAudioBlocks) {
+      if(showAudioItem) {
+        tft.print(" bk max");
+      } else {
+        tft.print(" bk cur");
+      }
+    } else {
+      tft.print("k");
+    }
   }
   showAudioBlocks = !showAudioBlocks; // show the other one next time
+  if(showAudioBlocks) {
+    // show next audio block item next time
+    ++showAudioItem;
+    if(showAudioItem > 2) showAudioItem = 0;
+  }
 }
 
 // mouse actions

@@ -44,7 +44,7 @@ inline int __attribute__((always_inline)) CheckReceiverData(bool updateSpectrumD
 
   // *** TODO: we could streamline this further, there should always be the same number of blocks in the left and right channels.
   if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) {
-      return ProcessReceiverData(updateSpectrumData);
+    return ProcessReceiverData(updateSpectrumData);
   }
 
   return 0;

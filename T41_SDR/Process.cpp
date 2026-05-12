@@ -45,7 +45,7 @@ float32_t biquad_lowpass1_coeffs[5] = { 0, 0, 0, 0, 0 };
 
 float32_t audioMaxSquaredAve = 0.01; // this will blow up dBm if 0
 
-float32_t audioSpectBuffer[1024]; // This can't be DMAMEM.  It will break the S-Meter.
+float32_t audioSpectBuffer[1024]; // This can't be DMAMEM.  It will break the S-Meter. *** TODO: probably because it needs to be aligned ***
 
 uint8_t NB_on = 0; // noise blanker: 0 - off, 1 - on
 
@@ -224,7 +224,9 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
       1: input stream was processed
       2: spectrums updates
 
-    *** Call only when the required number of blocks is available or use CheckReceiverData ***
+    *** Call only when the required number of blocks are available or use CheckReceiverData,
+        an inline function that check for this condition.  This eliminate the function call
+        overhead. This prevents churn given the frequency of checking vs success (75 to 1). ***
  *****/
 int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static float32_t audiotmp = 0.0f;
@@ -238,7 +240,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static int reqPasses = 20;
   static int passes = 20;
   bool updateFreqSpec = false; // true: spectrums updated, otherwise false
-  bool success = false; // true: enough data to process, otherwise false
 
   /**********************************************************************************
         Get samples from queue buffers
@@ -247,7 +248,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         of size BUFFER_SIZE*N_BLOCKS.  BUFFER_SIZE is 128, N_BLOCKS = FFT_L / 2 / BUFFER_SIZE * DF = 16 with DF = 8 and FFT_L = 512
         BUFFER_SIZE*N_BLOCKS = 2048 samples
      **********************************************************************************/
-  // are there at least 16 blocks available in each channel
   //
   // The T41 takes ~1.5-5.0 ms (depending on display update, mode and options) to process 16 audio packets
   // afterwards it may take up to 10 ms to refill the buffers until 16 packets are available (thus this if block is
@@ -263,607 +263,604 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // even with reenabling interrupts during the idle loop.  Perhaps the low priority of the update interrupt was affecting this.
   //
   // we allow input buffer availability to regulate FT8 wav file decoding otherwise we'll process the wav file too fast
-  //if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks))
-  {
-    success = true;
 
-    SETPROFILEPIN(PROFILER_PROCESS_RX);
+  SETPROFILEPIN(PROFILER_PROCESS_RX);
 
-    elapsedMicros usec = 0;
+  elapsedMicros usec = 0;
 
-    // get audio samples from the audio buffers and convert them to float
-    // read I and Q blocks into buffers (128 samples each)
-    for(int i = 0; i < blocks; i++) {
-      /**********************************************************************************
-          Using arm_Math library, convert to float one buffer_size.
-          Float_buffer samples are now standardized from > -1.0 to < 1.0
-      **********************************************************************************/
-      arm_q15_to_float(Q_in_R.readBuffer(), &audioBufferL[128 * i], 128);
-      arm_q15_to_float(Q_in_L.readBuffer(), &audioBufferR[128 * i], 128);
-
-      Q_in_L.freeBuffer();
-      Q_in_R.freeBuffer();
-    }
-
-    // *** TODO: consider if this is needed for FT8 ***
-    // set RF gain for all bands
-    rfGainValue = pow(10, (float)t41.RFGain / 20);
-    arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, blocks * 128);
-    arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, blocks * 128);
-
+  // get audio samples from the audio buffers and convert them to float
+  // read I and Q blocks into buffers (128 samples each)
+  for(int i = 0; i < blocks; i++) {
     /**********************************************************************************
-        Remove DC offset to reduce centeral spike.  First read the Mean value of
-        left and right channels.  Then fill L and R correction arrays with those Means
-        and subtract the Means from the float L and R buffer data arrays.  Again use Arm_Math functions
-        to manipulate the arrays.  Arrays are all 2048 long
+        Using arm_Math library, convert to float one buffer_size.
+        Float_buffer samples are now standardized from > -1.0 to < 1.0
     **********************************************************************************/
-    switch(t41.DemodMode) {
-      //case DEMOD_FT8:
-      //  break;
-
-      default:
-        RemoveDCBias();
-        break;
-    }
-
-    /**********************************************************************************
-        Scale the data buffers by the rfGain value defined in bands[t41.ActiveBand] structure
-    **********************************************************************************/
-    arm_scale_f32(audioBufferL, bands[t41.ActiveBand].rfGain, audioBufferL, blocks * 128);
-    arm_scale_f32(audioBufferR, bands[t41.ActiveBand].rfGain, audioBufferR, blocks * 128);
-
-    /**********************************************************************************
-      Clear Buffers
-      The original T41 code clears the Teensy audio buffers here if there are more than
-      25-packets available.  I found this limit restrictive and caused audio atrifacts.
-      I deleted the code block.  You can read more about it here:
-      https://new.reddit.com/r/T41_EP/comments/1dus4d0/clearing_up_some_artifacts_in_my_t41_audio_stream/
-    **********************************************************************************/
-    // this is still helpful for troubleshooting at times when the audio process isn't working correctly
-    // *** TODO: needed for current state of internal FT8 decoding, DEMOD_FT8_INTERNAL, hangs otherwise, though interrupts work ***
-    if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
-      if(sendGet) {
-        Serial.println("clearing @ ProcessReceiverData ...");
-      }
-      Q_in_L.clear();
-      Q_in_R.clear();
-    }
-
-    /**********************************************************************************
-      IQ amplitude and phase correction.  For this scaled down version the I an Q channels are
-      equalized and phase corrected manually. This is done by applying a correction, which is the difference, to
-      the L channel only.  The phase is corrected in the IQPhaseCorrection() function.
-
-      IQ amplitude and phase correction
-    ***********************************************************************************************/
-
-    // Manual IQ amplitude correction
-    if(t41.DemodMode == DEMOD_LSB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM || t41.DemodMode == DEMOD_NFM) {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, blocks * 128);
-      IQPhaseCorrection(audioBufferL, audioBufferR, -IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
-    //} else if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM || t41.DemodMode == DEMOD_FT8) {
-    } else {
-      arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, blocks * 128);
-      IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
-    }
-
-    /**********************************************************************************
-        Perform a 256 point FFT for the spectrum display on the basis of the first 256 complex values
-        of the raw IQ input data this saves about 3% of processor power compared to calculating
-        the magnitudes and means of the 4096 point FFT for the display
-
-        Only go there from here, if magnification == 1
-    ***********************************************************************************************/
-
-    if((t41.SpectrumZoom == 0) && updateSpectrumData) {
-      Calc1xFreqSpec();
-      updateFreqSpec = true;
-
-    // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
-      //if(calibrateItem == 1) {
-      //  FFTupdated = true; // *** TODO: consolidate this as return from ShowSpectrum2 ***
-      //  return true; // *** TODO: check that receive calibrate is coded to get the data it needs ***
-      //}
-    }
-
-    /**********************************************************************************
-        Frequency translation by Fs/4 without multiplication from Lyons (2011): chapter 13.1.2 page 646
-        together with the savings of not having to shift/rotate the audioFFT, this saves
-        about 1% of processor use
-
-        This is for +Fs/4 [moves receive frequency to the left in the spectrum display]
-          audioBufferL contains I = real values
-          audioBufferR contains Q = imaginary values
-          xnew(0) =  xreal(0) + jximag(0)
-              leave first value (DC component) as it is!
-          xnew(1) =  - ximag(1) + jxreal(1)
-    **********************************************************************************/
-    FreqShift1(blocks * 128);
-
-    /**********************************************************************************
-        Spectrum zoom displays a magnified display of the data around the translated
-        receive frequency.  It uses the shifted spectrum, so the center "hump" around DC is
-        shifted by Fs/4.  Buffering and processing is done in the CalcZoomFreqSpec function.
-    **********************************************************************************/
-    // Kick off frequency spectrum FFT routine only once for each audio process loop
-    if(t41.SpectrumZoom != 0) {
-      if(updateSpectrumData && (reqPasses == 20)) {
-        passes = 0;
-
-        // calc passes needed to buffer a complete frequency spectrum at the current zoom factor
-        // and sample rate.  At 192kkHz sample rate, the zoom factor alone determines the passes
-        // required as the sample rate term below is 0.  At 44.1kHz sample rate, zoom is limited
-        // to 2x and 4x (22kHz/11kHz BW which is roughly equivalent to an 8x or 16x zoom).
-        // so the passes required based on zoom factor will always be 1 but the passes required
-        // based on sample rate are 4 or 8.
-        //          <----------------- zoom factor ------------------>   <----- sample rate ----->
-        reqPasses = (t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4)) + 2048 / (blocks * 128) - 1;
-      }
-      if(passes < reqPasses) {
-        passes++;
-        if(passes == reqPasses) {
-          // flag that we're ready to update frequency spectrum
-          // no need to reset passes, we won't pass through this
-          // block again until the next time updateSpectrumData is set
-          updateFreqSpec = true;
-          reqPasses = 20;
-          passes = 20;
-        }
-        CalcZoomFreqSpec(blocks * 128, updateFreqSpec);
-      }
-    }
-
-    // *** TODO: this is from v11 - reconcile calibration calls within Process.cpp ***
-    //if(calibrateItem >= 0) {
-    //  //CalibrateOptions();
-    //}
-
-    /*************************************************************************************************
-        freq_conv2()
-
-        FREQUENCY CONVERSION USING A SOFTWARE QUADRATURE OSCILLATOR
-        Creates a new IF frequency to allow the tuning window to be moved anywhere in the current display.
-        THIS VERSION calculates the COS AND SIN WAVE on the fly - uses double precision float
-
-        MAJOR ADVANTAGE: frequency conversion can be done for any frequency !
-
-        large parts of the code taken from the mcHF code by Clint, KA7OEI, thank you!
-          see here for more info on quadrature oscillators:
-        Wheatley, M. (2011): CuteSDR Technical Manual Ver. 1.01. - http://sourceforge.net/projects/cutesdr/
-        Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition.
-    *************************************************************************************************/
-    FreqShift2();
-
-    /**********************************************************************************
-        Decimation
-        Resample (Decimate) the shifted time signal, first by 4, then by 2.  Each time the
-        signal is decimated by an even number, the spectrum is reversed.  Resampling twice
-        returns the spectrum to the correct orientation.
-        Signal has now been shifted to base band, leaving aliases at higher frequencies,
-        which are removed at each decimation step using the Arm combined decimate/filter function.
-        If the starting sample rate is 192K SPS,   after the combined decimation, the sample rate is
-        now 192K/8 = 24K SPS.  The array size is also reduced by 8, making FFT calculations much faster.
-        The effective bandwidth (up to Nyquist frequency) is 12KHz.
-    **********************************************************************************/
-    switch(t41.DemodMode) {
-      case DEMOD_PSK31:
-        // decimation-by-4 in-place!
-        arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
-        arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
-
-        // we're now at 48k samples per second, the rate used by the PSK31 routines
-        // transfer this to the PSK31 buffer
-        // *** TODO: finish psk31 work ***
-        // but for now just continue
-        // *** TODO: the below breaks audio processing (audio buffers fill), don't know why ***
-        // decimation-by-2 in-place
-        //arm_fir_decimate_f32(&FIR_dec2_I, audioBufferL, audioBufferL, 512);
-        //arm_fir_decimate_f32(&FIR_dec2_Q, audioBufferR, audioBufferR, 512);
-        break;
-
-      case DEMOD_FT8:
-        // at 44.1kHz
-        break;
-
-      case DEMOD_PSK31_WAV:
-        // *** TODO: refactored code needs work ***
-        ProcessPSK31WaveData();
-        break;
-
-      #ifdef USE_BUFFERED_FT8_WAV
-      case DEMOD_FT8_INTERNAL:
-        SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-        // transfer to wav buffer to audio buffers
-        // and interpolate to 24 kHz to get audio signal for T41
-        // *** TODO: evaluate if use of CMISS_DSP library is better ***
-          // interpolate to 24 kHz to get audio signal for T41
-          // *** TODO: evaluate if use of CMISS_DSP library is better ***
-        // *** TODO: this assumes DEMOD_FT8_INTERNAL mode is always preceeded by DEMOD_FT8_WAV
-        //    to populate ft8WavBuf ***
-        if(ReadBufferedFT8Wav(audioBufferR, 128)) {
-          audioBufferL[0] = audioBufferR[0];
-          for(unsigned i = 1; i < 128; i++) {
-            audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
-            audioBufferL[2*i] = audioBufferR[i];
-          }
-        }
-        RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-        break;
-      #endif
-
-      case DEMOD_FT8_WAV:
-        // get samples from wav file (assumed open)
-        // pull data at the same rate as the T41
-        // audio is 256 bytes, 24 kHz at this point
-        // wav file sample rate is 12 kHz
-        // get a half sized sample and interpolate to the proper size/rate
-        // wav FT8 signal data to audioBufferR, audio to audioBufferL
-        SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-        if(ReadFT8Wav(audioBufferR, 128)) {
-          // interpolate to 24 kHz to get audio signal for T41
-          // *** TODO: evaluate if use of CMISS_DSP library is better ***
-          audioBufferL[0] = audioBufferR[0];
-          for(unsigned i = 1; i < 128; i++) {
-            audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
-            audioBufferL[2*i] = audioBufferR[i];
-          }
-
-          // we're using the audio input buffers to regulate the pace of the output stream
-          // without this we'll play the wave file about 3 times faster than normal
-          // *** need to check whether we're clipping any of our output with this
-          //      not a big priority unless we want this to be a standard feature ***
-          // *** this slows things down with live FT8 processing of the wav file ***
-          //if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
-          //  Serial.println("clearing @ ProcessReceiverData DEMOD_FT8_WAV ...");
-          //  Q_in_L.clear();
-          //  Q_in_R.clear();
-          //}
-        }
-        RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-        break;
-
-      default:
-        // decimate by 8x for all other modes
-
-        // decimation-by-4 in-place
-        arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
-        arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
-
-        // decimation-by-2 in-place
-        arm_fir_decimate_f32(&FIR_dec2_I, audioBufferL, audioBufferL, 512);
-        arm_fir_decimate_f32(&FIR_dec2_Q, audioBufferR, audioBufferR, 512);
-
-        // now at 24kps
-        break;
-    }
-
-    // audio DSP
-    // apply audio filter cutoffs and calculate audio spectrum data
-    switch(t41.DemodMode) {
-      case DEMOD_NFM:
-        CalcAudioMax();
-
-        // Prepare the audio signal buffers
-        // fill recent audio samples into audioFFT (left channel: re, right channel: im)
-        // we'll use this to demodulate the NFM signal
-        for(int i = 0; i < 256; i++) {
-          audioFFT[512 + i * 2] = audioBufferL[i]; // real
-          audioFFT[512 + i * 2 + 1] = audioBufferR[i]; // imaginary
-        }
-        break;
-
-      //case DEMOD_FT8:
-      //  // *** TODO: consider if AGC (in default below) for FT8 is desirable with WSJT-X ***
-      //  // *** without AGC the T41 volume is less in this mode than equivalent SSB ***
-      //  AudioDSP(updateFreqSpec);
-      //  break;
-
-      #ifdef USE_BUFFERED_FT8_WAV
-      case DEMOD_FT8_INTERNAL: // *** TODO: this is USE_BUFFERED_FT8_WAV only ***
-      #endif
-      case DEMOD_FT8_WAV:
-        //AudioDSP(updateFreqSpec, 20, false); // no imaginary component for these
-        AudioDSP(updateFreqSpec, false); // no imaginary component for these
-        break;
-
-      default:
-        // prepare audio signals for all other modes
-        AudioDSP(updateFreqSpec);
-
-        // apply automatic gain control
-        // AGC acts upon on the audio data in audioIFFT
-        // *** TODO: evaluate effectiveness and proper placement of this AGC function ***
-        AGC();
-        break;
-    }
-
-    /**********************************************************************************
-      Demodulation
-        our time domain output is a combination of the real part (left channel) AND the imaginary part (right channel) of the second half of the audioFFT
-        The demod mode is accomplished by selecting/combining the real and imaginary parts of the output of the IFFT process.
-    **********************************************************************************/
-    switch(t41.DemodMode) {
-      case DEMOD_AM:
-        for(int i = 0; i < 256; i++) {     // Magnitude estimation Lyons (2011): page 652 / libcsdr
-          audiotmp = AlphaBetaMag(audioIFFT[512 + (i * 2)], audioIFFT[512 + (i * 2) + 1]);
-          // DC removal filter -----------------------
-          w = audiotmp + wold * 0.99f; // Response to below 200Hz
-          audioBufferL[i] = w - wold;
-          wold = w;
-        }
-        arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferL, audioBufferR, 256);
-        arm_copy_f32(audioBufferR, audioBufferL, 256);
-        break;
-
-      case DEMOD_NFM:
-        // *** TODO: NFM demod sound rough, similar to when buffers aren't prepared properly one loop to next.  Investigate ***
-
-        // three versions to select from:
-        //  (1) - fmdemod_quadri_novect_cf
-        //  (2) - nfmdemod
-        //  (3) - arm_max_f32
-        // the first two have about same performance, the third didn't perform well on my test signal
-
-        nfmdemod(&audioFFT[512], audioBufferL, 256);
-
-        arm_scale_f32(audioBufferL, AUDIO_SCALER_NFM, audioBufferL, 256);
-
-        // limit the demodulated signal
-        for(int i = 1; i < 256; i++) {
-          float32_t tmp = audioBufferL[i];
-
-          // limit it to -1 <= tmp <= 1
-          // modified from limit_ff in libcsdr.c from https://github.com/ha7ilm/csdr
-          tmp = (1 < tmp) ? 1 : tmp;
-          tmp = (-1 > tmp) ? -1 : tmp;
-          audioBufferL[i] = tmp;
-        }
-
-        // no difference in audio with this
-        //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferL, audioBufferR, 256);
-        //arm_copy_f32(audioBufferR, audioBufferL, 256);
-
-        // buzz and muffled sound with this deemphasis filter
-        // *** TODO: see: https://sdr.hu/static/bsc-thesis.pdf section 10.6 De-emphasis to investigate problems here ***
-        //deemphasis_nfm_ff(audioBufferL, audioBufferR, 256, sampleRate / 8.0);
-        //arm_copy_f32(audioBufferR, audioBufferL, 256);
-
-        //deemphasis_nfm_ff(audioBufferL, audioBufferR, 256, sampleRate / 8.0);
-        //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferR, audioBufferL, 256);
-
-        //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferL, audioBufferR, 256);
-        //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, sampleRate / 8.0);
-
-        // process audio for demodulated NFM and FT8 wave file
-        AudioDSP(updateFreqSpec, false); // no imaginary component for these
-
-        // apply automatic gain control
-        // AGC acts upon on the audio data in audioIFFT
-        // *** TODO: evaluate effectiveness and proper placement of this AGC function ***
-        AGC();
-        break;
-
-      case DEMOD_SAM:
-        AMDecodeSAM();
-        break;
-
-      case DEMOD_PSK31_WAV:
-        // determine the second derivative of the phase angle
-        //Psk31Decoder(&audioFFT[512], audioBufferL_EX, 256);
-        Psk31PhaseShiftDetector(&audioFFT[512], audioBufferL_EX, 256);
-        break;
-
-      default:
-        break;
-    }
-
-    // additional DSP work #1
-    switch(t41.DemodMode) {
-      // no additional work
-      case DEMOD_AM:
-      case DEMOD_SAM:
-      case DEMOD_PSK31:
-      case DEMOD_PSK31_WAV:
-        break;
-
-      //case DEMOD_FT8_WAV: // *** TODO: should wav data be passed through audio filters ***
-      default:
-        // transfer audio signal back to buffer
-        for(int i = 0; i < 256; i++) {
-          audioBufferL[i] = audioIFFT[512 + (i * 2)];
-        }
-        break;
-    }
-
-    // additional DSP work #2
-    switch(t41.DemodMode) {
-      case DEMOD_FT8_INTERNAL:
-        #ifndef USE_BUFFERED_FT8_WAV
-        // prepare FT8 library signal
-        // interpolation by 2 (24kps to 48kps)
-        arm_fir_interpolate_f32(&FIR_int1_I, audioBufferL, audioBufferR, 256);
-
-        // decimation by 4 to (48kps to 12kps)
-        arm_fir_decimate_f32(&FIR_dec3, audioBufferR, audioBufferR, 512);
-        #endif
-
-        // fall through
-
-      case DEMOD_FT8_WAV:
-        // transfer 12kHz data to ft8_lib
-        BufferFT8Data(audioBufferR, 128);
-        break;
-
-      default:
-        break;
-    }
-
-    // send audio data to control app if applicable
-    if(updateFreqSpec && controlDataFlag) {
-      //for(int i = 0; i < AUDIO_SPEC_RES; i++) {
-      //  // audioYPixel is already >= 0, limit it to 255
-      //  specData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
-      //}
-      //T41ControlSendData(specData, AUDIO_SPEC_RES);
-    }
-
-#ifdef T41_REMOTE_DISPLAY
-    if(connected) {
-      for(int i = 0; i < AUDIO_SPEC_RES; i++) {
-        // audioYPixel is already >= 0, limit it to 255
-        audioData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
-      }
-    }
-#endif
-
-    // apply receive EQ if set
-    if(receiveEQFlag == ON ) {
-      DoReceiveEQ();
-      //arm_copy_f32(audioBufferL, audioBufferR, 256);
-    }
-
-    /**********************************************************************************
-      Noise Reduction
-      3 algorithms working 3-15-22
-      NR_Kim
-      Spectral NR
-      LMS variable leak NR
-    **********************************************************************************/
-    switch(t41.NoiseFilter) {
-      case 0:                               // NR Off
-        break;
-      case 1:                               // Kim NR
-        Kim1_NR();
-        arm_scale_f32(audioBufferL, 30, audioBufferL, 256);
-        //arm_scale_f32(audioBufferR, 30, audioBufferR, 256);
-        break;
-      case 2:                               // Spectral NR
-        SpectralNoiseReduction();
-        break;
-      case 3:                               // LMS NR
-        ANR_notch = 0;
-        Xanr();
-        arm_scale_f32(audioBufferL, 1.5, audioBufferL, 256);
-        //arm_scale_f32(audioBufferR, 2, audioBufferR, 256);
-        break;
-    }
-
-    // apply automatic notch if set
-    if(ANR_notchOn == 1) {
-      ANR_notch = 1;
-      Xanr();
-      arm_copy_f32(audioBufferR, audioBufferL, 256);
-    }
-
-    /**********************************************************************************
-      EXPERIMENTAL: noise blanker
-      by Michael Wild
-    **********************************************************************************/
-    if(NB_on != 0) {
-      NoiseBlanker(audioBufferL, audioBufferR);
-      arm_copy_f32(audioBufferR, audioBufferL, 256);
-    }
-
-    if(t41.RadioState == RECEIVE_STATE) {
-      DoCWReceiveProcessing();
-
-      // ----------------------  CW Narrow band filters -------------------------
-      if(t41.CWFilterIndex != 5) {
-        switch(t41.CWFilterIndex) {
-          case 0:  // 0.8 KHz
-            arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter1, audioBufferL, audioBufferR, 256);
-            arm_copy_f32(audioBufferR, audioBufferL, 256);
-            break;
-
-          case 1: // 1.0 KHz
-            arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter2, audioBufferL, audioBufferR, 256);
-            arm_copy_f32(audioBufferR, audioBufferL, 256);
-            break;
-
-          case 2: // 1.3 KHz
-            arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter3, audioBufferL, audioBufferR, 256);
-            arm_copy_f32(audioBufferR, audioBufferL, 256);
-            break;
-
-          case 3: // 1.8 KHz
-            arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter4, audioBufferL, audioBufferR, 256);
-            arm_copy_f32(audioBufferR, audioBufferL, 256);
-            break;
-
-          case 4:  // 2.0 KHz
-            arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter5, audioBufferL, audioBufferR, 256);
-            arm_copy_f32(audioBufferR, audioBufferL, 256);
-            break;
-
-          case 5:  //Off
-            break;
-        }
-      }
-    }
-
-    // ======================================Interpolation  ================
-    switch(t41.DemodMode) {
-      case DEMOD_FT8:
-        // not needed, we're at a 44.1kHz sample rate and haven't decimated
-        // *** this scaler works for a Windows input sound device volume of 10 to give
-        // the recommended 30dB input level on WSJT-X ***
-        intScaler = 0.1;
-        break;
-
-      default:
-        // interpolation-by-2
-        arm_fir_interpolate_f32(&FIR_int1_I, audioBufferL, audioIFFT, 256);
-
-        // interpolation-by-4
-        arm_fir_interpolate_f32(&FIR_int2_I, audioIFFT, audioBufferL, 512);
-
-        // scale by 8x to compensate for the interpolation
-        intScaler = 8.0;
-        break;
-    }
-
-    /**********************************************************************************
-      Digital Volume Control
-    **********************************************************************************/
-    // v11 has a hardware MUTE output pin that is unrelated to this, at least currently.
-    // *** TODO: there is currently no mechanism to set mute. ***
-    /*
-    int mute = 0; // 0 - normal volume, 1 - mute (*** this is never changed ***)
-    if(mute == 1) {
-      arm_scale_f32(audioBufferL, 0.0, audioBufferL, blocks * 128);
-    } else if(mute == 0) {
-      // this includes a factor of 8x to compensate for the interpolation above
-      arm_scale_f32(audioBufferL, 8.0 * VolumeToAmplification(t41.AudioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
-    }
-    */
-    arm_scale_f32(audioBufferL, intScaler * VolumeToAmplification(t41.AudioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
-
-    /**********************************************************************************
-      CONVERT TO INTEGER AND PLAY AUDIO
-    **********************************************************************************/
-    arm_float_to_q15(audioBufferL, q15_buffer_LTemp, blocks * 128);
-    Q_out_L.play(q15_buffer_LTemp, blocks * 128);
-
-    /*
-    // volume testing
-    float tmp;
-    static float max = 0;
-    uint32_t index;
-    arm_max_f32(audioBufferL, 2048, &tmp, &index);
-    if(tmp > max) {
-      max = tmp;
-    }
-
-    Serial.print(tmp*32768.0);Serial.print(", "); Serial.println(max*32768.0);
-    */
-
-    elapsed_micros_sum = elapsed_micros_sum + usec;
-    elapsed_micros_idx_t++;
-
-    RESETPROFILEPIN(PROFILER_PROCESS_RX);
+    arm_q15_to_float(Q_in_R.readBuffer(), &audioBufferL[128 * i], 128);
+    arm_q15_to_float(Q_in_L.readBuffer(), &audioBufferR[128 * i], 128);
+
+    Q_in_L.freeBuffer();
+    Q_in_R.freeBuffer();
   }
 
-  return !success ? 0 : (updateFreqSpec ? 2 : 1);
+  // *** TODO: consider if this is needed for FT8 ***
+  // set RF gain for all bands
+  rfGainValue = pow(10, (float)t41.RFGain / 20);
+  arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, blocks * 128);
+  arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, blocks * 128);
+
+  /**********************************************************************************
+      Remove DC offset to reduce centeral spike.  First read the Mean value of
+      left and right channels.  Then fill L and R correction arrays with those Means
+      and subtract the Means from the float L and R buffer data arrays.  Again use Arm_Math functions
+      to manipulate the arrays.  Arrays are all 2048 long
+  **********************************************************************************/
+  switch(t41.DemodMode) {
+    //case DEMOD_FT8:
+    //  break;
+
+    default:
+      RemoveDCBias();
+      break;
+  }
+
+  /**********************************************************************************
+      Scale the data buffers by the rfGain value defined in bands[t41.ActiveBand] structure
+  **********************************************************************************/
+  arm_scale_f32(audioBufferL, bands[t41.ActiveBand].rfGain, audioBufferL, blocks * 128);
+  arm_scale_f32(audioBufferR, bands[t41.ActiveBand].rfGain, audioBufferR, blocks * 128);
+
+  /**********************************************************************************
+    Clear Buffers
+    The original T41 code clears the Teensy audio buffers here if there are more than
+    25-packets available.  I found this limit restrictive and caused audio atrifacts.
+    I deleted the code block.  You can read more about it here:
+    https://new.reddit.com/r/T41_EP/comments/1dus4d0/clearing_up_some_artifacts_in_my_t41_audio_stream/
+  **********************************************************************************/
+  // this is still helpful for troubleshooting at times when the audio process isn't working correctly
+  // *** TODO: needed for current state of internal FT8 decoding, DEMOD_FT8_INTERNAL, hangs otherwise, though interrupts work ***
+  if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
+    if(sendGet) {
+      Serial.println("clearing @ ProcessReceiverData ...");
+    }
+    Q_in_L.clear();
+    Q_in_R.clear();
+    t41.DroppedBlock = 1;
+  }
+
+  /**********************************************************************************
+    IQ amplitude and phase correction.  For this scaled down version the I an Q channels are
+    equalized and phase corrected manually. This is done by applying a correction, which is the difference, to
+    the L channel only.  The phase is corrected in the IQPhaseCorrection() function.
+
+    IQ amplitude and phase correction
+  ***********************************************************************************************/
+
+  // Manual IQ amplitude correction
+  if(t41.DemodMode == DEMOD_LSB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM || t41.DemodMode == DEMOD_NFM) {
+    arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, blocks * 128);
+    IQPhaseCorrection(audioBufferL, audioBufferR, -IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
+  //} else if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM || t41.DemodMode == DEMOD_FT8) {
+  } else {
+    arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, blocks * 128);
+    IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
+  }
+
+  /**********************************************************************************
+      Perform a 256 point FFT for the spectrum display on the basis of the first 256 complex values
+      of the raw IQ input data this saves about 3% of processor power compared to calculating
+      the magnitudes and means of the 4096 point FFT for the display
+
+      Only go there from here, if magnification == 1
+  ***********************************************************************************************/
+
+  if((t41.SpectrumZoom == 0) && updateSpectrumData) {
+    Calc1xFreqSpec();
+    updateFreqSpec = true;
+
+  // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
+    //if(calibrateItem == 1) {
+    //  FFTupdated = true; // *** TODO: consolidate this as return from ShowSpectrum2 ***
+    //  return true; // *** TODO: check that receive calibrate is coded to get the data it needs ***
+    //}
+  }
+
+  /**********************************************************************************
+      Frequency translation by Fs/4 without multiplication from Lyons (2011): chapter 13.1.2 page 646
+      together with the savings of not having to shift/rotate the audioFFT, this saves
+      about 1% of processor use
+
+      This is for +Fs/4 [moves receive frequency to the left in the spectrum display]
+        audioBufferL contains I = real values
+        audioBufferR contains Q = imaginary values
+        xnew(0) =  xreal(0) + jximag(0)
+            leave first value (DC component) as it is!
+        xnew(1) =  - ximag(1) + jxreal(1)
+  **********************************************************************************/
+  FreqShift1(blocks * 128);
+
+  /**********************************************************************************
+      Spectrum zoom displays a magnified display of the data around the translated
+      receive frequency.  It uses the shifted spectrum, so the center "hump" around DC is
+      shifted by Fs/4.  Buffering and processing is done in the CalcZoomFreqSpec function.
+  **********************************************************************************/
+  // Kick off frequency spectrum FFT routine only once for each audio process loop
+  if(t41.SpectrumZoom != 0) {
+    if(updateSpectrumData && (reqPasses == 20)) {
+      passes = 0;
+
+      // calc passes needed to buffer a complete frequency spectrum at the current zoom factor
+      // and sample rate.  At 192kkHz sample rate, the zoom factor alone determines the passes
+      // required as the sample rate term below is 0.  At 44.1kHz sample rate, zoom is limited
+      // to 2x and 4x (22kHz/11kHz BW which is roughly equivalent to an 8x or 16x zoom).
+      // so the passes required based on zoom factor will always be 1 but the passes required
+      // based on sample rate are 4 or 8.
+      //          <----------------- zoom factor ------------------>   <----- sample rate ----->
+      reqPasses = (t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4)) + 2048 / (blocks * 128) - 1;
+    }
+    if(passes < reqPasses) {
+      passes++;
+      if(passes == reqPasses) {
+        // flag that we're ready to update frequency spectrum
+        // no need to reset passes, we won't pass through this
+        // block again until the next time updateSpectrumData is set
+        updateFreqSpec = true;
+        reqPasses = 20;
+        passes = 20;
+      }
+      CalcZoomFreqSpec(blocks * 128, updateFreqSpec);
+    }
+  }
+
+  // *** TODO: this is from v11 - reconcile calibration calls within Process.cpp ***
+  //if(calibrateItem >= 0) {
+  //  //CalibrateOptions();
+  //}
+
+  /*************************************************************************************************
+      freq_conv2()
+
+      FREQUENCY CONVERSION USING A SOFTWARE QUADRATURE OSCILLATOR
+      Creates a new IF frequency to allow the tuning window to be moved anywhere in the current display.
+      THIS VERSION calculates the COS AND SIN WAVE on the fly - uses double precision float
+
+      MAJOR ADVANTAGE: frequency conversion can be done for any frequency !
+
+      large parts of the code taken from the mcHF code by Clint, KA7OEI, thank you!
+        see here for more info on quadrature oscillators:
+      Wheatley, M. (2011): CuteSDR Technical Manual Ver. 1.01. - http://sourceforge.net/projects/cutesdr/
+      Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition.
+  *************************************************************************************************/
+  FreqShift2();
+
+  /**********************************************************************************
+      Decimation
+      Resample (Decimate) the shifted time signal, first by 4, then by 2.  Each time the
+      signal is decimated by an even number, the spectrum is reversed.  Resampling twice
+      returns the spectrum to the correct orientation.
+      Signal has now been shifted to base band, leaving aliases at higher frequencies,
+      which are removed at each decimation step using the Arm combined decimate/filter function.
+      If the starting sample rate is 192K SPS,   after the combined decimation, the sample rate is
+      now 192K/8 = 24K SPS.  The array size is also reduced by 8, making FFT calculations much faster.
+      The effective bandwidth (up to Nyquist frequency) is 12KHz.
+  **********************************************************************************/
+  switch(t41.DemodMode) {
+    case DEMOD_PSK31:
+      // decimation-by-4 in-place!
+      arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
+      arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
+
+      // we're now at 48k samples per second, the rate used by the PSK31 routines
+      // transfer this to the PSK31 buffer
+      // *** TODO: finish psk31 work ***
+      // but for now just continue
+      // *** TODO: the below breaks audio processing (audio buffers fill), don't know why ***
+      // decimation-by-2 in-place
+      //arm_fir_decimate_f32(&FIR_dec2_I, audioBufferL, audioBufferL, 512);
+      //arm_fir_decimate_f32(&FIR_dec2_Q, audioBufferR, audioBufferR, 512);
+      break;
+
+    case DEMOD_FT8:
+      // at 44.1kHz
+      break;
+
+    case DEMOD_PSK31_WAV:
+      // *** TODO: refactored code needs work ***
+      ProcessPSK31WaveData();
+      break;
+
+    #ifdef USE_BUFFERED_FT8_WAV
+    case DEMOD_FT8_INTERNAL:
+      SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      // transfer to wav buffer to audio buffers
+      // and interpolate to 24 kHz to get audio signal for T41
+      // *** TODO: evaluate if use of CMISS_DSP library is better ***
+        // interpolate to 24 kHz to get audio signal for T41
+        // *** TODO: evaluate if use of CMISS_DSP library is better ***
+      // *** TODO: this assumes DEMOD_FT8_INTERNAL mode is always preceeded by DEMOD_FT8_WAV
+      //    to populate ft8WavBuf ***
+      if(ReadBufferedFT8Wav(audioBufferR, 128)) {
+        audioBufferL[0] = audioBufferR[0];
+        for(unsigned i = 1; i < 128; i++) {
+          audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
+          audioBufferL[2*i] = audioBufferR[i];
+        }
+      }
+      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      break;
+    #endif
+
+    case DEMOD_FT8_WAV:
+      // get samples from wav file (assumed open)
+      // pull data at the same rate as the T41
+      // audio is 256 bytes, 24 kHz at this point
+      // wav file sample rate is 12 kHz
+      // get a half sized sample and interpolate to the proper size/rate
+      // wav FT8 signal data to audioBufferR, audio to audioBufferL
+      SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      if(ReadFT8Wav(audioBufferR, 128)) {
+        // interpolate to 24 kHz to get audio signal for T41
+        // *** TODO: evaluate if use of CMISS_DSP library is better ***
+        audioBufferL[0] = audioBufferR[0];
+        for(unsigned i = 1; i < 128; i++) {
+          audioBufferL[2*i-1] = (audioBufferR[i-1] + audioBufferR[i]) / 2;
+          audioBufferL[2*i] = audioBufferR[i];
+        }
+
+        // we're using the audio input buffers to regulate the pace of the output stream
+        // without this we'll play the wave file about 3 times faster than normal
+        // *** need to check whether we're clipping any of our output with this
+        //      not a big priority unless we want this to be a standard feature ***
+        // *** this slows things down with live FT8 processing of the wav file ***
+        //if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
+        //  Serial.println("clearing @ ProcessReceiverData DEMOD_FT8_WAV ...");
+        //  Q_in_L.clear();
+        //  Q_in_R.clear();
+        //}
+      }
+      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      break;
+
+    default:
+      // decimate by 8x for all other modes
+
+      // decimation-by-4 in-place
+      arm_fir_decimate_f32(&FIR_dec1_I, audioBufferL, audioBufferL, 2048);
+      arm_fir_decimate_f32(&FIR_dec1_Q, audioBufferR, audioBufferR, 2048);
+
+      // decimation-by-2 in-place
+      arm_fir_decimate_f32(&FIR_dec2_I, audioBufferL, audioBufferL, 512);
+      arm_fir_decimate_f32(&FIR_dec2_Q, audioBufferR, audioBufferR, 512);
+
+      // now at 24kps
+      break;
+  }
+
+  // audio DSP
+  // apply audio filter cutoffs and calculate audio spectrum data
+  switch(t41.DemodMode) {
+    case DEMOD_NFM:
+      CalcAudioMax();
+
+      // Prepare the audio signal buffers
+      // fill recent audio samples into audioFFT (left channel: re, right channel: im)
+      // we'll use this to demodulate the NFM signal
+      for(int i = 0; i < 256; i++) {
+        audioFFT[512 + i * 2] = audioBufferL[i]; // real
+        audioFFT[512 + i * 2 + 1] = audioBufferR[i]; // imaginary
+      }
+      break;
+
+    //case DEMOD_FT8:
+    //  // *** TODO: consider if AGC (in default below) for FT8 is desirable with WSJT-X ***
+    //  // *** without AGC the T41 volume is less in this mode than equivalent SSB ***
+    //  AudioDSP(updateFreqSpec);
+    //  break;
+
+    #ifdef USE_BUFFERED_FT8_WAV
+    case DEMOD_FT8_INTERNAL: // *** TODO: this is USE_BUFFERED_FT8_WAV only ***
+    #endif
+    case DEMOD_FT8_WAV:
+      //AudioDSP(updateFreqSpec, 20, false); // no imaginary component for these
+      AudioDSP(updateFreqSpec, false); // no imaginary component for these
+      break;
+
+    default:
+      // prepare audio signals for all other modes
+      AudioDSP(updateFreqSpec);
+
+      // apply automatic gain control
+      // AGC acts upon on the audio data in audioIFFT
+      // *** TODO: evaluate effectiveness and proper placement of this AGC function ***
+      AGC();
+      break;
+  }
+
+  /**********************************************************************************
+    Demodulation
+      our time domain output is a combination of the real part (left channel) AND the imaginary part (right channel) of the second half of the audioFFT
+      The demod mode is accomplished by selecting/combining the real and imaginary parts of the output of the IFFT process.
+  **********************************************************************************/
+  switch(t41.DemodMode) {
+    case DEMOD_AM:
+      for(int i = 0; i < 256; i++) {     // Magnitude estimation Lyons (2011): page 652 / libcsdr
+        audiotmp = AlphaBetaMag(audioIFFT[512 + (i * 2)], audioIFFT[512 + (i * 2) + 1]);
+        // DC removal filter -----------------------
+        w = audiotmp + wold * 0.99f; // Response to below 200Hz
+        audioBufferL[i] = w - wold;
+        wold = w;
+      }
+      arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferL, audioBufferR, 256);
+      arm_copy_f32(audioBufferR, audioBufferL, 256);
+      break;
+
+    case DEMOD_NFM:
+      // *** TODO: NFM demod sound rough, similar to when buffers aren't prepared properly one loop to next.  Investigate ***
+
+      // three versions to select from:
+      //  (1) - fmdemod_quadri_novect_cf
+      //  (2) - nfmdemod
+      //  (3) - arm_max_f32
+      // the first two have about same performance, the third didn't perform well on my test signal
+
+      nfmdemod(&audioFFT[512], audioBufferL, 256);
+
+      arm_scale_f32(audioBufferL, AUDIO_SCALER_NFM, audioBufferL, 256);
+
+      // limit the demodulated signal
+      for(int i = 1; i < 256; i++) {
+        float32_t tmp = audioBufferL[i];
+
+        // limit it to -1 <= tmp <= 1
+        // modified from limit_ff in libcsdr.c from https://github.com/ha7ilm/csdr
+        tmp = (1 < tmp) ? 1 : tmp;
+        tmp = (-1 > tmp) ? -1 : tmp;
+        audioBufferL[i] = tmp;
+      }
+
+      // no difference in audio with this
+      //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferL, audioBufferR, 256);
+      //arm_copy_f32(audioBufferR, audioBufferL, 256);
+
+      // buzz and muffled sound with this deemphasis filter
+      // *** TODO: see: https://sdr.hu/static/bsc-thesis.pdf section 10.6 De-emphasis to investigate problems here ***
+      //deemphasis_nfm_ff(audioBufferL, audioBufferR, 256, sampleRate / 8.0);
+      //arm_copy_f32(audioBufferR, audioBufferL, 256);
+
+      //deemphasis_nfm_ff(audioBufferL, audioBufferR, 256, sampleRate / 8.0);
+      //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferR, audioBufferL, 256);
+
+      //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferL, audioBufferR, 256);
+      //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, sampleRate / 8.0);
+
+      // process audio for demodulated NFM and FT8 wave file
+      AudioDSP(updateFreqSpec, false); // no imaginary component for these
+
+      // apply automatic gain control
+      // AGC acts upon on the audio data in audioIFFT
+      // *** TODO: evaluate effectiveness and proper placement of this AGC function ***
+      AGC();
+      break;
+
+    case DEMOD_SAM:
+      AMDecodeSAM();
+      break;
+
+    case DEMOD_PSK31_WAV:
+      // determine the second derivative of the phase angle
+      //Psk31Decoder(&audioFFT[512], audioBufferL_EX, 256);
+      Psk31PhaseShiftDetector(&audioFFT[512], audioBufferL_EX, 256);
+      break;
+
+    default:
+      break;
+  }
+
+  // additional DSP work #1
+  switch(t41.DemodMode) {
+    // no additional work
+    case DEMOD_AM:
+    case DEMOD_SAM:
+    case DEMOD_PSK31:
+    case DEMOD_PSK31_WAV:
+      break;
+
+    //case DEMOD_FT8_WAV: // *** TODO: should wav data be passed through audio filters ***
+    default:
+      // transfer audio signal back to buffer
+      for(int i = 0; i < 256; i++) {
+        audioBufferL[i] = audioIFFT[512 + (i * 2)];
+      }
+      break;
+  }
+
+  // additional DSP work #2
+  switch(t41.DemodMode) {
+    case DEMOD_FT8_INTERNAL:
+      #ifndef USE_BUFFERED_FT8_WAV
+      // prepare FT8 library signal
+      // interpolation by 2 (24kps to 48kps)
+      arm_fir_interpolate_f32(&FIR_int1_I, audioBufferL, audioBufferR, 256);
+
+      // decimation by 4 to (48kps to 12kps)
+      arm_fir_decimate_f32(&FIR_dec3, audioBufferR, audioBufferR, 512);
+      #endif
+
+      // fall through
+
+    case DEMOD_FT8_WAV:
+      // transfer 12kHz data to ft8_lib
+      BufferFT8Data(audioBufferR, 128);
+      break;
+
+    default:
+      break;
+  }
+
+  // send audio data to control app if applicable
+  if(updateFreqSpec && controlDataFlag) {
+    //for(int i = 0; i < AUDIO_SPEC_RES; i++) {
+    //  // audioYPixel is already >= 0, limit it to 255
+    //  specData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
+    //}
+    //T41ControlSendData(specData, AUDIO_SPEC_RES);
+  }
+
+#ifdef T41_REMOTE_DISPLAY
+  if(connected) {
+    for(int i = 0; i < AUDIO_SPEC_RES; i++) {
+      // audioYPixel is already >= 0, limit it to 255
+      audioData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
+    }
+  }
+#endif
+
+  // apply receive EQ if set
+  if(receiveEQFlag == ON ) {
+    DoReceiveEQ();
+    //arm_copy_f32(audioBufferL, audioBufferR, 256);
+  }
+
+  /**********************************************************************************
+    Noise Reduction
+    3 algorithms working 3-15-22
+    NR_Kim
+    Spectral NR
+    LMS variable leak NR
+  **********************************************************************************/
+  switch(t41.NoiseFilter) {
+    case 0:                               // NR Off
+      break;
+    case 1:                               // Kim NR
+      Kim1_NR();
+      arm_scale_f32(audioBufferL, 30, audioBufferL, 256);
+      //arm_scale_f32(audioBufferR, 30, audioBufferR, 256);
+      break;
+    case 2:                               // Spectral NR
+      SpectralNoiseReduction();
+      break;
+    case 3:                               // LMS NR
+      ANR_notch = 0;
+      Xanr();
+      arm_scale_f32(audioBufferL, 1.5, audioBufferL, 256);
+      //arm_scale_f32(audioBufferR, 2, audioBufferR, 256);
+      break;
+  }
+
+  // apply automatic notch if set
+  if(ANR_notchOn == 1) {
+    ANR_notch = 1;
+    Xanr();
+    arm_copy_f32(audioBufferR, audioBufferL, 256);
+  }
+
+  /**********************************************************************************
+    EXPERIMENTAL: noise blanker
+    by Michael Wild
+  **********************************************************************************/
+  if(NB_on != 0) {
+    NoiseBlanker(audioBufferL, audioBufferR);
+    arm_copy_f32(audioBufferR, audioBufferL, 256);
+  }
+
+  if(t41.RadioState == RECEIVE_STATE) {
+    DoCWReceiveProcessing();
+
+    // ----------------------  CW Narrow band filters -------------------------
+    if(t41.CWFilterIndex != 5) {
+      switch(t41.CWFilterIndex) {
+        case 0:  // 0.8 KHz
+          arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter1, audioBufferL, audioBufferR, 256);
+          arm_copy_f32(audioBufferR, audioBufferL, 256);
+          break;
+
+        case 1: // 1.0 KHz
+          arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter2, audioBufferL, audioBufferR, 256);
+          arm_copy_f32(audioBufferR, audioBufferL, 256);
+          break;
+
+        case 2: // 1.3 KHz
+          arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter3, audioBufferL, audioBufferR, 256);
+          arm_copy_f32(audioBufferR, audioBufferL, 256);
+          break;
+
+        case 3: // 1.8 KHz
+          arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter4, audioBufferL, audioBufferR, 256);
+          arm_copy_f32(audioBufferR, audioBufferL, 256);
+          break;
+
+        case 4:  // 2.0 KHz
+          arm_biquad_cascade_df2T_f32(&S1_CW_AudioFilter5, audioBufferL, audioBufferR, 256);
+          arm_copy_f32(audioBufferR, audioBufferL, 256);
+          break;
+
+        case 5:  //Off
+          break;
+      }
+    }
+  }
+
+  // ======================================Interpolation  ================
+  switch(t41.DemodMode) {
+    case DEMOD_FT8:
+      // not needed, we're at a 44.1kHz sample rate and haven't decimated
+      // *** this scaler works for a Windows input sound device volume of 10 to give
+      // the recommended 30dB input level on WSJT-X ***
+      intScaler = 0.1;
+      break;
+
+    default:
+      // interpolation-by-2
+      arm_fir_interpolate_f32(&FIR_int1_I, audioBufferL, audioIFFT, 256);
+
+      // interpolation-by-4
+      arm_fir_interpolate_f32(&FIR_int2_I, audioIFFT, audioBufferL, 512);
+
+      // scale by 8x to compensate for the interpolation
+      intScaler = 8.0;
+      break;
+  }
+
+  /**********************************************************************************
+    Digital Volume Control
+  **********************************************************************************/
+  // v11 has a hardware MUTE output pin that is unrelated to this, at least currently.
+  // *** TODO: there is currently no mechanism to set mute. ***
+  /*
+  int mute = 0; // 0 - normal volume, 1 - mute (*** this is never changed ***)
+  if(mute == 1) {
+    arm_scale_f32(audioBufferL, 0.0, audioBufferL, blocks * 128);
+  } else if(mute == 0) {
+    // this includes a factor of 8x to compensate for the interpolation above
+    arm_scale_f32(audioBufferL, 8.0 * VolumeToAmplification(t41.AudioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
+  }
+  */
+  arm_scale_f32(audioBufferL, intScaler * VolumeToAmplification(t41.AudioVolume) * VOL_FACTOR, audioBufferL, blocks * 128);
+
+  /**********************************************************************************
+    CONVERT TO INTEGER AND PLAY AUDIO
+  **********************************************************************************/
+  arm_float_to_q15(audioBufferL, q15_buffer_LTemp, blocks * 128);
+  Q_out_L.play(q15_buffer_LTemp, blocks * 128);
+
+  /*
+  // volume testing
+  float tmp;
+  static float max = 0;
+  uint32_t index;
+  arm_max_f32(audioBufferL, 2048, &tmp, &index);
+  if(tmp > max) {
+    max = tmp;
+  }
+
+  Serial.print(tmp*32768.0);Serial.print(", "); Serial.println(max*32768.0);
+  */
+
+  elapsed_micros_sum = elapsed_micros_sum + usec;
+  elapsed_micros_idx_t++;
+
+  RESETPROFILEPIN(PROFILER_PROCESS_RX);
+
+  return updateFreqSpec ? 2 : 1;
 }
 
 /*****

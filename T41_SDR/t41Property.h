@@ -74,6 +74,8 @@ public:
   Property<int> InactiveFreq;
   Property<int> InactiveBand;
 
+  Property<int> DroppedBlock; // blocks were dropped since last update: 0=false, 1=true
+
   // helper functions
   void SetPropertyDefaults();
 

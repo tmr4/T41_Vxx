@@ -2,6 +2,20 @@
 
 ## Ongoing Work
 
+### Streaming IQ Data to a Remote Unit
+
+I've long wanted to pass audio to a remote unit.  This wasn't possible with my previous wireless remote. The Bluetooth I used to transfer T41 data just wasn't fast enough.  With the T41 Desktop Companion (Audio Platform, AP hardware version) I decided to try out USB transfer. That proved successful.
+
+There are a lot of different ways to approach this.  I've tried many over the last week.  The key with all of them was that the T41 had to feed data to USB Host serial only when it could take a full packet (512-bytes) and the remote had to read a packet from USB serial when it was available.  Failing this results in USB buffer issues and system instability.
+
+The standard way to address this is double buffering. But this adds overhead and while successful, slows down both the T41 and remote unit. In my early tests I found that the T41 required significantly more time to transmit 16 blocks of IQ data (one display frame) than the remote needed to read it. To accommodate the difference, I increaced the USB Host buffer to hold 16 blocks of IQ data and let the remote drain this as fast as it could.  That wasn't a good long-term strategy as I didn't want to modify Teensyduino or use such a large buffer needlessly.
+
+I tried various other buffering/syncing strategies to increase throughput. These required custom code for buffering and syncing the streaming data between the units. I even tried turning off display updates on the T41 which isn't really needed for remote operations, but isn't great if you're using the remote unit as a desktop companion to the T41.
+
+I ultimately settled on creating Teensy Audio library USB serial objects.  The T41 object takes input directly from the I2S IQ input object and streams the data to USB Host serial.  The remote object takes input directly from USB serial and streams the data to the Q_in_L/R input queues ready for the normal RX processing. The streaming is handled in the background by the Teensy Audio library.
+
+You can find these objects in *input_usb.h* and *output_usb.h*.  These object are very light, reading/writing directly from/to their connected objects with no buffer in between. The background work by the Audio library makes this run smoothly. The objects could be made more reliable with double buffering and syncing, but this hasn't proved necessary in my testing.  I'll only consider it if I notice the units get out of sync during normal operation.
+
 ### Global Working Variables to Properties
 
 * I've been slowly converting the T41 global working variables to C# style properties.  These can notify remote to take action or cause the display to be updated.  This should eliminate having such things spread throughout the code.

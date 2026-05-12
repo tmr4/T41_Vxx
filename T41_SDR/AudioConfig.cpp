@@ -95,7 +95,17 @@ elapsedMicros usecAudio;
 AudioControlSGTL5000 audioControl_1; // controller for the Teensy Audio Board microphone
 AudioControlSGTL5000 audioControl_2; // control object PCM1808 ADC (doesn't actually control ADC) https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
 
-// Audio inputs
+// Remote Audio
+/*
+Remote IQ data stream transfer:
+The T41 IQ data stream is transfered to a remote unit over USB Host. The remote
+unit receives the data on USB serial. The specific USB objects are specified
+in the hardware config file, hardwareConfig.h, for each unit.
+
+See output_usb.h and input_usb.h for the new Teensy Audio library objects that
+seemlessly perform this transfer.
+*/
+
 #if REC_IQ_FROM_T41
 // new audio library object to stream usb serial to Q_in_L and Q_in_R on remote
 AudioInputSerial1 usbSerial;
@@ -107,6 +117,7 @@ extern USBSerial_BigBuffer usbHostSerial1;
 AudioOutputHostSerial hostSerial;
 #endif
 
+// Audio inputs
 // I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
 // See https://www.pjrc.com/teensy/gui/?info=AudioInputI2SQuad
 AudioInputI2SQuad i2s_quadIn;

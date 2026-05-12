@@ -1,13 +1,33 @@
 #pragma once
 
 /*
- AudioOutputHostSerial - Streams 2-channels to specified USB Host serial object
+ AudioOutputHostSerial - Streams 2-channels from connected input objects to specified USB Host serial object
+
+T41 timing (w/ T41 standard input, Auto NF):
+  * 2-channel input, 512-bytes total, written directly to USB Host serial (not buffered)
+    * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel }
+  * update() run every 667us (2.9ms /44.1kHz * 192kHz)
+  * ~205us to write 512-bytes to USB Host serial
+  * ~2.8ms to process the 16 blocks of data required to form a frame for display
+    * T41 take twice as long to process data due to the longer time required to
+      write to USB Host serial than the remote needs to read the same amount of
+      data from USB serial.
+  * This time adds to the time to complete one update of display (frame):
+    * ~150ms or ~6.7 frames/sec with remote attached
+    * ~96ms w/o remote ~10.4 frames/sec
+  * Notes:
+    * The T41 and remote prepare to render the next frame immediately after completing the
+      previous frame. The different frame rates mean that the two units aren't rendering the same
+      data slices at any given time.
+    * The T41 and remote are running at different clock rates, 528MHz for the T41 for Teensy
+      longevity and 600MHz on the remote due to AP instability at 528MHz (Teensy chip voltage issue)
 
  Works with AudioInputSerial
 
  *** This object could be made more robust with a buffer and syncing but
      early testing hasn't shown a need for this ***
- */
+
+*/
 
 #include <Arduino.h>
 #include <AudioStream.h>
