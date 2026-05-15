@@ -30,7 +30,8 @@
 //-------------------------------------------------------------------------------------------------------------
 
 // TODO: display dependent
-#include <RA8875.h>
+//#include <RA8875.h>
+#include "src\displayRA8875\RA8875\src\RA8875.h" // based on: https://github.com/mjs513/RA8875/tree/RA8875_t4 (adds yield to BTE_move)
 extern RA8875 tft;
 
 #define DEBUG_MSG(msg)

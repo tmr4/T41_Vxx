@@ -1,4 +1,4 @@
-// vPS specific hardware config file for running on Project System
+// vPSx specific hardware config file for running on Project System without extra audio board, encoders or switch matrix (i.e. for remote testing only)
 
 #pragma once
 
@@ -81,7 +81,7 @@
 */
 
 // set the remote operation role of this device
-#define DEVICE_REMOTE_OPS_MODE  2 // 0=none, 1=WSJT-X, 2=remote, 3=T41
+#define DEVICE_REMOTE_OPS_MODE  4 // 0=none, 1=WSJT-X, Remote over USB (2=remote, 3=T41), Remote over Ethernet (4=remote, 5=T41)
 
 // set the desired remote services below to true to enable remote CAT control/audio
 // *** IQ audio is sent from T41 device USB Host connector to the remote USB (Serial) connector ***
@@ -106,13 +106,14 @@
 
 // the following are disabled by defualt and will be set automatically depending on the remote mode selected
 #define T41_WSJT_CAT_AUDIO        false
-#define CAT_CONTROL_REMOTE_USB    false
+#define CAT_CONTROL_REMOTE        false
 #define CAT_CONTROL_T41_USB_HOST  false
-#define REC_IQ_FROM_T41           false
-#define SEND_IQ_TO_REMOTE         false
+#define REC_IQ_FROM_T41_USB       false
+#define REC_IQ_FROM_T41_ETHER     false
+#define SEND_IQ_TO_REMOTE_USB         false
 
 // automatically configure radio for selected remote operation and services
-#if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 3)
+#if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 5)
   #undef DEVICE_REMOTE_OPS_MODE
   #define DEVICE_REMOTE_OPS_MODE 0
 #else
@@ -125,23 +126,23 @@
     #undef wsjtSerial
     #define wsjtSerial SerialUSB1
   #elif DEVICE_REMOTE_OPS_MODE == 2
-    // remote
+    // remote USB
     #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
-      #undef CAT_CONTROL_REMOTE_USB
-      #define CAT_CONTROL_REMOTE_USB true
+      #undef CAT_CONTROL_REMOTE
+      #define CAT_CONTROL_REMOTE true
     #endif
     #if REMOTE_CAT_CONTROL
       #undef controlSerial
       #define controlSerial Serial
     #endif
     #if REMOTE_AUDIO_DATA
-      #undef REC_IQ_FROM_T41
-      #define REC_IQ_FROM_T41 true
+      #undef REC_IQ_FROM_T41_USB
+      #define REC_IQ_FROM_T41_USB true
       #undef controlAudio
       #define controlAudio SerialUSB1
     #endif
   #elif DEVICE_REMOTE_OPS_MODE == 3
-    // T41
+    // T41 USB
     #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
       #undef CAT_CONTROL_T41_USB_HOST
       #define CAT_CONTROL_T41_USB_HOST true
@@ -151,10 +152,44 @@
       #define controlSerial usbHostSerial
     #endif
     #if REMOTE_AUDIO_DATA
-      #undef SEND_IQ_TO_REMOTE
-      #define SEND_IQ_TO_REMOTE true
+      #undef SEND_IQ_TO_REMOTE_USB
+      #define SEND_IQ_TO_REMOTE_USB true
       #undef controlAudio
       #define controlAudio usbHostSerial1
+    #endif
+  #elif DEVICE_REMOTE_OPS_MODE == 4
+    // remote Ethernet
+    #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
+      #undef CAT_CONTROL_REMOTE
+      #define CAT_CONTROL_REMOTE true
+    #endif
+    #if REMOTE_CAT_CONTROL
+      #undef controlSerial
+      #define controlSerial ethernetControl
+    #endif
+    #if REMOTE_AUDIO_DATA
+      #undef REC_IQ_FROM_T41_ETHER
+      #define REC_IQ_FROM_T41_ETHER true
+      // *** TODO: can this be made generic for USB and Ethernet? ***
+      //#undef controlAudio
+      //#define controlAudio SerialUSB1
+    #endif
+  #elif DEVICE_REMOTE_OPS_MODE == 5
+    // T41 Ethernet
+    #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
+      #undef CAT_CONTROL_REMOTE
+      #define CAT_CONTROL_REMOTE true
+    #endif
+    #if REMOTE_CAT_CONTROL
+      #undef controlSerial
+      #define controlSerial ethernetControl
+    #endif
+    #if REMOTE_AUDIO_DATA
+      #undef SEND_IQ_TO_REMOTE_ETHER
+      #define SEND_IQ_TO_REMOTE_ETHER true
+      // *** TODO: can this be made generic for USB and Ethernet? ***
+      //#undef controlAudio
+      //#define controlAudio usbHostSerial1
     #endif
   #endif
 #endif

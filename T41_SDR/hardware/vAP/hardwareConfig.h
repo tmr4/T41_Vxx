@@ -78,10 +78,10 @@
 
 // the following are disabled by defualt and will be set automatically depending on the remote mode selected
 #define T41_WSJT_CAT_AUDIO        false
-#define CAT_CONTROL_REMOTE_USB    false
+#define CAT_CONTROL_REMOTE    false
 #define CAT_CONTROL_T41_USB_HOST  false
-#define REC_IQ_FROM_T41           false
-#define SEND_IQ_TO_REMOTE         false
+#define REC_IQ_FROM_T41_USB           false
+#define SEND_IQ_TO_REMOTE_USB         false
 
 // automatically configure radio for selected remote operation and services
 #if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 3)
@@ -99,16 +99,16 @@
   #elif DEVICE_REMOTE_OPS_MODE == 2
     // remote
     #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
-      #undef CAT_CONTROL_REMOTE_USB
-      #define CAT_CONTROL_REMOTE_USB true
+      #undef CAT_CONTROL_REMOTE
+      #define CAT_CONTROL_REMOTE true
     #endif
     #if REMOTE_CAT_CONTROL
       #undef controlSerial
       #define controlSerial Serial
     #endif
     #if REMOTE_AUDIO_DATA
-      #undef REC_IQ_FROM_T41
-      #define REC_IQ_FROM_T41 true
+      #undef REC_IQ_FROM_T41_USB
+      #define REC_IQ_FROM_T41_USB true
       #undef controlAudio
       #define controlAudio SerialUSB1
     #endif
@@ -123,8 +123,8 @@
       #define controlSerial usbHostSerial
     #endif
     #if REMOTE_AUDIO_DATA
-      #undef SEND_IQ_TO_REMOTE
-      #define SEND_IQ_TO_REMOTE true
+      #undef SEND_IQ_TO_REMOTE_USB
+      #define SEND_IQ_TO_REMOTE_USB true
       #undef controlAudio
       #define controlAudio usbHostSerial1
     #endif

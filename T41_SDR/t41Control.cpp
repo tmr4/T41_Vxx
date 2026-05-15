@@ -23,6 +23,11 @@ extern USBSerial_BigBuffer usbHostSerial;
 extern USBSerial_BigBuffer usbHostSerial1;
 #endif
 
+#include <QNEthernet.h>
+using namespace qindesign::network;
+#include "input_ether.h"
+#include "output_ether.h"
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -48,6 +53,16 @@ int signalStrengthReceivedIndex = -1;
 
 bool checkingConnection = false;
 
+#if REC_IQ_FROM_T41_ETHER
+EthernetClient ethernetControl;
+extern AudioInputEther remoteAudioStream;
+#endif
+#if SEND_IQ_TO_REMOTE_ETHER
+EthernetServer ethernetServerControl(80);
+EthernetClient ethernetControl;
+extern AudioOutputEther t41AudioStream;
+#endif
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -58,23 +73,64 @@ void SendID(bool request);
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+#if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
+void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress& gateway) {
+  static bool isInitialized = false;
+
+  if(isInitialized) return; // Skip if already started
+
+  Ethernet.begin(ip, subnet, gateway);
+  Ethernet.waitForLink(5000);
+  Serial.println(Ethernet.localIP());
+  isInitialized = true;
+}
+#endif
+
 // the three usb serial objects in the teensy (Serial, SerialUSB1 and SerialUSB2) are all different classes (usb_serial_class, usb_serial2_class, and usb_serial3_class)
 // I suppose to prevent naming conflict somewhere, but this prevents having serial commands with a common argument specifying the serial channel to use, such as
 // void T41ControlSetup(Stream& serial) { serial.begin(); }.  As such might as well duplicate these functions for both the T41 control app and Beacon monitor
 void T41ControlSetup() {
   //controlSerial.begin(19200);
-  if(CAT_CONTROL_REMOTE_USB) {
+  // *** this controls whether debug messages go out over Serial ***
+  // *** this is needed for USB where the remote Serial connection is used for CAT control ***
+  // *** that's not the case for Ethernet ***
+  // *** TODO: fix for Ethernet if needed ***
+  if(CAT_CONTROL_REMOTE) {
     sendGet = false;
   } else {
     //sendGet = true;
     sendGet = false;
   }
+#if REC_IQ_FROM_T41_ETHER
+  // Remote Ethernet Client
+  // Network configuration for the Client
+  const IPAddress clientIP{192, 168, 1, 101}; // Must be different from Server
+  const IPAddress subnet{255, 255, 255, 0};
+  const IPAddress gateway{192, 168, 1, 1};
+  const IPAddress serverIP{192, 168, 1, 100};
+  InitEthernet(clientIP, subnet, gateway);
+  ethernetControl.connect(serverIP, 80);
+#endif
+#if SEND_IQ_TO_REMOTE_ETHER
+  // T41 Ethernet Server
+  const IPAddress clientIP{192, 168, 1, 101}; // Must be different from Server
+  const IPAddress subnet{255, 255, 255, 0};
+  const IPAddress gateway{192, 168, 1, 1};
+  const IPAddress serverIP{192, 168, 1, 100};
+  InitEthernet(serverIP, subnet, gateway);
+  //InitEthernet(clientIP, subnet, gateway);
+  ethernetServerControl.begin();
+  //ethernetControl.connect(serverIP, 80);
+  //ethernetControl = ethernetServerControl.available();
+  ethernetControl = ethernetServerControl.accept();
+#endif
 }
 
 void T41RemoteConnectCheck() {
-#if REC_IQ_FROM_T41
+#if REC_IQ_FROM_T41_USB || REC_IQ_FROM_T41_ETHER
   static bool wasConnected = false;
   static bool connectionLost = false;
+  uint8_t connected = 0;
 
   // *** remote can detect dtr on connect but doesn't catch cable disconnect ***
   if(wasConnected) {
@@ -84,7 +140,33 @@ void T41RemoteConnectCheck() {
       t41.RemoteStatus = REMOTE_CONNECTED;
     }
   }
-  if(Serial.dtr()) {
+  #if REC_IQ_FROM_T41_USB
+  // DTR is a reliable indicator that Serial has connected to a host
+  // *** it is not a reliable indicator of a disconnect ***
+  // *** !Serial is not a reliable indicator of a disconnect ***
+  connected = Serial.dtr();
+  #endif
+  #if REC_IQ_FROM_T41_ETHER
+  // need both audio and control ports
+  connected = remoteAudioStream.connected() && ethernetControl.connected();
+  if(!connected) {
+    const IPAddress serverIP{192, 168, 1, 100};
+    // try to connect
+    if((remoteAudioStream.connect() == 1) && (ethernetControl.connect(serverIP, 80) == 1)) {
+      connected = 1;
+    } else {
+      if(!remoteAudioStream.connected()) {
+        Serial.println("remoteAudioStream not connected");
+        remoteAudioStream.end();
+      }
+      if(!ethernetControl.connected()) {
+        Serial.println("ethernetControl not connected");
+        ethernetControl.stop();
+      }
+    }
+  }
+  #endif
+  if(connected) {
     if(!wasConnected) {
       t41.RemoteStatus = REMOTE_CONNECTED;
       wasConnected = true;
@@ -102,8 +184,15 @@ void T41RemoteConnectCheck() {
       t41.RemoteStatus = REMOTE_WAITING;
     }
   }
+
+  // begin or end based on remote status
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    remoteAudioStream.begin();
+  } else {
+    remoteAudioStream.end();
+  }
 #endif
-#if SEND_IQ_TO_REMOTE
+#if SEND_IQ_TO_REMOTE_USB || SEND_IQ_TO_REMOTE_ETHER
   static unsigned long last = 0;
   unsigned long now = millis();
   int lasped = now - last;
@@ -125,6 +214,13 @@ void T41RemoteConnectCheck() {
     } else {
       t41.RemoteStatus = REMOTE_CONNECTED;
     }
+  }
+
+  // begin or end based on remote status
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    t41AudioStream.begin();
+  } else {
+    t41AudioStream.end();
   }
 #endif
 }

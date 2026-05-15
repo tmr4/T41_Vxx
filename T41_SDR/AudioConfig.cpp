@@ -9,6 +9,12 @@
 
 #include "AudioConfig.h"
 
+#include <QNEthernet.h>
+using namespace qindesign::network;
+
+#include "input_ether.h"
+#include "output_ether.h"
+
 #include <USBHost_t36.h>
 #include "input_usb.h"
 #include "output_usb.h"
@@ -106,15 +112,24 @@ See output_usb.h and input_usb.h for the new Teensy Audio library objects that
 seemlessly perform this transfer.
 */
 
-#if REC_IQ_FROM_T41
+#if REC_IQ_FROM_T41_USB
 // new audio library object to stream usb serial to Q_in_L and Q_in_R on remote
-AudioInputSerial1 usbSerial;
+AudioInputSerial1 remoteAudioStream;
 #endif
-#if SEND_IQ_TO_REMOTE
+#if REC_IQ_FROM_T41_ETHER
+// new audio library object to stream IQ data over Ethernet to Q_in_L and Q_in_R on remote
+EthernetClient ethernetAudio;
+AudioInputEther remoteAudioStream;
+#endif
+#if SEND_IQ_TO_REMOTE_USB
 // new audio library object to stream Q_in_L and Q_in_R to usb host serial on T41
 extern USBHost usbHost;
 extern USBSerial_BigBuffer usbHostSerial1;
-AudioOutputHostSerial hostSerial;
+AudioOutputHostSerial t41AudioStream;
+#endif
+#if SEND_IQ_TO_REMOTE_ETHER
+EthernetServer ethernetServerAudio(8023);
+AudioOutputEther t41AudioStream;
 #endif
 
 // Audio inputs
@@ -338,10 +353,15 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     // RX input on I2S channels 3, 4 (pin 6)
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
-    #if SEND_IQ_TO_REMOTE
-    hostSerial.init(&usbHost, &controlAudio);
-    pc_HostSerialL.connect(i2s_quadIn, 2, hostSerial, 0);
-    pc_HostSerialR.connect(i2s_quadIn, 3, hostSerial, 1);
+    #if SEND_IQ_TO_REMOTE_USB
+    t41AudioStream.init(&usbHost, &controlAudio);
+    pc_HostSerialL.connect(i2s_quadIn, 2, t41AudioStream, 0);
+    pc_HostSerialR.connect(i2s_quadIn, 3, t41AudioStream, 1);
+    #endif
+    #if SEND_IQ_TO_REMOTE_ETHER
+    t41AudioStream.init(&ethernetServerAudio);
+    pc_HostSerialL.connect(i2s_quadIn, 2, t41AudioStream, 0);
+    pc_HostSerialR.connect(i2s_quadIn, 3, t41AudioStream, 1);
     #endif
 
     // RX output and sidetone on I2S channel 3(left)
@@ -359,16 +379,19 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
     // establish audio connections
     // RX input on I2S channels 1, 2 (pin 8)
-    #if REC_IQ_FROM_T41
-    pc_Q_in_L.connect(usbSerial, 0, Q_in_L, 0);
-    pc_Q_in_R.connect(usbSerial, 1, Q_in_R, 0);
+    #if REC_IQ_FROM_T41_ETHER
+    remoteAudioStream.init(&ethernetAudio);
     #endif
-    #if SEND_IQ_TO_REMOTE
+    #if REC_IQ_FROM_T41_USB || REC_IQ_FROM_T41_ETHER
+    pc_Q_in_L.connect(remoteAudioStream, 0, Q_in_L, 0);
+    pc_Q_in_R.connect(remoteAudioStream, 1, Q_in_R, 0);
+    #endif
+    #if SEND_IQ_TO_REMOTE_USB
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
-    hostSerial.init(&usbHost, &controlAudio);
-    pc_HostSerialL.connect(i2s_quadIn, 0, hostSerial, 0);
-    pc_HostSerialR.connect(i2s_quadIn, 1, hostSerial, 1);
+    t41AudioStream.init(&usbHost, &controlAudio);
+    pc_HostSerialL.connect(i2s_quadIn, 0, t41AudioStream, 0);
+    pc_HostSerialR.connect(i2s_quadIn, 1, t41AudioStream, 1);
     #endif
     // RX output on I2S channel 1(left)
     // I2S on pin 7 (also headphone and line out)

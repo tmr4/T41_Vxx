@@ -17,18 +17,11 @@
     a new devise so we don't really save that much.  Doing this manually
     is a possibility if we need to save memory when not using a keyboard. */
 #if USB_HOST_SUPPORT
-//extern USBHost usbHost;
-//extern USBHub usbHub;
 USBHost usbHost;
 USBHub usbHub(usbHost);
 #endif
 
-#if REC_IQ_FROM_T41
-//USBHost usbHost;
-//USBHub usbHub(usbHost);
-#endif
-
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+#if HOST_KEYBOARD_MOUSE_SUPPORT
 USBHIDParser hkbParser(usbHost); // each device needs a parser
 KeyboardController kbController(usbHost);
 
@@ -46,7 +39,7 @@ MouseController mouseController(usbHost);
 // these do not work in DMAMEM
 USBSerial_BigBuffer usbHostSerial(usbHost, 1); // most CAT commands are small
 //extern USBSerial_BigBuffer usbHostSerial;
-#if SEND_IQ_TO_REMOTE
+#if SEND_IQ_TO_REMOTE_USB
 // USB device must compiled with Dual or Triple serial
 //USBSerial_BigBuffer usbHostSerial1(usbHost, 1);
 USBSerial_BigBuffer usbHostSerial1(usbHost);
@@ -95,7 +88,7 @@ void check_for_usbhost_device_changes() {
 //-------------------------------------------------------------------------------------------------------------
 
 FLASHMEM void UsbHostSetup() {
-#ifdef USB_HOST_SUPPORT
+#if USB_HOST_SUPPORT
   usbHost.begin();
 #endif
 
@@ -103,11 +96,11 @@ FLASHMEM void UsbHostSetup() {
   usbHostSerial.begin(1000000);
 #endif
 
-#if SEND_IQ_TO_REMOTE
+#if SEND_IQ_TO_REMOTE_USB
   usbHostSerial1.begin(1000000);
 #endif
 
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+#if HOST_KEYBOARD_MOUSE_SUPPORT
   KeyboardSetup();
 #endif
 
@@ -115,17 +108,17 @@ FLASHMEM void UsbHostSetup() {
 }
 
 void UsbHostTask() {
-#ifdef USB_HOST_SUPPORT
+#if USB_HOST_SUPPORT
   usbHost.Task();
 #endif
 }
 
 void UsbHostLoop() {
-#ifdef USB_HOST_SUPPORT
+#if USB_HOST_SUPPORT
   usbHost.Task();
 #endif
 
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+#if HOST_KEYBOARD_MOUSE_SUPPORT
   MouseLoop();
 #endif
 

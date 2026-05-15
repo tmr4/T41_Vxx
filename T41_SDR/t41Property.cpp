@@ -73,7 +73,7 @@ void T41Properties::begin() {
 }
 
 void T41Properties::SetPropertyDefaults() {
-  int remoteStatus = CAT_CONTROL_T41_USB_HOST || CAT_CONTROL_REMOTE_USB ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
+  int remoteStatus = CAT_CONTROL_T41_USB_HOST || CAT_CONTROL_REMOTE ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
   RadioState.Set(RECONFIGURE_STATE);
 

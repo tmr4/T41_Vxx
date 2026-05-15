@@ -1308,7 +1308,7 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
     // process controls if 10ms has passed since last update
     if(millis() - prevUpdate > 10) {
       ProcessControls();
-      #if CAT_CONTROL_REMOTE_USB
+      #if CAT_CONTROL_REMOTE
         T41ControlLoop();
       #endif
       prevUpdate = millis();

@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- AudioInputSerialT - Streams 2-channels from selected USB serial object to connect output objects
+ AudioInputEther - Streams 2-channels from selected Ethernet object to connect output objects
 
 Remote timing (w/ T41 standard input, Auto NF):
   * USB serial input, 512-bytes total, written directly to 2-channel output (not buffered)
@@ -22,7 +22,7 @@ Remote timing (w/ T41 standard input, Auto NF):
     * The T41 and remote are running at different clock rates, 528MHz for the T41 for Teensy
       longevity and 600MHz on the remote due to AP instability at 528MHz (Teensy chip voltage issue)
 
- Works with AudioOutputHostSerial
+ Works with AudioOutputEther
 
  *** This object could be made more robust with a buffer and syncing but
      early testing hasn't shown a need for this ***
@@ -31,33 +31,56 @@ Remote timing (w/ T41 standard input, Auto NF):
 #include <Arduino.h>
 #include <AudioStream.h>
 
+#include <QNEthernet.h>
+using namespace qindesign::network;
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
-// Data
+// Forward
 //-------------------------------------------------------------------------------------------------------------
 
-extern "C" {
-  int usb_serial_read(void *buffer,  uint32_t size);
-  int usb_serial2_read(void *buffer, uint32_t size);
-  int usb_serial3_read(void *buffer, uint32_t size);
-
-  int usb_serial_available(void);
-  int usb_serial2_available(void);
-  int usb_serial3_available(void);
-}
+void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress& gateway);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-template< int (*available)(), int (*read)(void *, uint32_t) >
-class AudioInputSerialT : public AudioStream {
+class AudioInputEther : public AudioStream {
 public:
-  AudioInputSerialT() : AudioStream(0, nullptr) {}
+  AudioInputEther() : AudioStream(0, nullptr) {}
 
-	void begin() { enabled = true; }
+  void init(EthernetClient *client) {
+    if(client == nullptr) return;
+
+    _client = client;
+
+    // Configure static IP
+    InitEthernet(clientIP, subnet, gateway);
+  }
+	void begin() {
+    if(_client->connected()) {
+      enabled = true;
+    } else {
+      enabled = false;
+    }
+  }
 	void end() { enabled = false;	}
+
+  uint8_t connected() {
+    if(!_client) {
+      return 0;
+    } else {
+      return _client->connected();
+    }
+  }
+  int connect() {
+    if(!_client) {
+      return 0;
+    } else {
+      return _client->connect(serverIP, port);
+    }
+  }
 
   void update() override {
     audio_block_t *blockL, *blockR;
@@ -65,14 +88,14 @@ public:
 
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     if(!enabled) {
-      char dump;
+      uint8_t dump;
       // empty USB buffer
-      while(available()) read(&dump, 1);
+      while(_client->available()) _client->read(&dump, 1);
       RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
 
-    if(available() < blockSize) {
+    if(_client->available() < blockSize) {
       RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
@@ -88,8 +111,8 @@ public:
       return;
     }
 
-    n = read((void *)blockL->data, blockSize / 2);
-    n += read((void *)blockR->data, blockSize / 2);
+    n = _client->read((uint8_t *)blockL->data, blockSize / 2);
+    n += _client->read((uint8_t *)blockR->data, blockSize / 2);
     if(n == blockSize) {
       TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
       transmit(blockL, 0);
@@ -105,11 +128,17 @@ public:
 
 private:
   bool enabled = false;
+
+  EthernetClient *_client = nullptr;
+
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
+
+  // Network configuration for the Client
+  const IPAddress clientIP{192, 168, 1, 101}; // Must be different from Server
+  const IPAddress subnet{255, 255, 255, 0};
+  const IPAddress gateway{192, 168, 1, 1};
+
+  // Target Server Configuration
+  const IPAddress serverIP{192, 168, 1, 100};
+  const uint16_t port = 8023;
 };
-
-using AudioInputSerial = AudioInputSerialT< usb_serial_available, usb_serial_read >;
-
-using AudioInputSerial1 = AudioInputSerialT< usb_serial2_available, usb_serial2_read >;
-
-using AudioInputSerial2 = AudioInputSerialT< usb_serial3_available, usb_serial3_read >;

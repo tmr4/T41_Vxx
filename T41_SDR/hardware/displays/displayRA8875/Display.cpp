@@ -98,15 +98,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#if SEND_IQ_TO_REMOTE
-// new audio library object to stream Q_in_L and Q_in_R to usb host serial on T41
-extern AudioOutputHostSerial hostSerial;
-#endif
-#if REC_IQ_FROM_T41
-// new audio library object to stream usb serial to Q_in_L and Q_in_R on remote
-extern AudioInputSerial1 usbSerial;
-#endif
-
 #define NEW_SI5351_FREQ_MULT  1UL
 #define FLOAT_PRECISION         6             // Assumed precision for a float
 
@@ -857,22 +848,6 @@ FLASHMEM void ShowSpectrumFreqValues() {
 }
 
 FLASHMEM void ShowRemoteStatus() {
-  // *** TODO: consider a better place for this ***
-  #if SEND_IQ_TO_REMOTE
-    if(t41.RemoteStatus == REMOTE_CONNECTED) {
-      hostSerial.begin();
-    } else {
-      hostSerial.end();
-    }
-  #endif
-  #if REC_IQ_FROM_T41
-    if(t41.RemoteStatus == REMOTE_CONNECTED) {
-      usbSerial.begin();
-    } else {
-      usbSerial.end();
-    }
-  #endif
-
   tft.setFontScale((enum RA8875tsize)0);
 
   tft.setCursor(OPERATION_STATS_REM, OPERATION_STATS_T);

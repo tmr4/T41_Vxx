@@ -288,7 +288,7 @@ FLASHMEM void setup() {
   //T41BeaconSetup();
   //WSJTControlSetup();
 
-#if CAT_CONTROL_REMOTE_USB || CAT_CONTROL_T41_USB_HOST
+#if CAT_CONTROL_REMOTE || CAT_CONTROL_T41_USB_HOST
   T41ControlSetup();
 #endif
 
@@ -401,7 +401,7 @@ FASTRUN void loop() {
   // *** need PC control without a display ***
   //T41ControlLoop();
 
-#if CAT_CONTROL_REMOTE_USB
+#if CAT_CONTROL_REMOTE
   T41ControlLoop();
 #endif
 
@@ -486,7 +486,7 @@ FASTRUN void loop() {
         case DISPLAY_T41:
           DrawFreqSpectrum();
           DrawAudioSpectrum();
-//#if REC_IQ_FROM_T41
+//#if REC_IQ_FROM_T41_USB
 //  if(t41.RemoteStatus == REMOTE_CONNECTED) {
 //  //if(!iqSyncSearch) {
 //          DrawFreqSpectrum();
