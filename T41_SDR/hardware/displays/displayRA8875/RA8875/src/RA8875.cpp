@@ -815,14 +815,13 @@ void RA8875::_waitBusy(uint8_t res)
 		if (res == 0x01) writeCommand(RA8875_DMACR);//dma
 		temp = readStatus();
 		if ((millis() - start) > 10) return;
-    //yield(); // causes audio/display instability
+    YieldToEthernet();
     if(!dspDone) {
       // run ProcessReceiverData successfully once
       //TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
       if(CheckReceiverData() == 1) {
         dspDone = true;
       }
-      YieldToEthernet();
     }
 	} while ((temp & res) == res);
 }

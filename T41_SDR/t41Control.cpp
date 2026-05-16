@@ -101,30 +101,21 @@ void T41ControlSetup() {
     //sendGet = true;
     sendGet = false;
   }
+#if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
+  const IPAddress clientIP{192, 168, 1, 101};
+  const IPAddress subnet{255, 255, 255, 0};
+  const IPAddress gateway{192, 168, 1, 1};
+  const IPAddress serverIP{192, 168, 1, 100};
 #if REC_IQ_FROM_T41_ETHER
   // Remote Ethernet Client
-  // Network configuration for the Client
-  const IPAddress clientIP{192, 168, 1, 101}; // Must be different from Server
-  const IPAddress subnet{255, 255, 255, 0};
-  const IPAddress gateway{192, 168, 1, 1};
-  const IPAddress serverIP{192, 168, 1, 100};
   InitEthernet(clientIP, subnet, gateway);
-  ethernetControl.connect(serverIP, 80);
-#endif
-#if SEND_IQ_TO_REMOTE_ETHER
+#elif SEND_IQ_TO_REMOTE_ETHER
   // T41 Ethernet Server
-  const IPAddress clientIP{192, 168, 1, 101}; // Must be different from Server
-  const IPAddress subnet{255, 255, 255, 0};
-  const IPAddress gateway{192, 168, 1, 1};
-  const IPAddress serverIP{192, 168, 1, 100};
   InitEthernet(serverIP, subnet, gateway);
-  //InitEthernet(clientIP, subnet, gateway);
-  //ethernetServerControl.begin();
-  ethernetServerControl.beginWithReuse();
-  //ethernetControl.connect(serverIP, 80);
-  //ethernetControl = ethernetServerControl.available();
-  //ethernetControl = ethernetServerControl.accept();
-  //if(ethernetControl) Serial.println("T41ControlSetup accepted client");
+  ethernetServerControl.begin();
+#endif
+  ethernetControl.setConnectionTimeoutEnabled(false);
+  ethernetControl.setNoDelay(true);
 #endif
 }
 
@@ -141,8 +132,8 @@ void T41RemoteConnectCheck() {
     //}
   }
 
-  // *** remote can detect dtr on connect but doesn't catch cable disconnect ***
 #if REC_IQ_FROM_T41_USB
+  // *** remote can detect dtr on connect but doesn't catch cable disconnect ***
   // DTR is a reliable indicator that Serial has connected to a host
   // *** it is not a reliable indicator of a disconnect ***
   // *** !Serial is not a reliable indicator of a disconnect ***
@@ -153,44 +144,6 @@ void T41RemoteConnectCheck() {
     remoteAudioStream.end();
   }
 #endif
-#if REC_IQ_FROM_T41_ETHER
-  // need both audio and control ports
-  //if(!wasConnected)
-  {
-  //Serial.println("checking connection");
-  connected = remoteAudioStream.connected() && ethernetControl.connected();
-  //connected = remoteAudioStream && ethernetControl;
-  if(!connected) {
-    //Serial.println("not connected");
-    const IPAddress serverIP{192, 168, 1, 100};
-    if(wasConnected) {
-      if(!remoteAudioStream.connected()) {
-        t41.RemoteStatus = REMOTE_LOST;
-        remoteAudioStream.end();
-      }
-      //if(!ethernetControl.connected()) ethernetControl.end();
-    }
-    // try to connect
-    if(!ethernetControl.connected()) {
-      ethernetControl.stop();
-      //if(ethernetControl.connect(serverIP, 80, 5005) == 1) {
-      if(ethernetControl.connect(serverIP, 80) == 1) {
-        connected = remoteAudioStream.connected();
-        //delay(100);
-      }
-    } else if(!remoteAudioStream.connected()) {
-      if(remoteAudioStream.connect() == 1) {
-        //Serial.println("remoteAudioStream connected");
-        connected = 1;
-        remoteAudioStream.setNoDelay();
-        remoteAudioStream.begin();
-      } else {
-        connected = 0;
-      }
-    }
-  }
-  }
-#endif
 #if SEND_IQ_TO_REMOTE_USB
   // send a connection request every 5s until connected
   if((t41.RemoteStatus != REMOTE_CONNECTED) && (lasped > 5000)) {
@@ -198,49 +151,40 @@ void T41RemoteConnectCheck() {
     SendID(true);
     last = now;
   }
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    // send a heartbeat every 500ms
+    //if(lasped > 500) {
+    //  SendID(true);
+    //}
+    //if(millis() - lastHeartbeat > 2000) {
+    //  t41.RemoteStatus = REMOTE_LOST;
+    //} else {
+    //  t41.RemoteStatus = REMOTE_CONNECTED;
+    //}
+  }
 #endif
-
-#if SEND_IQ_TO_REMOTE_ETHER
-  static unsigned long last = 0;
-  unsigned long now = millis();
-  int lasped = now - last;
-
-  //if(!wasConnected)
-  {
+#if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
   //Serial.println("checking connection");
-  connected = t41AudioStream.connected() && ethernetControl.connected();
-  //connected = t41AudioStream && ethernetControl;
-  if(!connected) {
-    //const IPAddress serverIP{192, 168, 1, 100};
+  if(!ethernetControl.connected()) {
     //Serial.println("not connected");
-    if(wasConnected) {
-      if(!t41AudioStream.connected()) t41AudioStream.end();
-      //if(!ethernetControl.connected()) ethernetControl.end();
-    }
+    const IPAddress serverIP{192, 168, 1, 100};
+
     // try to connect
-    if(!ethernetControl.connected()) {
-      EthernetClient newA = ethernetServerControl.accept();
-      if(newA) {
-        ethernetControl.stop();
-        ethernetControl = newA;
-        //Serial.println("ethernetControlServer accepted client");
-        connected = t41AudioStream.connected();
-        //delay(100); // might help t41AudioStream connection in some cases, but causes max Audio memory usage at startup
-        // *** TODO: not sure why this increases audio memory use, but delay hasn't been needed ***
-      }
-    } else if(!t41AudioStream.connected()) {
-      if(t41AudioStream.connect() == 1) {
-        //Serial.println("t41AudioStream connected");
-        connected = 1;
-        t41AudioStream.begin();
-      } else {
-        connected = 0;
-      }
+    ethernetControl.stop();
+#if REC_IQ_FROM_T41_ETHER
+    ethernetControl.connect(serverIP, 80);
+#elif SEND_IQ_TO_REMOTE_ETHER
+    ethernetControl = ethernetServerControl.accept();
+#endif
+    if(ethernetControl) {
+      connected = 1;
+    } else {
+      connected = 0;
     }
-  }
   }
 #endif
 
+  // show remote connection status
   if(connected) {
     if(!wasConnected) {
       t41.RemoteStatus = REMOTE_CONNECTED;
@@ -259,20 +203,6 @@ void T41RemoteConnectCheck() {
       t41.RemoteStatus = REMOTE_WAITING;
     }
   }
-//#if SEND_IQ_TO_REMOTE_USB || SEND_IQ_TO_REMOTE_ETHER
-#if SEND_IQ_TO_REMOTE_USB
-  if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    // send a heartbeat every 500ms
-    //if(lasped > 500) {
-    //  SendID(true);
-    //}
-    //if(millis() - lastHeartbeat > 2000) {
-    //  t41.RemoteStatus = REMOTE_LOST;
-    //} else {
-    //  t41.RemoteStatus = REMOTE_CONNECTED;
-    //}
-  }
-#endif
 }
 
 void T41ControlSendData(uint8_t *data, int len) {

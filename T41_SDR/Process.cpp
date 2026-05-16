@@ -87,6 +87,7 @@ void FreqShift1(int blockSize);
 void FreqShift2();
 void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 void Calc1xFreqSpec();
+void YieldToEthernet();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -441,6 +442,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition.
   *************************************************************************************************/
   FreqShift2();
+
+
+
+  YieldToEthernet();
 
   /**********************************************************************************
       Decimation
@@ -1299,13 +1304,12 @@ void Calc1xFreqSpec() {
 }
 
 void YieldToEthernet() {
-  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+  if(t41.RemoteStatus == REMOTE_CONNECTED)
+  {
     #if REC_IQ_FROM_T41_ETHER
-      Ethernet.loop();
       remoteAudioStream.read();
     #endif
     #if SEND_IQ_TO_REMOTE_ETHER
-      Ethernet.loop();
       t41AudioStream.write();
     #endif
   }

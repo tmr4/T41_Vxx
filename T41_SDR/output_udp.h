@@ -50,23 +50,63 @@ class AudioOutputEther : public AudioStream {
 public:
   AudioOutputEther() : AudioStream(2, inputQueueArray) {}
 
-  void begin() {
-    if(!enabled) {
-      InitEthernet(serverIP, subnet, gateway); // configure static IP
-      _server.begin(port);
-      _client.setConnectionTimeoutEnabled(false);
-      _client.setNoDelay(true);
-      enabled = true;
+  void init(EthernetServer *server) {
+    if(server == nullptr) return;
+
+    _server = server;
+
+    // Configure static IP
+    InitEthernet(serverIP, subnet, gateway);
+    //_server->begin();
+    _server->beginWithReuse();
+  }
+  uint8_t connected() {
+    if(_client) {
+      return _client.connected();
+    } else {
+      return 0;
     }
   }
-	void end() { enabled = false; }
-
+  int connect() {
+    //_client = _server->accept();
+    EthernetClient newB = _server->accept();
+    if(newB) {
+      _client.stop();
+      _client = newB;
+      Serial.println("AudioOutputEther accepted client");
+      _client.setNoDelay(true);
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+	void begin() {
+    if(!_server) {
+      enabled = false;
+    } else {
+      //_client = _server->available();
+      //_client = _server->available();
+      //_client = _server->accept();
+      if(_client && _client.connected()) {
+        enabled = true;
+        Serial.println("AudioOutputEther enabled");
+      } else {
+        enabled = false;
+      }
+    }
+  }
+	void end() {
+    //if(_client) _client.stop();
+    //_client = nullptr;
+    enabled = false;
+  }
 
   // store stream in queue
   void update() override {
     audio_block_t *blockL, *blockR;
     int h;
 
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     blockL = receiveReadOnly(0);
     blockR = receiveReadOnly(1);
 
@@ -74,10 +114,13 @@ public:
     if(!enabled || (h == tail) || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
+      //Serial.println("dropping block");
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
 
     // we're enabled an have blocks to queue
+    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
     //h = (head + 1) % maxBlocks;
     //if(h == tail) {
     //  // buffer full, drop oldest block
@@ -91,55 +134,55 @@ public:
     queue[head][0] = blockL;
     queue[head][1] = blockR;
     head = h;
+
+    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    RESETPROFILEPIN(PROFILER_DECODE_FT8);
+    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
   }
 
   // write queue data out to Ethernet
   void write() {
-    if(enabled) {
-      TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
-
-      Ethernet.loop();
-
-      // stop dead or broken connections
-      if(!_client.connected()) {
-        _client.stop();
-
-        // accept incoming connections
-        _client = _server.accept();
-        if(_client) {
-          _client.setConnectionTimeoutEnabled(false);
-          _client.setNoDelay(true);
-        }
-      }
-
-      if(tail == head) {
-        RESETPROFILEPIN(PROFILER_DECODE_FT8);
-        return; // nothing to write
-      }
-
-      if(_client) {
-        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-        audio_block_t *blockL, *blockR;
-        while((_client.availableForWrite() > blockSize) && (tail != head)) {
-          TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
-          blockL = queue[tail][0];
-          blockR = queue[tail][1];
-
-          _client.write((uint8_t *)blockL->data, blockSize / 2);
-          _client.write((uint8_t *)blockR->data, blockSize / 2);
-          //_client.writeFully((uint8_t *)blockL->data, blockSize / 2);
-          //_client.writeFully((uint8_t *)blockR->data, blockSize / 2);
-
-          release(blockL);
-          release(blockR);
-          tail = (tail + 1) % maxBlocks;
-        }
-        _client.flush();
-      }
-      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+    if(tail == head) {
       RESETPROFILEPIN(PROFILER_DECODE_FT8);
-      RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+      return; // nothing to write
     }
+
+    //if(_client && _client.connected()) {
+    if(_client) {
+      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+      //int avail = _client.availableForWrite();
+      audio_block_t *blockL, *blockR;
+      //Serial.println(avail);
+      //while((avail >= blockSize) && (tail != head)) {
+      //while((avail >= blockSize) && (tail != head)) {
+      if((_client.availableForWrite() >= blockSize) && (tail != head)) {
+      //while((_client.availableForWrite() >= blockSize) && (tail != head)) {
+      //while((_client.availableForWrite() >= blockSize * 2) && (tail != head)) {
+        //Serial.println(avail);
+        TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+        blockL = queue[tail][0];
+        blockR = queue[tail][1];
+
+        _client.write((uint8_t *)blockL->data, blockSize / 2);
+        _client.write((uint8_t *)blockR->data, blockSize / 2);
+        //_client.writeFully((uint8_t *)blockL->data, blockSize / 2);
+        //_client.writeFully((uint8_t *)blockR->data, blockSize / 2);
+
+        release(blockL);
+        release(blockR);
+        //avail -= blockSize;
+        tail = (tail + 1) % maxBlocks;
+      }
+      _client.flush();
+    }
+    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    RESETPROFILEPIN(PROFILER_DECODE_FT8);
+    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+  }
+
+  explicit operator bool() {
+    return _client ? 1 : 0;
   }
 
 private:
@@ -152,7 +195,7 @@ private:
   const IPAddress gateway{192, 168, 1, 1};
 
   const uint16_t port = 8023;
-  EthernetServer _server;
+  EthernetServer *_server = nullptr;
   EthernetClient _client; // this persistent instance keeps the connection alive
 
 	audio_block_t * volatile queue[maxBlocks][2];

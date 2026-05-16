@@ -118,7 +118,6 @@ AudioInputSerial1 remoteAudioStream;
 #endif
 #if REC_IQ_FROM_T41_ETHER
 // new audio library object to stream IQ data over Ethernet to Q_in_L and Q_in_R on remote
-EthernetClient ethernetAudio;
 AudioInputEther remoteAudioStream;
 #endif
 #if SEND_IQ_TO_REMOTE_USB
@@ -128,7 +127,6 @@ extern USBSerial_BigBuffer usbHostSerial1;
 AudioOutputHostSerial t41AudioStream;
 #endif
 #if SEND_IQ_TO_REMOTE_ETHER
-EthernetServer ethernetServerAudio(8023);
 AudioOutputEther t41AudioStream;
 #endif
 
@@ -359,7 +357,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     pc_HostSerialR.connect(i2s_quadIn, 3, t41AudioStream, 1);
     #endif
     #if SEND_IQ_TO_REMOTE_ETHER
-    t41AudioStream.init(&ethernetServerAudio);
+    t41AudioStream.begin();
     pc_HostSerialL.connect(i2s_quadIn, 2, t41AudioStream, 0);
     pc_HostSerialR.connect(i2s_quadIn, 3, t41AudioStream, 1);
     #endif
@@ -380,7 +378,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     // establish audio connections
     // RX input on I2S channels 1, 2 (pin 8)
     #if REC_IQ_FROM_T41_ETHER
-    remoteAudioStream.init(&ethernetAudio);
+    remoteAudioStream.begin();
     #endif
     #if REC_IQ_FROM_T41_USB || REC_IQ_FROM_T41_ETHER
     pc_Q_in_L.connect(remoteAudioStream, 0, Q_in_L, 0);
