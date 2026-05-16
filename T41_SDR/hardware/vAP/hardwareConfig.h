@@ -53,7 +53,7 @@
 */
 
 // set the remote operation role of this device
-#define DEVICE_REMOTE_OPS_MODE  2 // 0=none, 1=WSJT-X, 2=remote, 3=T41
+#define DEVICE_REMOTE_OPS_MODE  4 // 0=none, 1=WSJT-X, Remote over USB (2=remote, 3=T41), Remote over Ethernet (4=remote, 5=T41)
 
 // set the desired remote services below to true to enable remote CAT control/audio
 // *** IQ audio is sent from T41 device USB Host connector to the remote USB (Serial) connector ***
@@ -84,7 +84,7 @@
 #define SEND_IQ_TO_REMOTE_USB         false
 
 // automatically configure radio for selected remote operation and services
-#if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 3)
+#if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 5)
   #undef DEVICE_REMOTE_OPS_MODE
   #define DEVICE_REMOTE_OPS_MODE 0
 #else
@@ -127,6 +127,40 @@
       #define SEND_IQ_TO_REMOTE_USB true
       #undef controlAudio
       #define controlAudio usbHostSerial1
+    #endif
+  #elif DEVICE_REMOTE_OPS_MODE == 4
+    // remote Ethernet
+    #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
+      #undef CAT_CONTROL_REMOTE
+      #define CAT_CONTROL_REMOTE true
+    #endif
+    #if REMOTE_CAT_CONTROL
+      #undef controlSerial
+      #define controlSerial ethernetControl
+    #endif
+    #if REMOTE_AUDIO_DATA
+      #undef REC_IQ_FROM_T41_ETHER
+      #define REC_IQ_FROM_T41_ETHER true
+      // *** TODO: can this be made generic for USB and Ethernet? ***
+      //#undef controlAudio
+      //#define controlAudio SerialUSB1
+    #endif
+  #elif DEVICE_REMOTE_OPS_MODE == 5
+    // T41 Ethernet
+    #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
+      #undef CAT_CONTROL_REMOTE
+      #define CAT_CONTROL_REMOTE true
+    #endif
+    #if REMOTE_CAT_CONTROL
+      #undef controlSerial
+      #define controlSerial ethernetControl
+    #endif
+    #if REMOTE_AUDIO_DATA
+      #undef SEND_IQ_TO_REMOTE_ETHER
+      #define SEND_IQ_TO_REMOTE_ETHER true
+      // *** TODO: can this be made generic for USB and Ethernet? ***
+      //#undef controlAudio
+      //#define controlAudio usbHostSerial1
     #endif
   #endif
 #endif

@@ -111,28 +111,42 @@ public:
   void read() {
     audio_block_t *blockL, *blockR;
     int h, n;
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
 
-    if(!enabled) {
-      uint8_t dump;
+    if(!enabled)
+    {
+      uint8_t dump[512];
       // empty Ethernet buffer
-      while(_client->available()) _client->read(&dump, 1);
+      while(_client->available() > blockSize) {
+        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+        _client->read(dump, blockSize);
+      }
+      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
 
     //int avail = _client->available();
     h = (head + 1) % maxBlocks;
+    //if((avail >= blockSize) && (h != tail)) {
     //while((avail >= blockSize) && (h != tail)) {
-    while((_client->available() >= blockSize * 2) && (h != tail)) {
-      TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+    //if((_client->available() >= blockSize) && (h != tail)) {
+    while((_client->available() > blockSize) && (h != tail)) {
+    //while((_client->available() >= blockSize * 2) && (h != tail)) {
+      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
       // we have sufficient data to queue
       blockL = allocate();
       blockR = allocate();
       if(!blockL || !blockR) {
         if(blockL) release(blockL);
         if(blockR) release(blockR);
-        break;
+        //break;
+        RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+        RESETPROFILEPIN(PROFILER_DECODE_FT8);
+        return;
       }
 
+      TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
       n = _client->read((uint8_t *)blockL->data, blockSize / 2);
       n += _client->read((uint8_t *)blockR->data, blockSize / 2);
       if(n < blockSize) {
@@ -156,7 +170,13 @@ public:
       }
       //avail -= blockSize;
     }
+    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    RESETPROFILEPIN(PROFILER_DECODE_FT8);
     RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+  }
+
+  explicit operator bool() {
+    return _client ? 1 : 0;
   }
 
 private:

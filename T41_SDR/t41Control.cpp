@@ -155,11 +155,13 @@ void T41RemoteConnectCheck() {
 #endif
 #if REC_IQ_FROM_T41_ETHER
   // need both audio and control ports
-  if(!wasConnected) {
-  Serial.println("checking connection");
+  //if(!wasConnected)
+  {
+  //Serial.println("checking connection");
   connected = remoteAudioStream.connected() && ethernetControl.connected();
+  //connected = remoteAudioStream && ethernetControl;
   if(!connected) {
-    Serial.println("not connected");
+    //Serial.println("not connected");
     const IPAddress serverIP{192, 168, 1, 100};
     if(wasConnected) {
       if(!remoteAudioStream.connected()) {
@@ -178,7 +180,7 @@ void T41RemoteConnectCheck() {
       }
     } else if(!remoteAudioStream.connected()) {
       if(remoteAudioStream.connect() == 1) {
-        Serial.println("remoteAudioStream connected");
+        //Serial.println("remoteAudioStream connected");
         connected = 1;
         remoteAudioStream.setNoDelay();
         remoteAudioStream.begin();
@@ -203,12 +205,14 @@ void T41RemoteConnectCheck() {
   unsigned long now = millis();
   int lasped = now - last;
 
-  if(!wasConnected) {
-  Serial.println("checking connection");
+  //if(!wasConnected)
+  {
+  //Serial.println("checking connection");
   connected = t41AudioStream.connected() && ethernetControl.connected();
+  //connected = t41AudioStream && ethernetControl;
   if(!connected) {
     //const IPAddress serverIP{192, 168, 1, 100};
-    Serial.println("not connected");
+    //Serial.println("not connected");
     if(wasConnected) {
       if(!t41AudioStream.connected()) t41AudioStream.end();
       //if(!ethernetControl.connected()) ethernetControl.end();
@@ -219,14 +223,14 @@ void T41RemoteConnectCheck() {
       if(newA) {
         ethernetControl.stop();
         ethernetControl = newA;
-        Serial.println("ethernetControlServer accepted client");
+        //Serial.println("ethernetControlServer accepted client");
         connected = t41AudioStream.connected();
         //delay(100); // might help t41AudioStream connection in some cases, but causes max Audio memory usage at startup
         // *** TODO: not sure why this increases audio memory use, but delay hasn't been needed ***
       }
     } else if(!t41AudioStream.connected()) {
       if(t41AudioStream.connect() == 1) {
-        Serial.println("t41AudioStream connected");
+        //Serial.println("t41AudioStream connected");
         connected = 1;
         t41AudioStream.begin();
       } else {
@@ -719,7 +723,9 @@ int GetMode() {
 void T41ControlLoop() {
   float32_t dbm;
 
-  T41RemoteConnectCheck();
+  if(t41.RemoteStatus != REMOTE_CONNECTED) {
+    T41RemoteConnectCheck();
+  }
 
   if(controlSerial.available()) {
     char cmd[256];

@@ -144,25 +144,30 @@ public:
   void write() {
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     if(tail == head) {
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return; // nothing to write
     }
 
-    if(_client && _client.connected()) {
+    //if(_client && _client.connected()) {
+    if(_client) {
       TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
       //int avail = _client.availableForWrite();
       audio_block_t *blockL, *blockR;
       //Serial.println(avail);
       //while((avail >= blockSize) && (tail != head)) {
-      while((_client.availableForWrite() >= blockSize * 2) && (tail != head)) {
+      //while((avail >= blockSize) && (tail != head)) {
+      if((_client.availableForWrite() >= blockSize) && (tail != head)) {
+      //while((_client.availableForWrite() >= blockSize) && (tail != head)) {
+      //while((_client.availableForWrite() >= blockSize * 2) && (tail != head)) {
         //Serial.println(avail);
         TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
         blockL = queue[tail][0];
         blockR = queue[tail][1];
 
-        //_client.write((uint8_t *)blockL->data, blockSize / 2);
-        //_client.write((uint8_t *)blockR->data, blockSize / 2);
-        _client.writeFully((uint8_t *)blockL->data, blockSize / 2);
-        _client.writeFully((uint8_t *)blockR->data, blockSize / 2);
+        _client.write((uint8_t *)blockL->data, blockSize / 2);
+        _client.write((uint8_t *)blockR->data, blockSize / 2);
+        //_client.writeFully((uint8_t *)blockL->data, blockSize / 2);
+        //_client.writeFully((uint8_t *)blockR->data, blockSize / 2);
 
         release(blockL);
         release(blockR);
@@ -174,6 +179,10 @@ public:
     RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
     RESETPROFILEPIN(PROFILER_DECODE_FT8);
     RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+  }
+
+  explicit operator bool() {
+    return _client ? 1 : 0;
   }
 
 private:
