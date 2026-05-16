@@ -74,6 +74,7 @@ public:
       _client.stop();
       _client = newB;
       Serial.println("AudioOutputEther accepted client");
+      _client.setNoDelay(true);
       return 1;
     } else {
       return 0;
@@ -113,7 +114,7 @@ public:
     if(!enabled || (h == tail) || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
-      Serial.println("dropping block");
+      //Serial.println("dropping block");
       RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
@@ -148,23 +149,27 @@ public:
 
     if(_client && _client.connected()) {
       TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-      int avail = _client.availableForWrite();
+      //int avail = _client.availableForWrite();
       audio_block_t *blockL, *blockR;
       //Serial.println(avail);
-      while((avail >= blockSize) && (tail != head)) {
+      //while((avail >= blockSize) && (tail != head)) {
+      while((_client.availableForWrite() >= blockSize * 2) && (tail != head)) {
         //Serial.println(avail);
         TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
         blockL = queue[tail][0];
         blockR = queue[tail][1];
 
-        _client.write((uint8_t *)blockL->data, blockSize / 2);
-        _client.write((uint8_t *)blockR->data, blockSize / 2);
+        //_client.write((uint8_t *)blockL->data, blockSize / 2);
+        //_client.write((uint8_t *)blockR->data, blockSize / 2);
+        _client.writeFully((uint8_t *)blockL->data, blockSize / 2);
+        _client.writeFully((uint8_t *)blockR->data, blockSize / 2);
 
         release(blockL);
         release(blockR);
-        avail -= blockSize;
+        //avail -= blockSize;
         tail = (tail + 1) % maxBlocks;
       }
+      _client.flush();
     }
     RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
     RESETPROFILEPIN(PROFILER_DECODE_FT8);

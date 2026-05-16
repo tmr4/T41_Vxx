@@ -89,6 +89,7 @@ public:
     }
   }
   //void stop() { _client->stop(); }
+  void setNoDelay() { _client->setNoDelay(true); }
 
   // send queued data to stream
   void update() override {
@@ -118,9 +119,10 @@ public:
       return;
     }
 
-    int avail = _client->available();
+    //int avail = _client->available();
     h = (head + 1) % maxBlocks;
-    while((avail >= blockSize) && (h != tail)) {
+    //while((avail >= blockSize) && (h != tail)) {
+    while((_client->available() >= blockSize * 2) && (h != tail)) {
       TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
       // we have sufficient data to queue
       blockL = allocate();
@@ -146,13 +148,13 @@ public:
           if(oldestL) release(oldestL);
           if(oldestR) release(oldestR);
           tail = (tail + 1) % maxBlocks;
-          Serial.println("dropping block");
+          //Serial.println("dropping block");
         }
         queue[head][0] = blockL;
         queue[head][1] = blockR;
         head = h;
       }
-      avail -= blockSize;
+      //avail -= blockSize;
     }
     RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
   }

@@ -155,9 +155,19 @@ void T41RemoteConnectCheck() {
 #endif
 #if REC_IQ_FROM_T41_ETHER
   // need both audio and control ports
+  if(!wasConnected) {
+  Serial.println("checking connection");
   connected = remoteAudioStream.connected() && ethernetControl.connected();
   if(!connected) {
+    Serial.println("not connected");
     const IPAddress serverIP{192, 168, 1, 100};
+    if(wasConnected) {
+      if(!remoteAudioStream.connected()) {
+        t41.RemoteStatus = REMOTE_LOST;
+        remoteAudioStream.end();
+      }
+      //if(!ethernetControl.connected()) ethernetControl.end();
+    }
     // try to connect
     if(!ethernetControl.connected()) {
       ethernetControl.stop();
@@ -170,11 +180,13 @@ void T41RemoteConnectCheck() {
       if(remoteAudioStream.connect() == 1) {
         Serial.println("remoteAudioStream connected");
         connected = 1;
+        remoteAudioStream.setNoDelay();
         remoteAudioStream.begin();
       } else {
         connected = 0;
       }
     }
+  }
   }
 #endif
 #if SEND_IQ_TO_REMOTE_USB
@@ -191,9 +203,16 @@ void T41RemoteConnectCheck() {
   unsigned long now = millis();
   int lasped = now - last;
 
+  if(!wasConnected) {
+  Serial.println("checking connection");
   connected = t41AudioStream.connected() && ethernetControl.connected();
   if(!connected) {
     //const IPAddress serverIP{192, 168, 1, 100};
+    Serial.println("not connected");
+    if(wasConnected) {
+      if(!t41AudioStream.connected()) t41AudioStream.end();
+      //if(!ethernetControl.connected()) ethernetControl.end();
+    }
     // try to connect
     if(!ethernetControl.connected()) {
       EthernetClient newA = ethernetServerControl.accept();
@@ -214,6 +233,7 @@ void T41RemoteConnectCheck() {
         connected = 0;
       }
     }
+  }
   }
 #endif
 

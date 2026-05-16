@@ -1301,9 +1301,11 @@ void Calc1xFreqSpec() {
 void YieldToEthernet() {
   if(t41.RemoteStatus == REMOTE_CONNECTED) {
     #if REC_IQ_FROM_T41_ETHER
+      Ethernet.loop();
       remoteAudioStream.read();
     #endif
     #if SEND_IQ_TO_REMOTE_ETHER
+      Ethernet.loop();
       t41AudioStream.write();
     #endif
   }
