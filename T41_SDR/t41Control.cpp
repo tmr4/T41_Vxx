@@ -80,8 +80,8 @@ void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress&
   if(isInitialized) return; // Skip if already started
 
   Ethernet.begin(ip, subnet, gateway);
-  Ethernet.waitForLink(5000);
-  Serial.println(Ethernet.localIP());
+  //Ethernet.waitForLink(5000);
+  //Serial.println(Ethernet.localIP());
   isInitialized = true;
 }
 #endif
@@ -119,53 +119,104 @@ void T41ControlSetup() {
   const IPAddress serverIP{192, 168, 1, 100};
   InitEthernet(serverIP, subnet, gateway);
   //InitEthernet(clientIP, subnet, gateway);
-  ethernetServerControl.begin();
+  //ethernetServerControl.begin();
+  ethernetServerControl.beginWithReuse();
   //ethernetControl.connect(serverIP, 80);
   //ethernetControl = ethernetServerControl.available();
-  ethernetControl = ethernetServerControl.accept();
+  //ethernetControl = ethernetServerControl.accept();
+  //if(ethernetControl) Serial.println("T41ControlSetup accepted client");
 #endif
 }
 
 void T41RemoteConnectCheck() {
-#if REC_IQ_FROM_T41_USB || REC_IQ_FROM_T41_ETHER
+  uint8_t connected = 0;
   static bool wasConnected = false;
   static bool connectionLost = false;
-  uint8_t connected = 0;
+
+  if(wasConnected) {
+    //if(millis() - lastHeartbeat > 600) {
+    //  t41.RemoteStatus = REMOTE_LOST;
+    //} else {
+    //  t41.RemoteStatus = REMOTE_CONNECTED;
+    //}
+  }
 
   // *** remote can detect dtr on connect but doesn't catch cable disconnect ***
-  if(wasConnected) {
-    if(millis() - lastHeartbeat > 600) {
-      t41.RemoteStatus = REMOTE_LOST;
-    } else {
-      t41.RemoteStatus = REMOTE_CONNECTED;
-    }
-  }
-  #if REC_IQ_FROM_T41_USB
+#if REC_IQ_FROM_T41_USB
   // DTR is a reliable indicator that Serial has connected to a host
   // *** it is not a reliable indicator of a disconnect ***
   // *** !Serial is not a reliable indicator of a disconnect ***
   connected = Serial.dtr();
-  #endif
-  #if REC_IQ_FROM_T41_ETHER
+  if(connected) {
+    remoteAudioStream.begin();
+  } else {
+    remoteAudioStream.end();
+  }
+#endif
+#if REC_IQ_FROM_T41_ETHER
   // need both audio and control ports
   connected = remoteAudioStream.connected() && ethernetControl.connected();
   if(!connected) {
     const IPAddress serverIP{192, 168, 1, 100};
     // try to connect
-    if((remoteAudioStream.connect() == 1) && (ethernetControl.connect(serverIP, 80) == 1)) {
-      connected = 1;
-    } else {
-      if(!remoteAudioStream.connected()) {
-        Serial.println("remoteAudioStream not connected");
-        remoteAudioStream.end();
+    if(!ethernetControl.connected()) {
+      ethernetControl.stop();
+      //if(ethernetControl.connect(serverIP, 80, 5005) == 1) {
+      if(ethernetControl.connect(serverIP, 80) == 1) {
+        connected = remoteAudioStream.connected();
+        //delay(100);
       }
-      if(!ethernetControl.connected()) {
-        Serial.println("ethernetControl not connected");
-        ethernetControl.stop();
+    } else if(!remoteAudioStream.connected()) {
+      if(remoteAudioStream.connect() == 1) {
+        Serial.println("remoteAudioStream connected");
+        connected = 1;
+        remoteAudioStream.begin();
+      } else {
+        connected = 0;
       }
     }
   }
-  #endif
+#endif
+#if SEND_IQ_TO_REMOTE_USB
+  // send a connection request every 5s until connected
+  if((t41.RemoteStatus != REMOTE_CONNECTED) && (lasped > 5000)) {
+    t41.RemoteStatus = REMOTE_WAITING;
+    SendID(true);
+    last = now;
+  }
+#endif
+
+#if SEND_IQ_TO_REMOTE_ETHER
+  static unsigned long last = 0;
+  unsigned long now = millis();
+  int lasped = now - last;
+
+  connected = t41AudioStream.connected() && ethernetControl.connected();
+  if(!connected) {
+    //const IPAddress serverIP{192, 168, 1, 100};
+    // try to connect
+    if(!ethernetControl.connected()) {
+      EthernetClient newA = ethernetServerControl.accept();
+      if(newA) {
+        ethernetControl.stop();
+        ethernetControl = newA;
+        Serial.println("ethernetControlServer accepted client");
+        connected = t41AudioStream.connected();
+        //delay(100); // might help t41AudioStream connection in some cases, but causes max Audio memory usage at startup
+        // *** TODO: not sure why this increases audio memory use, but delay hasn't been needed ***
+      }
+    } else if(!t41AudioStream.connected()) {
+      if(t41AudioStream.connect() == 1) {
+        Serial.println("t41AudioStream connected");
+        connected = 1;
+        t41AudioStream.begin();
+      } else {
+        connected = 0;
+      }
+    }
+  }
+#endif
+
   if(connected) {
     if(!wasConnected) {
       t41.RemoteStatus = REMOTE_CONNECTED;
@@ -184,43 +235,18 @@ void T41RemoteConnectCheck() {
       t41.RemoteStatus = REMOTE_WAITING;
     }
   }
-
-  // begin or end based on remote status
+//#if SEND_IQ_TO_REMOTE_USB || SEND_IQ_TO_REMOTE_ETHER
+#if SEND_IQ_TO_REMOTE_USB
   if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    remoteAudioStream.begin();
-  } else {
-    remoteAudioStream.end();
-  }
-#endif
-#if SEND_IQ_TO_REMOTE_USB || SEND_IQ_TO_REMOTE_ETHER
-  static unsigned long last = 0;
-  unsigned long now = millis();
-  int lasped = now - last;
-
-  if(t41.RemoteStatus != REMOTE_CONNECTED) {
-    // send a connection request every 5s until connected
-    if(lasped > 5000) {
-      t41.RemoteStatus = REMOTE_WAITING;
-      SendID(true);
-      last = now;
-    }
-  } else {
     // send a heartbeat every 500ms
-    if(lasped > 500) {
-      SendID(true);
-    }
-    if(millis() - lastHeartbeat > 2000) {
-      t41.RemoteStatus = REMOTE_LOST;
-    } else {
-      t41.RemoteStatus = REMOTE_CONNECTED;
-    }
-  }
-
-  // begin or end based on remote status
-  if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    t41AudioStream.begin();
-  } else {
-    t41AudioStream.end();
+    //if(lasped > 500) {
+    //  SendID(true);
+    //}
+    //if(millis() - lastHeartbeat > 2000) {
+    //  t41.RemoteStatus = REMOTE_LOST;
+    //} else {
+    //  t41.RemoteStatus = REMOTE_CONNECTED;
+    //}
   }
 #endif
 }
@@ -832,7 +858,9 @@ void T41ControlLoop() {
           if(checkingConnection) {
             checkingConnection = false;
           }
+          #if SEND_IQ_TO_REMOTE_USB
           t41.RemoteStatus = REMOTE_CONNECTED;
+          #endif
         } else if(cmd[1] == 'F' && cmd[2] == ';') {
           // retrieves transceiver status
           if(useKenwoodIF) {

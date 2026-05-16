@@ -26,6 +26,9 @@
 #include "t41USBHost.h"
 #include "Utility.h"
 
+#include "input_ether.h"
+#include "output_ether.h"
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -67,6 +70,13 @@ float32_t DMAMEM freqSpecBuf[1024];
 float32_t DMAMEM prevFreqSpecBuf[1024];
 
 extern arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
+
+#if SEND_IQ_TO_REMOTE_ETHER
+extern AudioOutputEther t41AudioStream;
+#endif
+#if REC_IQ_FROM_T41_ETHER
+extern AudioInputEther remoteAudioStream;
+#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -1288,13 +1298,26 @@ void Calc1xFreqSpec() {
   }
 }
 
+void YieldToEthernet() {
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    #if REC_IQ_FROM_T41_ETHER
+      remoteAudioStream.read();
+    #endif
+    #if SEND_IQ_TO_REMOTE_ETHER
+      t41AudioStream.write();
+    #endif
+  }
+}
+
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static long prevUpdate = 0;
+  // prevent reentry, *** TODO: probably not needed ***
 	static uint8_t dspRunning=0;
-	if (dspRunning) return; // TODO: does this need to be atomic?
+	if (dspRunning) return;
 	dspRunning = 1;
 
   while(true) {
+    YieldToEthernet();
     if(updateSpectrum) {
       // wait for spectrum data update
       if(CheckReceiverData(true) == 2) break;

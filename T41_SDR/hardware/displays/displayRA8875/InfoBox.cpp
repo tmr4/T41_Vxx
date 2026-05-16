@@ -6,6 +6,7 @@
 
 #include "..\..\SDT.h"
 
+#include "..\..\AudioConfig.h"
 #include "..\..\Button.h"
 #include "..\..\ButtonProc.h"
 #include "..\..\CWProcessing.h"
@@ -692,7 +693,7 @@ void IBHeapFollowup(int row, int col) {
         } else {
           value = maxBlocks;
         }
-        AudioMemoryUsageMaxReset(); // reset max audio mem usage
+        AudioMemoryUsageMaxReset(); // reset max audio mem usage for next loop
         break;
       case 2:
         if(t41.DroppedBlock) {
@@ -702,7 +703,7 @@ void IBHeapFollowup(int row, int col) {
         break;
     }
     // highlight high audio memory usage
-    if(value > 75) color = RA8875_RED;
+    if(value > 0.75 * MAX_AUDIO_BLOCKS) color = RA8875_RED;
   } else {
     // note: these values are defined by the linker, they are not valid memory
     // locations in all cases - by defining them as arrays, the C++ compiler

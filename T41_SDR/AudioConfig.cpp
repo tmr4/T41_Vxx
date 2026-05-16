@@ -306,8 +306,8 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
   // allocate audio library memory
   // about 26k increase in DMAMEM for each 100 block increase in audio memory
-  AudioMemory(100);
-  //AudioMemory(250);
+  //AudioMemory(100);
+  AudioMemory(MAX_AUDIO_BLOCKS);
   //AudioMemory(500);
   //AudioMemory(1000); // about 130k increase in DMAMEM over 500
 
@@ -425,6 +425,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
   amp1.gain(100);
   pc_usb2.disconnect(); // USB
 #endif
+  AudioMemoryUsageMaxReset(); // reset max audio mem usage
 }
 
 inline void Q_in_Ex_Stop() {

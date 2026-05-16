@@ -57,8 +57,27 @@ public:
 
     // Configure static IP
     InitEthernet(serverIP, subnet, gateway);
-    _server->begin();
-    _client = _server->accept();
+    //_server->begin();
+    _server->beginWithReuse();
+  }
+  uint8_t connected() {
+    if(_client) {
+      return _client.connected();
+    } else {
+      return 0;
+    }
+  }
+  int connect() {
+    //_client = _server->accept();
+    EthernetClient newB = _server->accept();
+    if(newB) {
+      _client.stop();
+      _client = newB;
+      Serial.println("AudioOutputEther accepted client");
+      return 1;
+    } else {
+      return 0;
+    }
   }
 	void begin() {
     if(!_server) {
@@ -69,54 +88,91 @@ public:
       //_client = _server->accept();
       if(_client && _client.connected()) {
         enabled = true;
+        Serial.println("AudioOutputEther enabled");
       } else {
         enabled = false;
       }
     }
   }
 	void end() {
-    if(_client) _client.stop();
+    //if(_client) _client.stop();
     //_client = nullptr;
     enabled = false;
   }
 
+  // store stream in queue
   void update() override {
     audio_block_t *blockL, *blockR;
+    int h;
 
     TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     blockL = receiveReadOnly(0);
     blockR = receiveReadOnly(1);
 
-    if(!enabled || !blockL || !blockR) {
+    h = (head + 1) % maxBlocks;
+    if(!enabled || (h == tail) || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
+      Serial.println("dropping block");
       RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
 
+    // we're enabled an have blocks to queue
     TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-    if (_client && _client.connected()) {
-      if(_client.availableForWrite() < blockSize) {
-        release(blockL);
-        release(blockR);
-        RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-        RESETPROFILEPIN(PROFILER_DECODE_FT8);
-        return;
-      }
+    //h = (head + 1) % maxBlocks;
+    //if(h == tail) {
+    //  // buffer full, drop oldest block
+    //  audio_block_t *oldestL = queue[tail][0];
+    //  audio_block_t *oldestR = queue[tail][1];
+    //  if(oldestL) release(oldestL);
+    //  if(oldestR) release(oldestR);
+    //  tail = (tail + 1) % maxBlocks;
+    //  Serial.println("dropping block");
+    //}
+    queue[head][0] = blockL;
+    queue[head][1] = blockR;
+    head = h;
 
-      TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
-      _client.write((uint8_t *)blockL->data, blockSize / 2);
-      _client.write((uint8_t *)blockR->data, blockSize / 2);
+    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+    RESETPROFILEPIN(PROFILER_DECODE_FT8);
+    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+  }
+
+  // write queue data out to Ethernet
+  void write() {
+    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+    if(tail == head) {
+      return; // nothing to write
     }
 
-    release(blockL);
-    release(blockR);
+    if(_client && _client.connected()) {
+      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+      int avail = _client.availableForWrite();
+      audio_block_t *blockL, *blockR;
+      //Serial.println(avail);
+      while((avail >= blockSize) && (tail != head)) {
+        //Serial.println(avail);
+        TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+        blockL = queue[tail][0];
+        blockR = queue[tail][1];
+
+        _client.write((uint8_t *)blockL->data, blockSize / 2);
+        _client.write((uint8_t *)blockR->data, blockSize / 2);
+
+        release(blockL);
+        release(blockR);
+        avail -= blockSize;
+        tail = (tail + 1) % maxBlocks;
+      }
+    }
     RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
     RESETPROFILEPIN(PROFILER_DECODE_FT8);
     RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
   }
 
 private:
+	static constexpr int maxBlocks = 50;
   bool enabled = false;
 
   // Network configuration for the Server
@@ -127,6 +183,10 @@ private:
   const uint16_t port = 8023;
   EthernetServer *_server = nullptr;
   EthernetClient _client; // this persistent instance keeps the connection alive
+
+	audio_block_t * volatile queue[maxBlocks][2];
+	volatile uint8_t head = 0;
+	volatile uint8_t tail = 0;
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   audio_block_t *inputQueueArray[2];
