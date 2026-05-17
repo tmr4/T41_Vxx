@@ -1,18 +1,25 @@
 #pragma once
 
 /*
- AudioInputEther - Streams 2-channels from selected Ethernet object to connect output objects
+ AudioInputTCP - Streams 2-channels from set TCP port to connected AudioStream objects
 
-Remote timing (w/ T41 standard input, Auto NF):
-  * USB serial input, 512-bytes total, written directly to 2-channel output (not buffered)
-    * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel } input to
-      { 256-bytes left channel } and { 256-bytes right channel }
+Memory Usage on Teensy 4.1:
+Compiled with: Smallest Code, 528MHz, Serial, 100 blocks Audio memory
+  FLASH: code:270304, data:91056, headers:8300   free for files:7756804
+   RAM1: variables:166432, code:231960, padding:30184   free for local variables:95712
+   RAM2: variables:267840  free for malloc/new:256448
+ EXTRAM: variables:480320
+
+Remote timing (w/ T41 standard testing input, Auto NF):
+  * Once enabled and connected, data read from TCP port, 512-bytes total, directly to blocks allocated from Audio memory
+    * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel }
+    * Pointers to these blocks stored in circular buffer
+  * read() must be called with sufficient frequency to avoid TCP buffer overflow
+    * A similar frequency to update() maintains smooth data flow and minimizes Audio memory needs
   * update() run every 667us (2.9ms /44.1kHz * 192kHz)
-  * ~3.6us to read 512-bytes from USB serial
+    * queued input { 256-bytes left channel } and { 256-bytes right channel } sent to connected objects
+  * ~15us to read 512-bytes from TCP port
   * ~1.4ms to process the 16 blocks of data required to form a frame for display
-    * The remote take half as long to process data due to the shorter time required to
-      read data from USB serial as the T41 takes to write the same amount of data to
-      USB Host serial.
   * Time to complete one update of display (frame):
     * ~75ms or ~13.4 frames/sec
   * Notes:
@@ -21,11 +28,13 @@ Remote timing (w/ T41 standard input, Auto NF):
       data slices at any given time.
     * The T41 and remote are running at different clock rates, 528MHz for the T41 for Teensy
       longevity and 600MHz on the remote due to AP instability at 528MHz (Teensy chip voltage issue)
+    * The objects seemlessly handle disconnects in most cases. A long disconnect seems to require
+      a longer time to reconnect.
 
- Works with AudioOutputEther
+ Works with AudioOutputTCP
 
- *** This object could be made more robust with a buffer and syncing but
-     early testing hasn't shown a need for this ***
+ *** This object could be made more robust with a buffer overflow checks
+     and syncing but early testing hasn't shown a need for this ***
 */
 
 #include <Arduino.h>
@@ -46,9 +55,9 @@ void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress&
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioInputEther : public AudioStream {
+class AudioInputTCP : public AudioStream {
 public:
-  AudioInputEther() : AudioStream(0, nullptr) {}
+  AudioInputTCP(int port) : AudioStream(0, nullptr), _port(port) {}
 
   void begin() {
     if(!enabled) {
@@ -59,6 +68,7 @@ public:
 	void end() { enabled = false; }
 
   // send queued data to stream
+  // *** this is called from an interrupt, it can't touch QNEthernet objects ***
   void update() override {
     audio_block_t *blockL, *blockR;
 
@@ -89,11 +99,7 @@ public:
       if(_client) {
         //int avail = _client.available();
         h = (head + 1) % maxBlocks;
-        //if((avail >= blockSize) && (h != tail)) {
-        //while((avail >= blockSize) && (h != tail)) {
-        //if((_client.available() >= blockSize) && (h != tail)) {
-        while((_client.available() > blockSize) && (h != tail)) {
-        //while((_client.available() >= blockSize * 2) && (h != tail)) {
+        while((_client.available() >= blockSize) && (h != tail)) {
           TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
           // we have sufficient data to queue
           blockL = allocate();
@@ -139,7 +145,7 @@ public:
           lastConnectCheck = millis();
           _client.abort(); // Clear out old locks
           _client.setConnectionTimeoutEnabled(false);
-          _client.connect(serverIP, port);
+          _client.connect(serverIP, _port);
           _client.setNoDelay(true);
         }
       }
@@ -159,8 +165,8 @@ public:
   }
 
 private:
-	//static constexpr int maxBlocks = 50;
-	static constexpr int maxBlocks = 200;
+	static constexpr int maxBlocks = 50;
+	//static constexpr int maxBlocks = 200;
   bool enabled = false;
 
   //EthernetClient *_client = nullptr;
@@ -173,7 +179,7 @@ private:
 
   // Target Server Configuration
   const IPAddress serverIP{192, 168, 1, 100};
-  const uint16_t port = 8023;
+  int _port;
 
 	audio_block_t * volatile queue[maxBlocks][2];
 	volatile uint8_t head = 0;

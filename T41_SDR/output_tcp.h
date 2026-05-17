@@ -1,31 +1,42 @@
 #pragma once
 
 /*
- AudioOutputEther - Streams 2-channels from connected input objects to specified Ethernet object
+ AudioOutputTCP - Streams 2-channels from connected AudioStream objects to set TCP port
 
-T41 timing (w/ T41 standard input, Auto NF):
-  * 2-channel input, 512-bytes total, written directly to USB Host serial (not buffered)
+Memory Usage on Teensy 4.1:
+Compiled with: Smallest Code, 528MHz, Serial, 100 blocks Audio memory
+  FLASH: code:259036, data:90032, headers:8300   free for files:7769096
+   RAM1: variables:154272, code:220104, padding:9272   free for local variables:140640
+   RAM2: variables:267840  free for malloc/new:256448
+ EXTRAM: variables:1200320
+
+T41 timing (w/ T41 standard testing input, Auto NF):
+  * update() runs every 667us (2.9ms /44.1kHz * 192kHz), 2-channel input
+    * pointers to input blocks stored in circular buffer once enabled and connected
+  * Once enabled and connected, buffered data, 512-bytes total, written directly to TCP port
     * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel }
-  * update() run every 667us (2.9ms /44.1kHz * 192kHz)
-  * ~205us to write 512-bytes to USB Host serial
-  * ~2.8ms to process the 16 blocks of data required to form a frame for display
-    * T41 take twice as long to process data due to the longer time required to
-      write to USB Host serial than the remote needs to read the same amount of
-      data from USB serial.
+    * Unlike USB object, this can't be done in update since QNEthernet objects can't be accessed from interrupt state
+  * write() must be called with sufficient frequency to avoid buffer overflow or data will be lost
+    * A similar frequency to update() maintains smooth data flow and minimizes Audio memory needs
+  * ~10us to write 512-bytes to TCP port
+  * ~2ms to process the 16 blocks of data required to form a frame for display
+    * This is faster than with USB transfers as the TCP write is faster than USB.
   * This time adds to the time to complete one update of display (frame):
-    * ~150ms or ~6.7 frames/sec with remote attached
-    * ~96ms w/o remote ~10.4 frames/sec
+    * ~106ms or ~9.4 frames/sec with remote attached
+    * ~99ms w/o remote ~10.1 frames/sec
   * Notes:
     * The T41 and remote prepare to render the next frame immediately after completing the
       previous frame. The different frame rates mean that the two units aren't rendering the same
       data slices at any given time.
     * The T41 and remote are running at different clock rates, 528MHz for the T41 for Teensy
       longevity and 600MHz on the remote due to AP instability at 528MHz (Teensy chip voltage issue)
+    * The objects seemlessly handle disconnects in most cases. A long disconnect seems to require
+      a longer time to reconnect.
 
- Works with AudioInputEther
+ Works with AudioInputTCP
 
- *** This object could be made more robust with a buffer and syncing but
-     early testing hasn't shown a need for this ***
+ *** This object could be made more robust with a buffer overflow checks
+     and syncing but early testing hasn't shown a need for this ***
 
 */
 
@@ -46,14 +57,14 @@ void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress&
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioOutputEther : public AudioStream {
+class AudioOutputTCP : public AudioStream {
 public:
-  AudioOutputEther() : AudioStream(2, inputQueueArray) {}
+  AudioOutputTCP(int port) : AudioStream(2, inputQueueArray), _port(port) {}
 
   void begin() {
     if(!enabled) {
       InitEthernet(serverIP, subnet, gateway); // configure static IP
-      _server.begin(port);
+      _server.begin(_port);
       _client.setConnectionTimeoutEnabled(false);
       _client.setNoDelay(true);
       enabled = true;
@@ -62,7 +73,8 @@ public:
 	void end() { enabled = false; }
 
 
-  // store stream in queue
+  // store input stream in queue
+  // *** this is called from an interrupt, it can't touch QNEthernet objects ***
   void update() override {
     audio_block_t *blockL, *blockR;
     int h;
@@ -77,17 +89,16 @@ public:
       return;
     }
 
-    // we're enabled an have blocks to queue
-    //h = (head + 1) % maxBlocks;
-    //if(h == tail) {
-    //  // buffer full, drop oldest block
-    //  audio_block_t *oldestL = queue[tail][0];
-    //  audio_block_t *oldestR = queue[tail][1];
-    //  if(oldestL) release(oldestL);
-    //  if(oldestR) release(oldestR);
-    //  tail = (tail + 1) % maxBlocks;
-    //  Serial.println("dropping block");
-    //}
+    // we're enabled and have blocks to queue
+    if(h == tail) {
+      // buffer full, drop oldest block
+      // *** increase buffer size if here ***
+      audio_block_t *oldestL = queue[tail][0];
+      audio_block_t *oldestR = queue[tail][1];
+      if(oldestL) release(oldestL);
+      if(oldestR) release(oldestR);
+      tail = (tail + 1) % maxBlocks;
+    }
     queue[head][0] = blockL;
     queue[head][1] = blockR;
     head = h;
@@ -123,7 +134,7 @@ public:
       if(_client) {
         TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
         audio_block_t *blockL, *blockR;
-        while((_client.availableForWrite() > blockSize) && (tail != head)) {
+        while((_client.availableForWrite() >= blockSize) && (tail != head)) {
           TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
           blockL = queue[tail][0];
           blockR = queue[tail][1];
@@ -155,7 +166,7 @@ private:
   const IPAddress subnet{255, 255, 255, 0};
   const IPAddress gateway{192, 168, 1, 1};
 
-  const uint16_t port = 8023;
+  int _port;
   EthernetServer _server;
   EthernetClient _client; // this persistent instance keeps the connection alive
 

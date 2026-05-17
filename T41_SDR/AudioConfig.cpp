@@ -12,8 +12,8 @@
 #include <QNEthernet.h>
 using namespace qindesign::network;
 
-#include "input_ether.h"
-#include "output_ether.h"
+#include "input_tcp.h"
+#include "output_tcp.h"
 
 #include <USBHost_t36.h>
 #include "input_usb.h"
@@ -118,7 +118,7 @@ AudioInputSerial1 remoteAudioStream;
 #endif
 #if REC_IQ_FROM_T41_ETHER
 // new audio library object to stream IQ data over Ethernet to Q_in_L and Q_in_R on remote
-AudioInputEther remoteAudioStream;
+AudioInputTCP remoteAudioStream(8023);
 #endif
 #if SEND_IQ_TO_REMOTE_USB
 // new audio library object to stream Q_in_L and Q_in_R to usb host serial on T41
@@ -127,7 +127,7 @@ extern USBSerial_BigBuffer usbHostSerial1;
 AudioOutputHostSerial t41AudioStream;
 #endif
 #if SEND_IQ_TO_REMOTE_ETHER
-AudioOutputEther t41AudioStream;
+AudioOutputTCP t41AudioStream(8023);
 #endif
 
 // Audio inputs

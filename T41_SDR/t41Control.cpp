@@ -25,8 +25,8 @@ extern USBSerial_BigBuffer usbHostSerial1;
 
 #include <QNEthernet.h>
 using namespace qindesign::network;
-#include "input_ether.h"
-#include "output_ether.h"
+#include "input_tcp.h"
+#include "output_tcp.h"
 
 #include "debug.h"
 
@@ -55,12 +55,12 @@ bool checkingConnection = false;
 
 #if REC_IQ_FROM_T41_ETHER
 EthernetClient ethernetControl;
-extern AudioInputEther remoteAudioStream;
+extern AudioInputTCP remoteAudioStream;
 #endif
 #if SEND_IQ_TO_REMOTE_ETHER
 EthernetServer ethernetServerControl(80);
 EthernetClient ethernetControl;
-extern AudioOutputEther t41AudioStream;
+extern AudioOutputTCP t41AudioStream;
 #endif
 
 //-------------------------------------------------------------------------------------------------------------

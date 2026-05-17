@@ -3,7 +3,7 @@
 /*
  AudioInputSerialT - Streams 2-channels from selected USB serial object to connect output objects
 
-Remote timing (w/ T41 standard input, Auto NF):
+Remote timing (w/ T41 standard testing input, Auto NF):
   * USB serial input, 512-bytes total, written directly to 2-channel output (not buffered)
     * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel } input to
       { 256-bytes left channel } and { 256-bytes right channel }
@@ -21,6 +21,7 @@ Remote timing (w/ T41 standard input, Auto NF):
       data slices at any given time.
     * The T41 and remote are running at different clock rates, 528MHz for the T41 for Teensy
       longevity and 600MHz on the remote due to AP instability at 528MHz (Teensy chip voltage issue)
+    * The objects seemlessly handle disconnects in most cases.
 
  Works with AudioOutputHostSerial
 

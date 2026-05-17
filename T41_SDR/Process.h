@@ -5,8 +5,8 @@
 #include "t41Property.h"
 
 #if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
-#include "input_ether.h"
-#include "output_ether.h"
+#include "input_tcp.h"
+#include "output_tcp.h"
 #endif
 
 //-------------------------------------------------------------------------------------------------------------
@@ -29,10 +29,10 @@ extern float32_t audioSpectBuffer[]; // This can't be DMAMEM.  It will break the
 extern float32_t audioMaxSquaredAve;
 
 #if SEND_IQ_TO_REMOTE_ETHER
-extern AudioOutputEther t41AudioStream;
+extern AudioOutputTCP t41AudioStream;
 #endif
 #if REC_IQ_FROM_T41_ETHER
-extern AudioInputEther remoteAudioStream;
+extern AudioInputTCP remoteAudioStream;
 #endif
 
 //-------------------------------------------------------------------------------------------------------------

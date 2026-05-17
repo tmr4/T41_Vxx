@@ -16,6 +16,11 @@ I ultimately settled on creating Teensy Audio library USB serial objects.  The T
 
 You can find these objects in *input_usb.h* and *output_usb.h*.  These object are very light, reading/writing directly from/to their connected objects with no buffer in between. The background work by the Audio library makes this run smoothly. The objects could be made more reliable with double buffering and syncing, but this hasn't proved necessary in my testing.  I'll only consider it if I notice the units get out of sync during normal operation.
 
+I've also worked out streaming IQ data over TCP. They are Audio library objects similar to the USB objects. You can find them in *input_tcp.h* and *output_tcp.h*. The main wrinkle in these objects is that Ethernet related calls can't be made from an interrupt state. That means we can't take advantage of the Audio Stream update function to drive the input/output, but the object's read/write functions must be called frequently to drive the data flow. The update function either fills a buffer from Audio Stream objects for sending data to the TCP port (output_tcp.h) or empties a buffer filled from a TCP port to the connected Audio Stream objects (input_tcp.h). The major advantage with these objects is that they can be connected to a local network.  Here is an Ethernet enabled Audio Platform acting as a *T41 Bedside Companion*, connected to a local network in my bedroom.  The T41, with a test signal, is at my workbench connected to the local network there. The four encoders serve the same purpose as on the T41. Most other options are available with the attached mouse.  Actions on this unit are duplicated on the T41 and visa-versa. I haven't worked out TX on this yet, but it should be possible.
+
+![displayILI9341](https://github.com/tmr4/T41_Vxx/blob/inout_ether/images/T41_AP_Bedside.png)
+
+
 ### Global Working Variables to Properties
 
 * I've been slowly converting the T41 global working variables to C# style properties.  These can notify remote to take action or cause the display to be updated.  This should eliminate having such things spread throughout the code.
