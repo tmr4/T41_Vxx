@@ -106,10 +106,11 @@
 
 // the following are disabled by defualt and will be set automatically depending on the remote mode selected
 #define T41_WSJT_CAT_AUDIO        false
-#define CAT_CONTROL_REMOTE    false
+#define CAT_CONTROL_T41           false
+#define CAT_CONTROL_REMOTE        false
 #define CAT_CONTROL_T41_USB_HOST  false
-#define REC_IQ_FROM_T41_USB           false
-#define SEND_IQ_TO_REMOTE_USB         false
+#define REC_IQ_FROM_T41_USB       false
+#define SEND_IQ_TO_REMOTE_USB     false
 
 // automatically configure radio for selected remote operation and services
 #if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 5)
@@ -143,6 +144,8 @@
   #elif DEVICE_REMOTE_OPS_MODE == 3
     // T41
     #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
+      #undef CAT_CONTROL_T41
+      #define CAT_CONTROL_T41 true
       #undef CAT_CONTROL_T41_USB_HOST
       #define CAT_CONTROL_T41_USB_HOST true
     #endif
@@ -176,8 +179,8 @@
   #elif DEVICE_REMOTE_OPS_MODE == 5
     // T41 Ethernet
     #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
-      #undef CAT_CONTROL_REMOTE
-      #define CAT_CONTROL_REMOTE true
+      #undef CAT_CONTROL_T41
+      #define CAT_CONTROL_T41 true
     #endif
     #if REMOTE_CAT_CONTROL
       #undef controlSerial

@@ -96,6 +96,7 @@ void T41ControlSetup() {
   // *** that's not the case for Ethernet ***
   // *** TODO: fix for Ethernet if needed ***
   if(CAT_CONTROL_REMOTE) {
+    //sendGet = true;
     sendGet = false;
   } else {
     //sendGet = true;
@@ -112,7 +113,7 @@ void T41ControlSetup() {
 #elif SEND_IQ_TO_REMOTE_ETHER
   // T41 Ethernet Server
   InitEthernet(serverIP, subnet, gateway);
-  ethernetServerControl.begin();
+  ethernetServerControl.begin(80);
 #endif
   ethernetControl.setConnectionTimeoutEnabled(false);
   ethernetControl.setNoDelay(true);
@@ -120,19 +121,56 @@ void T41ControlSetup() {
 }
 
 void T41RemoteConnectCheck() {
-  uint8_t connected = 0;
+  static unsigned long last = 0;
+  unsigned long now = millis();
+  int lasped = now - last;
+  int remoteStatus = t41.RemoteStatus;
+  bool connected = t41.RemoteStatus == REMOTE_CONNECTED;
   static bool wasConnected = false;
   static bool connectionLost = false;
 
-  if(wasConnected) {
-    //if(millis() - lastHeartbeat > 600) {
-    //  t41.RemoteStatus = REMOTE_LOST;
-    //} else {
-    //  t41.RemoteStatus = REMOTE_CONNECTED;
-    //}
+  // T41 sends a heartbeat to remote, remote replies
+  // Remote knows it's connected if it receives the heartbeat or a command every 15s
+  // T41 knows it's connected if it receives response from remote every 15s
+  #if SEND_IQ_TO_REMOTE_USB
+  // send a connection request every 5s until connected
+  if(!connected) {
+    if(lasped > 5000) {
+      SendID(true);
+      last = now;
+    }
   }
+  #endif
+  #if SEND_IQ_TO_REMOTE_USB || SEND_IQ_TO_REMOTE_ETHER
+  // send a heartbeat every 15s
+  if(wasConnected) {
+    if(lasped > 15000) {
+      SendID(true);
+      last = now;
+    }
+  }
+  #endif
 
-#if REC_IQ_FROM_T41_USB
+  //if(wasConnected) {
+  //  if(millis() - lastHeartbeat > 30000) {
+  //    remoteStatus = REMOTE_LOST;
+  //    connected = false;
+  //  } else {
+  //    remoteStatus = REMOTE_CONNECTED;
+  //    connected = true;
+  //  }
+  //} else {
+  //  if(millis() - lastHeartbeat > 10000) {
+  //    remoteStatus = REMOTE_WAITING;
+  //    connected = false;
+  //  } else {
+  //    remoteStatus = REMOTE_CONNECTED;
+  //    connected = true;
+  //  }
+  //}
+
+  // *** TODO: consider something similar for Ethernet, but it seems more robust than USB ***
+  #if REC_IQ_FROM_T41_USB
   // *** remote can detect dtr on connect but doesn't catch cable disconnect ***
   // DTR is a reliable indicator that Serial has connected to a host
   // *** it is not a reliable indicator of a disconnect ***
@@ -143,66 +181,53 @@ void T41RemoteConnectCheck() {
   } else {
     remoteAudioStream.end();
   }
-#endif
-#if SEND_IQ_TO_REMOTE_USB
-  // send a connection request every 5s until connected
-  if((t41.RemoteStatus != REMOTE_CONNECTED) && (lasped > 5000)) {
-    t41.RemoteStatus = REMOTE_WAITING;
-    SendID(true);
-    last = now;
-  }
-  if(t41.RemoteStatus == REMOTE_CONNECTED) {
-    // send a heartbeat every 500ms
-    //if(lasped > 500) {
-    //  SendID(true);
-    //}
-    //if(millis() - lastHeartbeat > 2000) {
-    //  t41.RemoteStatus = REMOTE_LOST;
-    //} else {
-    //  t41.RemoteStatus = REMOTE_CONNECTED;
-    //}
-  }
-#endif
-#if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
+  #endif
+
+  #if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
   //Serial.println("checking connection");
-  if(!ethernetControl.connected()) {
+  //if(!connected || !ethernetControl.connected()) {
+  if(!connected && (lasped > 5000)) {
+    last = now;
     //Serial.println("not connected");
     const IPAddress serverIP{192, 168, 1, 100};
 
     // try to connect
     ethernetControl.stop();
-#if REC_IQ_FROM_T41_ETHER
-    ethernetControl.connect(serverIP, 80);
-#elif SEND_IQ_TO_REMOTE_ETHER
+    //ethernetControl.abort();
+    ethernetControl.setConnectionTimeoutEnabled(false);
+    ethernetControl.setNoDelay(true);
+    #if REC_IQ_FROM_T41_ETHER
+    if(ethernetControl.connect(serverIP, 80) == 1) connected = true;
+    #elif SEND_IQ_TO_REMOTE_ETHER
     ethernetControl = ethernetServerControl.accept();
-#endif
     if(ethernetControl) {
-      connected = 1;
-    } else {
-      connected = 0;
+      connected = true;
     }
+    #endif
   }
-#endif
+  #endif
 
   // show remote connection status
   if(connected) {
     if(!wasConnected) {
-      t41.RemoteStatus = REMOTE_CONNECTED;
       wasConnected = true;
     }
+    remoteStatus = REMOTE_CONNECTED;
   } else {
     if(wasConnected) {
       if(connectionLost) {
-        t41.RemoteStatus = REMOTE_WAITING;
+        remoteStatus = REMOTE_WAITING;
         connectionLost = false;
       } else {
-        t41.RemoteStatus = REMOTE_LOST;
+        remoteStatus = REMOTE_LOST;
         connectionLost = true;
       }
     } else {
-      t41.RemoteStatus = REMOTE_WAITING;
+      remoteStatus = REMOTE_WAITING;
     }
   }
+
+  t41.RemoteStatus = remoteStatus;
 }
 
 void T41ControlSendData(uint8_t *data, int len) {
@@ -653,9 +678,7 @@ int GetMode() {
 void T41ControlLoop() {
   float32_t dbm;
 
-  if(t41.RemoteStatus != REMOTE_CONNECTED) {
-    T41RemoteConnectCheck();
-  }
+  T41RemoteConnectCheck();
 
   if(controlSerial.available()) {
     char cmd[256];

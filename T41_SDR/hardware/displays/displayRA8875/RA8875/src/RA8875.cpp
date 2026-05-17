@@ -804,7 +804,6 @@ boolean RA8875::_waitPoll(uint8_t regname, uint8_t waitflag, uint8_t timeout)
 */
 /**************************************************************************/
 #include "..\..\..\..\Process.h"
-void YieldToEthernet();
 void RA8875::_waitBusy(uint8_t res)
 {
 	uint8_t temp;

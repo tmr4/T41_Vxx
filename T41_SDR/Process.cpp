@@ -26,9 +26,6 @@
 #include "t41USBHost.h"
 #include "Utility.h"
 
-#include "input_ether.h"
-#include "output_ether.h"
-
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -71,13 +68,6 @@ float32_t DMAMEM prevFreqSpecBuf[1024];
 
 extern arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
 
-#if SEND_IQ_TO_REMOTE_ETHER
-extern AudioOutputEther t41AudioStream;
-#endif
-#if REC_IQ_FROM_T41_ETHER
-extern AudioInputEther remoteAudioStream;
-#endif
-
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -87,7 +77,6 @@ void FreqShift1(int blockSize);
 void FreqShift2();
 void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 void Calc1xFreqSpec();
-void YieldToEthernet();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -427,6 +416,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   //  //CalibrateOptions();
   //}
 
+  YieldToEthernet();
+
   /*************************************************************************************************
       freq_conv2()
 
@@ -442,8 +433,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition.
   *************************************************************************************************/
   FreqShift2();
-
-
 
   YieldToEthernet();
 
@@ -550,6 +539,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       break;
   }
 
+  YieldToEthernet();
+
   // audio DSP
   // apply audio filter cutoffs and calculate audio spectrum data
   switch(t41.DemodMode) {
@@ -589,6 +580,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       AGC();
       break;
   }
+
+  YieldToEthernet();
 
   /**********************************************************************************
     Demodulation
@@ -1303,18 +1296,6 @@ void Calc1xFreqSpec() {
   }
 }
 
-void YieldToEthernet() {
-  if(t41.RemoteStatus == REMOTE_CONNECTED)
-  {
-    #if REC_IQ_FROM_T41_ETHER
-      remoteAudioStream.read();
-    #endif
-    #if SEND_IQ_TO_REMOTE_ETHER
-      t41AudioStream.write();
-    #endif
-  }
-}
-
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static long prevUpdate = 0;
   // prevent reentry, *** TODO: probably not needed ***
@@ -1337,7 +1318,7 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
     // process controls if 10ms has passed since last update
     if(millis() - prevUpdate > 10) {
       ProcessControls();
-      #if CAT_CONTROL_REMOTE
+      #if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
         T41ControlLoop();
       #endif
       prevUpdate = millis();

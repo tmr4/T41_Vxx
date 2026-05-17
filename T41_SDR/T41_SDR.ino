@@ -288,7 +288,7 @@ FLASHMEM void setup() {
   //T41BeaconSetup();
   //WSJTControlSetup();
 
-#if CAT_CONTROL_REMOTE || CAT_CONTROL_T41_USB_HOST
+#if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
   T41ControlSetup();
 #endif
 
@@ -401,7 +401,7 @@ FASTRUN void loop() {
   // *** need PC control without a display ***
   //T41ControlLoop();
 
-#if CAT_CONTROL_REMOTE
+#if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
   T41ControlLoop();
 #endif
 

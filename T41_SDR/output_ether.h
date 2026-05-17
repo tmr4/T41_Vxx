@@ -71,7 +71,7 @@ public:
     blockR = receiveReadOnly(1);
 
     h = (head + 1) % maxBlocks;
-    if(!enabled || (h == tail) || !blockL || !blockR) {
+    if(!connected || !enabled || (h == tail) || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
       return;
@@ -109,6 +109,9 @@ public:
         if(_client) {
           _client.setConnectionTimeoutEnabled(false);
           _client.setNoDelay(true);
+          connected = true;
+        } else {
+          connected = false;
         }
       }
 
@@ -145,6 +148,7 @@ public:
 private:
 	static constexpr int maxBlocks = 50;
   bool enabled = false;
+  bool connected = false;
 
   // Network configuration for the Server
   const IPAddress serverIP{192, 168, 1, 100};

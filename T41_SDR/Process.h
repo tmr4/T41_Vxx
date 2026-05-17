@@ -4,6 +4,11 @@
 #include "AudioConfig.h"
 #include "t41Property.h"
 
+#if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
+#include "input_ether.h"
+#include "output_ether.h"
+#endif
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -22,6 +27,13 @@ extern uint8_t ANR_notchOn;
 
 extern float32_t audioSpectBuffer[]; // This can't be DMAMEM.  It will break the S-Meter.
 extern float32_t audioMaxSquaredAve;
+
+#if SEND_IQ_TO_REMOTE_ETHER
+extern AudioOutputEther t41AudioStream;
+#endif
+#if REC_IQ_FROM_T41_ETHER
+extern AudioInputEther remoteAudioStream;
+#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -48,4 +60,15 @@ inline int __attribute__((always_inline)) CheckReceiverData(bool updateSpectrumD
   }
 
   return 0;
+}
+
+inline void __attribute__((always_inline)) YieldToEthernet() {
+  if(t41.RemoteStatus == REMOTE_CONNECTED) {
+    #if REC_IQ_FROM_T41_ETHER
+      remoteAudioStream.read();
+    #endif
+    #if SEND_IQ_TO_REMOTE_ETHER
+      t41AudioStream.write();
+    #endif
+  }
 }
