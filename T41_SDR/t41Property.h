@@ -21,6 +21,7 @@ public:
     calibration. As a read-only property, RadioState can't be assigned a value directly.
     The Set method must be used to assign a value.
   */
+  ReadOnlyProperty<int> RadioID;
   ReadOnlyProperty<int> RadioState;
 
   ReadOnlyProperty<float> SampleRate;

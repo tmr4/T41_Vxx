@@ -75,6 +75,7 @@ void T41Properties::begin() {
 void T41Properties::SetPropertyDefaults() {
   int remoteStatus = CAT_CONTROL_T41 || CAT_CONTROL_REMOTE ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
+  RadioID.Set(RADIO_ID);
   RadioState.Set(RECONFIGURE_STATE);
 
   SampleRate.Set(192000.0);

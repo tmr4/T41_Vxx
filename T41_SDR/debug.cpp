@@ -92,3 +92,39 @@ FLASHMEM void   getFreeITCM() { // end of CODE ITCM, skip full 32 bits
   for( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
   printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
+
+// *** testing debug IO pin setup only ***
+void TogglePins() {
+  static int count = 0;
+  for(int i = 0; i < 10; i++) {
+    switch(count) {
+      case 0:
+        TOGGLEPROFILEPIN(PROFILER_MAINLOOP);
+        break;
+      case 1:
+        TOGGLEPROFILEPIN(PROFILER_PROCESS_RX);
+        break;
+      case 2:
+        TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
+        break;
+      case 3:
+        TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
+        break;
+      case 4:
+        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+        break;
+      case 5:
+        TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+        break;
+      case 6:
+        TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+        break;
+      case 7:
+        TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+        break;
+    }
+    delay(1);
+  }
+  ++count;
+  if(count >= 8) count = 0;
+}
