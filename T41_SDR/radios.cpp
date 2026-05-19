@@ -348,6 +348,9 @@ const CatControl::CommandEntry RemoteRadio::dispatchTable[] = {
 //-------------------------------------------------------------------------------------------------------------
 // WSJTXRadio - WSJT-X specific commands
 //-------------------------------------------------------------------------------------------------------------
+// *** check which of these are common Kenwood and move them there ***
+// *** and/or can use flag  bool isWsjtxMode = false; // The auto-detected state
+// *** to alter KenwoodRadio so don't need separate class ***
 
 // WSJT-X had trouble with Kenwood TS-2000 use the TS-890S instead
 // WSJT-X doesn't model Kenwood TS-890S computer control commands, but
@@ -541,6 +544,45 @@ const CatControl::CommandEntry WSJTXRadio::dispatchTable[] = {
   {"TX", (CatControl::CmdHandler)&WSJTXRadio::handleTX},              // TX
 };
 
+// switching links
+void loop() {
+    if (Ethernet.linkStatus() == LinkON) {
+        radio.setLink(&ethClient);
+        // Maybe remote units always need "Standard" mode, not WSJT-X?
+    } else {
+        radio.setLink(&Serial);
+    }
+    radio.update();
+}
+
+// context aware change modes
+void KenwoodRadio::handleID(const char* data) {
+    // 1. Identify to the software
+    link->print("ID019;");
+
+    // 2. Trigger the "Personality" change
+    if (!isWsjtxMode) {
+        isWsjtxMode = true;
+
+        // Directly call your radio's internal mode-switching logic
+        this->setRadioMode(MODE_DATA_U);
+        this->setFilterWidth(FILTER_WIDE);
+
+        // Debug info or UI update
+        Serial.println("WSJT-X Detected: Switching to FT8 Data Profile.");
+    }
+}
+// and exit detect
+if (bufferIdx > 0 && (millis() - lastCharTime > TIMEOUT_MS)) {
+    resetBuffer();
+    // Optional: If we haven't heard from WSJT-X in 30 seconds,
+    // maybe revert to standard SSB mode?
+    if (isWsjtxMode && (millis() - lastCharTime > 30000)) {
+        isWsjtxMode = false;
+        setRadioMode(MODE_SSB);
+    }
+}
+
 
 /*
 //modified from wsjt.cpp, but WSJT-X doesn't use
@@ -608,3 +650,49 @@ void WSJTXRadio::handleBandUp(const char* cmd, const size_t len) {
 }
 
 */
+
+
+// interface
+class RadioCat {
+protected:
+    Stream* link = nullptr;
+public:
+    void setLink(Stream* s) { link = s; }
+    virtual void update() = 0; // Each personality implements its own parser
+    virtual ~RadioCat() {}    // Important for clean memory swapping
+};
+
+
+// dynamic switcher logic
+RadioCat* activeRadio = nullptr;
+Stream* activeStream = nullptr;
+
+void switchPersonality(String type) {
+    // 1. Clean up the old personality
+    if (activeRadio) delete activeRadio;
+
+    // 2. Create the new one
+    if (type == "WSJTX") {
+        activeRadio = new WsjtxRadio();
+    } else {
+        activeRadio = new KenwoodStandard();
+    }
+
+    // 3. Re-attach the current physical link to the new personality
+    if (activeStream) activeRadio->setLink(activeStream);
+}
+
+void loop() {
+    // A. Handle Link Switching (Hardware Level)
+    if (Ethernet.linkStatus() == LinkON) {
+        activeStream = &ethClient;
+    } else {
+        activeStream = &Serial;
+    }
+
+    // B. Ensure the personality knows which cable to use
+    if (activeRadio) {
+        activeRadio->setLink(activeStream);
+        activeRadio->update(); // Runs the CAT logic (Dispatch Table + Timeout)
+    }
+}
