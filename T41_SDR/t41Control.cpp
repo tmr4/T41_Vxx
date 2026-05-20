@@ -28,11 +28,15 @@ using namespace qindesign::network;
 #include "input_tcp.h"
 #include "output_tcp.h"
 
+#include "radios.h"
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+extern RemoteRadio radio;
 
 // for testing
 //volatile bool sendGet = false;
@@ -54,12 +58,15 @@ int signalStrengthReceivedIndex = -1;
 bool checkingConnection = false;
 
 #if REC_IQ_FROM_T41_ETHER
-EthernetClient ethernetControl;
+//EthernetClient ethernetControl;
+extern EthernetClient ethernetControl;
 extern AudioInputTCP remoteAudioStream;
 #endif
 #if SEND_IQ_TO_REMOTE_ETHER
-EthernetServer ethernetServerControl(80);
-EthernetClient ethernetControl;
+//EthernetServer ethernetServerControl(80);
+extern EthernetServer ethernetServerControl;
+//EthernetClient ethernetControl;
+extern EthernetClient ethernetControl;
 extern AudioOutputTCP t41AudioStream;
 #endif
 
@@ -89,7 +96,7 @@ void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress&
 // the three usb serial objects in the teensy (Serial, SerialUSB1 and SerialUSB2) are all different classes (usb_serial_class, usb_serial2_class, and usb_serial3_class)
 // I suppose to prevent naming conflict somewhere, but this prevents having serial commands with a common argument specifying the serial channel to use, such as
 // void T41ControlSetup(Stream& serial) { serial.begin(); }.  As such might as well duplicate these functions for both the T41 control app and Beacon monitor
-void T41ControlSetup() {
+void T41ControlSetupOld() {
   //controlSerial.begin(19200);
   // *** this controls whether debug messages go out over Serial ***
   // *** this is needed for USB where the remote Serial connection is used for CAT control ***
@@ -332,7 +339,7 @@ int T41ControlGetCommand(char * cmd, int max) {
   cmd[i+1] = 0; // *** TODO: this is currently needed by send command, revisit if that is changed ***
   return i;
 }
-
+/*
 void TogglePins() {
   static int count = 0;
   for(int i = 0; i < 10; i++) {
@@ -367,7 +374,7 @@ void TogglePins() {
   ++count;
   if(count >= 8) count = 0;
 }
-
+*/
 // Dual T41 master commands
 // for sending integer-based commands between T41 and remote
 void SendCommand(int value, int id) {
@@ -504,7 +511,8 @@ void SendCommand(int value, int id) {
     default:
       return;
   }
-  T41ControlSendCmd(cmd);
+  //T41ControlSendCmd(cmd);
+  radio.SendCommand(cmd);
 }
 
 void SendID(bool request) {

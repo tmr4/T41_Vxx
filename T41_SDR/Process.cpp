@@ -28,9 +28,13 @@
 
 #include "debug.h"
 
+#include "radios.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+extern RemoteRadio radio;
 
 extern bool sendGet;
 
@@ -1319,7 +1323,8 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
     if(millis() - prevUpdate > 10) {
       ProcessControls();
       #if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
-        T41ControlLoop();
+        //T41ControlLoop();
+        radio.update();
       #endif
       prevUpdate = millis();
       //if(++count > 10) {

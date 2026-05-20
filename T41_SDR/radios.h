@@ -1,34 +1,9 @@
 
 #include "catControl.h"
-#include "radios.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
-
-//-------------------------------------------------------------------------------------------------------------
-// KenwoodRadio
-//-------------------------------------------------------------------------------------------------------------
-
-class KenwoodRadio : public CatControl {
-private:
-  static const CommandEntry dispatchTable[];
-
-protected:
-  const CommandEntry* getDispatchTable() override { return dispatchTable; }
-  size_t getTableSize() override { return sizeof(dispatchTable) / sizeof(CommandEntry); }
-
-  int GetMode();
-
-private:
-  /*
-  // radio-specific handlers
-  void handleID(const char* cmd) {
-      link->print("ID019;");
-      // ... switch to FT8 logic ...
-  }
-  */
-};
 
 //-------------------------------------------------------------------------------------------------------------
 // RemoteRadio - PC or remote unit control commands
@@ -36,20 +11,67 @@ private:
 
 class RemoteRadio : public CatControl {
 private:
-  static const CommandEntry dispatchTable[];
+  static constexpr size_t CMD_COUNT = 28;
+  static const CATCommand catCommands[CMD_COUNT];
+
+public:
+  RemoteRadio() : CatControl(catCommands, CMD_COUNT) {}
+  //virtual ~RemoteRadio() {}
 
 protected:
-  const CommandEntry* getDispatchTable() override { return dispatchTable; }
-  size_t getTableSize() override { return sizeof(dispatchTable) / sizeof(CommandEntry); }
 
 private:
-  /*
-  // radio-specific handlers
-  void handleID(const char* cmd) {
-      link->print("ID019;");
-      // ... switch to FT8 logic ...
-  }
-  */
+  void handleDP(const char* cmd, bool isRead);
+  void handleDS(const char* cmd, bool isRead);
+  void handleFF(const char* cmd, bool isRead);
+  void handleFI(const char* cmd, bool isRead);
+  void handleFS(const char* cmd, bool isRead);
+  void handleFT(const char* cmd, bool isRead);
+  void handleGT(const char* cmd, bool isRead);
+  void handleIF(const char* cmd, bool isRead);
+  void handleMD(const char* cmd, bool isRead);
+  void handleME(const char* cmd, bool isRead);
+  void handleNF(const char* cmd, bool isRead);
+  void handleNG(const char* cmd, bool isRead);
+  void handleNH(const char* cmd, bool isRead);
+  void handleNL(const char* cmd, bool isRead);
+  void handleNS(const char* cmd, bool isRead);
+  void handleNW(const char* cmd, bool isRead);
+  void handleN1(const char* cmd, bool isRead);
+  void handlePC(const char* cmd, bool isRead);
+  void handleSM(const char* cmd, bool isRead);
+  void handleVO(const char* cmd, bool isRead);
+  void handleZM(const char* cmd, bool isRead);
+
+public:
+  DEFINE_CAT_ACTION(RemoteRadio, handleBD);
+  DEFINE_CAT_ACTION(RemoteRadio, handleBU);
+  DEFINE_CAT_ACTION(RemoteRadio, handleDP);
+  DEFINE_CAT_ACTION(RemoteRadio, handleDS);
+  DEFINE_CAT_ACTION(RemoteRadio, handleFA);
+  DEFINE_CAT_ACTION(RemoteRadio, handleFB);
+  DEFINE_CAT_ACTION(RemoteRadio, handleFC);
+  DEFINE_CAT_ACTION(RemoteRadio, handleFF);
+  DEFINE_CAT_ACTION(RemoteRadio, handleFI);
+  DEFINE_CAT_ACTION(RemoteRadio, handleFS);
+  DEFINE_CAT_ACTION(RemoteRadio, handleFT);
+  DEFINE_CAT_ACTION(RemoteRadio, handleGT);
+  DEFINE_CAT_ACTION(RemoteRadio, handleID);
+  DEFINE_CAT_ACTION(RemoteRadio, handleIF);
+  DEFINE_CAT_ACTION(RemoteRadio, handleMD);
+  DEFINE_CAT_ACTION(RemoteRadio, handleME);
+  DEFINE_CAT_ACTION(RemoteRadio, handleNF);
+  DEFINE_CAT_ACTION(RemoteRadio, handleNG);
+  DEFINE_CAT_ACTION(RemoteRadio, handleNH);
+  DEFINE_CAT_ACTION(RemoteRadio, handleNL);
+  DEFINE_CAT_ACTION(RemoteRadio, handleNS);
+  DEFINE_CAT_ACTION(RemoteRadio, handleNW);
+  DEFINE_CAT_ACTION(RemoteRadio, handleN1);
+  DEFINE_CAT_ACTION(RemoteRadio, handlePC);
+  DEFINE_CAT_ACTION(RemoteRadio, handleSM);
+  DEFINE_CAT_ACTION(RemoteRadio, handleTM);
+  DEFINE_CAT_ACTION(RemoteRadio, handleVO);
+  DEFINE_CAT_ACTION(RemoteRadio, handleZM);
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -148,22 +170,46 @@ private:
 
 *********************************************************************************************************/
 
-// *** probably need CatControl after KenwoodRadio is fleshed out ***
-//class WSJTXRadio : public CatControl {
-class WSJTXRadio : public KenwoodRadio {
+class WSJTXRadio : public CatControl {
 private:
-  static const CommandEntry dispatchTable[];
+  static constexpr size_t CMD_COUNT = 13;
+  static const CATCommand catCommands[CMD_COUNT];
+
+public:
+  WSJTXRadio() : CatControl(catCommands, CMD_COUNT) {}
 
 protected:
-  const CommandEntry* getDispatchTable() override { return dispatchTable; }
-  size_t getTableSize() override { return sizeof(dispatchTable) / sizeof(CommandEntry); }
 
 private:
   int mode = 2; // FT8 mode is always USB
 
-  void handleID(const char* cmd, const size_t len) override;
-};
+  void handleAI(const char* cmd, bool isRead);
+  void handleFA(const char* cmd, bool isRead);
+  void handleFB(const char* cmd, bool isRead);
+  void handleFT(const char* cmd, bool isRead);
+  void handleID(const char* cmd, bool isRead) override;
+  void handleIF(const char* cmd, bool isRead);
+  void handleKS(const char* cmd, bool isRead);
+  void handleMD(const char* cmd, bool isRead);
+  void handleSF(const char* cmd, bool isRead);
+  void handleSP(const char* cmd, bool isRead);
+  void handleTB(const char* cmd, bool isRead);
+  void handleTX(const char* cmd, bool isRead);
 
+  DEFINE_CAT_ACTION(WSJTXRadio, handleAI);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleFA);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleFB);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleFT);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleID);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleIF);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleKS);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleMD);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleSF);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleSP);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleTB);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleTM);
+  DEFINE_CAT_ACTION(WSJTXRadio, handleTX);
+};
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

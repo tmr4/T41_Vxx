@@ -123,7 +123,7 @@ void UsbHostLoop() {
 #endif
 
 #if CAT_CONTROL_T41_USB_HOST
-  T41ControlLoop();
+  //T41ControlLoop();
 #endif
 
 /*

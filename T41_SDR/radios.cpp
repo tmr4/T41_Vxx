@@ -1,80 +1,43 @@
 
-#include "catControl.h"
+#include "SDT.h"
+
+#include "ButtonProc.h"
+#include "Display.h"
+#include "Encoders.h"
+#include "Filter.h"
+#include "hardware.h"
+#include "MenuProc.h"
+#include "t41Control.h"
+#include "Utility.h"
+
 #include "radios.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern bool controlDataFlag;
+extern bool ft8PTT;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------------------
-// KenwoodRadio
-//-------------------------------------------------------------------------------------------------------------
-
-/*
-void KenwoodRadio::handle(const char* cmd, const size_t len) {
-  if(len == 3) {
-  }
-}
-*/
-  // T41 to Kenwood TS-2000 modes
-  // *** TODO: verify when this is used ***
-  int KenwoodRadio::GetMode() {
-    // 1: LSB, 2: USB, 3: CW, 4: FM, 5: AM
-    int mode;
-    if(t41.RadioMode == CW_MODE) {
-      mode=3;
-    } else {
-      switch(t41.DemodMode) {
-        case DEMOD_USB:
-          mode=2; // USB
-          break;
-        case DEMOD_LSB:
-          mode=1; // LSB
-          break;
-        case DEMOD_AM:
-        case DEMOD_SAM:
-          mode=5; // AM
-          break;
-        case DEMOD_NFM:
-          mode=4; // FM
-          break;
-        default:
-          mode=1; // LSB
-          break;
-      }
-    }
-    return mode;
-  }
-
-// Kenwood Command Dispatch Table (both inherited and radio specific)
-// *** TODO: separate these into common, Kenwood specific, and alternate radio commands ***
-const CatControl::CommandEntry KenwoodRadio::dispatchTable[] = {
-//  {"", (CatControl::CmdHandler)&KenwoodRadio::handle},
-  {"BD", (CatControl::CmdHandler)&KenwoodRadio::handleBandDown},  // band down
-  {"BU", (CatControl::CmdHandler)&KenwoodRadio::handleBandUp},    // band up
-  {"FA", (CatControl::CmdHandler)&KenwoodRadio::handleFA},        // read/set VFO A frequency
-  {"FB", (CatControl::CmdHandler)&KenwoodRadio::handleFB},        // read/set VFO B frequency
-  {"FC", (CatControl::CmdHandler)&KenwoodRadio::handleFC},        // read/set current VFO center frequency
-  {"ID", (CatControl::CmdHandler)&KenwoodRadio::handleID},        // read radio ID
-};
-
-//-------------------------------------------------------------------------------------------------------------
 // RemoteRadio - PC or remote unit control commands
 //-------------------------------------------------------------------------------------------------------------
 
-void RemoteRadio::handleDataStart(const char* cmd, const size_t len) {
-  if(len == 3) {
+// set data start
+void RemoteRadio::handleDS(const char* cmd, bool isRead) {
+  if(!isRead) {
     // start sending spectrum data
     controlDataFlag = true;
   }
 }
 
-void RemoteRadio::handleDataPause(const char* cmd, const size_t len) {
-  if(len == 3) {
+// set data pause
+void RemoteRadio::handleDP(const char* cmd, bool isRead) {
+  if(!isRead) {
     // stop sending spectrum data
     controlDataFlag = false;
   }
@@ -82,19 +45,18 @@ void RemoteRadio::handleDataPause(const char* cmd, const size_t len) {
 
 // read/set NCO frequency offset
 // "FF;" (length 3) or "FFxxxxxxxxxxx;" (length 14)
-void RemoteRadio::handleFF(const char* cmd, const size_t len) {
-  if(len == 3) { // read
+void RemoteRadio::handleFF(const char* cmd, bool isRead) {
+  if(isRead) {
     snprintf(msg, sizeof(msg), "FF%011lu;", (long)t41.NCOFreq);
-    send(msg);
-  } else if(len == 14) { // set
+  } else {
     t41.NCOFreq.Update(atol(&cmd[2]));
   }
 }
 
 // set center or fine tune frequency increment change
 // "FIx;" (length 4) x=0 center; x=1 fine tune
-void RemoteRadio::handleFI(const char* cmd, const size_t len) {
-  if(len == 4) {
+void RemoteRadio::handleFI(const char* cmd, bool isRead) {
+  if(!isRead) {
     if(cmd[2] == '0') {
       ChangeFreqIncrement(atol(&cmd[3]) - t41.CenterTuneIndex, false);
     } else if(cmd[2] == '1') {
@@ -105,8 +67,8 @@ void RemoteRadio::handleFI(const char* cmd, const size_t len) {
 
 // toggle fine tune status, on/off
 // "FS;" (length 3)
-void RemoteRadio::handleFS(const char* cmd, const size_t len) {
-  if(len == 3) {
+void RemoteRadio::handleFS(const char* cmd, bool isRead) {
+  if(!isRead) {
     t41.MouseCenterTuneActive.Update(!atoi(&cmd[2]));
     HighlightTuneInc();
   }
@@ -114,8 +76,8 @@ void RemoteRadio::handleFS(const char* cmd, const size_t len) {
 
 // set VFO A or B (non-standard, this is specific for transmit on Kenwood)
 // "FTx;" (length 4) x=0 VFO A; x=1 VFO B
-void RemoteRadio::handleFT(const char* cmd, const size_t len) {
-  if(len == 4) {
+void RemoteRadio::handleFT(const char* cmd, bool isRead) {
+  if(!isRead) {
     VFOSelect(atoi(&cmd[2]));
     // SendAS(); // PC control specific ???
   }
@@ -123,30 +85,49 @@ void RemoteRadio::handleFT(const char* cmd, const size_t len) {
 
 // read/set AGC (non-standard Kenwood command)
 // "GTx;" (length 4) x=0 VFO A; x=1 VFO B
-void RemoteRadio::handleGT(const char* cmd, const size_t len) {
-  if(len == 3) {
-    snprintf(msg, sizeof(msg), "GT%d;", t41.AGCMode);
-    send(msg);
-  } else if(len == 4) {
+void RemoteRadio::handleGT(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "GT%d;", (int)t41.AGCMode);
+  } else {
     t41.AGCMode.Update(atoi(&cmd[2]));
     UpdateInfoBoxItem(T41_ITEM_AGC);
   }
 }
 
 // read transceiver status
-void RemoteRadio::handleIF(const char* cmd, const size_t len) {
-  if(len == 3) {
-    SendIF();
+void RemoteRadio::handleIF(const char* cmd, bool isRead) {
+  if(isRead) {
+    // *** Warning: this is not the Kenwood implimentation ***
+    sprintf(msg, "IF%011d%d%d%d%03d%+06d%04d%d%d%d%d%d%d%d%d%011d;",
+      // active VFO Freq = TxRxFreq, t41.CenterFreq = TxRxFreq - NCOFreq
+      //  *** TODO: we only need 8 digits for first field for T41, consider using other 3 for something ***
+      t41.ActiveFreq(), // freq in Hz (%011d) at index 2
+      (int)t41.ActiveBand,            // current band (%d) at index 13
+      (int)t41.RadioMode,             // transmission mode (%d) at index 14
+      (int)t41.DemodMode,             // demodulation mode (%d)  at index 15
+      (int)t41.AudioVolume,           // audio volume (%03d) at index 16
+      (int)t41.NCOFreq,               // NCO freq (%+06d) at index 19
+      (int)t41.NoiseFloor,            // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
+      (int)t41.LiveNoiseFloor,        // set noise floor active/inactive 1/0 (%d) at index 29
+      !GetXRState(),                  // RX/TX (1/0) (%d) at index 30
+      (int)t41.ActiveVFO,             // VFO A/B (0/1) (%d) at index 31
+      (int)t41.MouseCenterTuneActive, // fine or center tune enabled (0/1) (%d) at index 32
+      (int)t41.FineTuneIndex,         // fine tune index (%d) at index 33
+      (int)t41.CenterTuneIndex,       // center tune index (%d) at index 34
+      (int)t41.AGCMode,               // AGC mode (%d) at index 35
+      (int)t41.SpectrumZoom,          // spectrum zoom (%d) at index 36
+      (int)t41.InactiveFreq           // inactive VFO freq in Hz (%011d) at index 37
+      //splitVFO ? 1 : 0,             // VFO split status (%d) at index xx
+    );
   }
 }
 
 // read/set demod mode (non-standard Kenwood TS-2000 command)
 // "MD;" (length 3) or "MDx;" (length 4) x= demodulation mode (see SDT.h)
-void RemoteRadio::handleMD(const char* cmd, const size_t len) {
-  if(len == 3) {
-    snprintf(msg, sizeof(msg), "MD%d;", t41.DemodMode);
-    send(msg);
-  } else if(len == 4) {
+void RemoteRadio::handleMD(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "MD%d;", (int)t41.DemodMode);
+  } else {
     ChangeDemodMode(atoi(&cmd[2]), false);
     // SendAS(); // PC control specific ???
   }
@@ -154,11 +135,10 @@ void RemoteRadio::handleMD(const char* cmd, const size_t len) {
 
 // read/set operating mode
 // "ME;" (length 3) or "MEx;" (length 4) x= operating mode (see SDT.h)
-void RemoteRadio::handleME(const char* cmd, const size_t len) {
-  if(len == 3) {
-    snprintf(msg, sizeof(msg), "MD%d;", t41.DemodMode);
-    send(msg);
-  } else if(len == 4) {
+void RemoteRadio::handleME(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "MD%d;", (int)t41.DemodMode);
+  } else {
     ChangeMode(atoi(&cmd[2]), -1, false);
     // SendAS(); // PC control specific ???
   }
@@ -167,26 +147,25 @@ void RemoteRadio::handleME(const char* cmd, const size_t len) {
 // *** TODO: some of these 'N' commands conflict with Kenwood commands
 // read/set noise floor
 // "NF;" (length 3) or "NFxxxx;" (length 7) xxxx= noise floor
-void RemoteRadio::handleNF(const char* cmd, const size_t len) {
-  if(len == 3) {
+void RemoteRadio::handleNF(const char* cmd, bool isRead) {
+  if(isRead) {
     snprintf(msg, sizeof(msg), "NF%04d;", (int)t41.NoiseFloor);
-    send(msg);
-  } else if(len == 7) {
+  } else {
     t41.NoiseFloor.Update(atoi(&cmd[2]));
   }
 }
 
 // set live noise floor
-void RemoteRadio::handleNG(const char* cmd, const size_t len) {
-  if(len == 4) {
+void RemoteRadio::handleNG(const char* cmd, bool isRead) {
+  if(!isRead) {
     t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
     UpdateInfoBoxItem(T41_ITEM_FLOOR);
   }
 }
 
 // set high audio filter frequency
-void RemoteRadio::handleNH(const char* cmd, const size_t len) {
-  if(len == 14) {
+void RemoteRadio::handleNH(const char* cmd, bool isRead) {
+  if(!isRead) {
     t41.FilterHiCut.Update(atol(&cmd[2]));
 
     CalcAudioFilters();
@@ -194,8 +173,8 @@ void RemoteRadio::handleNH(const char* cmd, const size_t len) {
 }
 
 // set low audio filter frequency
-void RemoteRadio::handleNL(const char* cmd, const size_t len) {
-  if(len == 14) {
+void RemoteRadio::handleNL(const char* cmd, bool isRead) {
+  if(!isRead) {
     t41.FilterLoCut.Update(atol(&cmd[2]));
 
     CalcAudioFilters();
@@ -203,8 +182,8 @@ void RemoteRadio::handleNL(const char* cmd, const size_t len) {
 }
 
 // inc/dec audio filter
-void RemoteRadio::handleNS(const char* cmd, const size_t len) {
-  if(len == 5) {
+void RemoteRadio::handleNS(const char* cmd, bool isRead) {
+  if(!isRead) {
     posFilterEncoder += atoi(&cmd[2]);
     ProcessFilterEncoder();
 
@@ -214,8 +193,8 @@ void RemoteRadio::handleNS(const char* cmd, const size_t len) {
 }
 
 // set 0.5kHz-1.5kHz audio filter
-void RemoteRadio::handleNW(const char* cmd, const size_t len) {
-  if(len == 3) {
+void RemoteRadio::handleNW(const char* cmd, bool isRead) {
+  if(!isRead) {
     t41.FilterLoCut.Update(500);
     t41.FilterHiCut.Update(1500);
 
@@ -224,8 +203,8 @@ void RemoteRadio::handleNW(const char* cmd, const size_t len) {
 }
 
 // set noise filter
-void RemoteRadio::handleN1(const char* cmd, const size_t len) {
-  if(len == 4) {
+void RemoteRadio::handleN1(const char* cmd, bool isRead) {
+  if(!isRead) {
     t41.NoiseFilter.Update(atoi(&cmd[2]));
     UpdateInfoBoxItem(T41_ITEM_FILTER);
   }
@@ -233,11 +212,10 @@ void RemoteRadio::handleN1(const char* cmd, const size_t len) {
 
 // read/set transmit power level (non-standard Kenwood command)
 // "PC;" (length 3) or "PCxx;" (length 5) xx= transmit power level
-void RemoteRadio::handlePC(const char* cmd, const size_t len) {
-  if(len == 3) {
-    snprintf(msg, sizeof(msg), "PC%02d;", t41.TxPower);
-    send(msg);
-  } else if(len == 5) {
+void RemoteRadio::handlePC(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "PC%02d;", (int)t41.TxPower);
+  } else {
     t41.TxPower.Update(atoi(&cmd[2]));
     ShowCurrentPowerSetting();
   }
@@ -247,10 +225,10 @@ void RemoteRadio::handlePC(const char* cmd, const size_t len) {
 // "SM;" (length 3)
 // "SMx;" (length 4) x= 0: dbm; 1: S-meter
 // "SMxyyyyy;" (length 9) x= see above; y= value
-void RemoteRadio::handleSM(const char* cmd, const size_t len) {
+void RemoteRadio::handleSM(const char* cmd, bool isRead) {
   float32_t dbm = CalcSignalStrength();
 
-  if(len == 3) {
+  if(isRead) {
     // One of the following:
     // send dBm
     //sprintf(cmd, "SM0%+05d;", (int)(dbm * 10));
@@ -260,13 +238,13 @@ void RemoteRadio::handleSM(const char* cmd, const size_t len) {
 
     // just send dBm for now
     snprintf(msg, sizeof(msg), "SM0%+05d;", (int)(dbm * 10));
-    send(msg);
-  } else if(len == 4) {
-    int index = atoi(&cmd[2]);
-
-    // just send dBm for now
-    snprintf(msg, sizeof(msg), "SM%d%+05d;", index, (int)(dbm * 10));
-  } else if(len == 9) {
+  // *** TODO: need to resolve this one outlier ***
+  //} else {
+  //  int index = atoi(&cmd[2]);
+  //
+  //  // just send dBm for now
+  //  snprintf(msg, sizeof(msg), "SM%d%+05d;", index, (int)(dbm * 10));
+  } else {
     // One of the following:
     // SM0-xxxx; (receive dBm)
     //sprintf(cmd, "SM0%+05d;", (int)(dbm * 10));
@@ -282,67 +260,56 @@ void RemoteRadio::handleSM(const char* cmd, const size_t len) {
   }
 }
 
-// set Teensy RTC
-// "TMxxxxxxxxxxx;" (length 14)
-void RemoteRadio::handleTM(const char* cmd, const size_t len) {
-  if(len == 14) {
-    Teensy3Clock.set(atol(&cmd[2]));
-    setTime(atol(&cmd[2]));
-  }
-}
-
 // read/set volume
 // "VO;" (length 3) or "VOxxx;" (length 6) xxx= volume 0-100
-void RemoteRadio::handleVO(const char* cmd, const size_t len) {
-  if(len == 3) {
-    snprintf(msg, sizeof(msg), "VO%03d;", t41.AudioVolume);
-    send(msg);
-  } else if(len == 6) {
+void RemoteRadio::handleVO(const char* cmd, bool isRead) {
+  Serial.println("at VO");
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "VO%03d;", (int)t41.AudioVolume);
+  } else {
     t41.AudioVolume.Update(atoi(&cmd[2]));
   }
 }
 
 // read/set spectrum zoom
 // "ZM;" (length 3) or "ZMx;" (length 4) x= zoom (0 to MAX_ZOOM_ENTRIES - 1)
-void RemoteRadio::(const char* cmd, const size_t len) {
-  if(len == 3) {
-    snprintf(msg, sizeof(msg), "ZM%d;", t41.SpectrumZoom);
-    send(msg);
-  } else if(len == 4) {
+void RemoteRadio::handleZM(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "ZM%d;", (int)t41.SpectrumZoom);
+  } else {
     t41.SpectrumZoom.Update(atoi(&cmd[2]));
   }
 }
 
-const CatControl::CommandEntry RemoteRadio::dispatchTable[] = {
-  {"BD", (CatControl::CmdHandler)&RemoteRadio::handleBandDown},       // band down
-  {"BU", (CatControl::CmdHandler)&RemoteRadio::handleBandUp},         // band up
-  {"DS", (CatControl::CmdHandler)&RemoteRadio::handleDataStart},       // start data transfer
-  {"DP", (CatControl::CmdHandler)&RemoteRadio::handleDataPause},       // pause data transfer
-  {"FA", (CatControl::CmdHandler)&RemoteRadio::handleFA},             // read/set VFO A frequency
-  {"FB", (CatControl::CmdHandler)&RemoteRadio::handleFB},             // read/set VFO B frequency
-  {"FC", (CatControl::CmdHandler)&RemoteRadio::handleFC},             // read/set current VFO center frequency
-  {"FF", (CatControl::CmdHandler)&RemoteRadio::handleFF},              // read/set NCO frequency offset
-  {"FI", (CatControl::CmdHandler)&RemoteRadio::handleFI},              // set center or fine tune increment change
-  {"FS", (CatControl::CmdHandler)&RemoteRadio::handleFS},              // toggle fine tune status
-  {"FT", (CatControl::CmdHandler)&RemoteRadio::handleFT},              // set VFO A or B
-  {"GT", (CatControl::CmdHandler)&RemoteRadio::handleGT},              // read/set AGC
-  {"ID", (CatControl::CmdHandler)&RemoteRadio::handleID},             // read radio ID
-  {"IF", (CatControl::CmdHandler)&RemoteRadio::handleIF},              // read transceiver status
-  {"MD", (CatControl::CmdHandler)&RemoteRadio::handleMD},              // read/set demod mode
-  {"MD", (CatControl::CmdHandler)&RemoteRadio::handleMD},              // read/set demod mode
-  {"ME", (CatControl::CmdHandler)&RemoteRadio::handleME},              // read/set operating mode
-  {"NF", (CatControl::CmdHandler)&RemoteRadio::handleNF},              // read/set noise floor
-  {"NG", (CatControl::CmdHandler)&RemoteRadio::handleNG},              // set live noise floor
-  {"NH", (CatControl::CmdHandler)&RemoteRadio::handleNH},              // set high audio filter frequency
-  {"NL", (CatControl::CmdHandler)&RemoteRadio::handleNL},              // set low audio filter frequency
-  {"NS", (CatControl::CmdHandler)&RemoteRadio::handleNS},              // inc/dec audio filter
-  {"NW", (CatControl::CmdHandler)&RemoteRadio::handleNW},              // set 0.5kHz-1.5kHz audio filter
-  {"N1", (CatControl::CmdHandler)&RemoteRadio::handleN1},              // set noise filter
-  {"PC", (CatControl::CmdHandler)&RemoteRadio::handlePC},              // read/set transmit power level
-  {"SM", (CatControl::CmdHandler)&RemoteRadio::handleSM},              // read S-meter
-  {"TM", (CatControl::CmdHandler)&RemoteRadio::handleTM},              // set Teensy RTC
-  {"VO", (CatControl::CmdHandler)&RemoteRadio::handleVO},              // read/set volume
-  {"ZM", (CatControl::CmdHandler)&RemoteRadio::handleZM},              // read/set spectrum zoom
+const CATCommand RemoteRadio::catCommands[] = {
+  {"BD"_cat, 3,  4, RemoteRadio::handleBD_Wrapper},   // band down
+  {"BU"_cat, 3,  4, RemoteRadio::handleBU_Wrapper},   // band up
+  {"DP"_cat, 0,  3, RemoteRadio::handleDP_Wrapper},   // pause data transfer
+  {"DS"_cat, 0,  3, RemoteRadio::handleDS_Wrapper},   // start data transfer
+  {"FA"_cat, 3, 14, RemoteRadio::handleFA_Wrapper},   // read/set VFO A frequency
+  {"FB"_cat, 3, 14, RemoteRadio::handleFB_Wrapper},   // read/set VFO B frequency
+  {"FC"_cat, 3, 14, RemoteRadio::handleFC_Wrapper},   // read/set current VFO center frequency
+  {"FF"_cat, 3, 14, RemoteRadio::handleFF_Wrapper},   // read/set NCO frequency offset
+  {"FI"_cat, 0,  4, RemoteRadio::handleFI_Wrapper},   // set center or fine tune increment change
+  {"FS"_cat, 0,  3, RemoteRadio::handleFS_Wrapper},   // toggle fine tune status
+  {"FT"_cat, 0,  4, RemoteRadio::handleFT_Wrapper},   // set VFO A or B
+  {"GT"_cat, 3,  4, RemoteRadio::handleGT_Wrapper},   // read/set AGC
+  {"ID"_cat, 3,  6, RemoteRadio::handleID_Wrapper},   // read radio ID
+  {"IF"_cat, 3,  0, RemoteRadio::handleIF_Wrapper},   // read transceiver status
+  {"MD"_cat, 3,  4, RemoteRadio::handleMD_Wrapper},   // read/set demod mode
+  {"ME"_cat, 3,  4, RemoteRadio::handleME_Wrapper},   // read/set operating mode
+  {"NF"_cat, 3,  7, RemoteRadio::handleNF_Wrapper},   // read/set noise floor
+  {"NG"_cat, 0,  4, RemoteRadio::handleNG_Wrapper},   // set live noise floor
+  {"NH"_cat, 0, 14, RemoteRadio::handleNH_Wrapper},   // set high audio filter frequency
+  {"NL"_cat, 0, 14, RemoteRadio::handleNL_Wrapper},   // set low audio filter frequency
+  {"NS"_cat, 0,  5, RemoteRadio::handleNS_Wrapper},   // inc/dec audio filter
+  {"NW"_cat, 0,  3, RemoteRadio::handleNW_Wrapper},   // set 0.5kHz-1.5kHz audio filter
+  {"N1"_cat, 0,  4, RemoteRadio::handleN1_Wrapper},   // set noise filter
+  {"PC"_cat, 3,  5, RemoteRadio::handlePC_Wrapper},   // read/set transmit power level
+  {"SM"_cat, 3,  4, RemoteRadio::handleSM_Wrapper},   // read S-meter
+  {"TM"_cat, 0, 14, RemoteRadio::handleTM_Wrapper},   // set Teensy RTC
+  {"VO"_cat, 3,  6, RemoteRadio::handleVO_Wrapper},   // read/set volume
+  {"ZM"_cat, 3,  4, RemoteRadio::handleZM_Wrapper},   // read/set spectrum zoom
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -358,21 +325,19 @@ const CatControl::CommandEntry RemoteRadio::dispatchTable[] = {
 
 // Auto Information
 // "AI;" (length 3) or "AIx;" (length 4) x=0 off; x=1 on?
-void WSJTXRadio::handleAI(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleAI(const char* cmd, bool isRead) {
+  if(isRead) {
     snprintf(msg, sizeof(msg), "AI0;"); // Auto info off
-    send(msg);
-  } else if(len == 4) {
+  } else {
   }
 }
 
 // read/set VFO A frequency
 // "FA;" (length 3) or "FAxxxxxxxxxxx;" (length 14)
-void WSJTXRadio::handleFA(const char* cmd, const size_t len) override {
-  if(len == 3) {
-    snprintf(msg, sizeof(msg), "FA%011lu;", t41.GetFreqA());
-    send(msg);
-  } else if(len == 14) {
+void WSJTXRadio::handleFA(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "FA%011d;", (int)t41.GetFreqA());
+  } else {
     long f = atol(&cmd[2]);
     ChangeBand(f);
     t41.SetFreqA(f);
@@ -381,11 +346,10 @@ void WSJTXRadio::handleFA(const char* cmd, const size_t len) override {
 
 // read/set VFO B frequency
 // "FB;" (length 3) or "FBxxxxxxxxxxx;" (length 14)
-void WSJTXRadio::handleFB(const char* cmd, const size_t len) {
-  if(len == 3) {
-    snprintf(msg, sizeof(msg), "FB%011lu;", t41.GetFreqB());
-    send(msg);
-  } else if(len == 14) {
+void WSJTXRadio::handleFB(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "FB%011d;", (int)t41.GetFreqB());
+  } else {
     long f = atol(&cmd[2]);
     ChangeBand(f);
     t41.SetFreqB(f);
@@ -394,31 +358,29 @@ void WSJTXRadio::handleFB(const char* cmd, const size_t len) {
 
 // read/set VFO A or B
 // "FTx;" (length 4) x=0 VFO A; x=1 VFO B
-void WSJTXRadio::handleFT(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleFT(const char* cmd, bool isRead) {
+  if(isRead) {
     snprintf(msg, sizeof(msg), "FT0;"); // T41 always responds transmit on VFO A
-    send(msg);
-  } else if(len == 4) {
+  } else {
     VFOSelect(atoi(&cmd[2]));
   }
 }
 
-void WSJTXRadio::handleID(const char* cmd, const size_t len) override {
-  if(len == 3) {
+void WSJTXRadio::handleID(const char* cmd, bool isRead) {
+  if(isRead) {
     // receipt of ID command will switch to FT8 Data mode if not already there
     ChangeMode(DATA_MODE, DEMOD_FT8);
 
     // reply with the TS-890S id
     snprintf(msg, sizeof(msg), "ID024;");
     //snprintf(msg, sizeof(msg), "ID019;"); // TS-2000
-    send(msg);
   }
 }
 
 // read transceiver status
 // "IF;" (length = 3)
-void WSJTXRadio::handleIF(const char* cmd, const size_t len) override {
-  if(len == 3) {
+void WSJTXRadio::handleIF(const char* cmd, bool isRead) {
+  if(isRead) {
     // WSJT-X recieved w/ USB Serial+Audio: IF00007048000125004+0000000001000361100007030000; which is 48, expects 37
     //                            1         2         3      |  4
     //                  0123456789012345678901234567890123456789012345678
@@ -447,7 +409,7 @@ void WSJTXRadio::handleIF(const char* cmd, const size_t len) override {
     // 0        %d                                          0
     // ;                                                     ;
     //                  IF000070480005000+00000000001xx000000;
-    sprintf(msg, sizeof(msg), "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
+    snprintf(msg, sizeof(msg), "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
       t41.ActiveFreq(),     // freq in Hz
       5000,         // freq step size
       0,            // RIT/XIT freq in Hz, +-99999, this isn't preserved in the T41 but would be VFO A - VFO B if split
@@ -463,86 +425,84 @@ void WSJTXRadio::handleIF(const char* cmd, const size_t len) override {
       1,            // CTCSS tone frequency
       0             // shift status
     );
-    send(msg);
   }
 }
 
-// Keying Speed
+// read keying Speed
 // "KS;" (length 3)
-void WSJTXRadio::handleKS(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleKS(const char* cmd, bool isRead) {
+  if(isRead) {
     snprintf(msg, sizeof(msg), "KS0%d;", DEFAULT_KEYER_WPM);
-    send(msg);
   }
 }
 
 // read demod mode
 // "MD;" (length 3)
-void WSJTXRadio::handleMD(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleMD(const char* cmd, bool isRead) {
+  if(isRead) {
     snprintf(msg, sizeof(msg), "MD%d;", mode);
-    send(msg);
   }
 }
 
 // read VFO frequency and mode
 // "SF;" (length 3)
-void WSJTXRadio::handleSF(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleSF(const char* cmd, bool isRead) {
+  if(isRead) {
     int vfo = atoi(&cmd[2]);
     int freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
     snprintf(msg, sizeof(msg), "SF%d%011d%d;", vfo, freq, mode);
-    send(msg);
-  } else if(len == 4 {
-    // ignored
   }
 }
 
 // Split VFO
 // "SP;" (length 3) or "SPx;" (length 4)
-void WSJTXRadio::handleSP(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleSP(const char* cmd, bool isRead) {
+  if(isRead) {
     snprintf(msg, sizeof(msg), "SP%d;", 0); // no split VFO
-    send(msg);
-  } else if(len == 4 {
+  } else {
     // ignored
   }
 }
 
 // Split
 // "TB;" (length 3) or "TBx;" (length 4)
-void WSJTXRadio::handleTB(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleTB(const char* cmd, bool isRead) {
+  if(isRead) {
     snprintf(msg, sizeof(msg), "TB%d;", 0); // no split VFO
-    send(msg);
-  } else if(len == 4 {
+  } else {
     // ignored
   }
 }
 
-// TX
+// set TX
 // "TX;" (length 3)
-void WSJTXRadio::handleTX(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleTX(const char* cmd, bool isRead) {
+  if(!isRead) {
     ft8PTT = true;
   }
 }
 
-const CatControl::CommandEntry WSJTXRadio::dispatchTable[] = {
-  {"DP", (CatControl::CmdHandler)&WSJTXRadio::handleAI},              // auto information
-  {"FA", (CatControl::CmdHandler)&WSJTXRadio::handleFA},              // read/set VFO A frequency
-  {"FB", (CatControl::CmdHandler)&WSJTXRadio::handleFB},              // read/set VFO B frequency
-  {"FT", (CatControl::CmdHandler)&WSJTXRadio::handleFT},              // set VFO A or B
-  {"ID", (CatControl::CmdHandler)&WSJTXRadio::handleID},              // read radio ID
-  {"IF", (CatControl::CmdHandler)&WSJTXRadio::handleIF},              // read transceiver status
-  {"KS", (CatControl::CmdHandler)&WSJTXRadio::handleKS},              // key speed
-  {"MD", (CatControl::CmdHandler)&WSJTXRadio::handleMD},              // read/set demod mode
-  {"SF", (CatControl::CmdHandler)&WSJTXRadio::handleSF},              // read VFO freq and mode
-  {"SP", (CatControl::CmdHandler)&WSJTXRadio::handleSP},              // read split VFO
-  {"TB", (CatControl::CmdHandler)&WSJTXRadio::handleTB},              // read split
-  {"TM", (CatControl::CmdHandler)&RemoteRadio::handleTM},             // set Teensy RTC
-  {"TX", (CatControl::CmdHandler)&WSJTXRadio::handleTX},              // TX
+const CATCommand WSJTXRadio::catCommands[] = {
+  {"AI"_cat, 3,  0, WSJTXRadio::handleAI_Wrapper},   // auto information
+  {"FA"_cat, 3, 14, WSJTXRadio::handleFA_Wrapper},   // read/set VFO A frequency
+  {"FB"_cat, 3, 14, WSJTXRadio::handleFB_Wrapper},   // read/set VFO B frequency
+  {"FT"_cat, 3,  4, WSJTXRadio::handleFT_Wrapper},   // set VFO A or B
+  {"ID"_cat, 3,  0, WSJTXRadio::handleID_Wrapper},   // read radio ID
+  {"IF"_cat, 3,  0, WSJTXRadio::handleIF_Wrapper},   // read transceiver status
+  {"KS"_cat, 3,  0, WSJTXRadio::handleKS_Wrapper},   // key speed
+  {"MD"_cat, 3,  0, WSJTXRadio::handleMD_Wrapper},   // read/set demod mode
+  {"SF"_cat, 3,  0, WSJTXRadio::handleSF_Wrapper},   // read VFO freq and mode
+  {"SP"_cat, 3,  4, WSJTXRadio::handleSP_Wrapper},   // read split VFO
+  {"TB"_cat, 3,  4, WSJTXRadio::handleTB_Wrapper},   // read split
+  {"TM"_cat, 0, 14, WSJTXRadio::handleTM_Wrapper},   // set Teensy RTC
+  {"TX"_cat, 0,  3, WSJTXRadio::handleTX_Wrapper},   // TX
 };
+
+
+
+
+/*
+
 
 // switching links
 void loop() {
@@ -584,8 +544,50 @@ if (bufferIdx > 0 && (millis() - lastCharTime > TIMEOUT_MS)) {
 }
 
 
-/*
 //modified from wsjt.cpp, but WSJT-X doesn't use
+
+  // T41 to Kenwood TS-2000 modes
+  // *** TODO: verify when this is used ***
+  int KenwoodRadio::GetMode() {
+    // 1: LSB, 2: USB, 3: CW, 4: FM, 5: AM
+    int mode;
+    if(t41.RadioMode == CW_MODE) {
+      mode=3;
+    } else {
+      switch(t41.DemodMode) {
+        case DEMOD_USB:
+          mode=2; // USB
+          break;
+        case DEMOD_LSB:
+          mode=1; // LSB
+          break;
+        case DEMOD_AM:
+        case DEMOD_SAM:
+          mode=5; // AM
+          break;
+        case DEMOD_NFM:
+          mode=4; // FM
+          break;
+        default:
+          mode=1; // LSB
+          break;
+      }
+    }
+    return mode;
+  }
+
+// Kenwood Command Dispatch Table (both inherited and radio specific)
+// *** TODO: separate these into common, Kenwood specific, and alternate radio commands ***
+const CatControl::CATCommand KenwoodRadio::catCommands[] = {
+//  {"", (CatControl::CATAction)&KenwoodRadio::handle},
+  {"BD", (CatControl::CATAction)&KenwoodRadio::handleBD},  // band down
+  {"BU", (CatControl::CATAction)&KenwoodRadio::handleBU},    // band up
+  {"FA", (CatControl::CATAction)&KenwoodRadio::handleFA},        // read/set VFO A frequency
+  {"FB", (CatControl::CATAction)&KenwoodRadio::handleFB},        // read/set VFO B frequency
+  {"FC", (CatControl::CATAction)&KenwoodRadio::handleFC},        // read/set current VFO center frequency
+  {"ID", (CatControl::CATAction)&KenwoodRadio::handleID},        // read radio ID
+};
+
 
 // Kenwood Band
 int WSJTXRadio::GetKenwoodBand() {
@@ -621,37 +623,35 @@ int WSJTXRadio::GetKenwoodBand() {
 
 // band down
 // "BD;" (length 3) or "BDx;" (length 4)
-void WSJTXRadio::handleBandDown(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleBD(const char* cmd, bool isRead) {
+  if(isRead) {
     ChangeBand(-1);
-  } else if(len == 4) { // hybrid
+  } else {
     if(atoi(&cmd[2]) == 0) {
       snprintf(msg, sizeof(msg), "BU0%d;", GetKenwoodBand());
     } else {
       snprintf(msg, sizeof(msg), "BU1%d;", GetKenwoodBand());
     }
-    send(msg);
   }
 }
 
 // band up
 // "BU;" (length 3) or "BUx;" (length 4)
-void WSJTXRadio::handleBandUp(const char* cmd, const size_t len) {
-  if(len == 3) {
+void WSJTXRadio::handleBU(const char* cmd, bool isRead) {
+  if(isRead) {
     ChangeBand(1);
-  } else if(len == 4) {
+  } else {
     if(atoi(&cmd[2]) == 0) {
       snprintf(msg, sizeof(msg), "BD0%d;", GetKenwoodBand());
     } else {
       snprintf(msg, sizeof(msg), "BD1%d;", GetKenwoodBand());
     }
-    send(msg);
   }
 }
 
 */
 
-
+/*
 // interface
 class RadioCat {
 protected:
@@ -696,3 +696,4 @@ void loop() {
         activeRadio->update(); // Runs the CAT logic (Dispatch Table + Timeout)
     }
 }
+*/

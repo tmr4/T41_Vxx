@@ -48,6 +48,8 @@
 #include "t41USBHost.h"
 #include "wsjt.h"
 
+#include "radios.h"
+
 // *** need to pull what we want from these ***
 //#include "fir_cmsis_5k.h"
 //#include "fir_alt.h"
@@ -55,6 +57,8 @@
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+extern RemoteRadio radio;
 
 extern bool beaconFlag;
 extern bool iqSyncSearch;
@@ -402,7 +406,8 @@ FASTRUN void loop() {
   //T41ControlLoop();
 
 #if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
-  T41ControlLoop();
+  //T41ControlLoop();
+  radio.update();
 #endif
 
   // check for UI button press and process accordingly
