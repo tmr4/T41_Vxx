@@ -11,6 +11,8 @@ void T41RemoteConnectCheck();
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+void SendCommand(int id);
+
 class CatControl;
 
 struct CATAction {
@@ -35,48 +37,11 @@ class CatControl : public Stream {
 private:
   const CATCommand* const commands;
   const size_t numCmds;
+  static const uint16_t catItems[T41_ITEMS];
 
   static constexpr uint8_t maxCmd = 255;
   static constexpr uint8_t maxMsg = 50; // should be enough to respond to IF;
   static constexpr uint8_t timeout = 250;
-
-protected:
-  Stream* link = nullptr;
-  char cmd[maxCmd + 1];
-  char msg[maxMsg + 1];
-  uint8_t idx = 0;
-  unsigned long lastCharTime = 0;
-
-  void processCommand(const char* cmd) {
-    // ack the 2 character command code into a single uint16_t
-    uint16_t cmdCode = (static_cast<uint16_t>(cmd[0]) << 8) | static_cast<uint16_t>(cmd[1]);
-
-    // look for a match in dispatch table
-    for(size_t i = 0; i < numCmds; i++) {
-      const CATCommand& item = commands[i];
-
-      if(cmdCode == item.code) {
-        // CAT command found
-        bool isRead = false;
-
-        if(item.lenR != 0 && cmd[item.lenR-1] == ';') {
-          // read command properly formed
-          isRead = true;
-        } else if(item.lenS != 0 && cmd[item.lenS-1] == ';') {
-          // set command properly formed
-          isRead = false;
-        } else {
-          // command not properly formed
-          // *** TODO: consider sending followup if command not properly formed
-          return;
-        }
-        item.action.execute(this, cmd, true);
-        if(isRead) send(msg);
-        return;
-      }
-    }
-    // *** TODO: consider sending ?; if command not recognized
-  }
 
 public:
   CatControl(const CATCommand* const cmds, size_t size) : commands(cmds), numCmds(size) {}
@@ -98,35 +63,77 @@ public:
     if(idx > 0 && (millis() - lastCharTime > timeout)) idx = 0;
 
     while(link->available()) {
-      Serial.println("at 1");
       char c = link->read();
       lastCharTime = millis();
 
       if(c == ';') {
-        Serial.println("at 2");
-          cmd[idx] = '\0';
-          processCommand(cmd);
-          idx = 0;
-      } else if(idx < maxCmd) {
-          cmd[idx++] = c;
+        cmd[idx++] = ';';
+        cmd[idx] = '\0';
+        processCommand(cmd);
+        idx = 0;
+      } else if(idx < maxCmd - 1) { // leave room for ';' and '\0'
+        cmd[idx++] = c;
+      } else {
+        idx = 0;
       }
     }
   }
 
-  void SendCommand(const char* cmd) {
-    link->print(cmd);
+  void NotifyRemote(int item) {
+    uint16_t cat = catItems[item];
+    char cmd[4] = "xx;";
+
+    cmd[0] = static_cast<char>((cat & 0xFF00) >> 8);
+    cmd[1] = static_cast<char>(cat & 0xFF);
+    processCommand(cmd);
   }
 
 protected:
+  Stream* link = nullptr;
+  char cmd[maxCmd + 1];
+  char msg[maxMsg + 1];
+  uint8_t idx = 0;
+  unsigned long lastCharTime = 0;
+
+  void processCommand(const char* cmd) {
+    // convert the 2 character command code into a single uint16_t
+    uint16_t cmdCode = (static_cast<uint16_t>(cmd[0]) << 8) | static_cast<uint16_t>(cmd[1]);
+
+    // look for a match in dispatch table
+    for(size_t i = 0; i < numCmds; i++) {
+      const CATCommand& item = commands[i];
+
+      if(cmdCode == item.code) {
+        // CAT command found
+        bool isRead = false;
+
+        if(item.lenR != 0 && cmd[item.lenR-1] == ';') {
+          // read command properly formed
+          isRead = true;
+        } else if(item.lenS != 0 && cmd[item.lenS-1] == ';') {
+          // set command properly formed
+          isRead = false;
+        } else {
+          // command not properly formed
+          // *** TODO: consider sending followup if command not properly formed
+          return;
+        }
+        item.action.execute(this, cmd, isRead);
+        if(isRead) send(msg);
+        return;
+      }
+    }
+    // *** TODO: consider sending ?; if command not recognized
+  }
+
   // *** TODO: consider this against T41ControlSendMsg and if this should be virtual ***
   // *** can skip link null check as long as this is called only from update
   //void send(const char *msg) { if(link) link->print(msg); }
-  void send(const char *msg) { link->print(msg); }
+  void send(const char *msg);
 
   virtual void handleID(const char* cmd, bool isRead);
   virtual void ackIdReceipt() {}
 
-public:
   // handlers common to all radios
   void handleBD(const char* cmd, bool isRead);
   void handleBU(const char* cmd, bool isRead);

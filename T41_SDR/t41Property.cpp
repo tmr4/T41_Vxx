@@ -1,6 +1,7 @@
 
 #include "SDT.h"
 
+#include "catControl.h"
 #include "Display.h"
 #include "Encoders.h"
 #include "Noise.h"

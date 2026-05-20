@@ -191,6 +191,9 @@ void T41RemoteConnectCheck() {
   #endif
 
   #if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
+  if(!ethernetControl.connected()) {
+    connected = 0;
+  }
   //Serial.println("checking connection");
   //if(!connected || !ethernetControl.connected()) {
   if(!connected && (lasped > 5000)) {
@@ -382,7 +385,6 @@ void SendCommand(int value, int id) {
 
   switch(id) {
     case T41_ITEM_VOL:
-      //TogglePins();
       sprintf(cmd, "VO%03d;", value);
       break;
     case T41_ITEM_AGC:
@@ -511,8 +513,7 @@ void SendCommand(int value, int id) {
     default:
       return;
   }
-  //T41ControlSendCmd(cmd);
-  radio.SendCommand(cmd);
+  T41ControlSendCmd(cmd);
 }
 
 void SendID(bool request) {

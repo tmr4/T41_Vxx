@@ -47,28 +47,38 @@ void RemoteRadio::handleDP(const char* cmd, bool isRead) {
 // "FF;" (length 3) or "FFxxxxxxxxxxx;" (length 14)
 void RemoteRadio::handleFF(const char* cmd, bool isRead) {
   if(isRead) {
-    snprintf(msg, sizeof(msg), "FF%011lu;", (long)t41.NCOFreq);
+    snprintf(msg, sizeof(msg), "FF%011d;", (int)t41.NCOFreq);
   } else {
     t41.NCOFreq.Update(atol(&cmd[2]));
   }
 }
 
-// set center or fine tune frequency increment change
-// "FIx;" (length 4) x=0 center; x=1 fine tune
-void RemoteRadio::handleFI(const char* cmd, bool isRead) {
-  if(!isRead) {
-    if(cmd[2] == '0') {
-      ChangeFreqIncrement(atol(&cmd[3]) - t41.CenterTuneIndex, false);
-    } else if(cmd[2] == '1') {
-      ChangeFtIncrement(atol(&cmd[3]) - t41.FineTuneIndex, false);
-    }
+// read/set center or fine tune frequency increment change
+// "F0;" (length 3) or "F0x;" (length 4) x= index
+void RemoteRadio::handleF0(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "F0%d;", (int)t41.CenterTuneIndex);
+  } else {
+    ChangeFreqIncrement(atol(&cmd[3]) - t41.CenterTuneIndex, false);
   }
 }
 
-// toggle fine tune status, on/off
-// "FS;" (length 3)
+// read/set fine tune frequency increment change
+// "F1;" (length 3) or "F1x;" (length 4) x= index
+void RemoteRadio::handleF1(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "F1%d;", (int)t41.FineTuneIndex);
+  } else {
+    ChangeFtIncrement(atol(&cmd[3]) - t41.FineTuneIndex, false);
+  }
+}
+
+// read/set (toggle) fine tune status, on/off
+// "FS;" (length 3) of "FSx;" (length 4) x= 1 off, 0 on
 void RemoteRadio::handleFS(const char* cmd, bool isRead) {
-  if(!isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "FSF%d;", !(int)t41.MouseCenterTuneActive);
+  } else {
     t41.MouseCenterTuneActive.Update(!atoi(&cmd[2]));
     HighlightTuneInc();
   }
@@ -84,7 +94,7 @@ void RemoteRadio::handleFT(const char* cmd, bool isRead) {
 }
 
 // read/set AGC (non-standard Kenwood command)
-// "GTx;" (length 4) x=0 VFO A; x=1 VFO B
+// "GT;" (length 3) or "GTx;" (length 4) x=0 VFO A; x=1 VFO B
 void RemoteRadio::handleGT(const char* cmd, bool isRead) {
   if(isRead) {
     snprintf(msg, sizeof(msg), "GT%d;", (int)t41.AGCMode);
@@ -137,7 +147,7 @@ void RemoteRadio::handleMD(const char* cmd, bool isRead) {
 // "ME;" (length 3) or "MEx;" (length 4) x= operating mode (see SDT.h)
 void RemoteRadio::handleME(const char* cmd, bool isRead) {
   if(isRead) {
-    snprintf(msg, sizeof(msg), "MD%d;", (int)t41.DemodMode);
+    snprintf(msg, sizeof(msg), "ME%d;", (int)t41.DemodMode);
   } else {
     ChangeMode(atoi(&cmd[2]), -1, false);
     // SendAS(); // PC control specific ???
@@ -155,26 +165,35 @@ void RemoteRadio::handleNF(const char* cmd, bool isRead) {
   }
 }
 
-// set live noise floor
+// read/set live noise floor
+// "NG;" (length 3) or "NGx;" (length 4) x= 0 off, 1 on
 void RemoteRadio::handleNG(const char* cmd, bool isRead) {
-  if(!isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "NG%d;", (int)t41.LiveNoiseFloor);
+  } else {
     t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
     UpdateInfoBoxItem(T41_ITEM_FLOOR);
   }
 }
 
-// set high audio filter frequency
+// read/set high audio filter frequency
+// "NH;" (length 3) or "NHxxxxxxxxxxx;" (length 14)
 void RemoteRadio::handleNH(const char* cmd, bool isRead) {
-  if(!isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "NH%011d;", (int)t41.FilterHiCut);
+  } else {
     t41.FilterHiCut.Update(atol(&cmd[2]));
 
     CalcAudioFilters();
   }
 }
 
-// set low audio filter frequency
+// read/set low audio filter frequency
+// "NL;" (length 3) or "NLxxxxxxxxxxx;" (length 14)
 void RemoteRadio::handleNL(const char* cmd, bool isRead) {
-  if(!isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "NL%011d;", (int)t41.FilterLoCut);
+  } else {
     t41.FilterLoCut.Update(atol(&cmd[2]));
 
     CalcAudioFilters();
@@ -203,8 +222,11 @@ void RemoteRadio::handleNW(const char* cmd, bool isRead) {
 }
 
 // set noise filter
+// "N1;" (length 3) or "N1x;" (length 4) x= NR_OPTIONS
 void RemoteRadio::handleN1(const char* cmd, bool isRead) {
-  if(!isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "N1%d;", (int)t41.NoiseFilter);
+  } else {
     t41.NoiseFilter.Update(atoi(&cmd[2]));
     UpdateInfoBoxItem(T41_ITEM_FILTER);
   }
@@ -218,6 +240,16 @@ void RemoteRadio::handlePC(const char* cmd, bool isRead) {
   } else {
     t41.TxPower.Update(atoi(&cmd[2]));
     ShowCurrentPowerSetting();
+  }
+}
+
+// read/set RF gain
+// "PG;" (length 3) or "PGxxx;" (length 6) xxx= RF gain in db -60 to 10
+void RemoteRadio::handlePG(const char* cmd, bool isRead) {
+  if(isRead) {
+    snprintf(msg, sizeof(msg), "PG%+03d;", (int)t41.RFGain);
+  } else {
+    t41.RFGain.Update(atoi(&cmd[2]));
   }
 }
 
@@ -263,7 +295,6 @@ void RemoteRadio::handleSM(const char* cmd, bool isRead) {
 // read/set volume
 // "VO;" (length 3) or "VOxxx;" (length 6) xxx= volume 0-100
 void RemoteRadio::handleVO(const char* cmd, bool isRead) {
-  Serial.println("at VO");
   if(isRead) {
     snprintf(msg, sizeof(msg), "VO%03d;", (int)t41.AudioVolume);
   } else {
@@ -290,8 +321,9 @@ const CATCommand RemoteRadio::catCommands[] = {
   {"FB"_cat, 3, 14, RemoteRadio::handleFB_Wrapper},   // read/set VFO B frequency
   {"FC"_cat, 3, 14, RemoteRadio::handleFC_Wrapper},   // read/set current VFO center frequency
   {"FF"_cat, 3, 14, RemoteRadio::handleFF_Wrapper},   // read/set NCO frequency offset
-  {"FI"_cat, 0,  4, RemoteRadio::handleFI_Wrapper},   // set center or fine tune increment change
-  {"FS"_cat, 0,  3, RemoteRadio::handleFS_Wrapper},   // toggle fine tune status
+  {"F0"_cat, 3,  4, RemoteRadio::handleF0_Wrapper},   // set center or fine tune increment change
+  {"F1"_cat, 3,  4, RemoteRadio::handleF1_Wrapper},   // set center or fine tune increment change
+  {"FS"_cat, 3,  3, RemoteRadio::handleFS_Wrapper},   // toggle fine tune status
   {"FT"_cat, 0,  4, RemoteRadio::handleFT_Wrapper},   // set VFO A or B
   {"GT"_cat, 3,  4, RemoteRadio::handleGT_Wrapper},   // read/set AGC
   {"ID"_cat, 3,  6, RemoteRadio::handleID_Wrapper},   // read radio ID
@@ -299,13 +331,14 @@ const CATCommand RemoteRadio::catCommands[] = {
   {"MD"_cat, 3,  4, RemoteRadio::handleMD_Wrapper},   // read/set demod mode
   {"ME"_cat, 3,  4, RemoteRadio::handleME_Wrapper},   // read/set operating mode
   {"NF"_cat, 3,  7, RemoteRadio::handleNF_Wrapper},   // read/set noise floor
-  {"NG"_cat, 0,  4, RemoteRadio::handleNG_Wrapper},   // set live noise floor
-  {"NH"_cat, 0, 14, RemoteRadio::handleNH_Wrapper},   // set high audio filter frequency
-  {"NL"_cat, 0, 14, RemoteRadio::handleNL_Wrapper},   // set low audio filter frequency
+  {"NG"_cat, 3,  4, RemoteRadio::handleNG_Wrapper},   // set live noise floor
+  {"NH"_cat, 3, 14, RemoteRadio::handleNH_Wrapper},   // set high audio filter frequency
+  {"NL"_cat, 3, 14, RemoteRadio::handleNL_Wrapper},   // set low audio filter frequency
   {"NS"_cat, 0,  5, RemoteRadio::handleNS_Wrapper},   // inc/dec audio filter
   {"NW"_cat, 0,  3, RemoteRadio::handleNW_Wrapper},   // set 0.5kHz-1.5kHz audio filter
-  {"N1"_cat, 0,  4, RemoteRadio::handleN1_Wrapper},   // set noise filter
+  {"N1"_cat, 3,  4, RemoteRadio::handleN1_Wrapper},   // set noise filter
   {"PC"_cat, 3,  5, RemoteRadio::handlePC_Wrapper},   // read/set transmit power level
+  {"PG"_cat, 3,  6, RemoteRadio::handlePG_Wrapper},   // read/set RF gain
   {"SM"_cat, 3,  4, RemoteRadio::handleSM_Wrapper},   // read S-meter
   {"TM"_cat, 0, 14, RemoteRadio::handleTM_Wrapper},   // set Teensy RTC
   {"VO"_cat, 3,  6, RemoteRadio::handleVO_Wrapper},   // read/set volume

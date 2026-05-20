@@ -21,19 +21,19 @@ private:
 
 class T41Update {
   typedef void (*FuncPtrInt)(int);
-  typedef void (*FuncPtr2Int)(int, int);
+  //typedef void (*FuncPtr2Int)(int, int);
 
 public:
   T41Update() {}
 
-  static void SetUpdateFunctions(FuncPtrInt ib, FuncPtr2Int rm) {
+  static void SetUpdateFunctions(FuncPtrInt ib, FuncPtrInt rm) {
     fPtrInfoBox = ib;
     fPtrRemote = rm;
   }
 
 protected:
   static inline FuncPtrInt fPtrInfoBox = NULL;
-  static inline FuncPtr2Int fPtrRemote = NULL;
+  static inline FuncPtrInt fPtrRemote = NULL;
 
 private:
 };
@@ -111,7 +111,7 @@ public:
       Notify();
     } else if((hasChanged && notifyOnPoll)) {
       if(updateDisplay) UpdateDisplay();
-      if(updateRemote && (T41Update::fPtrRemote != NULL) && (id >= 0)) (*T41Update::fPtrRemote)(value, id);
+      if(updateRemote) UpdateRemote();
     } else if(updated) {
       if(updateDisplay) UpdateDisplay();
     }
@@ -149,7 +149,11 @@ public:
 protected:
   FLASHMEM void Notify() {
     UpdateDisplay();
-    if((T41Update::fPtrRemote != NULL) && (id >= 0)) (*T41Update::fPtrRemote)(value, id);
+    UpdateRemote();
+  }
+
+  FLASHMEM void UpdateRemote() {
+    if((T41Update::fPtrRemote != NULL) && (id >= 0)) (*T41Update::fPtrRemote)(id);
   }
 
   FLASHMEM void UpdateDisplay() {

@@ -71,6 +71,7 @@ typedef __uint8_t uint8_t;
 // id for various radio elements
 // used mainly to identify element for display and remote updates
 // T41_ITEM_VOL to T41_ITEM_LOAD are info box items
+#define T41_ITEMS             37
 #define T41_ITEM_VOL          0
 #define T41_ITEM_AGC          1
 #define T41_ITEM_TUNE         2

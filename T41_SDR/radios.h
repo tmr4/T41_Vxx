@@ -11,7 +11,7 @@
 
 class RemoteRadio : public CatControl {
 private:
-  static constexpr size_t CMD_COUNT = 28;
+  static constexpr size_t CMD_COUNT = 30;
   static const CATCommand catCommands[CMD_COUNT];
 
 public:
@@ -24,7 +24,8 @@ private:
   void handleDP(const char* cmd, bool isRead);
   void handleDS(const char* cmd, bool isRead);
   void handleFF(const char* cmd, bool isRead);
-  void handleFI(const char* cmd, bool isRead);
+  void handleF0(const char* cmd, bool isRead);
+  void handleF1(const char* cmd, bool isRead);
   void handleFS(const char* cmd, bool isRead);
   void handleFT(const char* cmd, bool isRead);
   void handleGT(const char* cmd, bool isRead);
@@ -39,6 +40,7 @@ private:
   void handleNW(const char* cmd, bool isRead);
   void handleN1(const char* cmd, bool isRead);
   void handlePC(const char* cmd, bool isRead);
+  void handlePG(const char* cmd, bool isRead);
   void handleSM(const char* cmd, bool isRead);
   void handleVO(const char* cmd, bool isRead);
   void handleZM(const char* cmd, bool isRead);
@@ -52,7 +54,8 @@ public:
   DEFINE_CAT_ACTION(RemoteRadio, handleFB);
   DEFINE_CAT_ACTION(RemoteRadio, handleFC);
   DEFINE_CAT_ACTION(RemoteRadio, handleFF);
-  DEFINE_CAT_ACTION(RemoteRadio, handleFI);
+  DEFINE_CAT_ACTION(RemoteRadio, handleF0);
+  DEFINE_CAT_ACTION(RemoteRadio, handleF1);
   DEFINE_CAT_ACTION(RemoteRadio, handleFS);
   DEFINE_CAT_ACTION(RemoteRadio, handleFT);
   DEFINE_CAT_ACTION(RemoteRadio, handleGT);
@@ -68,6 +71,7 @@ public:
   DEFINE_CAT_ACTION(RemoteRadio, handleNW);
   DEFINE_CAT_ACTION(RemoteRadio, handleN1);
   DEFINE_CAT_ACTION(RemoteRadio, handlePC);
+  DEFINE_CAT_ACTION(RemoteRadio, handlePG);
   DEFINE_CAT_ACTION(RemoteRadio, handleSM);
   DEFINE_CAT_ACTION(RemoteRadio, handleTM);
   DEFINE_CAT_ACTION(RemoteRadio, handleVO);
