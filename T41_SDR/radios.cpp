@@ -399,6 +399,10 @@ void WSJTXRadio::handleFT(const char* cmd, bool isRead) {
   }
 }
 
+// read radio ID
+// "ID;" (length 3), Answer: "IDxxx;" (length 6)
+// Kenwood TS-890S: ID024; // *** WSJT-X expects this even when TS-2000 is selected ***
+// Kenwood TS-2000: ID019;
 void WSJTXRadio::handleID(const char* cmd, bool isRead) {
   if(isRead) {
     // receipt of ID command will switch to FT8 Data mode if not already there

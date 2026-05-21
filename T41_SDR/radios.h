@@ -1,5 +1,45 @@
+#pragma once
 
 #include "catControl.h"
+
+/*
+
+Classes derived from CatControl define the specific CAT commands supported
+by the child class.  These are defined in functions of the form:
+
+   void supportedCommand(const char* cmd, bool isRead) {}
+
+and a helping macro of the form (defined in catControl.H):
+
+    DEFINE_CAT_ACTION(childClass, supportedCommand);
+
+Finally, the child class must define two members that will be passed to the
+parent class on construction: catCommands, an array of CATCommand, one for each
+CAT command the class supports, and CMD_COUNT, the total number of commands supported.
+
+The catCommands array is initialized as follows:
+
+const CATCommand RemoteRadio::catCommands[] = {
+  {"XX"_cat, readLength,  setLength, childClass::supportedCommand_Wrapper},
+  ...,
+  ...
+};
+
+where:
+  "XX" is a 2 character CAT command supported by the class
+
+  _cat required helper function to turn convert 2 character CAT commands into a uint16_t
+
+  readLength is the length of the read CAT command, including the required terminating semicolon.
+  setLength is the length of the set CAT command, including the required terminating semicolon.
+  *** set the command length to 0 if read or set isn't supported for the command ***
+
+  childClass::supportedCommand is the fully qualified method associated with the CAT command
+
+  _Wrapper is a helper macro that creates the method the parent will call to execute
+           supportedCommand in response to a received CAT command
+
+*/
 
 //-------------------------------------------------------------------------------------------------------------
 // Data

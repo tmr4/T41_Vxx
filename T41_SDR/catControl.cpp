@@ -52,7 +52,7 @@ void T41ControlSetup() {
 }
 
 void SendCommand(int id) {
-  radio.NotifyRemote(id);
+  radio.notifyRemote(id);
 }
 
 // band down
@@ -124,9 +124,8 @@ void CatControl::handleFC(const char* cmd, bool isRead) {
 }
 
 // read radio ID
-// "ID;" (length 3) or "IDxxx;" (length 6)
-// Kenwood TS-890S: ID024; // *** WSJT-X expects this even when TS-2000 is selected ***
-// Kenwood TS-2000: ID019;
+// "ID;" (length 3), Answer: "IDxxx;" (length 6)
+// *** ackIdReceipt is provided to acknowledge receipt of a properly formated reply ***
 void CatControl::handleID(const char* cmd, bool isRead) {
   if(isRead) {
     snprintf(msg, sizeof(msg), "ID%03d;", (int)t41.RadioID);
@@ -188,7 +187,7 @@ const uint16_t CatControl::catItems[T41_ITEMS] {
   "xx"_cat    // T41_ITEM_CW_DECODER   36
 };
 
-void CatControl::send(const char *msg) {
-  link->print(msg);
-  //ethernetControl.flush();
-}
+//void CatControl::send(const char *msg) {
+//  link->print(msg);
+//  //ethernetControl.flush();
+//}

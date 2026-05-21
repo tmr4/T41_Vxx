@@ -1,3 +1,4 @@
+#pragma once
 
 #include <Stream.h>
 
@@ -7,16 +8,18 @@
 
 void T41RemoteConnectCheck();
 
-//-------------------------------------------------------------------------------------------------------------
-// Data
-//-------------------------------------------------------------------------------------------------------------
+class CatControl;
 
 void SendCommand(int id);
 
-class CatControl;
+void T41ControlSetup();
+
+//-------------------------------------------------------------------------------------------------------------
+// Helpers
+//-------------------------------------------------------------------------------------------------------------
 
 struct CATAction {
-  virtual void execute(CatControl* instance, const char* cmd, bool read) const = 0;
+  virtual void execute(CatControl* instance, const char* cmd, bool isRead) const = 0;
 };
 
 struct CATCommand {
@@ -33,7 +36,33 @@ struct CATCommand {
   }; \
   static inline Action_##MethodName MethodName##_Wrapper;
 
-class CatControl : public Stream {
+// convert 2 character CAT commands into a uint16_t
+constexpr uint16_t operator "" _cat(const char* str, size_t len) {
+    return (static_cast<uint16_t>(str[0]) << 8) | static_cast<uint16_t>(str[1]);
+}
+
+//-------------------------------------------------------------------------------------------------------------
+// Data
+//-------------------------------------------------------------------------------------------------------------
+
+/*
+
+CatControl creates the framework for CAT control support. It provides the following public methods:
+
+  setLink: sets a pointer to the Stream derived communication object
+
+  update: checks for and processes available CAT commands according to command table provided by child class (see radio.h)
+          *** update must be called frequently to check for available commands         ***
+          *** calls to update must observe any restrictions of the Stream object used. ***
+          *** For example, update can't be call from an interrupt for an Ethernet      ***
+          *** Stream object.                                                           ***
+
+  notifyRemote: processes CAT command associated with specific item in catItems array
+                *** handy for notifying remote unit about changes to radio properties ***
+
+*/
+
+class CatControl {
 private:
   const CATCommand* const commands;
   const size_t numCmds;
@@ -48,11 +77,6 @@ public:
   virtual ~CatControl() {}
 
   void setLink(Stream& s) { link = &s; }
-
-  int available() override { if(link) return link->available(); else return 0; }
-  int read() override { if(link) return link->read(); else return -1; }
-  int peek() override { if(link) return link->peek(); else return -1; }
-  size_t write(uint8_t c) { if(link) return link->write(c); else return -1;}
 
   void update() {
     if(!link) return;
@@ -79,7 +103,7 @@ public:
     }
   }
 
-  void NotifyRemote(int item) {
+  void notifyRemote(int item) {
     uint16_t cat = catItems[item];
     char cmd[4] = "xx;";
 
@@ -90,8 +114,8 @@ public:
 
 protected:
   Stream* link = nullptr;
-  char cmd[maxCmd + 1];
-  char msg[maxMsg + 1];
+  char cmd[maxCmd + 1]; // leave room for terminating null
+  char msg[maxMsg + 1]; // leave room for terminating null
   uint8_t idx = 0;
   unsigned long lastCharTime = 0;
 
@@ -128,8 +152,8 @@ protected:
 
   // *** TODO: consider this against T41ControlSendMsg and if this should be virtual ***
   // *** can skip link null check as long as this is called only from update
-  //void send(const char *msg) { if(link) link->print(msg); }
-  void send(const char *msg);
+  void send(const char *msg) { if(link) link->print(msg); }
+  //void send(const char *msg);
 
   virtual void handleID(const char* cmd, bool isRead);
   virtual void ackIdReceipt() {}
@@ -146,13 +170,6 @@ protected:
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-// convert 2 character CAT commands into a uint16_t
-constexpr uint16_t operator "" _cat(const char* str, size_t len) {
-    return (static_cast<uint16_t>(str[0]) << 8) | static_cast<uint16_t>(str[1]);
-}
-
-void T41ControlSetup();
 
 /*
 // common commands for adding to radio specific dispatch tables
