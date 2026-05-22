@@ -57,14 +57,9 @@ void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress&
 
 class AudioInputTCP : public AudioStream {
 public:
-  AudioInputTCP(int port) : AudioStream(0, nullptr), _port(port) {}
+  AudioInputTCP() : AudioStream(0, nullptr) {}
 
-  void begin() {
-    if(!enabled) {
-      InitEthernet(clientIP, subnet, gateway); // configure static IP
-      enabled = true;
-    }
-  }
+  void begin() { enabled = true; }
 	void end() { enabled = false; }
 
   // send queued data to stream
@@ -91,15 +86,14 @@ public:
     audio_block_t *blockL, *blockR;
     int h, n;
 
-    if(enabled) {
-      TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
-
+    if(client) {
       Ethernet.loop();
 
-      if(_client) {
-        //int avail = _client.available();
+      if(enabled) {
+        TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+        //int avail = client->available();
         h = (head + 1) % maxBlocks;
-        while((_client.available() >= blockSize) && (h != tail)) {
+        while((client->available() >= blockSize) && (h != tail)) {
           TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
           // we have sufficient data to queue
           blockL = allocate();
@@ -114,8 +108,8 @@ public:
           }
 
           TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-          n = _client.read((uint8_t *)blockL->data, blockSize / 2);
-          n += _client.read((uint8_t *)blockR->data, blockSize / 2);
+          n = client->read((uint8_t *)blockL->data, blockSize / 2);
+          n += client->read((uint8_t *)blockR->data, blockSize / 2);
           if(n < blockSize) {
             // read error
             release(blockL);
@@ -138,28 +132,17 @@ public:
           //avail -= blockSize;
         }
       } else {
-        // non-blocking reconnection
-        static unsigned long lastConnectCheck = 0;
-
-        if (millis() - lastConnectCheck > 2000) {
-          lastConnectCheck = millis();
-          _client.abort(); // Clear out old locks
-          _client.setConnectionTimeoutEnabled(false);
-          _client.connect(serverIP, _port);
-          _client.setNoDelay(true);
+        uint8_t dump;
+        // empty Ethernet buffer
+        while(client->available()) {
+          TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+          client->read(&dump, 1);
         }
-      }
 
-      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-      RESETPROFILEPIN(PROFILER_DECODE_FT8);
-      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-      RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
-    } else {
-      uint8_t dump[512];
-      // empty Ethernet buffer
-      while(_client.available() > blockSize) {
-        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-        _client.read(dump, blockSize);
+        RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+        RESETPROFILEPIN(PROFILER_DECODE_FT8);
+        RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+        RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
       }
     }
   }
@@ -169,21 +152,13 @@ private:
 	//static constexpr int maxBlocks = 200;
   bool enabled = false;
 
-  //EthernetClient *_client = nullptr;
-  EthernetClient _client; // this persistent instance keeps the connection alive
-
-  // Network configuration for the Client
-  const IPAddress clientIP{192, 168, 1, 101}; // Must be different from Server
-  const IPAddress subnet{255, 255, 255, 0};
-  const IPAddress gateway{192, 168, 1, 1};
-
-  // Target Server Configuration
-  const IPAddress serverIP{192, 168, 1, 100};
-  int _port;
+  EthernetClient *client;
 
 	audio_block_t * volatile queue[maxBlocks][2];
 	volatile uint8_t head = 0;
 	volatile uint8_t tail = 0;
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
+
+  friend class ConnectManager;
 };

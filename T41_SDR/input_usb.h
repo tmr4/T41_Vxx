@@ -107,6 +107,8 @@ public:
 private:
   bool enabled = false;
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
+
+  friend class ConnectManager;
 };
 
 using AudioInputSerial = AudioInputSerialT< usb_serial_available, usb_serial_read >;

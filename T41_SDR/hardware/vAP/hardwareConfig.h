@@ -84,7 +84,7 @@
 #define CAT_CONTROL_T41_USB_HOST  false
 #define REC_IQ_FROM_T41_USB       false
 #define SEND_IQ_TO_REMOTE_USB     false
-
+/*
 // automatically configure radio for selected remote operation and services
 #if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 5)
   #undef DEVICE_REMOTE_OPS_MODE
@@ -166,3 +166,4 @@
     #endif
   #endif
 #endif
+*/

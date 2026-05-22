@@ -2,6 +2,9 @@
 
 #include <Audio.h>
 
+#include "input_tcp.h"
+#include "output_tcp.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -21,6 +24,18 @@ extern AudioPlayQueue Q_out_R;
 extern AudioPlayQueue Q_out_L_Ex;
 extern AudioPlayQueue Q_out_R_Ex;
 
+#if REMOTE_AUDIO_DATA
+  #if DEVICE_REMOTE_OPS_MODE == 2
+  extern AudioInputSerial1 iqStream;
+  #elif DEVICE_REMOTE_OPS_MODE == 3
+  extern AudioOutputHostSerial iqStream;
+  #elif DEVICE_REMOTE_OPS_MODE == 4
+  extern AudioInputTCP iqStream;
+  #elif DEVICE_REMOTE_OPS_MODE == 5
+  extern AudioOutputTCP iqStream;
+  #endif
+#endif
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -34,3 +49,18 @@ void SetupMicCompressors(boolean use_HP_filter, float knee_dBFS, float comp_rati
 void StartAudioStats();
 void EndAudioStats();
 #endif
+
+inline void __attribute__((always_inline)) YieldToEthernet() {
+  //if(t41.RemoteStatus == REMOTE_CONNECTED)
+  {
+#if REMOTE_AUDIO_DATA
+  #if DEVICE_REMOTE_OPS_MODE == 2
+  #elif DEVICE_REMOTE_OPS_MODE == 3
+  #elif DEVICE_REMOTE_OPS_MODE == 4
+  iqStream.read();
+  #elif DEVICE_REMOTE_OPS_MODE == 5
+  iqStream.write();
+  #endif
+#endif
+  }
+}

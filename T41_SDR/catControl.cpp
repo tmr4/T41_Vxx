@@ -19,37 +19,11 @@ using namespace qindesign::network;
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
-EthernetClient ethernetControl;
 RemoteRadio radio;
-#endif
-#if SEND_IQ_TO_REMOTE_ETHER
-EthernetServer ethernetServerControl(80);
-#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-void T41ControlSetup() {
-#if REC_IQ_FROM_T41_ETHER || SEND_IQ_TO_REMOTE_ETHER
-  const IPAddress clientIP{192, 168, 1, 101};
-  const IPAddress subnet{255, 255, 255, 0};
-  const IPAddress gateway{192, 168, 1, 1};
-  const IPAddress serverIP{192, 168, 1, 100};
-#if REC_IQ_FROM_T41_ETHER
-  // Remote Ethernet Client
-  InitEthernet(clientIP, subnet, gateway);
-#elif SEND_IQ_TO_REMOTE_ETHER
-  // T41 Ethernet Server
-  InitEthernet(serverIP, subnet, gateway);
-  ethernetServerControl.begin(80);
-#endif
-  ethernetControl.setConnectionTimeoutEnabled(false);
-  ethernetControl.setNoDelay(true);
-  radio.setLink(ethernetControl);
-#endif
-}
 
 void SendCommand(int id) {
   radio.notifyRemote(id);
@@ -132,6 +106,7 @@ void CatControl::handleID(const char* cmd, bool isRead) {
   } else {
     ackIdReceipt();
   }
+  heatbeart = millis(); // note time for heartbeat
 }
 
 // set Teensy RTC

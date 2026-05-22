@@ -48,6 +48,7 @@
 #include "t41USBHost.h"
 #include "wsjt.h"
 
+#include "connectManager.h"
 #include "radios.h"
 
 // *** need to pull what we want from these ***
@@ -57,6 +58,8 @@
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+ConnectManager transport;
 
 extern RemoteRadio radio;
 
@@ -293,7 +296,13 @@ FLASHMEM void setup() {
   //WSJTControlSetup();
 
 #if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
-  T41ControlSetup();
+  //T41ControlSetup();
+#endif
+
+#if DEVICE_REMOTE_OPS_MODE == 4
+  transport.begin(DeviceRole::ROLE_REMOTE);
+#elif DEVICE_REMOTE_OPS_MODE == 5
+  transport.begin(DeviceRole::ROLE_MAIN);
 #endif
 
   KeyerSetup(); // testing only
@@ -408,6 +417,7 @@ FASTRUN void loop() {
 #if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
   //T41ControlLoop();
   radio.update();
+  transport.update();
 #endif
 
   // check for UI button press and process accordingly

@@ -6,13 +6,9 @@
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
-void T41RemoteConnectCheck();
-
 class CatControl;
 
 void SendCommand(int id);
-
-void T41ControlSetup();
 
 //-------------------------------------------------------------------------------------------------------------
 // Helpers
@@ -80,8 +76,6 @@ public:
 
   void update() {
     if(!link) return;
-
-    T41RemoteConnectCheck();
 
     // timeout
     if(idx > 0 && (millis() - lastCharTime > timeout)) idx = 0;
@@ -165,6 +159,11 @@ protected:
   void handleFB(const char* cmd, bool isRead);
   void handleFC(const char* cmd, bool isRead);
   void handleTM(const char* cmd, bool isRead);
+
+private:
+  unsigned long heatbeart = 0;
+
+  friend class ConnectManager;
 };
 
 //-------------------------------------------------------------------------------------------------------------

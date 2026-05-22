@@ -101,4 +101,6 @@ private:
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   audio_block_t *inputQueueArray[2];
+
+  friend class ConnectManager;
 };
