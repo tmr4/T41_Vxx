@@ -23,6 +23,14 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+typedef struct {
+  const char *mapNames;
+  float lat;
+  float lon;
+} maps;
+
+extern const maps myMapFiles[];
+
 #define Si_5351_crystal     25000000L
 
 // Audio chain configuration options

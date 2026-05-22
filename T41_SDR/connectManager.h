@@ -22,7 +22,7 @@ enum LinkState { LINK_DISCONNECTED, LINK_CHECK_HARDWARE, LINK_CONNECTED, LINK_LO
 
 class ConnectManager {
 private:
-  DeviceRole localRole = ROLE_MAIN;
+  DeviceRole role = ROLE_MAIN;
   LinkState linkState = LINK_DISCONNECTED;
   ConnectMode connectMode = CONNECT_NONE;
 
@@ -36,18 +36,11 @@ private:
   const IPAddress gateway{192, 168, 1, 1};
   const IPAddress serverIP{192, 168, 1, 100};
 
-public:
-  ConnectManager(uint16_t cPort = 8000, uint16_t dPort = 8001) :
-    cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort), tcpDataServer(dPort),
-    usbHostSerial1(usbHost), usbHostSerial2(usbHost) {}
-
-  void begin(DeviceRole role) {
-    localRole = role;
-
+  void begin() {
     Serial.begin(115200);
     SerialUSB1.begin(115200);
 
-    if(localRole == ROLE_MAIN) {
+    if(role == ROLE_MAIN) {
       initEthernet(serverIP);
       tcpCmdServer.begin(cmdPort);
       tcpDataServer.begin(dataPort);
@@ -59,9 +52,39 @@ public:
     tcpDataClient.setConnectionTimeoutEnabled(false);
     tcpDataClient.setNoDelay(true);
     usbHost.begin();
+    enabled = true;
   }
 
-  void update() {
+public:
+  ConnectManager(uint16_t cPort = 8000, uint16_t dPort = 8001) :
+    cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort), tcpDataServer(dPort),
+    usbHostSerial1(usbHost), usbHostSerial2(usbHost) {}
+
+  void begin(DeviceRole _role, CatControl *control, AudioOutputTCP *stream) {
+    role = _role;
+    if(control && stream) {
+      catControl = control;
+      tcpOuput = stream;
+    } else {
+      return;
+    }
+    begin();
+  }
+
+  void begin(DeviceRole _role, CatControl *control, AudioInputTCP *stream) {
+    role = _role;
+    if(control && stream) {
+      catControl = control;
+      tcpInput = stream;
+    } else {
+      return;
+    }
+    begin();
+  }
+
+  bool update() {
+    if(!enabled) return false;
+    //Serial.println("at 1");
     usbHost.Task();
 
     unsigned long now = millis();
@@ -75,26 +98,32 @@ public:
         case LINK_LOST:           handleLinkLost();       break;
       }
     }
+    //Serial.print("at 2: "); Serial.println(linkState);
+    if(linkState != LINK_CONNECTED) delay(10);
+    return linkState == LINK_CONNECTED;
   }
 
+  bool isRemoteRole() const { return role == ROLE_REMOTE; }
   //bool isDataLineActive() const { return linkState == LINK_CONNECTED; }
   //Stream* getCommandStream() { return commandStreamPointer; }
   //Stream* getDataStream() { return dataStreamPointer; }
   //ConnectMode getActiveMode() const { return connectMode; }
 
 private:
+  bool enabled = false;
+
   // Remote Control
-  CatControl *catControl;
+  CatControl *catControl = nullptr;
 
   // Remote Audio - Remote IQ data stream:
   // The T41 IQ data stream is transfered to a remote unit over USB Host/Ethernet. The remote
   // unit receives the data on USB serial/Ethernet. The specific objects are declared below
   // based on the mode selected in the hardware config file, hardwareConfig.h, for each unit.
   //AudioStream audioStream;
-  AudioInputSerial1 *usbInput;
-  AudioOutputHostSerial *usbOutput;
-  AudioInputTCP *tcpInput;
-  AudioOutputTCP *tcpOuput;
+  AudioInputSerial1 *usbInput = nullptr;
+  AudioOutputHostSerial *usbOutput = nullptr;
+  AudioInputTCP *tcpInput = nullptr;
+  AudioOutputTCP *tcpOuput = nullptr;
 
   unsigned long pollTimer = 0;
   unsigned long lastHeartbeat = 0;
@@ -112,6 +141,8 @@ private:
   EthernetServer tcpDataServer;
   EthernetClient tcpDataClient;
 
+  bool isInitialized = false;
+
   // USB Host pipelines
   USBHost usbHost;
   USBSerial_BigBuffer usbHostSerial1; // data
@@ -123,7 +154,7 @@ private:
     // *** !Serial is not a reliable indicator of a disconnect ***
     //connected = Serial.dtr();
 
-    //return (localRole == ROLE_MAIN) ? (usbHostSerial1 && usbHostSerial2)
+    //return (role == ROLE_MAIN) ? (usbHostSerial1 && usbHostSerial2)
     //        : (Serial && bool(Serial) && SerialUSB1 && bool(SerialUSB1));
     return false; // testing Ethernet connection
   }
@@ -132,7 +163,7 @@ private:
 
   void handleDisconnected() {
     catControl->link = nullptr;
-    if(localRole == ROLE_MAIN) {
+    if(role == ROLE_MAIN) {
       tcpOuput->client = nullptr;
     } else {
       tcpInput->client = nullptr;
@@ -141,8 +172,7 @@ private:
     if(checkUsbPhysicalLink()) {
       connectMode = CONNECT_USB;
       linkState = LINK_CHECK_HARDWARE;
-    }
-    else if(checkEthernetPhysicalLink()) {
+    } else if(checkEthernetPhysicalLink()) {
       connectMode = CONNECT_ETHERNET;
       linkState = LINK_CHECK_HARDWARE;
     }
@@ -159,11 +189,11 @@ private:
     }
 
     if(connectMode == CONNECT_USB) {
-      //catControl->setLink((localRole == ROLE_MAIN) ? &usbHostSerial2 : &SerialUSB1);
-      //tcpOuput->client = (localRole == ROLE_MAIN) ? &usbHostSerial1 : &Serial;
+      //catControl->setLink((role == ROLE_MAIN) ? &usbHostSerial2 : &SerialUSB1);
+      //tcpOuput->client = (role == ROLE_MAIN) ? &usbHostSerial1 : &Serial;
       //setConnected();
     } else if(connectMode == CONNECT_ETHERNET) {
-      if(localRole == ROLE_MAIN) {
+      if(role == ROLE_MAIN) {
         // Server - CAT command port controls connection progression
         if(!tcpCmdClient || !tcpCmdClient.connected()) {
           //tcpCmdClient = tcpCmdServer.available();
@@ -179,20 +209,19 @@ private:
 
           if(tcpDataClient && tcpDataClient.connected()) {
             catControl->link = &tcpCmdClient;
-            if(localRole == ROLE_MAIN) {
-              tcpOuput->client = &tcpDataClient;
-            } else {
-              tcpInput->client = &tcpDataClient;
-            }
+            tcpOuput->client = &tcpDataClient;
             setConnected();
           }
         }
       } else {
         // Client - CAT command channel controls connection progression
         unsigned long now = millis();
+        //Serial.println("at 3a");
 
         if(!tcpCmdClient.connected() && !tcpCmdClient.connecting()) {
+          //Serial.println("at 3");
           if(now - tcpRetryTimer >= TCP_RETRY_INTERVAL) {
+            //Serial.println("at 4");
             tcpRetryTimer = now;
             //tcpCmdClient.connectNoWait(serverIP, cmdPort);
             tcpCmdClient.abort(); // Clear out old locks
@@ -205,20 +234,19 @@ private:
         // data port connects only after cmd port connects
         if(tcpCmdClient.connected()) {
           if(!tcpDataClient.connected() && !tcpDataClient.connecting()) {
+            //Serial.println("at 5");
             //tcpDataClient.connectNoWait(serverIP, dataPort);
             tcpDataClient.abort(); // Clear out old locks
             tcpDataClient.setConnectionTimeoutEnabled(false);
-            tcpDataClient.connect(serverIP, cmdPort);
+            //tcpDataClient.connect(serverIP, cmdPort);
+            tcpDataClient.connect(serverIP, dataPort);
             tcpDataClient.setNoDelay(true);
           }
 
           if(tcpDataClient.connected()) {
+            //Serial.println("at 6");
             catControl->link = &tcpCmdClient;
-            if(localRole == ROLE_MAIN) {
-              tcpOuput->client = &tcpDataClient;
-            } else {
-              tcpInput->client = &tcpDataClient;
-            }
+            tcpInput->client = &tcpDataClient;
             setConnected();
           }
         }
@@ -251,7 +279,7 @@ private:
     if(connectMode == CONNECT_ETHERNET) {
       tcpCmdClient.stop();
       tcpDataClient.stop();
-      if(localRole == ROLE_MAIN) {
+      if(role == ROLE_MAIN) {
         tcpOuput->client = nullptr;
       } else {
         tcpInput->client = nullptr;
@@ -275,27 +303,23 @@ private:
   void checkHeartbeat(bool reset = false) {
     unsigned long now = millis();
 
-    if(catControl != nullptr) {
-      if(reset) {
-        lastHeartbeat = now;
-        lastHbTX = now;
-      } else {
-        lastHeartbeat = catControl->heatbeart;
-      }
+    if(reset) {
+      lastHeartbeat = now;
+      lastHbTX = now;
+    } else {
+      lastHeartbeat = catControl->heatbeart;
+    }
 
-      if(now - lastHbTX >= HEARTBEAT_INTERVAL) {
-        lastHbTX = now;
-        catControl->send("ID;");
-      }
-      if(now - lastHeartbeat > HEARTBEAT_TIMEOUT) {
-        setLinkLost();
-      }
+    if(now - lastHbTX >= HEARTBEAT_INTERVAL) {
+      lastHbTX = now;
+      catControl->send("ID;");
+    }
+    if(now - lastHeartbeat > HEARTBEAT_TIMEOUT) {
+      //setLinkLost();
     }
   }
 
   void initEthernet(const IPAddress& ip) {
-    static bool isInitialized = false;
-
     if(isInitialized) return; // skip if already started
 
     Ethernet.begin(ip, subnet, gateway);

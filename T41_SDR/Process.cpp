@@ -22,7 +22,7 @@
 #include "Process.h"
 #include "psk31.h"
 #include "Tune.h"
-#include "t41Control.h"
+//#include "t41Control.h"
 #include "t41USBHost.h"
 #include "Utility.h"
 
@@ -35,8 +35,6 @@
 //-------------------------------------------------------------------------------------------------------------
 
 extern RemoteRadio radio;
-
-extern bool sendGet;
 
 // *** TODO: this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
@@ -323,9 +321,9 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // this is still helpful for troubleshooting at times when the audio process isn't working correctly
   // *** TODO: needed for current state of internal FT8 decoding, DEMOD_FT8_INTERNAL, hangs otherwise, though interrupts work ***
   if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
-    if(sendGet) {
-      Serial.println("clearing @ ProcessReceiverData ...");
-    }
+    //if(sendGet) {
+    //  Serial.println("clearing @ ProcessReceiverData ...");
+    //}
     Q_in_L.clear();
     Q_in_R.clear();
     t41.DroppedBlock = 1;
@@ -709,13 +707,13 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   }
 
   // send audio data to control app if applicable
-  if(updateFreqSpec && controlDataFlag) {
+  //if(updateFreqSpec && controlDataFlag) {
     //for(int i = 0; i < AUDIO_SPEC_RES; i++) {
     //  // audioYPixel is already >= 0, limit it to 255
     //  specData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
     //}
     //T41ControlSendData(specData, AUDIO_SPEC_RES);
-  }
+  //}
 
 #ifdef T41_REMOTE_DISPLAY
   if(connected) {
@@ -992,6 +990,7 @@ FASTRUN void ProcessControls() {
 
   UpdateClock();
   UpdateMemTempLoad();
+  radio.update();
 }
 
 /*****
@@ -1214,34 +1213,34 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
   if(updateSpectrumData) {
     // apply low pass filter and scale the magnitude values and convert to int for spectrum display
     // apply spectrum AGC
-    int16_t min = 0;
-    int16_t max = 0;
-    int16_t data[SPECTRUM_RES];
+    //int16_t min = 0;
+    //int16_t max = 0;
+    //int16_t data[SPECTRUM_RES];
 
     for(int i = 0; i < SPECTRUM_RES; i++) {
       freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
       prevFreqSpecBuf[i] = freqSpecBuf[i];
 
-      if(controlDataFlag) {
-        // *** TODO: reconsider transfers to PC control app ***
-        // hardwire for 10dB scale, 20 pixel offset, 20 dBScale
-        int16_t pixelnew = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
-
-        // *** control app data no longer has current noise floor as that is display dependent ***
-        data[i] = pixelnew;
-        if(data[i] < min) {
-          min = data[i];
-        }
-        if(data[i] > max) {
-          max = data[i];
-        }
-      }
+      //if(controlDataFlag) {
+      //  // *** TODO: reconsider transfers to PC control app ***
+      //  // hardwire for 10dB scale, 20 pixel offset, 20 dBScale
+      //  int16_t pixelnew = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
+//
+      //  // *** control app data no longer has current noise floor as that is display dependent ***
+      //  data[i] = pixelnew;
+      //  if(data[i] < min) {
+      //    min = data[i];
+      //  }
+      //  if(data[i] > max) {
+      //    max = data[i];
+      //  }
+      //}
     }
 
     // set up specData for frequency spectrum command if applicable
-    if(controlDataFlag) {
-      T41PrepareSpectrumData(data, max);
-    }
+    //if(controlDataFlag) {
+    //  T41PrepareSpectrumData(data, max);
+    //}
     //if(connected) {
     //  int tmp = 0;
     //  for(int i = 0; i < SPECTRUM_RES; i++) {

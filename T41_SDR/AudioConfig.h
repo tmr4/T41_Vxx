@@ -9,10 +9,10 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-//#define MAX_AUDIO_BLOCKS 500
+#define MAX_AUDIO_BLOCKS 500
 //#define MAX_AUDIO_BLOCKS 250
 //#define MAX_AUDIO_BLOCKS 150
-#define MAX_AUDIO_BLOCKS 100
+//#define MAX_AUDIO_BLOCKS 100
 
 extern AudioRecordQueue Q_in_L;
 extern AudioRecordQueue Q_in_R;

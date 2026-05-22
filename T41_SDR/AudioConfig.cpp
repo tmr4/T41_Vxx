@@ -337,6 +337,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 #if REMOTE_AUDIO_DATA
     pc_IQ_L.connect(i2s_quadIn, 2, iqStream, 0);
     pc_IQ_R.connect(i2s_quadIn, 3, iqStream, 1);
+    iqStream.begin(); // *** for testing only, should be in config below ***
 #endif
 
     // RX output and sidetone on I2S channel 3(left)
@@ -358,6 +359,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 #if REMOTE_AUDIO_DATA
     pc_Q_in_L.connect(iqStream, 0, Q_in_L, 0);
     pc_Q_in_R.connect(iqStream, 1, Q_in_R, 0);
+    iqStream.begin(); // *** for testing only, should be in config below ***
 #endif
 #if LOCAL_AUDIO_DATA
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
@@ -365,6 +367,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     // *** could stream this to a remote unit as well ***
     //pc_IQ_L.connect(i2s_quadIn, 0, iqStream, 0);
     //pc_IQ_R.connect(i2s_quadIn, 1, iqStream, 1);
+    //iqStream.begin(); // *** for testing only, should be in config below ***
 #endif
 
     // RX output on I2S channel 1(left)

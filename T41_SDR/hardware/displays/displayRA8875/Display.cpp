@@ -23,7 +23,7 @@
 #include "..\..\Noise.h"
 #include "..\..\Process.h"
 #include "..\..\Tune.h"
-#include "..\..\t41Control.h"
+//#include "..\..\t41Control.h"
 #include "..\..\Utility.h"
 
 #include "..\..\debug.h"
@@ -1101,9 +1101,9 @@ FASTRUN void DrawSmeterBar() {
   tft.setTextColor(RA8875_GREEN);
   tft.print("dBm");
 
-  if(controlDataFlag) {
-    SendSmeter(smeterPad, dbm);
-  }
+  //if(controlDataFlag) {
+  //  SendSmeter(smeterPad, dbm);
+  //}
 }
 
 /*****

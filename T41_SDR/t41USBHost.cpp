@@ -5,7 +5,7 @@
 
 #include "keyboard.h"
 #include "mouse.h"
-#include "t41Control.h"
+//#include "t41Control.h"
 #include "t41USBHost.h"
 
 //-------------------------------------------------------------------------------------------------------------

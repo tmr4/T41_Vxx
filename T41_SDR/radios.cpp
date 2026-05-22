@@ -7,7 +7,7 @@
 #include "Filter.h"
 #include "hardware.h"
 #include "MenuProc.h"
-#include "t41Control.h"
+//#include "t41Control.h"
 #include "Utility.h"
 
 #include "radios.h"
@@ -16,7 +16,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern bool controlDataFlag;
+//extern bool controlDataFlag;
 extern bool ft8PTT;
 
 //-------------------------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ extern bool ft8PTT;
 void RemoteRadio::handleDS(const char* cmd, bool isRead) {
   if(!isRead) {
     // start sending spectrum data
-    controlDataFlag = true;
+    //controlDataFlag = true;
   }
 }
 
@@ -39,7 +39,7 @@ void RemoteRadio::handleDS(const char* cmd, bool isRead) {
 void RemoteRadio::handleDP(const char* cmd, bool isRead) {
   if(!isRead) {
     // stop sending spectrum data
-    controlDataFlag = false;
+    //controlDataFlag = false;
   }
 }
 
@@ -285,9 +285,9 @@ void RemoteRadio::handleSM(const char* cmd, bool isRead) {
     //sprintf(cmd, "SM20%04d;", smeterPad);
 
     //Serial.print("Received signal strength: ");
-    signalStrengthReceivedIndex = atoi(&cmd[2]);
-    signalStrength = ((float)atoi(&cmd[3])) / 10.0;
-    signalStrengthReceived = true;
+    //signalStrengthReceivedIndex = atoi(&cmd[2]);
+    //signalStrength = ((float)atoi(&cmd[3])) / 10.0;
+    //signalStrengthReceived = true;
     //Serial.println(signalStrength);
   }
 }

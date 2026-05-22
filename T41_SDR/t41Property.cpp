@@ -5,7 +5,7 @@
 #include "Display.h"
 #include "Encoders.h"
 #include "Noise.h"
-#include "t41Control.h"
+//#include "t41Control.h"
 #include "Tune.h"
 
 /*

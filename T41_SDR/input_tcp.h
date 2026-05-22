@@ -134,16 +134,16 @@ public:
       } else {
         uint8_t dump;
         // empty Ethernet buffer
-        while(client->available()) {
+        while(client->available() > 512) {
           TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
           client->read(&dump, 1);
         }
-
-        RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-        RESETPROFILEPIN(PROFILER_DECODE_FT8);
-        RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-        RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
       }
+
+      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
     }
   }
 
@@ -152,7 +152,7 @@ private:
 	//static constexpr int maxBlocks = 200;
   bool enabled = false;
 
-  EthernetClient *client;
+  EthernetClient *client = nullptr;
 
 	audio_block_t * volatile queue[maxBlocks][2];
 	volatile uint8_t head = 0;

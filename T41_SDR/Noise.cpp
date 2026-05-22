@@ -106,7 +106,7 @@ float32_t ANR_two_mu = 0.0001;
 /*****
   Purpose: Kim1_NR()
 *****/
-void Kim1_NR() {
+FLASHMEM void Kim1_NR() {
   const arm_cfft_instance_f32* NR_FFT = &arm_cfft_sR_f32_len256;
   const arm_cfft_instance_f32* NR_iFFT = &arm_cfft_sR_f32_len256;
 
@@ -320,7 +320,7 @@ void Kim1_NR() {
 /*****
   Purpose:   xanr
 *****/
-void Xanr() {
+FLASHMEM void Xanr() {
   // variable leak LMS algorithm for automatic notch or noise reduction
   // (c) Warren Pratt wdsp library 2016
   int idx;
@@ -380,7 +380,7 @@ void Xanr() {
 
    STAND: UHSDR github 14.1.2018
 *****/
-void SpectralNoiseReduction() {
+FLASHMEM void SpectralNoiseReduction() {
   const arm_cfft_instance_f32* NR_FFT = &arm_cfft_sR_f32_len256;
   const arm_cfft_instance_f32* NR_iFFT = &arm_cfft_sR_f32_len256;
   static uint8_t NR_init_counter = 0;

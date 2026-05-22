@@ -44,12 +44,14 @@
 #include "mouse.h"
 #include "remote.h"
 #include "t41Beacon.h"
-#include "t41Control.h"
+//#include "t41Control.h"
 #include "t41USBHost.h"
 #include "wsjt.h"
 
 #include "connectManager.h"
 #include "radios.h"
+#include "input_tcp.h"
+#include "output_tcp.h"
 
 // *** need to pull what we want from these ***
 //#include "fir_cmsis_5k.h"
@@ -62,6 +64,17 @@
 ConnectManager transport;
 
 extern RemoteRadio radio;
+#if REMOTE_AUDIO_DATA
+  #if DEVICE_REMOTE_OPS_MODE == 2
+  extern AudioInputSerial1 iqStream;
+  #elif DEVICE_REMOTE_OPS_MODE == 3
+  extern AudioOutputHostSerial iqStream;
+  #elif DEVICE_REMOTE_OPS_MODE == 4
+  extern AudioInputTCP iqStream;
+  #elif DEVICE_REMOTE_OPS_MODE == 5
+  extern AudioOutputTCP iqStream;
+  #endif
+#endif
 
 extern bool beaconFlag;
 extern bool iqSyncSearch;
@@ -300,9 +313,9 @@ FLASHMEM void setup() {
 #endif
 
 #if DEVICE_REMOTE_OPS_MODE == 4
-  transport.begin(DeviceRole::ROLE_REMOTE);
+  transport.begin(DeviceRole::ROLE_REMOTE, &radio, &iqStream);
 #elif DEVICE_REMOTE_OPS_MODE == 5
-  transport.begin(DeviceRole::ROLE_MAIN);
+  transport.begin(DeviceRole::ROLE_MAIN, &radio, &iqStream);
 #endif
 
   KeyerSetup(); // testing only
@@ -411,14 +424,11 @@ FASTRUN void loop() {
   }
 #endif
 
-  // *** need PC control without a display ***
-  //T41ControlLoop();
-
-#if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
-  //T41ControlLoop();
+  if(!transport.update() && transport.isRemoteRole()) {
+    ProcessControls();
+    return;
+  }
   radio.update();
-  transport.update();
-#endif
 
   // check for UI button press and process accordingly
   valPin = ReadSelectedPushButton();
@@ -501,18 +511,6 @@ FASTRUN void loop() {
         case DISPLAY_T41:
           DrawFreqSpectrum();
           DrawAudioSpectrum();
-//#if REC_IQ_FROM_T41_USB
-//  if(t41.RemoteStatus == REMOTE_CONNECTED) {
-//  //if(!iqSyncSearch) {
-//          DrawFreqSpectrum();
-//          DrawAudioSpectrum();
-//  } else {
-//          YieldToProcess();
-//  }
-//#else
-//          DrawFreqSpectrum();
-//          DrawAudioSpectrum();
-//#endif
           break;
 
         case DISPLAY_T41_FT8_DECODE:

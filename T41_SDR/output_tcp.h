@@ -127,10 +127,11 @@ class AudioOutputTCP : public AudioStream {
           }
           client->flush();
         }
-        RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-        RESETPROFILEPIN(PROFILER_DECODE_FT8);
-        RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
       }
+
+      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
+      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
     }
   }
 
@@ -138,7 +139,7 @@ class AudioOutputTCP : public AudioStream {
 	static constexpr int maxBlocks = 50;
   bool enabled = false;
 
-  EthernetClient *client;
+  EthernetClient *client = nullptr;
 
 	audio_block_t * volatile queue[maxBlocks][2];
 	volatile uint8_t head = 0;
