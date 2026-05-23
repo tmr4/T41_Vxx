@@ -28,12 +28,16 @@
 
 #include "debug.h"
 
-#include "radios.h"
+#include "radio.h"
+#include "connectManager.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+#if DEVICE_REMOTE_OPS_MODE > 0
+extern ConnectManager transport;
+#endif
 extern RemoteRadio radio;
 
 // *** TODO: this is display dependent, but also fundamental to much of how the DSP process works ***
@@ -990,6 +994,8 @@ FASTRUN void ProcessControls() {
 
   UpdateClock();
   UpdateMemTempLoad();
+
+  transport.update();
   radio.update();
 }
 
@@ -1321,10 +1327,6 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
     // process controls if 10ms has passed since last update
     if(millis() - prevUpdate > 10) {
       ProcessControls();
-      #if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
-        //T41ControlLoop();
-        radio.update();
-      #endif
       prevUpdate = millis();
       //if(++count > 10) {
       //  // prevent freeze when no input is present

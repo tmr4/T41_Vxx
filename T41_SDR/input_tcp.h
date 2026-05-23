@@ -132,11 +132,11 @@ public:
           //avail -= blockSize;
         }
       } else {
-        uint8_t dump;
+        uint8_t dump[512];
         // empty Ethernet buffer
         while(client->available() > 512) {
           TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-          client->read(&dump, 1);
+          client->read(dump, 512);
         }
       }
 

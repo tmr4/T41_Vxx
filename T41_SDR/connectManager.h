@@ -1,3 +1,4 @@
+#pragma once
 
 #include <Arduino.h>
 #include <QNEthernet.h>
@@ -6,29 +7,29 @@
 //using namespace qnetsilverman;
 using namespace qindesign::network;
 
+#include "AudioConfig.h"
 #include "catControl.h"
-#include "input_tcp.h"
-#include "output_tcp.h"
-#include "input_usb.h"
-#include "output_usb.h"
+
+#include "t41Property.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-enum DeviceRole { ROLE_MAIN, ROLE_REMOTE };
+enum DeviceRole { REMOTE_ROLE_T41, REMOTE_ROLE_REMOTE };
 enum ConnectMode { CONNECT_NONE, CONNECT_USB, CONNECT_ETHERNET };
 enum LinkState { LINK_DISCONNECTED, LINK_CHECK_HARDWARE, LINK_CONNECTED, LINK_LOST };
 
 class ConnectManager {
 private:
-  DeviceRole role = ROLE_MAIN;
+  DeviceRole role = REMOTE_ROLE_T41;
   LinkState linkState = LINK_DISCONNECTED;
   ConnectMode connectMode = CONNECT_NONE;
 
   const unsigned long POLL_INTERVAL = 40;
   const unsigned long HEARTBEAT_INTERVAL = 500;
   const unsigned long HEARTBEAT_TIMEOUT = 1200;
+  const int HEARTBEAT_COUNT = 3;
   const unsigned long TCP_RETRY_INTERVAL = 2000;
 
   const IPAddress clientIP{192, 168, 1, 101};
@@ -37,10 +38,13 @@ private:
   const IPAddress serverIP{192, 168, 1, 100};
 
   void begin() {
-    Serial.begin(115200);
-    SerialUSB1.begin(115200);
+    // *** set up usb as appropriate ***
+    //usbHostSerial.begin(1000000);
+    //usbHostSerial1.begin(1000000);
+    //Serial.begin(115200);
+    //SerialUSB1.begin(115200);
 
-    if(role == ROLE_MAIN) {
+    if(role == REMOTE_ROLE_T41) {
       initEthernet(serverIP);
       tcpCmdServer.begin(cmdPort);
       tcpDataServer.begin(dataPort);
@@ -56,12 +60,11 @@ private:
   }
 
 public:
-  ConnectManager(uint16_t cPort = 8000, uint16_t dPort = 8001) :
-    cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort), tcpDataServer(dPort),
-    usbHostSerial1(usbHost), usbHostSerial2(usbHost) {}
+  ConnectManager(DeviceRole _role = REMOTE_ROLE_T41, uint16_t cPort = 8000, uint16_t dPort = 8001) :
+    role(_role), cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort), tcpDataServer(dPort),
+    usbHostSerial1(usbHost), usbHostSerial2(usbHost, 1) {}
 
-  void begin(DeviceRole _role, CatControl *control, AudioOutputTCP *stream) {
-    role = _role;
+  void begin(CatControl *control, AudioOutputTCP *stream) {
     if(control && stream) {
       catControl = control;
       tcpOuput = stream;
@@ -71,8 +74,7 @@ public:
     begin();
   }
 
-  void begin(DeviceRole _role, CatControl *control, AudioInputTCP *stream) {
-    role = _role;
+  void begin(CatControl *control, AudioInputTCP *stream) {
     if(control && stream) {
       catControl = control;
       tcpInput = stream;
@@ -82,9 +84,8 @@ public:
     begin();
   }
 
-  bool update() {
-    if(!enabled) return false;
-    //Serial.println("at 1");
+  void update() {
+    if(!enabled) return;
     usbHost.Task();
 
     unsigned long now = millis();
@@ -98,13 +99,12 @@ public:
         case LINK_LOST:           handleLinkLost();       break;
       }
     }
-    //Serial.print("at 2: "); Serial.println(linkState);
+
     if(linkState != LINK_CONNECTED) delay(10);
-    return linkState == LINK_CONNECTED;
   }
 
-  bool isRemoteRole() const { return role == ROLE_REMOTE; }
-  //bool isDataLineActive() const { return linkState == LINK_CONNECTED; }
+  bool isRemote() const { return role == REMOTE_ROLE_REMOTE; }
+  bool connected() const { return linkState == LINK_CONNECTED; }
   //Stream* getCommandStream() { return commandStreamPointer; }
   //Stream* getDataStream() { return dataStreamPointer; }
   //ConnectMode getActiveMode() const { return connectMode; }
@@ -128,6 +128,7 @@ private:
   unsigned long pollTimer = 0;
   unsigned long lastHeartbeat = 0;
   unsigned long lastHbTX = 0;
+  int heartbeatCount = -1;
   unsigned long tcpRetryTimer = 0;
 
   uint16_t cmdPort;
@@ -154,7 +155,7 @@ private:
     // *** !Serial is not a reliable indicator of a disconnect ***
     //connected = Serial.dtr();
 
-    //return (role == ROLE_MAIN) ? (usbHostSerial1 && usbHostSerial2)
+    //return (role == REMOTE_ROLE_T41) ? (usbHostSerial1 && usbHostSerial2)
     //        : (Serial && bool(Serial) && SerialUSB1 && bool(SerialUSB1));
     return false; // testing Ethernet connection
   }
@@ -163,7 +164,7 @@ private:
 
   void handleDisconnected() {
     catControl->link = nullptr;
-    if(role == ROLE_MAIN) {
+    if(role == REMOTE_ROLE_T41) {
       tcpOuput->client = nullptr;
     } else {
       tcpInput->client = nullptr;
@@ -172,28 +173,32 @@ private:
     if(checkUsbPhysicalLink()) {
       connectMode = CONNECT_USB;
       linkState = LINK_CHECK_HARDWARE;
+      t41.RemoteStatus = REMOTE_WAITING;
     } else if(checkEthernetPhysicalLink()) {
       connectMode = CONNECT_ETHERNET;
       linkState = LINK_CHECK_HARDWARE;
+      t41.RemoteStatus = REMOTE_WAITING;
     }
   }
 
   void handleCheckHardware() {
     if(connectMode == CONNECT_USB && !checkUsbPhysicalLink()) {
       linkState = LINK_DISCONNECTED;
+      t41.RemoteStatus = REMOTE_NOT_CONNECTED;
       return;
     }
     if(connectMode == CONNECT_ETHERNET && !checkEthernetPhysicalLink()) {
       linkState = LINK_DISCONNECTED;
+      t41.RemoteStatus = REMOTE_NOT_CONNECTED;
       return;
     }
 
     if(connectMode == CONNECT_USB) {
-      //catControl->setLink((role == ROLE_MAIN) ? &usbHostSerial2 : &SerialUSB1);
-      //tcpOuput->client = (role == ROLE_MAIN) ? &usbHostSerial1 : &Serial;
+      //catControl->setLink((role == REMOTE_ROLE_T41) ? &usbHostSerial2 : &SerialUSB1);
+      //tcpOuput->client = (role == REMOTE_ROLE_T41) ? &usbHostSerial1 : &Serial;
       //setConnected();
     } else if(connectMode == CONNECT_ETHERNET) {
-      if(role == ROLE_MAIN) {
+      if(role == REMOTE_ROLE_T41) {
         // Server - CAT command port controls connection progression
         if(!tcpCmdClient || !tcpCmdClient.connected()) {
           //tcpCmdClient = tcpCmdServer.available();
@@ -216,15 +221,11 @@ private:
       } else {
         // Client - CAT command channel controls connection progression
         unsigned long now = millis();
-        //Serial.println("at 3a");
 
         if(!tcpCmdClient.connected() && !tcpCmdClient.connecting()) {
-          //Serial.println("at 3");
           if(now - tcpRetryTimer >= TCP_RETRY_INTERVAL) {
-            //Serial.println("at 4");
             tcpRetryTimer = now;
-            //tcpCmdClient.connectNoWait(serverIP, cmdPort);
-            tcpCmdClient.abort(); // Clear out old locks
+            tcpCmdClient.abort();
             tcpCmdClient.setConnectionTimeoutEnabled(false);
             tcpCmdClient.connect(serverIP, cmdPort);
             tcpCmdClient.setNoDelay(true);
@@ -234,17 +235,13 @@ private:
         // data port connects only after cmd port connects
         if(tcpCmdClient.connected()) {
           if(!tcpDataClient.connected() && !tcpDataClient.connecting()) {
-            //Serial.println("at 5");
-            //tcpDataClient.connectNoWait(serverIP, dataPort);
-            tcpDataClient.abort(); // Clear out old locks
+            tcpDataClient.abort();
             tcpDataClient.setConnectionTimeoutEnabled(false);
-            //tcpDataClient.connect(serverIP, cmdPort);
             tcpDataClient.connect(serverIP, dataPort);
             tcpDataClient.setNoDelay(true);
           }
 
           if(tcpDataClient.connected()) {
-            //Serial.println("at 6");
             catControl->link = &tcpCmdClient;
             tcpInput->client = &tcpDataClient;
             setConnected();
@@ -279,7 +276,7 @@ private:
     if(connectMode == CONNECT_ETHERNET) {
       tcpCmdClient.stop();
       tcpDataClient.stop();
-      if(role == ROLE_MAIN) {
+      if(role == REMOTE_ROLE_T41) {
         tcpOuput->client = nullptr;
       } else {
         tcpInput->client = nullptr;
@@ -289,33 +286,62 @@ private:
     catControl->link = nullptr;
     connectMode = CONNECT_NONE;
     linkState = LINK_DISCONNECTED;
+    t41.RemoteStatus = REMOTE_NOT_CONNECTED;
   }
 
   void setConnected() {
     linkState = LINK_CONNECTED;
+    t41.RemoteStatus = REMOTE_CONNECTED;
     checkHeartbeat(true);
   }
 
   void setLinkLost() {
     linkState = LINK_LOST;
+    t41.RemoteStatus = REMOTE_LOST;
   }
 
+  // checkUsbPhysicalLink and checkEthernetPhysicalLink are not reliable indicators
+  // of connection. checkHeartbeat serves that purpose. In the LINK_CONNECTED state,
+  // an ID command is sent from the T41 to the remote units every HEARTBEAT_INTERVAL,
+  // with catControl->heatbeart recording the time of the reaponse. The connection is
+  // considered lost if a response is not received within HEARTBEAT_TIMEOUT. At
+  // least HEARTBEAT_COUNT responses must be received before a new connection is
+  // considered established and IQ data transfer is begun.
   void checkHeartbeat(bool reset = false) {
     unsigned long now = millis();
 
     if(reset) {
       lastHeartbeat = now;
       lastHbTX = now;
+      heartbeatCount = 0;  // begin startup heartbeat operation
     } else {
-      lastHeartbeat = catControl->heatbeart;
-    }
+      unsigned long last = lastHeartbeat;
 
-    if(now - lastHbTX >= HEARTBEAT_INTERVAL) {
-      lastHbTX = now;
-      catControl->send("ID;");
-    }
-    if(now - lastHeartbeat > HEARTBEAT_TIMEOUT) {
-      //setLinkLost();
+      lastHeartbeat = catControl->heatbeart;
+
+      // heartbeat validation
+      if(heartbeatCount >= 0) {
+         // startup heartbeat check
+        if(lastHeartbeat > last) ++heartbeatCount;
+
+        if(heartbeatCount >= HEARTBEAT_COUNT) {
+          iqStream.begin();
+          // *** probably makes sense for remote to send msg to T41 to start sending data ***
+          heartbeatCount = -1; // begin normal heartbeat operation
+        }
+      } else {
+         // normal heartbeat check
+        if(now - lastHeartbeat > HEARTBEAT_TIMEOUT) {
+          //iqStream.end();
+          //setLinkLost();
+        }
+      }
+
+      // check heartbeat timing
+      if(role == REMOTE_ROLE_T41 && (now - lastHbTX >= HEARTBEAT_INTERVAL)) {
+        lastHbTX = now;
+        catControl->send("ID;");
+      }
     }
   }
 

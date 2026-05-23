@@ -46,34 +46,32 @@
 #include "t41Beacon.h"
 //#include "t41Control.h"
 #include "t41USBHost.h"
-#include "wsjt.h"
-
-#include "connectManager.h"
-#include "radios.h"
-#include "input_tcp.h"
-#include "output_tcp.h"
 
 // *** need to pull what we want from these ***
 //#include "fir_cmsis_5k.h"
 //#include "fir_alt.h"
 
+#include "radio.h"
+#include "connectManager.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-ConnectManager transport;
 
 extern RemoteRadio radio;
-#if REMOTE_AUDIO_DATA
-  #if DEVICE_REMOTE_OPS_MODE == 2
-  extern AudioInputSerial1 iqStream;
-  #elif DEVICE_REMOTE_OPS_MODE == 3
-  extern AudioOutputHostSerial iqStream;
-  #elif DEVICE_REMOTE_OPS_MODE == 4
-  extern AudioInputTCP iqStream;
-  #elif DEVICE_REMOTE_OPS_MODE == 5
-  extern AudioOutputTCP iqStream;
-  #endif
+#if DEVICE_REMOTE_OPS_MODE == 2
+ConnectManager transport(REMOTE_ROLE_REMOTE);
+extern AudioInputSerial1 iqStream;
+#elif DEVICE_REMOTE_OPS_MODE == 3
+ConnectManager transport;
+extern AudioOutputHostSerial iqStream;
+#elif DEVICE_REMOTE_OPS_MODE == 4
+ConnectManager transport(REMOTE_ROLE_REMOTE);
+extern AudioInputTCP iqStream;
+#elif DEVICE_REMOTE_OPS_MODE == 5
+ConnectManager transport;
+extern AudioOutputTCP iqStream;
 #endif
 
 extern bool beaconFlag;
@@ -306,16 +304,9 @@ FLASHMEM void setup() {
   PrimeMallInfo();
 
   //T41BeaconSetup();
-  //WSJTControlSetup();
 
-#if CAT_CONTROL_REMOTE || CAT_CONTROL_T41
-  //T41ControlSetup();
-#endif
-
-#if DEVICE_REMOTE_OPS_MODE == 4
-  transport.begin(DeviceRole::ROLE_REMOTE, &radio, &iqStream);
-#elif DEVICE_REMOTE_OPS_MODE == 5
-  transport.begin(DeviceRole::ROLE_MAIN, &radio, &iqStream);
+#if DEVICE_REMOTE_OPS_MODE == 4 || DEVICE_REMOTE_OPS_MODE == 5
+  transport.begin(&radio, &iqStream);
 #endif
 
   KeyerSetup(); // testing only
@@ -395,14 +386,6 @@ FASTRUN void loop() {
   // 1. run routines that may change the state of the radio
   HardwareLoopStart();
 
-  #if T41_WSJT_CAT_AUDIO
-  // *** There is only one USB serial object available with USB audio enabled.  The Serial object
-  // is reserved for WSJT-X use.  Any other use could disrupt WSJT-X control of the T41.  The
-  // wsjt module provides for to communication with the WSJT-X app and allows setting the T41 clock
-  // with the SetT41Clock PC app. ***
-  WSJTLoop();
-#endif
-
 #ifdef AUDIO_STATS
   StartAudioStats();
 #endif
@@ -424,11 +407,7 @@ FASTRUN void loop() {
   }
 #endif
 
-  if(!transport.update() && transport.isRemoteRole()) {
-    ProcessControls();
-    return;
-  }
-  radio.update();
+  ProcessControls();
 
   // check for UI button press and process accordingly
   valPin = ReadSelectedPushButton();
@@ -500,8 +479,8 @@ FASTRUN void loop() {
   // save radio state for next loop
   lastState = t41.RadioState;
 
-  // *** TODO: consider if a control update is proper here ***
-  ProcessControls();
+  // skip processing remote unit without connection
+  if(transport.isRemote() && !transport.connected()) return;
 
   // 4. process radio state
   //Serial.print(t41.RadioState); Serial.print(", "); Serial.println(displayState);
@@ -561,7 +540,7 @@ FASTRUN void loop() {
         switch(t41.DemodMode) {
           case DEMOD_FT8:
               PrepareMicExciterData();
-              WSJTLoop(); // update ft8PTT
+              radio.update(); // update ft8PTT
             break;
 
           case DEMOD_FT8_INTERNAL:

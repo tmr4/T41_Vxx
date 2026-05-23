@@ -9,11 +9,6 @@
 
 #include "AudioConfig.h"
 
-#include "input_tcp.h"
-#include "output_tcp.h"
-#include "input_usb.h"
-#include "output_usb.h"
-
 /**************************************************************
 T41 audio chain:
   Software supports both RX/TX and RX only versions. RX support is alway assumed. But because v11/v12 hardware
@@ -122,16 +117,19 @@ AudioRecordQueue Q_in_R;
 // The T41 IQ data stream is transfered to a remote unit over USB Host/Ethernet. The remote
 // unit receives the data on USB serial/Ethernet. The specific objects are declared below
 // based on the mode selected in the hardware config file, hardwareConfig.h, for each unit.
-#if REMOTE_AUDIO_DATA
-  #if DEVICE_REMOTE_OPS_MODE == 2
-  AudioInputSerial1 iqStream;
-  #elif DEVICE_REMOTE_OPS_MODE == 3
-  AudioOutputHostSerial iqStream;
-  #elif DEVICE_REMOTE_OPS_MODE == 4
-  AudioInputTCP iqStream;
-  #elif DEVICE_REMOTE_OPS_MODE == 5
-  AudioOutputTCP iqStream;
-  #endif
+#if DEVICE_REMOTE_OPS_MODE == 2
+AudioInputSerial1 iqStream;
+#elif DEVICE_REMOTE_OPS_MODE == 3
+AudioOutputHostSerial iqStream;
+#elif DEVICE_REMOTE_OPS_MODE == 4
+AudioInputTCP iqStream;
+#elif DEVICE_REMOTE_OPS_MODE == 5
+AudioOutputTCP iqStream;
+#endif
+#if DEVICE_REMOTE_OPS_MODE > 1
+bool iqStreamActive = true;
+#else
+bool iqStreamActive = false;
 #endif
 
 // Audio outputs
@@ -334,11 +332,10 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
 
-#if REMOTE_AUDIO_DATA
-    pc_IQ_L.connect(i2s_quadIn, 2, iqStream, 0);
-    pc_IQ_R.connect(i2s_quadIn, 3, iqStream, 1);
-    iqStream.begin(); // *** for testing only, should be in config below ***
-#endif
+    if(iqStreamActive) {
+      pc_IQ_L.connect(i2s_quadIn, 2, iqStream, 0);
+      pc_IQ_R.connect(i2s_quadIn, 3, iqStream, 1);
+    }
 
     // RX output and sidetone on I2S channel 3(left)
     // I2S on pin 32 (also headphone and line out w/ 2nd audio adapter)
@@ -356,18 +353,16 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
     // establish audio connections
     // RX input on I2S channels 1, 2 (pin 8)
-#if REMOTE_AUDIO_DATA
-    pc_Q_in_L.connect(iqStream, 0, Q_in_L, 0);
-    pc_Q_in_R.connect(iqStream, 1, Q_in_R, 0);
-    iqStream.begin(); // *** for testing only, should be in config below ***
-#endif
+    if(iqStreamActive) {
+      pc_Q_in_L.connect(iqStream, 0, Q_in_L, 0);
+      pc_Q_in_R.connect(iqStream, 1, Q_in_R, 0);
+    }
 #if LOCAL_AUDIO_DATA
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
     // *** could stream this to a remote unit as well ***
     //pc_IQ_L.connect(i2s_quadIn, 0, iqStream, 0);
     //pc_IQ_R.connect(i2s_quadIn, 1, iqStream, 1);
-    //iqStream.begin(); // *** for testing only, should be in config below ***
 #endif
 
     // RX output on I2S channel 1(left)

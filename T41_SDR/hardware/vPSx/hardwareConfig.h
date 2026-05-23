@@ -57,12 +57,44 @@
 // uses about 44k of stack
 #define HOST_KEYBOARD_MOUSE_SUPPORT true
 
-// Remote control
 /*
-  T41_Vxx supports remote operations between a T41 and remote device or WSJT-X. To enable this
-  feature set DEVICE_REMOTE_OPS_MODE to the role of this unit, where 0 disables remote operation,
-  1 indicatesthis is a T41 connected to a PC running WSJT-X, 2 inicates this is a remote device
-  communicating with a T41, and 3 inidicates this is a T41 communicating with a remote device.
+  Remote operation:
+
+  T41_Vxx supports operations between a T41 and a remote device, such as WSJT-X, other PC app, or
+  other T41_Vxx enabled devices. This section describes how to configure the T41 and remote device
+  for such operation and specifies the compiler options required for each. The limitations of such
+  operation are also discussed. The type of connection desired between the T41 and remote device
+  may require compiling the software with certain compiler options and these might preclude certain
+  T41 capabilities.  For example, WSJT-X w/ USB Audio/CAT control requires the "Serial + MIDI + Audio"
+  USB Type compile option. There is only one USB serial object available with USB audio enabled.  This
+  Serial object is reserved for WSJT-X use.  Any other use could disrupt WSJT-X control of the T41.
+
+  The following remote operating modes are available:
+    Mode                        T41 Mode Index      Remote Mode Index
+    None                          0                     na
+    WSJT-X                        1                     na
+    Remote (USB)                  3                     2
+    Remote (Ethernet)             5                     4
+    Remote (USB or Ethernet)      7                     6
+    Auto Cal (USB)                9                     8
+
+  The following minimum USB Type compile option is required for each operating modes:
+    Mode                           T41                      Remote
+    None                          Serial                      na
+    WSJT-X                        Serial + MIDI + Audio       *
+    Remote (USB)**                Serial                     Dual Serial
+    Remote (Ethernet)**           Serial                     Serial
+    Remote (USB or Ethernet)**    Dual Serial                Dual Serial
+    Auto Cal (USB)                Serial                     Serial
+
+    *  - configure WSJT-X for the serial COM assiciated with the T41 and 44.1kHz audio
+    ** - remote operation includes CAT control and high-speed IQ data transfer for spectrum display and audio
+
+  To enable remote operation, set DEVICE_REMOTE_OPS_MODE below to the role of this device, compile and upload.
+  Likewise, set the role of the companion device, compile again and upload to that device. Connect the two
+  devices with the selected cable type. Communication between the two devices should commence once the
+  connection is established.
+
   The device is then configured as follows:
 
   T41 connected to a PC running WSJT-X (DEVICE_REMOTE_OPS_MODE=1)
@@ -73,44 +105,18 @@
     - USB cable from the USB serial connection on this device (remote) to the USB host connection on the T41
     - Compile with at least "Dual Serial" selected
 
-  T41 connected to a remote devise (DEVICE_REMOTE_OPS_MODE=1)
+  T41 connected to a remote devise (DEVICE_REMOTE_OPS_MODE=3)
     - USB cable from the USB host connection on this unit (T41) to the USB serial connection on the remote
 
-  For operation with a remote device, DEVICE_REMOTE_OPS_MODE equals 2 or 3, select the type of operation,
-  CAT control and/or Audio transfer, by setting REMOTE_CAT_CONTROL and REMOTE_AUDIO_DATA appropriately.
+  For operation with a remote device, DEVICE_REMOTE_OPS_MODE equals 2 or 3, CAT control and Audio transfer
+  is assumed. Audio transfer may be disabled in a future update.
 */
 
 // set the remote operation role of this device
-#define DEVICE_REMOTE_OPS_MODE  4 // 0=none, 1=WSJT-X, Remote over USB (2=remote, 3=T41), Remote over Ethernet (4=remote, 5=T41)
-
-// set the desired remote services below to true to enable remote CAT control/audio
-// *** IQ audio is sent from T41 device USB Host connector to the remote USB (Serial) connector ***
-#define REMOTE_CAT_CONTROL      true
-#define REMOTE_AUDIO_DATA       true
-
-// The noted serial objects below are automatically assigned according to compile options for enabled services.
-// For use with PC apps and connecting to other CAT controlled units over USB serial or the USB host connector.
-//   Serial:         compiling with a single serial object with multiple services are enabled. Arduino IDE must be closed to connect to PC apps.
-//   SerialUSB1:     compiling with Dual or Triple Serial (need to figure which COM port is associated with each)
-//   SerialUSB2:     compiling with Triple Serial with two or more services enabled (need to figure which COM port is associated with each)
-//   usbHostSerial:  for CAT control with another radio over USB host (not for use with PC)
-//   usbHostSerial1: for passing audio to another radio over USB host (not for use with PC)
-//
-// Notes:
-// All services are disabled (set to Serial). Any messages from/to these services are sent to Arduino serial monitor.
-// *** note: debug messages go out over Serial and will be transmitted to these if set to Serial and the unit is connected to the USB host of another unit ***
-#define controlSerial Serial
-#define controlAudio  Serial
-#define beaconSerial  Serial
-#define wsjtSerial    Serial
+#define DEVICE_REMOTE_OPS_MODE  4
 
 // the following are disabled by defualt and will be set automatically depending on the remote mode selected
 #define T41_WSJT_CAT_AUDIO        false
-#define CAT_CONTROL_REMOTE        false
-#define CAT_CONTROL_T41_USB_HOST  false
-#define REC_IQ_FROM_T41_USB       false
-#define REC_IQ_FROM_T41_ETHER     false
-#define SEND_IQ_TO_REMOTE_USB         false
 
 // automatically configure radio for selected remote operation and services
 #if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 5)
@@ -123,73 +129,18 @@
     // Compile with an Audio option selected, such as "Serial + MIDI + Audio"
     #undef T41_WSJT_CAT_AUDIO
     #define T41_WSJT_CAT_AUDIO true
-    #undef wsjtSerial
-    #define wsjtSerial SerialUSB1
-  #elif DEVICE_REMOTE_OPS_MODE == 2
-    // remote USB
-    #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
-      #undef CAT_CONTROL_REMOTE
-      #define CAT_CONTROL_REMOTE true
-    #endif
-    #if REMOTE_CAT_CONTROL
-      #undef controlSerial
-      #define controlSerial Serial
-    #endif
-    #if REMOTE_AUDIO_DATA
-      #undef REC_IQ_FROM_T41_USB
-      #define REC_IQ_FROM_T41_USB true
-      #undef controlAudio
-      #define controlAudio SerialUSB1
-    #endif
-  #elif DEVICE_REMOTE_OPS_MODE == 3
-    // T41 USB
-    #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
-      #undef CAT_CONTROL_T41_USB_HOST
-      #define CAT_CONTROL_T41_USB_HOST true
-    #endif
-    #if REMOTE_CAT_CONTROL
-      #undef controlSerial
-      #define controlSerial usbHostSerial
-    #endif
-    #if REMOTE_AUDIO_DATA
-      #undef SEND_IQ_TO_REMOTE_USB
-      #define SEND_IQ_TO_REMOTE_USB true
-      #undef controlAudio
-      #define controlAudio usbHostSerial1
-    #endif
-  #elif DEVICE_REMOTE_OPS_MODE == 4
-    // remote Ethernet
-    #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
-      #undef CAT_CONTROL_REMOTE
-      #define CAT_CONTROL_REMOTE true
-    #endif
-    #if REMOTE_CAT_CONTROL
-      #undef controlSerial
-      #define controlSerial ethernetControl
-    #endif
-    #if REMOTE_AUDIO_DATA
-      #undef REC_IQ_FROM_T41_ETHER
-      #define REC_IQ_FROM_T41_ETHER true
-      // *** TODO: can this be made generic for USB and Ethernet? ***
-      //#undef controlAudio
-      //#define controlAudio SerialUSB1
-    #endif
-  #elif DEVICE_REMOTE_OPS_MODE == 5
-    // T41 Ethernet
-    #if REMOTE_CAT_CONTROL || REMOTE_AUDIO_DATA
-      #undef CAT_CONTROL_REMOTE
-      #define CAT_CONTROL_REMOTE true
-    #endif
-    #if REMOTE_CAT_CONTROL
-      #undef controlSerial
-      #define controlSerial ethernetControl
-    #endif
-    #if REMOTE_AUDIO_DATA
-      #undef SEND_IQ_TO_REMOTE_ETHER
-      #define SEND_IQ_TO_REMOTE_ETHER true
-      // *** TODO: can this be made generic for USB and Ethernet? ***
-      //#undef controlAudio
-      //#define controlAudio usbHostSerial1
-    #endif
   #endif
 #endif
+
+// The noted serial objects below are automatically assigned according to compile options for enabled services.
+// For use with PC apps and connecting to other CAT controlled units over USB serial or the USB host connector.
+//   Serial:         compiling with a single serial object with multiple services are enabled. Arduino IDE must be closed to connect to PC apps.
+//   SerialUSB1:     compiling with Dual or Triple Serial (need to figure which COM port is associated with each)
+//   SerialUSB2:     compiling with Triple Serial with two or more services enabled (need to figure which COM port is associated with each)
+//   usbHostSerial:  for CAT control with another radio over USB host (not for use with PC)
+//   usbHostSerial1: for passing audio to another radio over USB host (not for use with PC)
+//
+// Notes:
+// All services are disabled (set to Serial). Any messages from/to these services are sent to Arduino serial monitor.
+// *** note: debug messages go out over Serial and will be transmitted to these if set to Serial and the unit is connected to the USB host of another unit ***
+#define beaconSerial  Serial

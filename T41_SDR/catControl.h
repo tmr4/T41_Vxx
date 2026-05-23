@@ -149,37 +149,8 @@ protected:
   void send(const char *msg) { if(link) link->print(msg); }
   //void send(const char *msg);
 
-  virtual void handleID(const char* cmd, bool isRead);
-  virtual void ackIdReceipt() {}
-
-  // handlers common to all radios
-  void handleBD(const char* cmd, bool isRead);
-  void handleBU(const char* cmd, bool isRead);
-  void handleFA(const char* cmd, bool isRead);
-  void handleFB(const char* cmd, bool isRead);
-  void handleFC(const char* cmd, bool isRead);
-  void handleTM(const char* cmd, bool isRead);
-
-private:
+protected:
   unsigned long heatbeart = 0;
 
   friend class ConnectManager;
 };
-
-//-------------------------------------------------------------------------------------------------------------
-// Code
-//-------------------------------------------------------------------------------------------------------------
-
-/*
-// common commands for adding to radio specific dispatch tables
-{
-  {"BD"_cat, , , handleBD},       // band down
-  {"BU"_cat, , , handleBU},         // band up
-  {"FA"_cat, , , handleFA},             // read/set VFO A frequency
-  {"FB"_cat, , , handleFB},             // read/set VFO B frequency
-  {"FC"_cat, , , handleFC},             // read/set current VFO center frequency
-  {"ID"_cat, , , handleID},             // read radio ID
-  {"TM"_cat, 0, 14, handleTM_Wrapper},   // set Teensy RTC
-};
-
-*/

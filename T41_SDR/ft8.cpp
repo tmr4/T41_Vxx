@@ -183,7 +183,7 @@ TxMsg *txQueue[6] = {NULL}; // pointers into txBuf for appropriate msgs
 // index of next message in txQueue to be transmitted
 int txNextMsg = QSO_MSG_0; // default msg
 
-extern bool ft8PTT;
+bool ft8PTT = false;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards

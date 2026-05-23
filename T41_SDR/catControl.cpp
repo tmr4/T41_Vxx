@@ -1,19 +1,8 @@
 
-#include <TimeLib.h>                   // Part of Teensy Time library
 
 #include "SDT.h"
 
-#include <QNEthernet.h>
-using namespace qindesign::network;
-#include "input_tcp.h"
-#include "output_tcp.h"
-
-#include "ButtonProc.h"
-#include "Tune.h"
-
-#include "debug.h"
-
-#include "radios.h"
+#include "radio.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -27,95 +16,6 @@ RemoteRadio radio;
 
 void SendCommand(int id) {
   radio.notifyRemote(id);
-}
-
-// band down
-// "BD;" (length 3) or "BDx;" (length 4)
-void CatControl::handleBD(const char* cmd, bool isRead) {
-  if(isRead) {
-    ChangeBand(-1);
-    // SendAS(); // PC control specific ???
-  } else {
-    ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
-  }
-}
-
-// band up
-// "BU;" (length 3) or "BUx;" (length 4)
-void CatControl::handleBU(const char* cmd, bool isRead) {
-  if(isRead) {
-    ChangeBand(1);
-    // SendAS(); // PC control specific ???
-  } else {
-    ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
-  }
-}
-
-// read/set VFO A frequency
-// "FA;" (length 3) or "FAxxxxxxxxxxx;" (length 14)
-void CatControl::handleFA(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FA%011d;", (int)t41.GetFreqA());
-  } else {
-    long f = atol(&cmd[2]);
-
-    ChangeBand(f);
-    if(t41.MouseCenterTuneActive) {
-      t41.SetFreqA(f);
-    } else {
-      t41.NCOFreq.Update(f); // *** TODO: verify, this should only happen on active VFO ***
-    }
-  }
-}
-
-// read/set VFO B frequency
-// "FB;" (length 3) or "FBxxxxxxxxxxx;" (length 14)
-void CatControl::handleFB(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FB%011d;", (int)t41.GetFreqB());
-  } else {
-    long f = atol(&cmd[2]);
-
-    ChangeBand(f);
-    if(t41.MouseCenterTuneActive) {
-      t41.SetFreqB(f);
-    } else {
-      t41.NCOFreq.Update(f); // *** TODO: verify, this should only happen on active VFO ***
-    }
-  }
-}
-
-// read/set current VFO center frequency
-// "FC;" (length 3) or "FCxxxxxxxxxxx;" (length 14)
-void CatControl::handleFC(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FC%011d;", (int)t41.CenterFreq);
-  } else {
-    long f = atol(&cmd[2]);
-    t41.CenterFreq.Update(f);
-    SetFreq(f);
-  }
-}
-
-// read radio ID
-// "ID;" (length 3), Answer: "IDxxx;" (length 6)
-// *** ackIdReceipt is provided to acknowledge receipt of a properly formated reply ***
-void CatControl::handleID(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "ID%03d;", (int)t41.RadioID);
-  } else {
-    ackIdReceipt();
-  }
-  heatbeart = millis(); // note time for heartbeat
-}
-
-// set Teensy RTC
-// "TMxxxxxxxxxxx;" (length 14)
-void CatControl::handleTM(const char* cmd, bool isRead) {
-  if(!isRead) {
-    Teensy3Clock.set(atol(&cmd[2]));
-    setTime(atol(&cmd[2]));
-  }
 }
 
 // CAT command prefix for T41 display items and properties

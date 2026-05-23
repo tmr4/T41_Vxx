@@ -20,6 +20,4 @@
 // Set disabled services to Serial. Any messages from these services are sent to Arduino serial monitor.
 // *** note: debug messages go out over Serial and will be transmitted if controlSerial
 // is set to Serial and the unit is connected to the USB host of another unit ***
-#define controlSerial Serial // Serial or SerialUSB1 for USB port or usbHostSerial for USB Host port (this unit receives/sends CAT cmds over USB Host)
 #define beaconSerial Serial // Serial or SerialUSB2
-#define wsjtSerial Serial // Serial or SerialUSB1 or SerialUSB2
