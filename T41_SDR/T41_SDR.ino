@@ -489,7 +489,7 @@ FASTRUN void loop() {
       switch(displayState) {
         case DISPLAY_T41:
           DrawFreqSpectrum();
-          DrawAudioSpectrum();
+          //DrawAudioSpectrum();
           break;
 
         case DISPLAY_T41_FT8_DECODE:
