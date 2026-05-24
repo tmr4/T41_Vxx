@@ -1305,18 +1305,18 @@ void Calc1xFreqSpec() {
   }
 }
 
-void YieldToProcess() {
-  bool updateSpectrum = t41.SpectrumUpdated == 1 ? false : true;
+void YieldToProcess(bool updateSpectrum /* = false */) {
   static long prevUpdate = 0;
+  // prevent reentry, *** TODO: probably not needed ***
+	static uint8_t dspRunning=0;
+	if (dspRunning) return;
+	dspRunning = 1;
 
   while(true) {
     YieldToEthernet();
     if(updateSpectrum) {
       // wait for spectrum data update
-      if(CheckReceiverData(true) == 2) {
-        t41.SpectrumUpdated = 1;
-        break;
-      }
+      if(CheckReceiverData(true) == 2) break;
     } else {
       // process IQ data while sufficient data exists
       // This allows the process to catch up after longer tasks
@@ -1336,6 +1336,7 @@ void YieldToProcess() {
       //}
     }
   }
+	dspRunning = 0;
 }
 
 void YieldForProcess(int ms) {

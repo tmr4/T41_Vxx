@@ -78,8 +78,6 @@ public:
 
   Property<int> DroppedBlock; // blocks were dropped since last update: 0=false, 1=true
 
-  Property<int> SpectrumUpdated;
-
   // helper functions
   void SetPropertyDefaults();
 

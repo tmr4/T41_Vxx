@@ -651,7 +651,7 @@ FLASHMEM void PlotSpectrum(int *calBins, int binSize) {
   int x, y;
   //int nf = calNFAdjust;
 
-  YieldToProcess();
+  YieldToProcess(true);
 
   for(int i = 0; i < 2; i++)
   {
@@ -1518,7 +1518,7 @@ FLASHMEM void GetSignalStrength(float *pSS, int passes = 0, bool getMeanSS = tru
     } else {
       PrepareExciterIQDataCal(1);
       prevUpdate = millis();
-      YieldToProcess();
+      YieldToProcess(true);
     }
 
     // calculate adjacent sideband signal strength relative to reference sideband

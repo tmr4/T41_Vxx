@@ -195,7 +195,7 @@ void InitHilbertFilters();
 void SetupDemodFilterBW();
 void ResetTuning();
 
-void YieldToProcess();
+void YieldToProcess(bool updateSpectrum = false);
 void YieldForProcess(int ms);
 
 void AddDecodedMessage(struct tm *tmSlot, int16_t score, float time_sec, float freq, char *msg);
@@ -1299,8 +1299,7 @@ FLASHMEM void FT8DecoderLoop() {
       if(bufCount < 15) {
         // gather multiple audio spectrums per ft8 interval
         // with this, audio spectrum is drawn before freq spectrum
-        // *** TODO: check this w/ new yield process ***
-        YieldToProcess();
+        YieldToProcess(true);
         DrawAudioSpectrum();
 
   // single audio spectrum per ft8 interval

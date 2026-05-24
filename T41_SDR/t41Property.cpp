@@ -130,7 +130,6 @@ void T41Properties::SetPropertyDefaults() {
   InactiveBand.Init(BAND_40M);
 
   DroppedBlock.Init(0);
-  SpectrumUpdated.Init(0);
 }
 
 // helper functions

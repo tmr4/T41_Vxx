@@ -450,21 +450,20 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   uint16_t waterfall[WATERFALL_W];
   int16_t pixelnew, pixelnew1;
 
-  // initialize yOldPlot if this is a new spectrum
-  // otherwise we use y values from last loop
-  if(newSpectrumFlag) {
-    memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
-    return; // *** TODO: check if this is needed ***
-  }
-
-  YieldToProcess();
-  if(!t41.SpectrumUpdated) return;
+  YieldToProcess(true);
 
   // set current noise flow level for this loop
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
   if(t41.LiveNoiseFloor != 1) {
     currentNF = t41.NoiseFloor;
+  }
+
+  // initialize yOldPlot if this is a new spectrum
+  // otherwise we use y values from last loop
+  if(newSpectrumFlag) {
+    memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
+    return; // *** TODO: check if this is needed ***
   }
 
   // Draw the frequency spectrums, gather data for waterfall
@@ -615,7 +614,6 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   }
 
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
-  DrawAudioSpectrum();
 }
 
 /*****
@@ -626,6 +624,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
 FASTRUN void DrawAudioSpectrum() {
   int audioYPixel;
   static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
+
+  //YieldToProcess();
 
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
@@ -662,13 +662,15 @@ FASTRUN void DrawAudioSpectrum() {
       yOldAudioPlot[i] = audioYPixel;
     }
 
-    // tuned to avoid yielding right before loop finishes which delays the start
-    // of the next loop while awaiting more input data
-    if(i < 160) YieldToProcess();
-
+    // *** some timely placed yields smooths audio processing, but doesn't reduce loop time
+    //if((filterHiPosition > 150) && (i < filterHiPosition)) {
+    //  if((i == 75) || ((filterHiPosition > 225) && (i == 150))) {
+    //    YieldToProcess();
+    //  }
+    //}
+    YieldToProcess();
   }
 
-  t41.SpectrumUpdated = 0; // indicate ready for next spectrum update
   RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
 }
 
@@ -1571,6 +1573,11 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
     // copy the waterfall back to layer 1, row 2
     tft.BTE_move(WATERFALL_L, SPECTRUM_TOP_Y + 102, WATERFALL_W, 47, WATERFALL_L, SPECTRUM_TOP_Y + 102, 2);
     tft.readStatus(); // Make sure it's done.
+
+    // *** TODO: add when waterfall is moved ***
+    //YieldToProcess();
+    // *** or this: prepares the audio spectrum data
+    //YieldToProcess(true);
 
     // reset waterfall for next frame
     for(int i = 0; i < WATERFALL_W; i++) {

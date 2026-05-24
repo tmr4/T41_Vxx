@@ -35,7 +35,7 @@ void ProcessControls();
 
 void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
 
-void YieldToProcess();
+void YieldToProcess(bool updateSpectrum = false);
 void YieldForProcess(int ms);
 
 inline int __attribute__((always_inline)) CheckReceiverData(bool updateSpectrumData = false) {
