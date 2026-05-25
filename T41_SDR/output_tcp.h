@@ -77,6 +77,18 @@ class AudioOutputTCP : public AudioStream {
     if(!client || !enabled || (h == tail) || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
+
+      // reset queue
+      while(tail != head) {
+        TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+        blockL = queue[tail][0];
+        blockR = queue[tail][1];
+        tail = (tail + 1) % maxBlocks;
+        release(blockL);
+        release(blockR);
+      }
+      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+
       return;
     }
 
@@ -108,25 +120,23 @@ class AudioOutputTCP : public AudioStream {
           return; // nothing to write
         }
 
-        if(client) {
-          TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-          audio_block_t *blockL, *blockR;
-          while((client->availableForWrite() >= blockSize) && (tail != head)) {
-            TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
-            blockL = queue[tail][0];
-            blockR = queue[tail][1];
+        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+        audio_block_t *blockL, *blockR;
+        while((client->availableForWrite() >= blockSize) && (tail != head)) {
+          TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+          blockL = queue[tail][0];
+          blockR = queue[tail][1];
 
-            client->write((uint8_t *)blockL->data, blockSize / 2);
-            client->write((uint8_t *)blockR->data, blockSize / 2);
-            //client->writeFully((uint8_t *)blockL->data, blockSize / 2);
-            //client->writeFully((uint8_t *)blockR->data, blockSize / 2);
+          client->write((uint8_t *)blockL->data, blockSize / 2);
+          client->write((uint8_t *)blockR->data, blockSize / 2);
+          //client->writeFully((uint8_t *)blockL->data, blockSize / 2);
+          //client->writeFully((uint8_t *)blockR->data, blockSize / 2);
 
-            release(blockL);
-            release(blockR);
-            tail = (tail + 1) % maxBlocks;
-          }
-          client->flush();
+          release(blockL);
+          release(blockR);
+          tail = (tail + 1) % maxBlocks;
         }
+        client->flush();
       }
 
       RESETPROFILEPIN(PROFILER_PROCESS_FRAME);

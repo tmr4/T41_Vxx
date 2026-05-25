@@ -78,6 +78,15 @@ public:
       transmit(blockR, 1);
       release(blockL);
       release(blockR);
+    } else {
+      // reset queue
+      while(tail != head) {
+        blockL = queue[tail][0];
+        blockR = queue[tail][1];
+        tail = (tail + 1) % maxBlocks;
+        release(blockL);
+        release(blockR);
+      }
     }
   }
 

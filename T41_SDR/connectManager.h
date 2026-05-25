@@ -44,6 +44,7 @@ private:
     //Serial.begin(115200);
     //SerialUSB1.begin(115200);
 
+    // *** TODO: consider multiple calls to begin ***
     if(role == REMOTE_ROLE_T41) {
       initEthernet(serverIP);
       tcpCmdServer.begin(cmdPort);
@@ -296,6 +297,7 @@ private:
   }
 
   void setLinkLost() {
+    iqStream.end();
     linkState = LINK_LOST;
     t41.RemoteStatus = REMOTE_LOST;
   }
@@ -303,10 +305,13 @@ private:
   // checkUsbPhysicalLink and checkEthernetPhysicalLink are not reliable indicators
   // of connection. checkHeartbeat serves that purpose. In the LINK_CONNECTED state,
   // an ID command is sent from the T41 to the remote units every HEARTBEAT_INTERVAL,
-  // with catControl->heatbeart recording the time of the reaponse. The connection is
-  // considered lost if a response is not received within HEARTBEAT_TIMEOUT. At
-  // least HEARTBEAT_COUNT responses must be received before a new connection is
-  // considered established and IQ data transfer is begun.
+  // with catControl->heatbeart recording the time of the reaponse. The remote
+  // device considers the receipt of the ID command as a heartbeat.
+  // At least HEARTBEAT_COUNT responses must be received before a new connection is
+  // considered established and IQ data stream is begun.
+  // The connection is considered lost if a heartbeat response is not received within
+  // HEARTBEAT_TIMEOUT. In that case, the IQ data stream is stopped and the link lost
+  // state is entered.
   void checkHeartbeat(bool reset = false) {
     unsigned long now = millis();
 
@@ -332,8 +337,7 @@ private:
       } else {
          // normal heartbeat check
         if(now - lastHeartbeat > HEARTBEAT_TIMEOUT) {
-          //iqStream.end();
-          //setLinkLost();
+          setLinkLost();
         }
       }
 
