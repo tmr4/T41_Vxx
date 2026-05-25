@@ -815,7 +815,10 @@ void RA8875::_waitBusy(uint8_t res)
 		temp = readStatus();
 		if ((millis() - start) > 10) return;
     YieldToEthernet();
-    if(!dspDone) {
+    // no need for processing for other types
+    // w/o this check we can fall in here during clock update, d
+    // delaying the start of frequency update
+    if(!dspDone && res == 0x40) {
       // run ProcessReceiverData successfully once
       //TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
       if(CheckReceiverData() == 1) {

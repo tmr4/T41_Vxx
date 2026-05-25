@@ -10,9 +10,7 @@ Most hardware specific code has been pulled out of the core code into hardware s
 
 ### Project Structure
 
-A handy Arduino feature makes maintaining the common project easy. The Arduino compiler will compile any source and header files in the sketch folder ***and*** fines and subfolders in the *src* subfolder. All other subfolders in the sketch folder are ignored. That makes the following folder structure possible:
-
-In anticipation of the T41 Mini, I've extracted the remaining hardware specific routines core code.  I've also added a few hardware specific folders (vPS and vPT) for the ProtoSupplies.com [Project System](https://protosupplies.com/product/project-system-for-teensy-4-1/) and [Prototyping System](https://protosupplies.com/product/prototyping-system-for-teensy-4-1//).  I use these boards frequently in tests where I don't want to load the updated T41 software onto an actual radio.
+A handy Arduino feature makes maintaining the common project easy. The Arduino compiler will compile any source and header files in the sketch folder ***and*** files and subfolders in the *src* subfolder. All other subfolders in the sketch folder are ignored. That makes the following folder structure possible:
 
 ![Project folder structure](https://github.com/tmr4/T41_Vxx/blob/main/images/CommonCodeFolderStructure.png)
 
@@ -26,6 +24,7 @@ When managing the project, it's best to keep the *src* folder free of hardware s
 
 A minimum hardware version is available in the *minHardware* folder.  This allows testing of the receive function on the main board with appropriate IQ signal input.  An appropriate display or *displayNone* should be used.
 
+In anticipation of the T41 Mini, I've extracted the remaining hardware specific routines core code.  I've also added a few hardware specific folders (vPS and vPT) for the ProtoSupplies.com [Project System](https://protosupplies.com/product/project-system-for-teensy-4-1/) and [Prototyping System](https://protosupplies.com/product/prototyping-system-for-teensy-4-1//).  I use these boards frequently in tests where I don't want to load the updated T41 software onto an actual radio.
 
 ## Creating a new hardware version
 

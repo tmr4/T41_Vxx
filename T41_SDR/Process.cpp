@@ -242,7 +242,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   float rfGainValue, intScaler;
   // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8 or 24Hz
   int blocks = t41.DemodMode == DEMOD_FT8 ? 2 : 16;
-  // *** he amount of data required by the frequency spectrum calc depends on the zoom factor ***
+  // *** the amount of data required by the frequency spectrum calc depends on the zoom factor ***
   static int reqPasses = 20;
   static int passes = 20;
   bool updateFreqSpec = false; // true: spectrums updated, otherwise false
@@ -1307,10 +1307,6 @@ void Calc1xFreqSpec() {
 
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static long prevUpdate = 0;
-  // prevent reentry, *** TODO: probably not needed ***
-	static uint8_t dspRunning=0;
-	if (dspRunning) return;
-	dspRunning = 1;
 
   while(true) {
     YieldToEthernet();
@@ -1336,7 +1332,6 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
       //}
     }
   }
-	dspRunning = 0;
 }
 
 void YieldForProcess(int ms) {

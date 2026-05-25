@@ -26,7 +26,7 @@ For more detail see [Accomodating Hardware Differences](https://github.com/tmr4/
 
 ### Caution
 
-I've disabled saving operating parameter in EEPROM to facilitate changing versions.
+I've disabled saving operating parameters in EEPROM to facilitate changing versions.
 
 This is a work in progress.  Some functions may be broken and will likely remain so until they are of interest to me.  This is especially true for the v12 radio. I'm still building that so I've yet to add a lot of functionality.  Use at your own risk.
 

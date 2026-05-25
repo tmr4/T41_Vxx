@@ -450,6 +450,13 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   uint16_t waterfall[WATERFALL_W];
   int16_t pixelnew, pixelnew1;
 
+  // initialize yOldPlot if this is a new spectrum
+  // otherwise we use y values from last loop
+  if(newSpectrumFlag) {
+    memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
+    return; // *** TODO: check if this is needed ***
+  }
+
   YieldToProcess(true);
 
   // set current noise flow level for this loop
@@ -459,18 +466,11 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     currentNF = t41.NoiseFloor;
   }
 
-  // initialize yOldPlot if this is a new spectrum
-  // otherwise we use y values from last loop
-  if(newSpectrumFlag) {
-    memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
-    return; // *** TODO: check if this is needed ***
-  }
+  SETPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
   // Draw the frequency spectrums, gather data for waterfall
   for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
     bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
-
-    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
     // *** TODO: evaluate noise floor default setting for new v12 hardware ***
     // *** TODO: some calibration routines need an adjustment because there is no noise floor adjustment ***
@@ -557,6 +557,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     YieldToProcess();
   }
 
+  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
+
   // save last plot value for erasing on next loop
   yOldPlot[SPECTRUM_RES - 1] = y1Plot;
 
@@ -612,8 +614,6 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     tft.writeRect(WATERFALL_L, WATERFALL_T, WATERFALL_W, 1, waterfall);
     tft.writeTo(L1);
   }
-
-  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
 }
 
 /*****
@@ -625,11 +625,10 @@ FASTRUN void DrawAudioSpectrum() {
   int audioYPixel;
   static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
 
-  //YieldToProcess();
+  SETPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
 
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
-    TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
 
     // don't overwrite audio filter lines
     if((i != filterLoPosition) && (i != filterHiPosition)) {

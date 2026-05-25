@@ -214,6 +214,13 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   int offset = (512-SPECTRUM_RES) / 2;
   bool init = false;
 
+  // initialize yOldPlot if this is a new spectrum
+  // otherwise we use y values from last loop
+  if(newSpectrumFlag) {
+    memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
+    return; // *** TODO: check if this is needed ***
+  }
+
   YieldToProcess(true);
 
   // set current noise flow level for this loop
@@ -221,13 +228,6 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   // this allows live noise floor updates
   if(t41.LiveNoiseFloor != 1) {
     currentNF = t41.NoiseFloor;
-  }
-
-  // initialize yOldPlot if this is a new spectrum
-  // otherwise we use y values from last loop
-  if(newSpectrumFlag) {
-    memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
-    return; // *** TODO: check if this is needed ***
   }
 
   // Draw the frequency spectrums, gather data for waterfall
