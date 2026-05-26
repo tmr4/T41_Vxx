@@ -275,8 +275,15 @@ private:
   void handleLinkLost() {
     // close connections, this is non-blocking
     if(connectMode == CONNECT_ETHERNET) {
-      tcpCmdClient.stop();
-      tcpDataClient.stop();
+      if(Ethernet.linkState()) {
+        // just stop if link is still up
+        tcpCmdClient.stop();
+        tcpDataClient.stop();
+      } else {
+        // abort on cable loss
+        tcpCmdClient.abort();
+        tcpDataClient.abort();
+      }
       if(role == REMOTE_ROLE_T41) {
         tcpOuput->client = nullptr;
       } else {
