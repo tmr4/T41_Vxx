@@ -1,6 +1,6 @@
 // v11 specific hardware config file
 
-#define VERSION "v11_dev/v0.02" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
+#define VERSION "v11_dev/v0.03" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 
 //#define PROFILER_ACTIVE
 

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#define VERSION "vPSx_dev/v0.02" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
+#define VERSION "vPSx_dev/v0.03" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 
 //#define PROFILER_ACTIVE
 

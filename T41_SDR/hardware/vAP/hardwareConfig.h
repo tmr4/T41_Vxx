@@ -2,7 +2,7 @@
 
 #pragma once
 
-#define VERSION "vAP_dev/v0.02" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
+#define VERSION "vAP_dev/v0.03" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 #define RADIO_ID 02             // 0-999, radio ID is reported as 24 to WSJT-X (Kenwood TS-890S)
 
 #define PROFILER_ACTIVE
