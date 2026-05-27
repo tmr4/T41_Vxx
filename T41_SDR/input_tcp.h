@@ -23,6 +23,7 @@ Remote timing (w/ T41 standard testing input, Auto NF):
   * Time to complete one update of display (frame):
     * ~75ms or ~13.4 frames/sec
   * Notes:
+    * Ethernet transport: on average two 512-byte packets arrive ~90us apart every 2ms
     * The T41 and remote prepare to render the next frame immediately after completing the
       previous frame. The different frame rates mean that the two units aren't rendering the same
       data slices at any given time.

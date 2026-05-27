@@ -25,6 +25,7 @@ T41 timing (w/ T41 standard testing input, Auto NF):
     * ~106ms or ~9.4 frames/sec with remote attached
     * ~99ms w/o remote ~10.1 frames/sec
   * Notes:
+    * Ethernet transport: on average one 512-byte packets transmitted every 500-700us
     * The T41 and remote prepare to render the next frame immediately after completing the
       previous frame. The different frame rates mean that the two units aren't rendering the same
       data slices at any given time.
