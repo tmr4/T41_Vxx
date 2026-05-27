@@ -31,382 +31,221 @@ extern ConnectManager transport;
 // Generic CAT commands - PC or remote unit control commands
 //-------------------------------------------------------------------------------------------------------------
 
-// band down
+// *** comments below show both read/set command structure, but these functions
+//     only cover set commands ***
+// read/set band down
 // "BD;" (length 3) or "BDx;" (length 4)
-void RemoteRadio::cat_BD(const char* cmd, bool isRead) {
-  if(isRead) {
-    ChangeBand(-1);
-    // SendAS(); // PC control specific ???
-  } else {
-    ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
-  }
+void RemoteRadio::cat_BD(const char* cmd) {
+  ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
 }
 
-// band up
+// read/set band up
 // "BU;" (length 3) or "BUx;" (length 4)
-void RemoteRadio::cat_BU(const char* cmd, bool isRead) {
-  if(isRead) {
-    ChangeBand(1);
-    // SendAS(); // PC control specific ???
-  } else {
-    ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
-  }
+void RemoteRadio::cat_BU(const char* cmd) {
+  ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
 }
 
 // set data start
-void RemoteRadio::cat_DS(const char* cmd, bool isRead) {
-  if(!isRead) {
-    // start sending spectrum data
-    //controlDataFlag = true;
-  }
+void RemoteRadio::cat_DS(const char* cmd) {
+  // start sending spectrum data
+  //controlDataFlag = true;
 }
 
 // set data pause
-void RemoteRadio::cat_DP(const char* cmd, bool isRead) {
-  if(!isRead) {
-    // stop sending spectrum data
-    //controlDataFlag = false;
-  }
+void RemoteRadio::cat_DP(const char* cmd) {
+  // stop sending spectrum data
+  //controlDataFlag = false;
 }
 
 // read/set VFO A frequency
 // "FA;" (length 3) or "FAxxxxxxxxxxx;" (length 14)
-void RemoteRadio::cat_FA(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FA%011d;", (int)t41.GetFreqA());
-  } else {
-    long f = atol(&cmd[2]);
+void RemoteRadio::cat_FA(const char* cmd) {
+  long f = atol(&cmd[2]);
 
-    ChangeBand(f);
-    if(t41.MouseCenterTuneActive) {
-      t41.SetFreqA(f);
-    } else {
-      t41.NCOFreq.Update(f); // *** TODO: verify, this should only happen on active VFO ***
-    }
+  ChangeBand(f);
+  if(t41.MouseCenterTuneActive) {
+    t41.SetFreqA(f);
+  } else {
+    t41.NCOFreq.Update(f); // *** TODO: verify, this should only happen on active VFO ***
   }
 }
 
 // read/set VFO B frequency
 // "FB;" (length 3) or "FBxxxxxxxxxxx;" (length 14)
-void RemoteRadio::cat_FB(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FB%011d;", (int)t41.GetFreqB());
-  } else {
-    long f = atol(&cmd[2]);
+void RemoteRadio::cat_FB(const char* cmd) {
+  long f = atol(&cmd[2]);
 
-    ChangeBand(f);
-    if(t41.MouseCenterTuneActive) {
-      t41.SetFreqB(f);
-    } else {
-      t41.NCOFreq.Update(f); // *** TODO: verify, this should only happen on active VFO ***
-    }
+  ChangeBand(f);
+  if(t41.MouseCenterTuneActive) {
+    t41.SetFreqB(f);
+  } else {
+    t41.NCOFreq.Update(f); // *** TODO: verify, this should only happen on active VFO ***
   }
 }
 
 // read/set current VFO center frequency
 // "FC;" (length 3) or "FCxxxxxxxxxxx;" (length 14)
-void RemoteRadio::cat_FC(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FC%011d;", (int)t41.CenterFreq);
-  } else {
-    long f = atol(&cmd[2]);
-    t41.CenterFreq.Update(f);
-    SetFreq(f);
-  }
+void RemoteRadio::cat_FC(const char* cmd) {
+  long f = atol(&cmd[2]);
+  t41.CenterFreq.Update(f);
+  SetFreq(f);
 }
 
 // read/set NCO frequency offset
 // "FF;" (length 3) or "FFxxxxxxxxxxx;" (length 14)
-void RemoteRadio::cat_FF(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FF%011d;", (int)t41.NCOFreq);
-  } else {
-    t41.NCOFreq.Update(atol(&cmd[2]));
-  }
+void RemoteRadio::cat_FF(const char* cmd) {
+  t41.NCOFreq.Update(atol(&cmd[2]));
 }
 
 // read/set (toggle) fine tune status, on/off
 // "FS;" (length 3) of "FSx;" (length 4) x= 1 off, 0 on
-void RemoteRadio::cat_FS(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FSF%d;", !(int)t41.MouseCenterTuneActive);
-  } else {
-    t41.MouseCenterTuneActive.Update(!atoi(&cmd[2]));
-    HighlightTuneInc();
-  }
+void RemoteRadio::cat_FS(const char* cmd) {
+  t41.MouseCenterTuneActive.Update(!atoi(&cmd[2]));
+  HighlightTuneInc();
 }
 
 // set VFO A or B (non-standard, this is specific for transmit on Kenwood)
 // "FTx;" (length 4) x=0 VFO A; x=1 VFO B
-void RemoteRadio::cat_FT(const char* cmd, bool isRead) {
-  if(!isRead) {
-    VFOSelect(atoi(&cmd[2]));
-    // SendAS(); // PC control specific ???
-  }
+void RemoteRadio::cat_FT(const char* cmd) {
+  VFOSelect(atoi(&cmd[2]));
+  // SendAS(); // PC control specific ???
 }
 
 // read/set center or fine tune frequency increment change
 // "F0;" (length 3) or "F0x;" (length 4) x= index
-void RemoteRadio::cat_F0(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "F0%d;", (int)t41.CenterTuneIndex);
-  } else {
-    ChangeFreqIncrement(atol(&cmd[3]) - t41.CenterTuneIndex, false);
-  }
+void RemoteRadio::cat_F0(const char* cmd) {
+  ChangeFreqIncrement(atol(&cmd[3]) - t41.CenterTuneIndex, false);
 }
 
 // read/set fine tune frequency increment change
 // "F1;" (length 3) or "F1x;" (length 4) x= index
-void RemoteRadio::cat_F1(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "F1%d;", (int)t41.FineTuneIndex);
-  } else {
-    ChangeFtIncrement(atol(&cmd[3]) - t41.FineTuneIndex, false);
-  }
+void RemoteRadio::cat_F1(const char* cmd) {
+  ChangeFtIncrement(atol(&cmd[3]) - t41.FineTuneIndex, false);
 }
 
 // read/set AGC (non-standard Kenwood command)
 // "GT;" (length 3) or "GTx;" (length 4) x=0 VFO A; x=1 VFO B
-void RemoteRadio::cat_GT(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "GT%d;", (int)t41.AGCMode);
-  } else {
-    t41.AGCMode.Update(atoi(&cmd[2]));
-    UpdateInfoBoxItem(T41_ITEM_AGC);
-  }
+void RemoteRadio::cat_GT(const char* cmd) {
+  t41.AGCMode.Update(atoi(&cmd[2]));
+  UpdateInfoBoxItem(T41_ITEM_AGC);
 }
 
 // read radio ID
 // "ID;" (length 3), Answer: "IDxxx;" (length 6)
 // *** ackIdReceipt is provided to acknowledge receipt of a properly formated reply ***
-void RemoteRadio::cat_ID(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "ID%03d;", (int)t41.RadioID);
-    if(transport.isRemote()) heatbeart = millis(); // note time for heartbeat
-  } else {
-    ackIdReceipt();
-    heatbeart = millis(); // note time for heartbeat
-  }
-  //heatbeart = millis(); // note time for heartbeat
+void RemoteRadio::cat_ID(const char* cmd) {
+  ackIdReceipt();
+  heatbeart = millis(); // note time for heartbeat
 }
 
 // read transceiver status
-void RemoteRadio::cat_IF(const char* cmd, bool isRead) {
-  if(isRead) {
-    // *** Warning: this is not the Kenwood implimentation ***
-    sprintf(msg, "IF%011d%d%d%d%03d%+06d%04d%d%d%d%d%d%d%d%d%011d;",
-      // active VFO Freq = TxRxFreq, t41.CenterFreq = TxRxFreq - NCOFreq
-      //  *** TODO: we only need 8 digits for first field for T41, consider using other 3 for something ***
-      t41.ActiveFreq(), // freq in Hz (%011d) at index 2
-      (int)t41.ActiveBand,            // current band (%d) at index 13
-      (int)t41.RadioMode,             // transmission mode (%d) at index 14
-      (int)t41.DemodMode,             // demodulation mode (%d)  at index 15
-      (int)t41.AudioVolume,           // audio volume (%03d) at index 16
-      (int)t41.NCOFreq,               // NCO freq (%+06d) at index 19
-      (int)t41.NoiseFloor,            // noise floor (%04d) at index 25 *** TODO: verify need for +- or number of digits ***
-      (int)t41.LiveNoiseFloor,        // set noise floor active/inactive 1/0 (%d) at index 29
-      !GetXRState(),                  // RX/TX (1/0) (%d) at index 30
-      (int)t41.ActiveVFO,             // VFO A/B (0/1) (%d) at index 31
-      (int)t41.MouseCenterTuneActive, // fine or center tune enabled (0/1) (%d) at index 32
-      (int)t41.FineTuneIndex,         // fine tune index (%d) at index 33
-      (int)t41.CenterTuneIndex,       // center tune index (%d) at index 34
-      (int)t41.AGCMode,               // AGC mode (%d) at index 35
-      (int)t41.SpectrumZoom,          // spectrum zoom (%d) at index 36
-      (int)t41.InactiveFreq           // inactive VFO freq in Hz (%011d) at index 37
-      //splitVFO ? 1 : 0,             // VFO split status (%d) at index xx
-    );
-  }
-}
+void RemoteRadio::cat_IF(const char* cmd) {}
 
 // read/set demod mode (non-standard Kenwood TS-2000 command)
 // "MD;" (length 3) or "MDx;" (length 4) x= demodulation mode (see SDT.h)
-void RemoteRadio::cat_MD(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "MD%d;", (int)t41.DemodMode);
-  } else {
-    ChangeDemodMode(atoi(&cmd[2]), false);
-    // SendAS(); // PC control specific ???
-  }
+void RemoteRadio::cat_MD(const char* cmd) {
+  ChangeDemodMode(atoi(&cmd[2]), false);
+  // SendAS(); // PC control specific ???
 }
 
 // read/set operating mode
 // "ME;" (length 3) or "MEx;" (length 4) x= operating mode (see SDT.h)
-void RemoteRadio::cat_ME(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "ME%d;", (int)t41.DemodMode);
-  } else {
-    ChangeMode(atoi(&cmd[2]), -1, false);
-    // SendAS(); // PC control specific ???
-  }
+void RemoteRadio::cat_ME(const char* cmd) {
+  ChangeMode(atoi(&cmd[2]), -1, false);
+  // SendAS(); // PC control specific ???
 }
 
 // *** TODO: some of these 'N' commands conflict with Kenwood commands
 // read/set noise floor
 // "NF;" (length 3) or "NFxxxx;" (length 7) xxxx= noise floor
-void RemoteRadio::cat_NF(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "NF%04d;", (int)t41.NoiseFloor);
-  } else {
-    t41.NoiseFloor.Update(atoi(&cmd[2]));
-  }
+void RemoteRadio::cat_NF(const char* cmd) {
+  t41.NoiseFloor.Update(atoi(&cmd[2]));
 }
 
 // read/set live noise floor
 // "NG;" (length 3) or "NGx;" (length 4) x= 0 off, 1 on
-void RemoteRadio::cat_NG(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "NG%d;", (int)t41.LiveNoiseFloor);
-  } else {
-    t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
-    UpdateInfoBoxItem(T41_ITEM_FLOOR);
-  }
+void RemoteRadio::cat_NG(const char* cmd) {
+  t41.LiveNoiseFloor.Update(atoi(&cmd[2]));
+  UpdateInfoBoxItem(T41_ITEM_FLOOR);
 }
 
 // read/set high audio filter frequency
 // "NH;" (length 3) or "NHxxxxxxxxxxx;" (length 14)
-void RemoteRadio::cat_NH(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "NH%011d;", (int)t41.FilterHiCut);
-  } else {
-    t41.FilterHiCut.Update(atol(&cmd[2]));
-
-    CalcAudioFilters();
-  }
+void RemoteRadio::cat_NH(const char* cmd) {
+  t41.FilterHiCut.Update(atol(&cmd[2]));
+  CalcAudioFilters();
 }
 
 // read/set low audio filter frequency
 // "NL;" (length 3) or "NLxxxxxxxxxxx;" (length 14)
-void RemoteRadio::cat_NL(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "NL%011d;", (int)t41.FilterLoCut);
-  } else {
-    t41.FilterLoCut.Update(atol(&cmd[2]));
-
-    CalcAudioFilters();
-  }
+void RemoteRadio::cat_NL(const char* cmd) {
+  t41.FilterLoCut.Update(atol(&cmd[2]));
+  CalcAudioFilters();
 }
 
 // inc/dec audio filter
-void RemoteRadio::cat_NS(const char* cmd, bool isRead) {
-  if(!isRead) {
-    posFilterEncoder += atoi(&cmd[2]);
-    ProcessFilterEncoder();
+void RemoteRadio::cat_NS(const char* cmd) {
+  posFilterEncoder += atoi(&cmd[2]);
+  ProcessFilterEncoder();
 
-    CalcAudioFilters();
-    UpdateDisplayFilters();
-  }
+  CalcAudioFilters();
+  UpdateDisplayFilters();
 }
 
 // set 0.5kHz-1.5kHz audio filter
-void RemoteRadio::cat_NW(const char* cmd, bool isRead) {
-  if(!isRead) {
-    t41.FilterLoCut.Update(500);
-    t41.FilterHiCut.Update(1500);
+void RemoteRadio::cat_NW(const char* cmd) {
+  t41.FilterLoCut.Update(500);
+  t41.FilterHiCut.Update(1500);
 
-    CalcAudioFilters();
-  }
+  CalcAudioFilters();
 }
 
 // set noise filter
 // "N1;" (length 3) or "N1x;" (length 4) x= NR_OPTIONS
-void RemoteRadio::cat_N1(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "N1%d;", (int)t41.NoiseFilter);
-  } else {
-    t41.NoiseFilter.Update(atoi(&cmd[2]));
-    UpdateInfoBoxItem(T41_ITEM_FILTER);
-  }
+void RemoteRadio::cat_N1(const char* cmd) {
+  t41.NoiseFilter.Update(atoi(&cmd[2]));
+  UpdateInfoBoxItem(T41_ITEM_FILTER);
 }
 
 // read/set transmit power level (non-standard Kenwood command)
 // "PC;" (length 3) or "PCxx;" (length 5) xx= transmit power level
-void RemoteRadio::cat_PC(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "PC%02d;", (int)t41.TxPower);
-  } else {
-    t41.TxPower.Update(atoi(&cmd[2]));
-    ShowCurrentPowerSetting();
-  }
+void RemoteRadio::cat_PC(const char* cmd) {
+  t41.TxPower.Update(atoi(&cmd[2]));
+  ShowCurrentPowerSetting();
 }
 
 // read/set RF gain
 // "PG;" (length 3) or "PGxxx;" (length 6) xxx= RF gain in db -60 to 10
-void RemoteRadio::cat_PG(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "PG%+03d;", (int)t41.RFGain);
-  } else {
-    t41.RFGain.Update(atoi(&cmd[2]));
-  }
+void RemoteRadio::cat_PG(const char* cmd) {
+  t41.RFGain.Update(atoi(&cmd[2]));
 }
 
 // read S-meter (non-standard Kenwood command)
 // "SM;" (length 3)
 // "SMx;" (length 4) x= 0: dbm; 1: S-meter
 // "SMxyyyyy;" (length 9) x= see above; y= value
-void RemoteRadio::cat_SM(const char* cmd, bool isRead) {
-  float32_t dbm = CalcSignalStrength();
-
-  if(isRead) {
-    // One of the following:
-    // send dBm
-    //sprintf(cmd, "SM0%+05d;", (int)(dbm * 10));
-
-    // send s-meter
-    //sprintf(cmd, "SM20%04d;", smeterPad);
-
-    // just send dBm for now
-    snprintf(msg, sizeof(msg), "SM0%+05d;", (int)(dbm * 10));
-  // *** TODO: need to resolve this one outlier ***
-  //} else {
-  //  int index = atoi(&cmd[2]);
-  //
-  //  // just send dBm for now
-  //  snprintf(msg, sizeof(msg), "SM%d%+05d;", index, (int)(dbm * 10));
-  } else {
-    // One of the following:
-    // SM0-xxxx; (receive dBm)
-    //sprintf(cmd, "SM0%+05d;", (int)(dbm * 10));
-
-    // send s-meter
-    //sprintf(cmd, "SM20%04d;", smeterPad);
-
-    //Serial.print("Received signal strength: ");
-    //signalStrengthReceivedIndex = atoi(&cmd[2]);
-    //signalStrength = ((float)atoi(&cmd[3])) / 10.0;
-    //signalStrengthReceived = true;
-    //Serial.println(signalStrength);
-  }
-}
+void RemoteRadio::cat_SM(const char* cmd) {}
 
 // set Teensy RTC
 // "TMxxxxxxxxxxx;" (length 14)
-void RemoteRadio::cat_TM(const char* cmd, bool isRead) {
-  if(!isRead) {
-    Teensy3Clock.set(atol(&cmd[2]));
-    setTime(atol(&cmd[2]));
-  }
+void RemoteRadio::cat_TM(const char* cmd) {
+  Teensy3Clock.set(atol(&cmd[2]));
+  setTime(atol(&cmd[2]));
 }
 
 // read/set volume
 // "VO;" (length 3) or "VOxxx;" (length 6) xxx= volume 0-100
-void RemoteRadio::cat_VO(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "VO%03d;", (int)t41.AudioVolume);
-  } else {
-    t41.AudioVolume.Update(atoi(&cmd[2]));
-  }
+void RemoteRadio::cat_VO(const char* cmd) {
+  t41.AudioVolume.Update(atoi(&cmd[2]));
 }
 
 // read/set spectrum zoom
 // "ZM;" (length 3) or "ZMx;" (length 4) x= zoom (0 to MAX_ZOOM_ENTRIES - 1)
-void RemoteRadio::cat_ZM(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "ZM%d;", (int)t41.SpectrumZoom);
-  } else {
-    t41.SpectrumZoom.Update(atoi(&cmd[2]));
-  }
+void RemoteRadio::cat_ZM(const char* cmd) {
+  t41.SpectrumZoom.Update(atoi(&cmd[2]));
 }
 
+/*
 const CATCommand RemoteRadio::catCommands[] = {
   {"BD"_cat, 3,  4, RemoteRadio::cat_BD_Wrapper},   // band down
   {"BU"_cat, 3,  4, RemoteRadio::cat_BU_Wrapper},   // band up
@@ -439,7 +278,7 @@ const CATCommand RemoteRadio::catCommands[] = {
   {"VO"_cat, 3,  6, RemoteRadio::cat_VO_Wrapper},   // read/set volume
   {"ZM"_cat, 3,  4, RemoteRadio::cat_ZM_Wrapper},   // read/set spectrum zoom
 };
-
+*/
 //-------------------------------------------------------------------------------------------------------------
 // WSJT-X specific commands
 //-------------------------------------------------------------------------------------------------------------
@@ -543,179 +382,193 @@ const CATCommand RemoteRadio::catCommands[] = {
 
 // Auto Information
 // "AI;" (length 3) or "AIx;" (length 4) x=0 off; x=1 on?
-void RemoteRadio::wsjt_AI(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "AI0;"); // Auto info off
-  } else {
-  }
-}
+void RemoteRadio::wsjt_AI(const char* cmd) {}
 
 // read/set VFO A frequency
 // "FA;" (length 3) or "FAxxxxxxxxxxx;" (length 14)
-void RemoteRadio::wsjt_FA(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FA%011d;", (int)t41.GetFreqA());
-  } else {
-    long f = atol(&cmd[2]);
-    ChangeBand(f);
-    t41.SetFreqA(f);
-  }
+void RemoteRadio::wsjt_FA(const char* cmd) {
+  long f = atol(&cmd[2]);
+  ChangeBand(f);
+  t41.SetFreqA(f);
 }
 
 // read/set VFO B frequency
 // "FB;" (length 3) or "FBxxxxxxxxxxx;" (length 14)
-void RemoteRadio::wsjt_FB(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FB%011d;", (int)t41.GetFreqB());
-  } else {
-    long f = atol(&cmd[2]);
-    ChangeBand(f);
-    t41.SetFreqB(f);
-  }
+void RemoteRadio::wsjt_FB(const char* cmd) {
+  long f = atol(&cmd[2]);
+  ChangeBand(f);
+  t41.SetFreqB(f);
 }
 
 // read/set VFO A or B
 // "FTx;" (length 4) x=0 VFO A; x=1 VFO B
-void RemoteRadio::wsjt_FT(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "FT0;"); // T41 always responds transmit on VFO A
-  } else {
-    VFOSelect(atoi(&cmd[2]));
-  }
-}
-
-// read radio ID
-// "ID;" (length 3), Answer: "IDxxx;" (length 6)
-// Kenwood TS-890S: ID024; // *** WSJT-X expects this even when TS-2000 is selected ***
-// Kenwood TS-2000: ID019;
-void RemoteRadio::wsjt_ID(const char* cmd, bool isRead) {
-  if(isRead) {
-    // receipt of ID command will switch to FT8 Data mode if not already there
-    ChangeMode(DATA_MODE, DEMOD_FT8);
-
-    // reply with the TS-890S id
-    snprintf(msg, sizeof(msg), "ID024;");
-    //snprintf(msg, sizeof(msg), "ID019;"); // TS-2000
-  }
-}
-
-// read transceiver status
-// "IF;" (length = 3)
-void RemoteRadio::wsjt_IF(const char* cmd, bool isRead) {
-  if(isRead) {
-    // WSJT-X recieved w/ USB Serial+Audio: IF00007048000125004+0000000001000361100007030000; which is 48, expects 37
-    //                            1         2         3      |  4
-    //                  0123456789012345678901234567890123456789012345678
-    //                  IF00007048000125004+0000000001000361100007030000;
-    // should be        IF000070480005000+00000000001xx000000;
-    //
-    // should have sent per below:
-    //                            1         2         3      |  4
-    //                  0123456789012345678901234567890123456789012345678
-    //                  IF000070480005000+00000000001xx000000;
-    //                    01234567890
-    // TxRxFreq %011d     00007048000
-    // 5000     %04d                 5000
-    // 0        %+06d                    +00000
-    // 0        %d                             0
-    // 0        %d                              0
-    // 0        %d                               0
-    // 0        %02d                              00
-    // XRState  %d                                  1
-    // mode     %d                                   x
-    // aVFO     %d                                    x
-    // 0        %d                                     0
-    // 0        %d                                      0
-    // 0        %d                                       0
-    // 0        %02d                                      00
-    // 0        %d                                          0
-    // ;                                                     ;
-    //                  IF000070480005000+00000000001xx000000;
-    snprintf(msg, sizeof(msg), "IF%011d%04d%+06d%d%d%d%02d%d%d%d%d%d%d%02d%d;",
-      t41.ActiveFreq(),     // freq in Hz
-      5000,         // freq step size
-      0,            // RIT/XIT freq in Hz, +-99999, this isn't preserved in the T41 but would be VFO A - VFO B if split
-      0,            // RIT on/off
-      0,            // XIT on/off
-      0,0,          // channel bank number
-      !GetXRState(),     // RX/TX (1/0)
-      mode,         // operating mode
-      (int)t41.ActiveVFO,    // RX VFO
-      0,            // scan Status
-      0,            // split status (Kenwood manual refers to SP command which doesn't exist)
-      0,            // CTCSS enabled
-      1,            // CTCSS tone frequency
-      0             // shift status
-    );
-  }
+void RemoteRadio::wsjt_FT(const char* cmd) {
+  VFOSelect(atoi(&cmd[2]));
 }
 
 // read keying Speed
 // "KS;" (length 3)
-void RemoteRadio::wsjt_KS(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "KS0%d;", DEFAULT_KEYER_WPM);
-  }
-}
-
-// read demod mode
-// "MD;" (length 3)
-void RemoteRadio::wsjt_MD(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "MD%d;", mode);
-  }
-}
+void RemoteRadio::wsjt_KS(const char* cmd) {}
 
 // read VFO frequency and mode
 // "SF;" (length 3)
-void RemoteRadio::wsjt_SF(const char* cmd, bool isRead) {
-  if(isRead) {
-    int vfo = atoi(&cmd[2]);
-    int freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
-    snprintf(msg, sizeof(msg), "SF%d%011d%d;", vfo, freq, mode);
-  }
-}
+void RemoteRadio::wsjt_SF(const char* cmd) {}
 
 // Split VFO
 // "SP;" (length 3) or "SPx;" (length 4)
-void RemoteRadio::wsjt_SP(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "SP%d;", 0); // no split VFO
-  } else {
-    // ignored
-  }
-}
+void RemoteRadio::wsjt_SP(const char* cmd) {}
 
 // Split
 // "TB;" (length 3) or "TBx;" (length 4)
-void RemoteRadio::wsjt_TB(const char* cmd, bool isRead) {
-  if(isRead) {
-    snprintf(msg, sizeof(msg), "TB%d;", 0); // no split VFO
-  } else {
-    // ignored
-  }
-}
+void RemoteRadio::wsjt_TB(const char* cmd) {}
 
 // set TX
 // "TX;" (length 3)
-void RemoteRadio::wsjt_TX(const char* cmd, bool isRead) {
-  if(!isRead) {
-    ft8PTT = true;
-  }
+void RemoteRadio::wsjt_TX(const char* cmd) {
+  ft8PTT = true;
 }
-
-const CATCommand RemoteRadio::wsjtCommands[] = {
-  {"AI"_cat, 3,  0, RemoteRadio::wsjt_AI_Wrapper},   // auto information
-  {"FA"_cat, 3, 14, RemoteRadio::wsjt_FA_Wrapper},   // read/set VFO A frequency
-  {"FB"_cat, 3, 14, RemoteRadio::wsjt_FB_Wrapper},   // read/set VFO B frequency
-  {"FT"_cat, 3,  4, RemoteRadio::wsjt_FT_Wrapper},   // set VFO A or B
-  {"ID"_cat, 3,  0, RemoteRadio::wsjt_ID_Wrapper},   // read radio ID
-  {"IF"_cat, 3,  0, RemoteRadio::wsjt_IF_Wrapper},   // read transceiver status
-  {"KS"_cat, 3,  0, RemoteRadio::wsjt_KS_Wrapper},   // key speed
-  {"MD"_cat, 3,  0, RemoteRadio::wsjt_MD_Wrapper},   // read/set demod mode
-  {"SF"_cat, 3,  0, RemoteRadio::wsjt_SF_Wrapper},   // read VFO freq and mode
-  {"SP"_cat, 3,  4, RemoteRadio::wsjt_SP_Wrapper},   // read split VFO
-  {"TB"_cat, 3,  4, RemoteRadio::wsjt_TB_Wrapper},   // read split
-  {"TM"_cat, 0, 14, RemoteRadio::cat_TM_Wrapper},    // set Teensy RTC (allows PC app to set radio time)
-  {"TX"_cat, 0,  3, RemoteRadio::wsjt_TX_Wrapper},   // TX
+  // build the command tables
+struct RemoteCommandTable {
+//class RemoteCommandTable {
+//public:
+  //const CATCommand* data[128] = {};
+  const CATCommand* data[128];
+  //constexpr RemoteCommandTable();
 };
+
+//static inline constexpr RemoteCommandTable() : data{} {
+//constexpr RemoteCommandTable::RemoteCommandTable() : data{
+static constexpr RemoteCommandTable makeCatTable() {
+  RemoteCommandTable wrapper = {};
+  /*
+    wrapper.data[get_cat_index("BD"_cat)] = &RemoteRadio::cat_BD_cmd;
+    wrapper.data[get_cat_index("BU"_cat)] = &RemoteRadio::cat_BU_cmd;
+    wrapper.data[get_cat_index("DP"_cat)] = &RemoteRadio::cat_DP_cmd;
+    wrapper.data[get_cat_index("DS"_cat)] = &RemoteRadio::cat_DS_cmd;
+    wrapper.data[get_cat_index("FA"_cat)] = &RemoteRadio::cat_FA_cmd;
+    wrapper.data[get_cat_index("FB"_cat)] = &RemoteRadio::cat_FB_cmd;
+    wrapper.data[get_cat_index("FC"_cat)] = &RemoteRadio::cat_FC_cmd;
+    wrapper.data[get_cat_index("FF"_cat)] = &RemoteRadio::cat_FF_cmd;
+    wrapper.data[get_cat_index("FS"_cat)] = &RemoteRadio::cat_FS_cmd;
+    wrapper.data[get_cat_index("FT"_cat)] = &RemoteRadio::cat_FT_cmd;
+    wrapper.data[get_cat_index("F0"_cat)] = &RemoteRadio::cat_F0_cmd;
+    wrapper.data[get_cat_index("F1"_cat)] = &RemoteRadio::cat_F1_cmd;
+    wrapper.data[get_cat_index("GT"_cat)] = &RemoteRadio::cat_GT_cmd;
+    wrapper.data[get_cat_index("ID"_cat)] = &RemoteRadio::cat_ID_cmd;
+    wrapper.data[get_cat_index("IF"_cat)] = &RemoteRadio::cat_IF_cmd;
+    wrapper.data[get_cat_index("MD"_cat)] = &RemoteRadio::cat_MD_cmd;
+    wrapper.data[get_cat_index("ME"_cat)] = &RemoteRadio::cat_ME_cmd;
+    wrapper.data[get_cat_index("NF"_cat)] = &RemoteRadio::cat_NF_cmd;
+    wrapper.data[get_cat_index("NG"_cat)] = &RemoteRadio::cat_NG_cmd;
+    wrapper.data[get_cat_index("NH"_cat)] = &RemoteRadio::cat_NH_cmd;
+    wrapper.data[get_cat_index("NL"_cat)] = &RemoteRadio::cat_NL_cmd;
+    wrapper.data[get_cat_index("NS"_cat)] = &RemoteRadio::cat_NS_cmd;
+    wrapper.data[get_cat_index("NW"_cat)] = &RemoteRadio::cat_NW_cmd;
+    wrapper.data[get_cat_index("N1"_cat)] = &RemoteRadio::cat_N1_cmd;
+    wrapper.data[get_cat_index("PC"_cat)] = &RemoteRadio::cat_PC_cmd;
+    wrapper.data[get_cat_index("PG"_cat)] = &RemoteRadio::cat_PG_cmd;
+    wrapper.data[get_cat_index("SM"_cat)] = &RemoteRadio::cat_SM_cmd;
+    wrapper.data[get_cat_index("TM"_cat)] = &RemoteRadio::cat_TM_cmd;
+    wrapper.data[get_cat_index("VO"_cat)] = &RemoteRadio::cat_VO_cmd;
+    wrapper.data[get_cat_index("ZM"_cat)] = &RemoteRadio::cat_ZM_cmd;
+    */
+    wrapper.data["BD"_cath] = &RemoteRadio::cat_BD_cmd;
+    wrapper.data["BU"_cath] = &RemoteRadio::cat_BU_cmd;
+    wrapper.data["DP"_cath] = &RemoteRadio::cat_DP_cmd;
+    wrapper.data["DS"_cath] = &RemoteRadio::cat_DS_cmd;
+    wrapper.data["FA"_cath] = &RemoteRadio::cat_FA_cmd;
+    wrapper.data["FB"_cath] = &RemoteRadio::cat_FB_cmd;
+    wrapper.data["FC"_cath] = &RemoteRadio::cat_FC_cmd;
+    wrapper.data["FF"_cath] = &RemoteRadio::cat_FF_cmd;
+    wrapper.data["FS"_cath] = &RemoteRadio::cat_FS_cmd;
+    wrapper.data["FT"_cath] = &RemoteRadio::cat_FT_cmd;
+    wrapper.data["F0"_cath] = &RemoteRadio::cat_F0_cmd;
+    wrapper.data["F1"_cath] = &RemoteRadio::cat_F1_cmd;
+    wrapper.data["GT"_cath] = &RemoteRadio::cat_GT_cmd;
+    wrapper.data["ID"_cath] = &RemoteRadio::cat_ID_cmd;
+    wrapper.data["IF"_cath] = &RemoteRadio::cat_IF_cmd;
+    wrapper.data["MD"_cath] = &RemoteRadio::cat_MD_cmd;
+    wrapper.data["ME"_cath] = &RemoteRadio::cat_ME_cmd;
+    wrapper.data["NF"_cath] = &RemoteRadio::cat_NF_cmd;
+    wrapper.data["NG"_cath] = &RemoteRadio::cat_NG_cmd;
+    wrapper.data["NH"_cath] = &RemoteRadio::cat_NH_cmd;
+    wrapper.data["NL"_cath] = &RemoteRadio::cat_NL_cmd;
+    wrapper.data["NS"_cath] = &RemoteRadio::cat_NS_cmd;
+    wrapper.data["NW"_cath] = &RemoteRadio::cat_NW_cmd;
+    wrapper.data["N1"_cath] = &RemoteRadio::cat_N1_cmd;
+    wrapper.data["PC"_cath] = &RemoteRadio::cat_PC_cmd;
+    wrapper.data["PG"_cath] = &RemoteRadio::cat_PG_cmd;
+    wrapper.data["SM"_cath] = &RemoteRadio::cat_SM_cmd;
+    wrapper.data["TM"_cath] = &RemoteRadio::cat_TM_cmd;
+    wrapper.data["VO"_cath] = &RemoteRadio::cat_VO_cmd;
+    wrapper.data["ZM"_cath] = &RemoteRadio::cat_ZM_cmd;
+    return wrapper;
+  }
+/*
+// 1. Define the array as a global constant with a flat initializer list
+// This forces the linker to bake the actual addresses into the binary image
+static const CATCommand* const catCommands[128] PROGMEM = {
+//    [5]   = &RemoteRadio::cat_ID_cmd,
+//    [10]  = &RemoteRadio::cat_ZM_cmd,
+//    [52]  = &RemoteRadio::cat_BU_cmd,
+//    [111] = &RemoteRadio::cat_FA_cmd,
+//    [122] = &RemoteRadio::cat_BD_cmd
+// 128-slot flat array using constant 40305
+//static const CommandStruct* const kenwood_data[128] PROGMEM = {
+    &RemoteRadio::cat_GT_cmd, nullptr, nullptr, nullptr, &RemoteRadio::cat_F1_cmd, &RemoteRadio::cat_ID_cmd, nullptr, &RemoteRadio::cat_DS_cmd, nullptr, nullptr,
+    &RemoteRadio::cat_ZM_cmd, nullptr, &RemoteRadio::cat_NG_cmd, &RemoteRadio::cat_FC_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, &RemoteRadio::cat_NL_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, &RemoteRadio::cat_DP_cmd, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, &RemoteRadio::cat_IF_cmd, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, &RemoteRadio::cat_BU_cmd, &RemoteRadio::cat_F0_cmd, &RemoteRadio::cat_ME_cmd, &RemoteRadio::cat_TM_cmd, nullptr, nullptr, nullptr, nullptr,
+    &RemoteRadio::cat_NS_cmd, &RemoteRadio::cat_NF_cmd, &RemoteRadio::cat_FB_cmd, nullptr, nullptr, nullptr, &RemoteRadio::cat_PC_cmd, nullptr, nullptr, &RemoteRadio::cat_VO_cmd,
+    nullptr, &RemoteRadio::cat_FT_cmd, &RemoteRadio::cat_N1_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &RemoteRadio::cat_NH_cmd,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, &RemoteRadio::cat_MD_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    &RemoteRadio::cat_FA_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &RemoteRadio::cat_NW_cmd, &RemoteRadio::cat_FS_cmd,
+    &RemoteRadio::cat_FF_cmd, &RemoteRadio::cat_BD_cmd, nullptr, nullptr, &RemoteRadio::cat_PG_cmd, &RemoteRadio::cat_SM_cmd, nullptr
+};
+*/
+// 2. The Radio declaration (at the very bottom)
+// Now, when this constructor runs, 'kenwood_data' is not 'empty memory'
+// it is a pre-baked block of pointers in Flash/RAM.
+//RemoteRadio radio_instance(kenwood_data);
+
+//struct WSJTCommandBuilder {
+class WSJTCommandBuilder {
+public:
+  //const CATCommand* data[128] = {};
+  const CATCommand* data[128];
+  constexpr WSJTCommandBuilder();
+};
+
+//static inline constexpr WSJTCommandBuilder() : data{} {
+constexpr WSJTCommandBuilder::WSJTCommandBuilder() : data{} {
+      data["AI"_cath] = &RemoteRadio::wsjt_AI_cmd;
+      data["FA"_cath] = &RemoteRadio::wsjt_FA_cmd;
+      data["FB"_cath] = &RemoteRadio::wsjt_FB_cmd;
+      data["FT"_cath] = &RemoteRadio::wsjt_FT_cmd;
+      data["ID"_cath] = &RemoteRadio::cat_ID_cmd;
+      data["IF"_cath] = &RemoteRadio::cat_IF_cmd;
+      data["KS"_cath] = &RemoteRadio::wsjt_KS_cmd;
+      data["MD"_cath] = &RemoteRadio::cat_MD_cmd;
+      data["SF"_cath] = &RemoteRadio::wsjt_SF_cmd;
+      data["SP"_cath] = &RemoteRadio::wsjt_SP_cmd;
+      data["TB"_cath] = &RemoteRadio::wsjt_TB_cmd;
+      data["TM"_cath] = &RemoteRadio::cat_TM_cmd;
+      data["TX"_cath] = &RemoteRadio::wsjt_TX_cmd;
+  }
+
+//static inline constexpr RemoteCommandTable catCommands PROGMEM {};
+//static inline constexpr WSJTCommandBuilder wsjtCommands PROGMEM {};
+//static inline constexpr RemoteCommandTable catCommands PROGMEM = {};
+//static inline constexpr WSJTCommandBuilder wsjtCommands PROGMEM = {};
+//static inline constexpr RemoteCommandTable catCommands PROGMEM;
+//static inline constexpr WSJTCommandBuilder wsjtCommands PROGMEM;
+//static constexpr RemoteCommandTable catCommands PROGMEM;
+//static constexpr WSJTCommandBuilder wsjtCommands PROGMEM;
+static const RemoteCommandTable catCommands PROGMEM = makeCatTable();
+constexpr WSJTCommandBuilder wsjtCommands;
+
+RemoteRadio radio(&catCommands.data[0], &wsjtCommands.data[0]);
