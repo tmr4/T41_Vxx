@@ -70,14 +70,14 @@ const uint16_t CatControl::catItems[T41_ITEMS] {
   "xx"_cat    // T41_ITEM_CW_DECODER   36
 };
 
-// get read CAT command value or act on a read command
+// get read CAT command value or otherwise perform non-standard action on a read command
 // *** TODO: got to be a better way ***
 int CatControl::GetPropertyValue(int token) {
   int value = 0;
   int vfo, freq;
 
   switch(token) {
-    case "AI"_cat:
+    case "AI"_cat: // WSJT-X
       snprintf(msg, sizeof(msg), "AI0;"); // Auto info off
       send(msg);
       break;
@@ -165,7 +165,7 @@ int CatControl::GetPropertyValue(int token) {
           0,            // XIT on/off
           0,0,          // channel bank number
           !GetXRState(),     // RX/TX (1/0)
-          mode,         // operating mode
+          2,            // operating mode
           (int)t41.ActiveVFO,    // RX VFO
           0,            // scan Status
           0,            // split status (Kenwood manual refers to SP command which doesn't exist)
@@ -229,10 +229,10 @@ int CatControl::GetPropertyValue(int token) {
     case "PG"_cat:
       value = t41.RFGain;
       break;
-    case "SF"_cat:
+    case "SF"_cat: // WSJT-X
       vfo = atoi(&cmd[2]);
       freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
-      snprintf(msg, sizeof(msg), "SF%d%011d%d;", vfo, freq, mode);
+      snprintf(msg, sizeof(msg), "SF%d%011d%d;", vfo, freq, 2);
       send(msg);
       break;
     case "SM"_cat:
@@ -247,75 +247,3 @@ int CatControl::GetPropertyValue(int token) {
   }
   return value;
 }
-
-
-/*
-[] {
-  , // BD
-  , // BU
-  , // DP
-  , // DS
-  t41.GetFreqA, // FA
-  t41.GetFreqB, // FB
-  t41.CenterFreq, // FC
-  t41.NCOFreq, // FF
-  !t41.MouseCenterTuneActive, // FS
-  , // FT
-  t41.CenterTuneIndex, // F0
-  t41.FineTuneIndex, // F1
-  t41.AGCMode, // GT
-  t41.RadioID, // ID
-  , // IF
-  t41.DemodMode, // MD
-  t41.RadioMode, // ME
-  t41.NoiseFloor, // NF
-  t41.NoiseFloor, // NG
-  t41.FilterHiCut, // NH
-  t41.FilterLoCut, // NL
-  , // NS
-  , // NW
-  t41.NoiseFilter, // N1
-  t41.TxPower, // PC
-  t41.RFGain, // PG
-  CalcSignalStrength()*10, // SM
-  , // TM
-  t41.AudioVolume, // VO
-  t41.SpectrumZoom, // ZM
-}
-[] {
-  , // BD
-  , // BU
-  , // DP
-  , // DS
-  , // FA
-  , // FB
-  T41_ITEM_FREQ, // FC
-  T41_ITEM_NCO, // FF
-  T41_ITEM_MOUSE, // FS
-  , // FT
-  T41_ITEM_TUNE, // F0
-  T41_ITEM_FINE, // F1
-  T41_ITEM_AGC, // GT
-  RADIO_ID, // ID
-  , // IF
-  T41_ITEM_DEMOD_MODE, // MD
-  T41_ITEM_RADIO_MODE, // ME
-  NoiseFloor, // NF
-  T41_ITEM_FLOOR, // NG
-  T41_ITEM_FHI, // NH
-  T41_ITEM_FLO, // NL
-  , // NS
-  , // NW
-  T41_ITEM_FILTER, // N1
-  T41_ITEM_POWER, // PC
-  T41_ITEM_RFGAIN, // PG
-  CalcSignalStrength()*10, // SM
-  , // TM
-  T41_ITEM_VOL, // VO
-  T41_ITEM_ZOOM, // ZM
-}
-*/
-//void CatControl::send(const char *msg) {
-//  link->print(msg);
-//  //ethernetControl.flush();
-//}

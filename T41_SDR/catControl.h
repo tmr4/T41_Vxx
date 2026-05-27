@@ -14,14 +14,12 @@ void SendCommand(int id);
 // Helpers
 //-------------------------------------------------------------------------------------------------------------
 
-int GetPropertyValue(int token);
-
 struct CATAction {
   virtual void execute(CatControl* instance, const char* cmd) const = 0;
 };
 
 struct CATCommand {
-  const int token;
+  const uint16_t token;
   const char* const format;       // answer format
   //const CATAction* action;
   const CATAction* const action;
@@ -29,9 +27,13 @@ struct CATCommand {
   const uint8_t lenS;
 };
 
+// macro to create the methods needed get the CAT command table into PROGMEM
+// *** use of __attribute__((section(".progmem.data") vs PROGMEM resolves MethodName##_Wrapper
+//     section type conflict with catCommands set as PROGMEM or can use PROGMEM here and use
+//     __attribute__((section(".progmem.data") on catCommands ***
 #define DEFINE_CAT_COMMAND(ClassName, MethodName, Token, FormatStr, ReadLen, SetLen) \
   /* 1. Flash string: fmt_cat_FA */ \
-  static inline const char fmt_##MethodName[] __attribute__((section(".progmem.data"), used)) = FormatStr; \
+  static inline const char fmt_##MethodName[] PROGMEM = FormatStr; \
   \
   /* 2. Wrapper: Action_cat_FA */ \
   struct Action_##MethodName : public CATAction { \
@@ -39,11 +41,10 @@ struct CATCommand {
       static_cast<ClassName*>(parentPtr)->MethodName(cmd); \
     } \
   }; \
-  static inline Action_##MethodName MethodName##_Wrapper = {}; \
-  /*static inline const Action_##MethodName MethodName##_Wrapper __attribute__((section(".progmem.data"), used));*/ \
+  static inline const Action_##MethodName MethodName##_Wrapper PROGMEM = {}; \
   \
   /* 3. Flash Struct: cat_FA_cmd */ \
-  static inline const CATCommand MethodName##_cmd __attribute__((section(".progmem.data"), used)) = { \
+  static inline const CATCommand MethodName##_cmd PROGMEM = { \
       Token, \
       fmt_##MethodName, \
       &MethodName##_Wrapper, \
@@ -161,17 +162,9 @@ Index:            1         2         3         4         5         6         7 
 */
 
 constexpr uint8_t operator "" _cath(const char* str, size_t len) {
-//static constexpr uint8_t operator "" _cath(const char* str, size_t len) {
-//constexpr uint8_t operator "" _cath(const char* str) {
-  //uint16_t token = (len < 2) ? 0 : (static_cast<uint16_t>(str[0]) << 8) | static_cast<uint16_t>(str[1]);
+  uint16_t token = (len < 2) ? 0 : (static_cast<uint16_t>(str[0]) << 8) | static_cast<uint16_t>(str[1]);
   // create 128-slot hash index
-  //return (uint8_t)((token * 40305U) & 0xFFFF) >> 9;
-  return ((((static_cast<uint16_t>(str[0]) << 8) | static_cast<uint16_t>(str[1])) * 40305U) & 0xFFFF) >> 9;
-  //return (uint16_t)((((uint16_t)str[0] << 8 | (uint16_t)str[1] ) * 40305U) & 0xFFFF) >> 9;
-}
-static constexpr uint8_t get_cat_index(uint16_t token) {
-  // Explicit 16-bit math ensures the compiler can pre-calculate this
-  return static_cast<uint8_t>((static_cast<uint16_t>(token * 40305U)) >> 9);
+  return ((token * 40305U) & 0xFFFF) >> 9;
 }
 
 //-------------------------------------------------------------------------------------------------------------
@@ -196,10 +189,8 @@ CatControl creates the framework for CAT control support. It provides the follow
 */
 
 class CatControl {
-public:
-  const CATCommand* const *commands;
 private:
-  //const CATCommand* const *commands;
+  const CATCommand* const *commands;
   static const uint16_t catItems[T41_ITEMS];
 
   static constexpr uint8_t maxCmd = 255;
@@ -255,15 +246,8 @@ protected:
   void processCommand(const char* cmd) {
     // convert the 2 character command code into a single uint16_t
     uint16_t cmdCode = (uint16_t)((cmd[0] << 8) | cmd[1]);
-    //uint8_t cmdIndex = (uint8_t)((uint16_t)(cmdCode * 40305U) & 0xFFFF) >> 9;
     uint8_t cmdIndex = (uint16_t)(cmdCode * 40305U) >> 9;
-    //uint8_t cmdIndex = ((cmdCode * 40305U) & 0xFFFF) >> 9;
     const CATCommand* item = commands[cmdIndex];
-    if(item) {
-      Serial.print(cmd); Serial.print(" cmdCode: "); Serial.print(cmdCode); Serial.print(" item->token: "); Serial.print(item->token); Serial.print(" cmdIndex: "); Serial.println(cmdIndex);
-    } else {
-      Serial.print(cmd); Serial.print(" cmdCode: "); Serial.print(cmdCode); Serial.print(" item->token: "); Serial.print("null"); Serial.print(" cmdIndex: "); Serial.println(cmdIndex);
-    }
 
     if(item) {
       // CAT command found
@@ -289,8 +273,6 @@ protected:
   //void send(const char *msg);
 
   int GetPropertyValue(int token);
-
-  int mode = 2; // FT8 mode is always USB
 
 protected:
   unsigned long heatbeart = 0;

@@ -13,7 +13,6 @@
 #include "Utility.h"
 
 #include "radio.h"
-#include "connectManager.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -21,7 +20,6 @@
 
 //extern bool controlDataFlag; // *** data transfers to PC control app are broken ***
 extern bool ft8PTT;
-extern ConnectManager transport;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -31,8 +29,9 @@ extern ConnectManager transport;
 // Generic CAT commands - PC or remote unit control commands
 //-------------------------------------------------------------------------------------------------------------
 
-// *** comments below show both read/set command structure, but these functions
-//     only cover set commands ***
+// *** comments below show both read/set command structure,
+//     but these functions only cover set commands ***
+
 // read/set band down
 // "BD;" (length 3) or "BDx;" (length 4)
 void RemoteRadio::cat_BD(const char* cmd) {
@@ -245,40 +244,6 @@ void RemoteRadio::cat_ZM(const char* cmd) {
   t41.SpectrumZoom.Update(atoi(&cmd[2]));
 }
 
-/*
-const CATCommand RemoteRadio::catCommands[] = {
-  {"BD"_cat, 3,  4, RemoteRadio::cat_BD_Wrapper},   // band down
-  {"BU"_cat, 3,  4, RemoteRadio::cat_BU_Wrapper},   // band up
-  {"DP"_cat, 0,  3, RemoteRadio::cat_DP_Wrapper},   // pause data transfer
-  {"DS"_cat, 0,  3, RemoteRadio::cat_DS_Wrapper},   // start data transfer
-  {"FA"_cat, 3, 14, RemoteRadio::cat_FA_Wrapper},   // read/set VFO A frequency
-  {"FB"_cat, 3, 14, RemoteRadio::cat_FB_Wrapper},   // read/set VFO B frequency
-  {"FC"_cat, 3, 14, RemoteRadio::cat_FC_Wrapper},   // read/set current VFO center frequency
-  {"FF"_cat, 3, 14, RemoteRadio::cat_FF_Wrapper},   // read/set NCO frequency offset
-  {"FS"_cat, 3,  3, RemoteRadio::cat_FS_Wrapper},   // toggle fine tune status
-  {"FT"_cat, 0,  4, RemoteRadio::cat_FT_Wrapper},   // set VFO A or B
-  {"F0"_cat, 3,  4, RemoteRadio::cat_F0_Wrapper},   // set center or fine tune increment change
-  {"F1"_cat, 3,  4, RemoteRadio::cat_F1_Wrapper},   // set center or fine tune increment change
-  {"GT"_cat, 3,  4, RemoteRadio::cat_GT_Wrapper},   // read/set AGC
-  {"ID"_cat, 3,  6, RemoteRadio::cat_ID_Wrapper},   // read radio ID
-  {"IF"_cat, 3,  0, RemoteRadio::cat_IF_Wrapper},   // read transceiver status
-  {"MD"_cat, 3,  4, RemoteRadio::cat_MD_Wrapper},   // read/set demod mode
-  {"ME"_cat, 3,  4, RemoteRadio::cat_ME_Wrapper},   // read/set operating mode
-  {"NF"_cat, 3,  7, RemoteRadio::cat_NF_Wrapper},   // read/set noise floor
-  {"NG"_cat, 3,  4, RemoteRadio::cat_NG_Wrapper},   // set live noise floor
-  {"NH"_cat, 3, 14, RemoteRadio::cat_NH_Wrapper},   // set high audio filter frequency
-  {"NL"_cat, 3, 14, RemoteRadio::cat_NL_Wrapper},   // set low audio filter frequency
-  {"NS"_cat, 0,  5, RemoteRadio::cat_NS_Wrapper},   // inc/dec audio filter
-  {"NW"_cat, 0,  3, RemoteRadio::cat_NW_Wrapper},   // set 0.5kHz-1.5kHz audio filter
-  {"N1"_cat, 3,  4, RemoteRadio::cat_N1_Wrapper},   // set noise filter
-  {"PC"_cat, 3,  5, RemoteRadio::cat_PC_Wrapper},   // read/set transmit power level
-  {"PG"_cat, 3,  6, RemoteRadio::cat_PG_Wrapper},   // read/set RF gain
-  {"SM"_cat, 3,  4, RemoteRadio::cat_SM_Wrapper},   // read S-meter
-  {"TM"_cat, 0, 14, RemoteRadio::cat_TM_Wrapper},   // set Teensy RTC
-  {"VO"_cat, 3,  6, RemoteRadio::cat_VO_Wrapper},   // read/set volume
-  {"ZM"_cat, 3,  4, RemoteRadio::cat_ZM_Wrapper},   // read/set spectrum zoom
-};
-*/
 //-------------------------------------------------------------------------------------------------------------
 // WSJT-X specific commands
 //-------------------------------------------------------------------------------------------------------------
@@ -427,148 +392,71 @@ void RemoteRadio::wsjt_TB(const char* cmd) {}
 void RemoteRadio::wsjt_TX(const char* cmd) {
   ft8PTT = true;
 }
-  // build the command tables
+
+// build the command tables
 struct RemoteCommandTable {
-//class RemoteCommandTable {
-//public:
-  //const CATCommand* data[128] = {};
   const CATCommand* data[128];
-  //constexpr RemoteCommandTable();
-};
 
-//static inline constexpr RemoteCommandTable() : data{} {
-//constexpr RemoteCommandTable::RemoteCommandTable() : data{
-static constexpr RemoteCommandTable makeCatTable() {
-  RemoteCommandTable wrapper = {};
-  /*
-    wrapper.data[get_cat_index("BD"_cat)] = &RemoteRadio::cat_BD_cmd;
-    wrapper.data[get_cat_index("BU"_cat)] = &RemoteRadio::cat_BU_cmd;
-    wrapper.data[get_cat_index("DP"_cat)] = &RemoteRadio::cat_DP_cmd;
-    wrapper.data[get_cat_index("DS"_cat)] = &RemoteRadio::cat_DS_cmd;
-    wrapper.data[get_cat_index("FA"_cat)] = &RemoteRadio::cat_FA_cmd;
-    wrapper.data[get_cat_index("FB"_cat)] = &RemoteRadio::cat_FB_cmd;
-    wrapper.data[get_cat_index("FC"_cat)] = &RemoteRadio::cat_FC_cmd;
-    wrapper.data[get_cat_index("FF"_cat)] = &RemoteRadio::cat_FF_cmd;
-    wrapper.data[get_cat_index("FS"_cat)] = &RemoteRadio::cat_FS_cmd;
-    wrapper.data[get_cat_index("FT"_cat)] = &RemoteRadio::cat_FT_cmd;
-    wrapper.data[get_cat_index("F0"_cat)] = &RemoteRadio::cat_F0_cmd;
-    wrapper.data[get_cat_index("F1"_cat)] = &RemoteRadio::cat_F1_cmd;
-    wrapper.data[get_cat_index("GT"_cat)] = &RemoteRadio::cat_GT_cmd;
-    wrapper.data[get_cat_index("ID"_cat)] = &RemoteRadio::cat_ID_cmd;
-    wrapper.data[get_cat_index("IF"_cat)] = &RemoteRadio::cat_IF_cmd;
-    wrapper.data[get_cat_index("MD"_cat)] = &RemoteRadio::cat_MD_cmd;
-    wrapper.data[get_cat_index("ME"_cat)] = &RemoteRadio::cat_ME_cmd;
-    wrapper.data[get_cat_index("NF"_cat)] = &RemoteRadio::cat_NF_cmd;
-    wrapper.data[get_cat_index("NG"_cat)] = &RemoteRadio::cat_NG_cmd;
-    wrapper.data[get_cat_index("NH"_cat)] = &RemoteRadio::cat_NH_cmd;
-    wrapper.data[get_cat_index("NL"_cat)] = &RemoteRadio::cat_NL_cmd;
-    wrapper.data[get_cat_index("NS"_cat)] = &RemoteRadio::cat_NS_cmd;
-    wrapper.data[get_cat_index("NW"_cat)] = &RemoteRadio::cat_NW_cmd;
-    wrapper.data[get_cat_index("N1"_cat)] = &RemoteRadio::cat_N1_cmd;
-    wrapper.data[get_cat_index("PC"_cat)] = &RemoteRadio::cat_PC_cmd;
-    wrapper.data[get_cat_index("PG"_cat)] = &RemoteRadio::cat_PG_cmd;
-    wrapper.data[get_cat_index("SM"_cat)] = &RemoteRadio::cat_SM_cmd;
-    wrapper.data[get_cat_index("TM"_cat)] = &RemoteRadio::cat_TM_cmd;
-    wrapper.data[get_cat_index("VO"_cat)] = &RemoteRadio::cat_VO_cmd;
-    wrapper.data[get_cat_index("ZM"_cat)] = &RemoteRadio::cat_ZM_cmd;
-    */
-    wrapper.data["BD"_cath] = &RemoteRadio::cat_BD_cmd;
-    wrapper.data["BU"_cath] = &RemoteRadio::cat_BU_cmd;
-    wrapper.data["DP"_cath] = &RemoteRadio::cat_DP_cmd;
-    wrapper.data["DS"_cath] = &RemoteRadio::cat_DS_cmd;
-    wrapper.data["FA"_cath] = &RemoteRadio::cat_FA_cmd;
-    wrapper.data["FB"_cath] = &RemoteRadio::cat_FB_cmd;
-    wrapper.data["FC"_cath] = &RemoteRadio::cat_FC_cmd;
-    wrapper.data["FF"_cath] = &RemoteRadio::cat_FF_cmd;
-    wrapper.data["FS"_cath] = &RemoteRadio::cat_FS_cmd;
-    wrapper.data["FT"_cath] = &RemoteRadio::cat_FT_cmd;
-    wrapper.data["F0"_cath] = &RemoteRadio::cat_F0_cmd;
-    wrapper.data["F1"_cath] = &RemoteRadio::cat_F1_cmd;
-    wrapper.data["GT"_cath] = &RemoteRadio::cat_GT_cmd;
-    wrapper.data["ID"_cath] = &RemoteRadio::cat_ID_cmd;
-    wrapper.data["IF"_cath] = &RemoteRadio::cat_IF_cmd;
-    wrapper.data["MD"_cath] = &RemoteRadio::cat_MD_cmd;
-    wrapper.data["ME"_cath] = &RemoteRadio::cat_ME_cmd;
-    wrapper.data["NF"_cath] = &RemoteRadio::cat_NF_cmd;
-    wrapper.data["NG"_cath] = &RemoteRadio::cat_NG_cmd;
-    wrapper.data["NH"_cath] = &RemoteRadio::cat_NH_cmd;
-    wrapper.data["NL"_cath] = &RemoteRadio::cat_NL_cmd;
-    wrapper.data["NS"_cath] = &RemoteRadio::cat_NS_cmd;
-    wrapper.data["NW"_cath] = &RemoteRadio::cat_NW_cmd;
-    wrapper.data["N1"_cath] = &RemoteRadio::cat_N1_cmd;
-    wrapper.data["PC"_cath] = &RemoteRadio::cat_PC_cmd;
-    wrapper.data["PG"_cath] = &RemoteRadio::cat_PG_cmd;
-    wrapper.data["SM"_cath] = &RemoteRadio::cat_SM_cmd;
-    wrapper.data["TM"_cath] = &RemoteRadio::cat_TM_cmd;
-    wrapper.data["VO"_cath] = &RemoteRadio::cat_VO_cmd;
-    wrapper.data["ZM"_cath] = &RemoteRadio::cat_ZM_cmd;
-    return wrapper;
+  constexpr RemoteCommandTable() : data{} {
+    data["BD"_cath] = &RemoteRadio::cat_BD_cmd;
+    data["BU"_cath] = &RemoteRadio::cat_BU_cmd;
+    data["DP"_cath] = &RemoteRadio::cat_DP_cmd;
+    data["DS"_cath] = &RemoteRadio::cat_DS_cmd;
+    data["FA"_cath] = &RemoteRadio::cat_FA_cmd;
+    data["FB"_cath] = &RemoteRadio::cat_FB_cmd;
+    data["FC"_cath] = &RemoteRadio::cat_FC_cmd;
+    data["FF"_cath] = &RemoteRadio::cat_FF_cmd;
+    data["FS"_cath] = &RemoteRadio::cat_FS_cmd;
+    data["FT"_cath] = &RemoteRadio::cat_FT_cmd;
+    data["F0"_cath] = &RemoteRadio::cat_F0_cmd;
+    data["F1"_cath] = &RemoteRadio::cat_F1_cmd;
+    data["GT"_cath] = &RemoteRadio::cat_GT_cmd;
+    data["ID"_cath] = &RemoteRadio::cat_ID_cmd;
+    data["IF"_cath] = &RemoteRadio::cat_IF_cmd;
+    data["MD"_cath] = &RemoteRadio::cat_MD_cmd;
+    data["ME"_cath] = &RemoteRadio::cat_ME_cmd;
+    data["NF"_cath] = &RemoteRadio::cat_NF_cmd;
+    data["NG"_cath] = &RemoteRadio::cat_NG_cmd;
+    data["NH"_cath] = &RemoteRadio::cat_NH_cmd;
+    data["NL"_cath] = &RemoteRadio::cat_NL_cmd;
+    data["NS"_cath] = &RemoteRadio::cat_NS_cmd;
+    data["NW"_cath] = &RemoteRadio::cat_NW_cmd;
+    data["N1"_cath] = &RemoteRadio::cat_N1_cmd;
+    data["PC"_cath] = &RemoteRadio::cat_PC_cmd;
+    data["PG"_cath] = &RemoteRadio::cat_PG_cmd;
+    data["SM"_cath] = &RemoteRadio::cat_SM_cmd;
+    data["TM"_cath] = &RemoteRadio::cat_TM_cmd;
+    data["VO"_cath] = &RemoteRadio::cat_VO_cmd;
+    data["ZM"_cath] = &RemoteRadio::cat_ZM_cmd;
   }
-/*
-// 1. Define the array as a global constant with a flat initializer list
-// This forces the linker to bake the actual addresses into the binary image
-static const CATCommand* const catCommands[128] PROGMEM = {
-//    [5]   = &RemoteRadio::cat_ID_cmd,
-//    [10]  = &RemoteRadio::cat_ZM_cmd,
-//    [52]  = &RemoteRadio::cat_BU_cmd,
-//    [111] = &RemoteRadio::cat_FA_cmd,
-//    [122] = &RemoteRadio::cat_BD_cmd
-// 128-slot flat array using constant 40305
-//static const CommandStruct* const kenwood_data[128] PROGMEM = {
-    &RemoteRadio::cat_GT_cmd, nullptr, nullptr, nullptr, &RemoteRadio::cat_F1_cmd, &RemoteRadio::cat_ID_cmd, nullptr, &RemoteRadio::cat_DS_cmd, nullptr, nullptr,
-    &RemoteRadio::cat_ZM_cmd, nullptr, &RemoteRadio::cat_NG_cmd, &RemoteRadio::cat_FC_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-    nullptr, &RemoteRadio::cat_NL_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, &RemoteRadio::cat_DP_cmd, nullptr, nullptr,
-    nullptr, nullptr, nullptr, nullptr, &RemoteRadio::cat_IF_cmd, nullptr, nullptr, nullptr, nullptr, nullptr,
-    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-    nullptr, nullptr, &RemoteRadio::cat_BU_cmd, &RemoteRadio::cat_F0_cmd, &RemoteRadio::cat_ME_cmd, &RemoteRadio::cat_TM_cmd, nullptr, nullptr, nullptr, nullptr,
-    &RemoteRadio::cat_NS_cmd, &RemoteRadio::cat_NF_cmd, &RemoteRadio::cat_FB_cmd, nullptr, nullptr, nullptr, &RemoteRadio::cat_PC_cmd, nullptr, nullptr, &RemoteRadio::cat_VO_cmd,
-    nullptr, &RemoteRadio::cat_FT_cmd, &RemoteRadio::cat_N1_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &RemoteRadio::cat_NH_cmd,
-    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-    nullptr, nullptr, &RemoteRadio::cat_MD_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-    &RemoteRadio::cat_FA_cmd, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &RemoteRadio::cat_NW_cmd, &RemoteRadio::cat_FS_cmd,
-    &RemoteRadio::cat_FF_cmd, &RemoteRadio::cat_BD_cmd, nullptr, nullptr, &RemoteRadio::cat_PG_cmd, &RemoteRadio::cat_SM_cmd, nullptr
 };
-*/
-// 2. The Radio declaration (at the very bottom)
-// Now, when this constructor runs, 'kenwood_data' is not 'empty memory'
-// it is a pre-baked block of pointers in Flash/RAM.
-//RemoteRadio radio_instance(kenwood_data);
 
-//struct WSJTCommandBuilder {
-class WSJTCommandBuilder {
-public:
-  //const CATCommand* data[128] = {};
+// *** this table hasn't been tested yet ***
+struct WSJTCommandBuilder {
   const CATCommand* data[128];
-  constexpr WSJTCommandBuilder();
+
+  constexpr WSJTCommandBuilder() : data{} {
+    data["AI"_cath] = &RemoteRadio::wsjt_AI_cmd;
+    data["FA"_cath] = &RemoteRadio::wsjt_FA_cmd;
+    data["FB"_cath] = &RemoteRadio::wsjt_FB_cmd;
+    data["FT"_cath] = &RemoteRadio::wsjt_FT_cmd;
+    data["ID"_cath] = &RemoteRadio::cat_ID_cmd;
+    data["IF"_cath] = &RemoteRadio::cat_IF_cmd;
+    data["KS"_cath] = &RemoteRadio::wsjt_KS_cmd;
+    data["MD"_cath] = &RemoteRadio::cat_MD_cmd;
+    data["SF"_cath] = &RemoteRadio::wsjt_SF_cmd;
+    data["SP"_cath] = &RemoteRadio::wsjt_SP_cmd;
+    data["TB"_cath] = &RemoteRadio::wsjt_TB_cmd;
+    data["TM"_cath] = &RemoteRadio::cat_TM_cmd;
+    data["TX"_cath] = &RemoteRadio::wsjt_TX_cmd;
+  }
 };
 
-//static inline constexpr WSJTCommandBuilder() : data{} {
-constexpr WSJTCommandBuilder::WSJTCommandBuilder() : data{} {
-      data["AI"_cath] = &RemoteRadio::wsjt_AI_cmd;
-      data["FA"_cath] = &RemoteRadio::wsjt_FA_cmd;
-      data["FB"_cath] = &RemoteRadio::wsjt_FB_cmd;
-      data["FT"_cath] = &RemoteRadio::wsjt_FT_cmd;
-      data["ID"_cath] = &RemoteRadio::cat_ID_cmd;
-      data["IF"_cath] = &RemoteRadio::cat_IF_cmd;
-      data["KS"_cath] = &RemoteRadio::wsjt_KS_cmd;
-      data["MD"_cath] = &RemoteRadio::cat_MD_cmd;
-      data["SF"_cath] = &RemoteRadio::wsjt_SF_cmd;
-      data["SP"_cath] = &RemoteRadio::wsjt_SP_cmd;
-      data["TB"_cath] = &RemoteRadio::wsjt_TB_cmd;
-      data["TM"_cath] = &RemoteRadio::cat_TM_cmd;
-      data["TX"_cath] = &RemoteRadio::wsjt_TX_cmd;
-  }
 
-//static inline constexpr RemoteCommandTable catCommands PROGMEM {};
-//static inline constexpr WSJTCommandBuilder wsjtCommands PROGMEM {};
-//static inline constexpr RemoteCommandTable catCommands PROGMEM = {};
-//static inline constexpr WSJTCommandBuilder wsjtCommands PROGMEM = {};
-//static inline constexpr RemoteCommandTable catCommands PROGMEM;
-//static inline constexpr WSJTCommandBuilder wsjtCommands PROGMEM;
-//static constexpr RemoteCommandTable catCommands PROGMEM;
-//static constexpr WSJTCommandBuilder wsjtCommands PROGMEM;
-static const RemoteCommandTable catCommands PROGMEM = makeCatTable();
-constexpr WSJTCommandBuilder wsjtCommands;
+// *** use of __attribute__((section(".progmem.data") vs PROGMEM resolves MethodName##_Wrapper
+//     section type conflict with catCommands set as PROGMEM or can use PROGMEM here and use
+//     __attribute__((section(".progmem.data") on catCommands ***
+static const RemoteCommandTable catCommands __attribute__((section(".progmem.data")));
+static const WSJTCommandBuilder wsjtCommands __attribute__((section(".progmem.data")));
 
 RemoteRadio radio(&catCommands.data[0], &wsjtCommands.data[0]);
