@@ -1,19 +1,20 @@
-// include after SDT.h to get proper configureation defines
-// *** TODO: consider restructuring ***
+
+#include "SDT.h"
+
+#include "connectManager.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define USB_HOST_SUPPORT false
-#if HOST_KEYBOARD_MOUSE_SUPPORT
-  #undef USB_HOST_SUPPORT
-  #define USB_HOST_SUPPORT true
-#endif
+// *** force Host into DMAMEM, but not necessary??? ***
+DMAMEM USBHost USBManager::usbHost;
+
+// *** same for the Hub ***
+// *** this one is key, otherwise this is created in RAM1 and we get
+//     periodic delays as the hub tries to resolve the device connections ***
+DMAMEM USBHub USBManager::usbHub(USBManager::usbHost);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-void UsbHostSetup();
-void UsbHostLoop();

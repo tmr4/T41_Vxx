@@ -28,7 +28,7 @@
 
 // set to true for mouse/keyboard support
 // uses about 44k of stack
-#define HOST_KEYBOARD_MOUSE_SUPPORT false
+#define HOST_KEYBOARD_MOUSE_SUPPORT true
 
 /*
   Remote operation:

@@ -44,8 +44,6 @@
 #include "mouse.h"
 #include "remote.h"
 #include "t41Beacon.h"
-//#include "t41Control.h"
-#include "t41USBHost.h"
 
 // *** need to pull what we want from these ***
 //#include "fir_cmsis_5k.h"
@@ -61,16 +59,16 @@
 
 extern RemoteRadio radio;
 #if DEVICE_REMOTE_OPS_MODE == 2
-ConnectManager transport(REMOTE_ROLE_REMOTE);
+DMAMEM ConnectManager transport(REMOTE_ROLE_REMOTE);
 extern AudioInputSerial1 iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 3
-ConnectManager transport;
+DMAMEM ConnectManager transport;
 extern AudioOutputHostSerial iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 4
-ConnectManager transport(REMOTE_ROLE_REMOTE);
+DMAMEM ConnectManager transport(REMOTE_ROLE_REMOTE);
 extern AudioInputTCP iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 5
-ConnectManager transport;
+DMAMEM ConnectManager transport;
 extern AudioOutputTCP iqStream;
 #endif
 
@@ -292,11 +290,10 @@ FLASHMEM void setup() {
   InitHardware(sampleRate);
   SoftReset();
 
-#ifdef USB_HOST_SUPPORT
-  UsbHostSetup();
-#endif
+  USBManager::begin();
 
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+#if HOST_KEYBOARD_MOUSE_SUPPORT
+  KeyboardSetup();
   MouseInit();
 #endif
 
@@ -401,7 +398,7 @@ FASTRUN void loop() {
     BeaconLoop();
   }
 
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+#if HOST_KEYBOARD_MOUSE_SUPPORT
   if(keyerState == 1) {
     KeyerLoop();
   }

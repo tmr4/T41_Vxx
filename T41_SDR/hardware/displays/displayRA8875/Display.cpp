@@ -1469,7 +1469,7 @@ FLASHMEM void DrawStaticDisplayItems() {
   ClearInfoBox();
 }
 
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+#if HOST_KEYBOARD_MOUSE_SUPPORT
 // for testing only
 FLASHMEM void PrintKeyboardBuffer() {
   tft.setFontScale(0,1);

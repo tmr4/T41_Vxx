@@ -9,12 +9,23 @@ using namespace qindesign::network;
 
 #include "AudioConfig.h"
 #include "catControl.h"
-
 #include "t41Property.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+class USBManager {
+private:
+  static USBHost usbHost;
+  static USBHub usbHub;
+
+public:
+  //USBManager();
+
+  static inline USBHost& getHost() { return usbHost; }
+  static inline void begin() { getHost().begin(); }
+};
 
 enum DeviceRole { REMOTE_ROLE_T41, REMOTE_ROLE_REMOTE };
 enum ConnectMode { CONNECT_NONE, CONNECT_USB, CONNECT_ETHERNET };
@@ -56,14 +67,13 @@ private:
     tcpCmdClient.setNoDelay(true);
     tcpDataClient.setConnectionTimeoutEnabled(false);
     tcpDataClient.setNoDelay(true);
-    usbHost.begin();
     enabled = true;
   }
 
 public:
   ConnectManager(DeviceRole _role = REMOTE_ROLE_T41, uint16_t cPort = 8000, uint16_t dPort = 8001) :
     role(_role), cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort), tcpDataServer(dPort),
-    usbHostSerial1(usbHost), usbHostSerial2(usbHost, 1) {}
+    usbHostSerial1(USBManager::getHost()), usbHostSerial2(USBManager::getHost(), 1) {}
 
   void begin(CatControl *control, AudioOutputTCP *stream) {
     if(control && stream) {
@@ -87,7 +97,8 @@ public:
 
   void update() {
     if(!enabled) return;
-    usbHost.Task();
+
+    USBManager::getHost().Task();
 
     unsigned long now = millis();
     if(now - pollTimer >= POLL_INTERVAL) {
@@ -146,7 +157,6 @@ private:
   bool isInitialized = false;
 
   // USB Host pipelines
-  USBHost usbHost;
   USBSerial_BigBuffer usbHostSerial1; // data
   USBSerial_BigBuffer usbHostSerial2; // command
 

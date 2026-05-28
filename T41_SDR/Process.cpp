@@ -18,12 +18,11 @@
 #include "keyer.h"
 #include "Menu.h"
 #include "MenuProc.h"
+#include "mouse.h"
 #include "Noise.h"
 #include "Process.h"
 #include "psk31.h"
 #include "Tune.h"
-//#include "t41Control.h"
-#include "t41USBHost.h"
 #include "Utility.h"
 
 #include "debug.h"
@@ -891,115 +890,6 @@ float VolumeToAmplification(int volume) {
 }
 
 /*****
-  Process any updates to the following controls:
-    Audio filter encoder
-    Keyboard and mouse
-    Course and Fine tune encoders
-    Live menus
-    Volume encoder
-
-  Poll following T41 properties:
-
-  *** called by YieldToProcess every ~10ms and less frequently by the main loop ***
-*****/
-// *** TODO: consider what controls are proper in various radio and display states and if to control them here ***
-FASTRUN void ProcessControls() {
-  bool updateDisplay = false;
-  bool updateInfoBox = false;
-
-  switch(displayState) {
-    case DISPLAY_T41:
-    case DISPLAY_T41_FT8_DECODE:
-      updateDisplay = true;
-      updateInfoBox = true;
-      break;
-
-    case DISPLAY_FULL_MENU:
-      updateInfoBox = true;
-      break;
-
-    case DISPLAY_BEACON_MONITOR:
-    default:
-    // no screen updates at all
-      break;
-  }
-
-  // poll front pannel
-  // *** inline function to poll front panel, empty function if not used ***
-  PollFrontPanel();
-
-  // handle USB Host
-#ifdef USB_HOST_SUPPORT
-  static unsigned long last_usb_read = 0;
-  unsigned long now = millis();
-
-  // poll USB Host at about every 8ms (125 Hz)
-  if (now - last_usb_read > 8) {
-    UsbHostLoop();
-    last_usb_read = now;
-  }
-#endif
-
-  // Handle tuning changes
-  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
-
-  // update filters if changed
-  // *** TODO: examine if we can skip this comparison ***
-  if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
-    ProcessFilterEncoder();
-  }
-
-  if(resetTuningFlag) {
-    // *** DrawBandwidthBar relies on resetTuningFlag being set prior to the ResetTuning call ***
-    resetTuningFlag = false;
-    ResetTuning();
-  }
-
-  // handle any live menu items
-  if(getMenuValueActive) {
-    if(getMenuSelected) {
-      ptrMenuFollowup();
-
-      // wrap up menu
-      getMenuSelected = false;
-      getMenuValueActive = false;
-      ptrMenuLoop = NULL;
-      ptrMenuFollowup = NULL;
-
-      EraseMenus();
-      menuStatus = NO_MENUS_ACTIVE;
-    } else {
-      GetMenuValueLoop();
-    }
-  }
-  if(getMenuOptionActive) {
-    if(getMenuSelected) {
-      ptrMenuFollowup();
-
-      // wrap up menu
-      getMenuSelected = false;
-      getMenuOptionActive = false;
-      ptrMenuLoop = NULL;
-      ptrMenuFollowup = NULL;
-
-      EraseMenus();
-      menuStatus = NO_MENUS_ACTIVE;
-    } else {
-      GetMenuOptionLoop();
-    }
-  }
-
-  t41.Poll(updateDisplay);
-  t41.PollInfoBox(updateInfoBox);
-
-  UpdateClock();
-  UpdateMemTempLoad();
-
-  transport.update();
-  radio.update();
-}
-
-/*****
   Purpose:
         Frequency translation by Fs/4 without multiplication from Lyons (2011): chapter 13.1.2 page 646
         together with the savings of not having to shift/rotate the audioFFT, this saves
@@ -1303,6 +1193,116 @@ void Calc1xFreqSpec() {
     spec_help = LPFcoeff * freqSpecBuf[x] + (1.0 - LPFcoeff) * prevFreqSpecBuf[x];
     prevFreqSpecBuf[x] = spec_help;
   }
+}
+
+/*****
+  Process any updates to the following controls:
+    Audio filter encoder
+    Keyboard and mouse
+    Course and Fine tune encoders
+    Live menus
+    Volume encoder
+
+  Poll following T41 properties:
+
+  *** called by YieldToProcess every ~10ms and less frequently by the main loop ***
+*****/
+// *** TODO: consider what controls are proper in various radio and display states and if to control them here ***
+FASTRUN void ProcessControls() {
+  bool updateDisplay = false;
+  bool updateInfoBox = false;
+
+  switch(displayState) {
+    case DISPLAY_T41:
+    case DISPLAY_T41_FT8_DECODE:
+      updateDisplay = true;
+      updateInfoBox = true;
+      break;
+
+    case DISPLAY_FULL_MENU:
+      updateInfoBox = true;
+      break;
+
+    case DISPLAY_BEACON_MONITOR:
+    default:
+    // no screen updates at all
+      break;
+  }
+
+  // poll front pannel
+  // *** inline function to poll front panel, empty function if not used ***
+  PollFrontPanel();
+
+  // handle USB Host
+#if HOST_KEYBOARD_MOUSE_SUPPORT
+  static unsigned long last_usb_read = 0;
+  unsigned long now = millis();
+
+  // poll USB Host at about every 8ms (125 Hz)
+  if (now - last_usb_read > 8) {
+    USBManager::getHost().Task();
+    MouseLoop();
+    last_usb_read = now;
+  }
+#endif
+
+  // Handle tuning changes
+  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
+
+  // update filters if changed
+  // *** TODO: examine if we can skip this comparison ***
+  if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
+    ProcessFilterEncoder();
+  }
+
+  if(resetTuningFlag) {
+    // *** DrawBandwidthBar relies on resetTuningFlag being set prior to the ResetTuning call ***
+    resetTuningFlag = false;
+    ResetTuning();
+  }
+
+  // handle any live menu items
+  if(getMenuValueActive) {
+    if(getMenuSelected) {
+      ptrMenuFollowup();
+
+      // wrap up menu
+      getMenuSelected = false;
+      getMenuValueActive = false;
+      ptrMenuLoop = NULL;
+      ptrMenuFollowup = NULL;
+
+      EraseMenus();
+      menuStatus = NO_MENUS_ACTIVE;
+    } else {
+      GetMenuValueLoop();
+    }
+  }
+  if(getMenuOptionActive) {
+    if(getMenuSelected) {
+      ptrMenuFollowup();
+
+      // wrap up menu
+      getMenuSelected = false;
+      getMenuOptionActive = false;
+      ptrMenuLoop = NULL;
+      ptrMenuFollowup = NULL;
+
+      EraseMenus();
+      menuStatus = NO_MENUS_ACTIVE;
+    } else {
+      GetMenuOptionLoop();
+    }
+  }
+
+  t41.Poll(updateDisplay);
+  t41.PollInfoBox(updateInfoBox);
+
+  UpdateClock();
+  UpdateMemTempLoad();
+
+  transport.update();
+  radio.update();
 }
 
 void YieldToProcess(bool updateSpectrum /* = false */) {

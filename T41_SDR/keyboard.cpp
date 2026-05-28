@@ -1,12 +1,19 @@
 
-#include "T41Config.h"
-#include "src\hardwareConfig.h"
+#include "SDT.h"
 
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+//#include "T41Config.h"
+//#include "src\hardwareConfig.h"
 
-#include <USBHost_t36.h> // https://github.com/PaulStoffregen/USBHost_t36
+#if HOST_KEYBOARD_MOUSE_SUPPORT
 
-extern KeyboardController kbController;
+#include "connectManager.h"
+
+/*  it would be nice to save this memory until a keyboard is plugged in
+    but both USBHost and USBHIDParser are needed to automatically detect
+    a new devise so we don't really save that much.  Doing this manually
+    is a possibility if we need to save memory when not using a keyboard. */
+USBHIDParser hkbParser(USBManager::getHost()); // each device needs a parser
+KeyboardController kbController(USBManager::getHost());
 
 //-------------------------------------------------------------------------------------------------------------
 // Data

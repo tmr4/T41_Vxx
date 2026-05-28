@@ -6,7 +6,7 @@
 int mouseWheelValue = 0;
 int menuBarSelected = false;
 
-#ifdef HOST_KEYBOARD_MOUSE_SUPPORT
+#if HOST_KEYBOARD_MOUSE_SUPPORT
 
 #include "ButtonProc.h"
 #include "CWProcessing.h"
@@ -18,9 +18,15 @@ int menuBarSelected = false;
 #include "mouse.h"
 #include "Tune.h"
 
-#include <USBHost_t36.h>
+#include "connectManager.h"
 
-extern MouseController mouseController;
+/*  it would be nice to save this memory until a keyboard is plugged in
+    but both USBHost and USBHIDParser are needed to automatically detect
+    a new devise so we don't really save that much.  Doing this manually
+    is a possibility if we need to save memory when not using a keyboard. */
+USBHIDParser mouseParser(USBManager::getHost()); // each device needs a parser
+MouseController mouseController(USBManager::getHost());
+
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
