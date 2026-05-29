@@ -223,6 +223,8 @@ FLASHMEM void SoftReset() {
 // *** for testing ***
 //extern "C" uint8_t external_psram_size;
 
+void MaxStackUseSetup();
+
 FLASHMEM void setup() {
   int sampleRate = 192000.0;
 
@@ -234,6 +236,8 @@ FLASHMEM void setup() {
     Serial.print(CrashReport);
   }
   //delay(1000);
+  // *** TODO: comment when no longer monitoring stack usage ***
+  MaxStackUseSetup();
 
   // Check for PSRAM chip(s) installed
   //uint8_t size = external_psram_size;

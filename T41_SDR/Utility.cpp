@@ -631,3 +631,23 @@ void UpdateMemTempLoad() {
     UpdateInfoBoxItem(T41_ITEM_LOAD);
   }
 }
+
+IntervalTimer stackTimer;
+volatile uint32_t peakStackUsage = 0;
+volatile uint32_t currentStackUsage = 0;
+
+void stackSampleISR() {
+  uint32_t current_sp;
+  __asm__ volatile ("mov %0, sp" : "=r" (current_sp));
+  currentStackUsage = (uint32_t)&_estack - current_sp;
+
+  if(currentStackUsage > peakStackUsage) {
+    peakStackUsage = currentStackUsage;
+  }
+}
+
+void MaxStackUseSetup() {
+  peakStackUsage = 0;
+  stackTimer.begin(stackSampleISR, 1000); // timer every 1ms
+  //stackTimer.begin(stackSampleISR, 100);
+}

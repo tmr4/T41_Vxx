@@ -632,6 +632,9 @@ void ClearInfoBox() {
   DrawInfoBoxFrame();
 }
 
+extern volatile uint32_t currentStackUsage;
+extern volatile uint32_t peakStackUsage;
+
 /*****
   Purpose: Information box follow up function for the Stack item
             The stack value is more informative when called from within a function that might be stressing the stack
@@ -644,24 +647,29 @@ void IBStackFollowup(int row, int col) {
   // locations in all cases - by defining them as arrays, the C++ compiler
   // will use the address of these definitions - it's a big hack, but there's
   // really no clean way to get at linker-defined symbols from the .ld file
+  // *** TODO: is this comment still valid? ***
+  static uint8_t showStack = 0; // 0=total stack, 1=current usage, 2=peak usage
+  uint32_t value = _estack-_ebss;
 
-  extern char _ebss[];
 
-  auto sp = (char*) __builtin_frame_address(0);
-
-  auto stack = (sp - _ebss) >> 10;
-
-  //Serial.print("Stack: ");
-  //Serial.println((int)(sp - _ebss));
-  //Serial.println("");
+  noInterrupts();
+  switch(showStack) {
+    case 1:
+      value = currentStackUsage;
+      break;
+    case 2:
+      value = peakStackUsage;
+      break;
+  }
+  interrupts();
 
   tft.setFontScale((enum RA8875tsize)0);
-  tft.setTextColor(RA8875_GREEN);
   tft.setCursor(col, row);
-  tft.print(stack);
+  tft.setTextColor(RA8875_GREEN);
+  tft.print(value/1000);
   tft.print("k");
+  if(++showStack > 2) showStack = 0;
 }
-
 
 /*****
   Purpose: Information box follow up function for the Heap item
