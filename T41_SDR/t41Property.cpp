@@ -62,25 +62,17 @@ void NotifyPropertyChanged(T val) {
   Serial.print("Property changed to: "); Serial.println(val);
 }
 
-//T41Properties* T41Properties::instance = NULL;
-
 T41Properties::T41Properties() {
-  begin();
-}
-
-void T41Properties::begin() {
-  // initialize static callback functions
   T41Update::SetUpdateFunctions(UpdateInfoBoxItem, SendCommand);
 }
 
 void T41Properties::SetPropertyDefaults() {
   int remoteStatus = DEVICE_REMOTE_OPS_MODE > 0 ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
-  RadioID.Set(RADIO_ID);
-  RadioState.Set(RECONFIGURE_STATE);
+  RadioState.Init(RECONFIGURE_STATE);
 
-  SampleRate.Set(192000.0);
-  IntermediateFreq.Set(48000.0);
+  SampleRate.Init(192000.0);
+  IntermediateFreq.Init(48000.0);
 
   // notify properties (not polled!)
   RemoteStatus.Init(remoteStatus, &ShowRemoteStatus);

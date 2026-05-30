@@ -150,27 +150,27 @@ bool infoBoxItemActive[IB_NUM_ITEMS] = {
 /* PROGMEM */ const infoBoxItem infoBox[] =
 { //                                                        font    # chars
   // label         options      option                      size    to erase  flag  col            row,           follow-up function
-  { "Vol:",        NULL,        (int*)&t41.AudioVolume,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
-  { "AGC",         agcOpts,     (int*)&t41.AGCMode,          1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    &IBAGCFollowup         }, // AGC
-  { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
-  { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
-  { "Zoom:",       zoomOptions, (int*)&t41.SpectrumZoom,     0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    &IBZoomFollowup        }, // Zoom
-  { "NF Set:",     nfOptions,   (int*)&t41.LiveNoiseFloor,   0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
+  { "Vol:",        NULL,        (int*)&t41.AudioVolume.value,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
+  { "AGC",         agcOpts,     (int*)&t41.AGCMode.value,          1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    &IBAGCFollowup         }, // AGC
+  { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex.value,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
+  { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex.value,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
+  { "Zoom:",       zoomOptions, (int*)&t41.SpectrumZoom.value,     0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    &IBZoomFollowup        }, // Zoom
+  { "NF Set:",     nfOptions,   (int*)&t41.LiveNoiseFloor.value,   0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
   { "Notch:",      onOff,       (int*)&ANR_notchOn,          0,        3,      1,   IB_COL_2_X,    IB_ROW_5_Y,    NULL                   }, // Notch
 
   // Compress and Noise need to be in column 1
-  { "Noise:",      filter,      (int*)&t41.NoiseFilter,      0,        8,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Noise Filter
-  { "Compress:",   onOff,       (int*)&t41.Compressor,             0,        6,      1,   IB_COL_1_X,    IB_ROW_6_Y,    &IBCompressionFollowup }, // Compress
+  { "Noise:",      filter,      (int*)&t41.NoiseFilter.value,      0,        8,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Noise Filter
+  { "Compress:",   onOff,       (int*)&t41.Compressor.value,             0,        6,      1,   IB_COL_1_X,    IB_ROW_6_Y,    &IBCompressionFollowup }, // Compress
   { "RF Gain:",    NULL,        NULL,                        0,        3,      0,   IB_COL_2_X,    IB_ROW_6_Y,    &IBRFGainFollowup      }, // RF Gain
 
   // Equalizers takes two columns
   { "Equalizer:",  NULL,        NULL,                        0,       10,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBEQFollowup          }, // Equalizers
 
   // Decider takes two columns
-  { "Decoder:",    onOff,       (int*)&t41.CWDecoder,        0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
+  { "Decoder:",    onOff,       (int*)&t41.CWDecoder.value,        0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
 
   // Key type takes two columns
-  { "Key Type:",   optionsWPM,  (int*)&t41.KeyType,          0,        2,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
+  { "Key Type:",   optionsWPM,  (int*)&t41.KeyType.value,          0,        2,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
 
   // Memory keyer requires 3 rows (10-12)
   { "Keyer     ",  keyerOpts,   &keyerState,                 0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer

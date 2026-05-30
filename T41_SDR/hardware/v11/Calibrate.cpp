@@ -243,7 +243,7 @@ FLASHMEM void RestoreRadioState() {
   RedrawDisplayScreen();
 
   displayState = DISPLAY_T41;
-  t41.RadioState.Set(RECONFIGURE_STATE);
+  t41.RadioState = RECONFIGURE_STATE;
 }
 
 /*****

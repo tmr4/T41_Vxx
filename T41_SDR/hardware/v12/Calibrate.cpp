@@ -333,7 +333,7 @@ FLASHMEM void CalibratePost(int calType) {
 
   RedrawDisplayScreen();
 
-  t41.RadioState.Set(RECONFIGURE_STATE);
+  t41.RadioState = RECONFIGURE_STATE;
 }
 
 FLASHMEM void DisplayIQAdjustIncrement(int adjChars) {

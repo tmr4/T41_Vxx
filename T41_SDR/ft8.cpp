@@ -236,8 +236,8 @@ FLASHMEM bool InitFT8() {
   bool result = true;
 
   if(t41.SampleRate > 50000) {
-    t41.SampleRate.Set(44100.0);
-    t41.IntermediateFreq.Set(11025.0);
+    t41.SampleRate = 44100.0;
+    t41.IntermediateFreq = 11025.0;
     // using 48k sample rate doesn't change FT8 transmision
     //t41.SampleRate = 48000.0;
     //t41.IntermediateFreq = 12000.0;
@@ -254,8 +254,8 @@ FLASHMEM bool InitFT8() {
 
 FLASHMEM void ExitFT8() {
   if(t41.SampleRate < 50000) {
-    t41.SampleRate.Set(192000.0);
-    t41.IntermediateFreq.Set(48000.0);
+    t41.SampleRate = 192000.0;
+    t41.IntermediateFreq = 48000.0;
     SetI2SFreq(t41.SampleRate);
     InitFFTArrays();
     t41.SpectrumZoom = 1;

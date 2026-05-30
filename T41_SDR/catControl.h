@@ -161,15 +161,23 @@ Index:            1         2         3         4         5         6         7 
 
 */
 
+#define CAT_HASH_CONSTANT 40305U
+#define CAT_TOKEN_TO_HASH ((token * CAT_HASH_CONSTANT) & 0xFFFF) >> 9
 constexpr uint8_t operator "" _cath(const char* str, size_t len) {
   uint16_t token = (len < 2) ? 0 : (static_cast<uint16_t>(str[0]) << 8) | static_cast<uint16_t>(str[1]);
   // create 128-slot hash index
-  return ((token * 40305U) & 0xFFFF) >> 9;
+  return CAT_TOKEN_TO_HASH;
+}
+
+inline uint8_t CatToken2Hash(uint16_t token) {
+  return CAT_TOKEN_TO_HASH;
 }
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+#define T41_ITEMS             37
 
 /*
 

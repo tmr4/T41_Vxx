@@ -152,7 +152,7 @@ FLASHMEM void FT8CalibratePrologue() {
   tft.writeTo(L1);  // Exit function in layer 1.  KF5N August 3, 2023
   RedrawDisplayScreen();
   calOnFlag = 0;
-  t41.RadioState.Set(RECONFIGURE_STATE);
+  t41.RadioState = RECONFIGURE_STATE;
   return;
 }
 

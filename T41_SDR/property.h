@@ -2,109 +2,89 @@
 
 #include <Arduino.h>
 
-template<typename T>
-class ReadOnlyProperty {
-public:
-  ReadOnlyProperty() {}
-
-  operator T() { return value; }
-
-  void Set(T val) {
-    value = val;
-  }
-
-protected:
-
-private:
-  T value;
-};
+#include "catControl.h"
 
 class T41Update {
   typedef void (*FuncPtrInt)(int);
-  //typedef void (*FuncPtr2Int)(int, int);
 
 public:
-  T41Update() {}
+  T41Update(uint16_t token) : catToken(token), catHash(CatToken2Hash(token)) {}
 
   static void SetUpdateFunctions(FuncPtrInt ib, FuncPtrInt rm) {
     fPtrInfoBox = ib;
     fPtrRemote = rm;
   }
 
+  uint16_t getCatToken() const { return catToken; }
+  uint8_t getCatHash() const { return catHash; }
+
+  virtual void setFromCAT(uint32_t newValue) = 0;
+  virtual uint32_t getForCAT() = 0;
+
 protected:
   static inline FuncPtrInt fPtrInfoBox = NULL;
   static inline FuncPtrInt fPtrRemote = NULL;
 
+//protected:
 private:
+  uint16_t catToken = 0;
+  uint8_t catHash = 0;
 };
 
-// *** FLASHMEM made no difference in code placement, couldn't verify placement in listing file  ***
 template<typename T>
-class Property : public T41Update {
+class ReadOnlyProperty : public T41Update {
+public:
+  ReadOnlyProperty(T val) : T41Update(0), value(val) {}
+  ReadOnlyProperty(T val, uint16_t token) : T41Update(token), value(val) {}
+
+  operator T() { return value; }
+
+  void setFromCAT(uint32_t newValue) override { }
+  uint32_t getForCAT() override { return (uint32_t)value; }
+
+protected:
+  T value;
+};
+
+template<typename T>
+class Property : public ReadOnlyProperty<T> {
   typedef void (*FuncPtr)();
   typedef void (*FuncPtrT)(T);
   typedef void (*FuncPtrInt)(int);
   typedef void (*FuncPtr2Int)(int, int);
   typedef int (*BoundPtr)(int);
 
-public:
-  FLASHMEM Property() {}
+protected:
+  //using ReadOnlyProperty<T>::value;
 
-  FLASHMEM void Init(T val) {
-    value = val;
-  }
+public:
+  using ReadOnlyProperty<T>::value;
+  //using ReadOnlyProperty<T>::operator T; // *** this isn't useful, see below ***
+
+  Property(T val) : ReadOnlyProperty<T>(val) {}
+  Property(T val, uint16_t token) : ReadOnlyProperty<T>(val, token) {}
+
+  void Init(T val);
 
   // fPtr called instead of fPtrInfoBox
-  FLASHMEM void Init(T val, FuncPtr _fPtr) {
-    value = val;
-    fPtr = _fPtr;
-  }
+  void Init(T val, FuncPtr _fPtr);
 
   // fPtr called instead of  fPtrInfoBox
-  FLASHMEM void Init(T val, FuncPtr _fPtr, int _id, bool polled = true) {
-    value = val;
-    fPtr = _fPtr;
-    id = _id;
-    notifyOnPoll = polled;
-  }
+  void Init(T val, FuncPtr _fPtr, int _id, bool polled = true);
 
   // w/ min/max
   // calls to T41Update
-  FLASHMEM void Init(T val, T _min, T _max, bool circ, int _id, bool polled = true) {
-    value = val;
-    hasMinMax = true;
-    min = _min;
-    max = _max;
-    minmaxCircular = circ;
-    id = _id;
-    notifyOnPoll = polled;
-  }
+  void Init(T val, T _min, T _max, bool circ, int _id, bool polled = true);
 
   // w/ min/max
   // fPtr called instead of fPtrInfoBox
-  FLASHMEM void Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr, int _id, bool polled = true) {
-    value = val;
-    hasMinMax = true;
-    min = _min;
-    max = _max;
-    minmaxCircular = circ;
-    fPtr = _fPtr;
-    id = _id;
-    notifyOnPoll = polled;
-  }
+  void Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr, int _id, bool polled = true);
 
   // with bounds check int (*bPtrInt)(T)
   // fPtr called instead of  fPtrInfoBox
-  FLASHMEM void Init(T val, BoundPtr _bPtrInt, FuncPtr _fPtr, int _id, bool polled = true) {
-    value = val;
-    hasMinMax = true;
-    bPtrInt = _bPtrInt;
-    fPtr = _fPtr;
-    id = _id;
-    notifyOnPoll = polled;
-  }
+  void Init(T val, BoundPtr _bPtrInt, FuncPtr _fPtr, int _id, bool polled = true);
 
-  FLASHMEM bool Poll(bool updateDisplay, bool updateRemote, bool override = false) {
+  bool Poll(bool updateDisplay, bool updateRemote, bool override = false) {
     bool tmp = hasChanged;
 
     if(override) {
@@ -122,13 +102,13 @@ public:
   }
 
   // update property value and display, skip notifications
-  FLASHMEM void Update(T val) {
+  void Update(T val) {
     value = val;
     updated = true;
   }
 
-  //operator T() { return get(); }
-  operator T() { return value; }
+  //operator T() { return this->value; } // *** compiler complains w/o this, even though it's in the base class ***
+  //operator T() { return value; }
   const T& operator=(const T& val) { return set(val); }
   const T& operator+=(const T& val) { return set(value + val); }
   const T& operator-=(const T& val) { return set(value - val); }
@@ -147,16 +127,16 @@ public:
   }
 
 protected:
-  FLASHMEM void Notify() {
+  void Notify() {
     UpdateDisplay();
     UpdateRemote();
   }
 
-  FLASHMEM void UpdateRemote() {
+  void UpdateRemote() {
     if((T41Update::fPtrRemote != NULL) && (id >= 0)) (*T41Update::fPtrRemote)(id);
   }
 
-  FLASHMEM void UpdateDisplay() {
+  void UpdateDisplay() {
     if(fPtr != NULL) {
       (*fPtr)();
     } else if((T41Update::fPtrInfoBox != NULL) && (id >= 0)) {
@@ -165,7 +145,6 @@ protected:
   }
 
 private:
-  T value;
   bool hasMinMax = false;
   T min, max;
   bool minmaxCircular = false;
@@ -206,4 +185,7 @@ private:
 
   FuncPtr fPtr = NULL;
   BoundPtr bPtrInt = NULL;
+
+public:
+  void setFromCAT(uint32_t newValue) override { Update((T)newValue); }
 };

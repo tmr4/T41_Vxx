@@ -421,34 +421,34 @@ FASTRUN void loop() {
   switch(t41.RadioMode) {
     case SSB_MODE:
       if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == HIGH) {
-        t41.RadioState.Set(RECEIVE_STATE);
+        t41.RadioState = RECEIVE_STATE;
       } else {
-        t41.RadioState.Set(SSB_TRANSMIT_STATE);
+        t41.RadioState = SSB_TRANSMIT_STATE;
       }
       break;
     case CW_MODE:
       if(cwKeyerPTT) {
-        t41.RadioState.Set(CW_TRANSMIT_KEYER_STATE);
+        t41.RadioState = CW_TRANSMIT_KEYER_STATE;
       } else if(beaconFlag) {
-        t41.RadioState.Set(BEACON_STATE);
+        t41.RadioState = BEACON_STATE;
       } else if((digitalRead(t41.PaddleDit) == HIGH) && (digitalRead(t41.PaddleDah) == HIGH)) {
-        t41.RadioState.Set(RECEIVE_STATE);
+        t41.RadioState = RECEIVE_STATE;
       } else if((digitalRead(t41.PaddleDit) == LOW) && (t41.KeyType == 0)) {
-        t41.RadioState.Set(CW_TRANSMIT_STRAIGHT_STATE);
+        t41.RadioState = CW_TRANSMIT_STRAIGHT_STATE;
       } else if((keyPressedOn == 1) && (t41.KeyType == 1)) {
-        t41.RadioState.Set(CW_TRANSMIT_PADDLE_STATE);
+        t41.RadioState = CW_TRANSMIT_PADDLE_STATE;
         keyPressedOn = 0;
       }
       break;
     case DSB_MODE:
-      t41.RadioState.Set(RECEIVE_STATE);
+      t41.RadioState = RECEIVE_STATE;
       break;
     case DATA_MODE:
       //Serial.print("ft8PTT: "); Serial.println(ft8PTT);
       if(ft8PTT) {
-        t41.RadioState.Set(DATA_TRANSMIT_STATE);
+        t41.RadioState = DATA_TRANSMIT_STATE;
       } else {
-        t41.RadioState.Set(RECEIVE_STATE);
+        t41.RadioState = RECEIVE_STATE;
       }
       break;
   }
