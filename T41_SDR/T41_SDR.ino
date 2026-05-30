@@ -294,12 +294,12 @@ FLASHMEM void setup() {
   InitHardware(sampleRate);
   SoftReset();
 
-  USBManager::begin();
-
 #if HOST_KEYBOARD_MOUSE_SUPPORT
   KeyboardSetup();
   MouseInit();
 #endif
+
+  USBManager::begin();
 
   //memCheck = true;
   PrimeMallInfo();

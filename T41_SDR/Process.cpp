@@ -87,7 +87,7 @@ void Calc1xFreqSpec();
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void InitFFTArrays() {
+FLASHMEM void InitFFTArrays() {
   CLEAR_VAR(audioFFT);
   CLEAR_VAR(prevAudioBuffer_L);
   CLEAR_VAR(prevAudioBuffer_R);
@@ -124,6 +124,7 @@ void CalcAudioMax() {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
   float32_t audioMaxSquared;
   uint32_t audioMaxIndex;
+  // *** TODO: 10k here, would be better to just allocated it when in NFM mode! ***
   static float32_t audioNFM[1024], audioNFMi[1024], prevNFMAudioBuffer_L[256], prevNFMAudioBuffer_R[256];
   float32_t audioNFMBuffer[1024];
 

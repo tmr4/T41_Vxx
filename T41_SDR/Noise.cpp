@@ -14,34 +14,35 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-float32_t LMS_NormCoeff_f32[MAX_LMS_TAPS + MAX_LMS_DELAY];
-float32_t LMS_nr_delay[512 + MAX_LMS_DELAY];
-float32_t LMS_StateF32[MAX_LMS_TAPS + MAX_LMS_DELAY];
+DMAMEM float32_t LMS_NormCoeff_f32[MAX_LMS_TAPS + MAX_LMS_DELAY];
+DMAMEM float32_t LMS_nr_delay[512 + MAX_LMS_DELAY];
+DMAMEM float32_t LMS_StateF32[MAX_LMS_TAPS + MAX_LMS_DELAY];
 uint8_t NR_first_time = 1;
 uint8_t NR_Kim;
 uint8_t NR_use_X = 0;
 const uint8_t NR_L_frames = 3;
 const uint8_t NR_N_frames = 15;
 
-float32_t DMAMEM NR_FFT_buffer[512] __attribute__((aligned(4)));
-float32_t DMAMEM NR_output_audio_buffer[NR_FFT_L];
-float32_t DMAMEM NR_last_iFFT_result[NR_FFT_L / 2];
-float32_t DMAMEM NR_last_sample_buffer_L[NR_FFT_L / 2];
-float32_t DMAMEM NR_last_sample_buffer_R[NR_FFT_L / 2];
-float32_t DMAMEM NR_X[NR_FFT_L / 2][3];
-float32_t DMAMEM NR_E[NR_FFT_L / 2][15];
-float32_t DMAMEM NR_M[NR_FFT_L / 2];
-float32_t DMAMEM NR_Nest[NR_FFT_L / 2][2];  //
-float32_t DMAMEM NR_lambda[NR_FFT_L / 2];
-float32_t DMAMEM NR_Gts[NR_FFT_L / 2][2];
-float32_t DMAMEM NR_G[NR_FFT_L / 2];
-float32_t DMAMEM NR_SNR_prio[NR_FFT_L / 2];
-float32_t DMAMEM NR_SNR_post[NR_FFT_L / 2];
-float32_t ANR_d[ANR_DLINE_SIZE];
-float32_t ANR_w[ANR_DLINE_SIZE];
+// *** TODO: noise reduction routines aren't great, see if alignment helps ***
+DMAMEM float32_t NR_FFT_buffer[512] __attribute__((aligned(4)));
+DMAMEM float32_t NR_output_audio_buffer[NR_FFT_L];
+DMAMEM float32_t NR_last_iFFT_result[NR_FFT_L / 2];
+DMAMEM float32_t NR_last_sample_buffer_L[NR_FFT_L / 2];
+DMAMEM float32_t NR_last_sample_buffer_R[NR_FFT_L / 2];
+DMAMEM float32_t NR_X[NR_FFT_L / 2][3];
+DMAMEM float32_t NR_E[NR_FFT_L / 2][15];
+DMAMEM float32_t NR_M[NR_FFT_L / 2];
+DMAMEM float32_t NR_Nest[NR_FFT_L / 2][2];  //
+DMAMEM float32_t NR_lambda[NR_FFT_L / 2];
+DMAMEM float32_t NR_Gts[NR_FFT_L / 2][2];
+DMAMEM float32_t NR_G[NR_FFT_L / 2];
+DMAMEM float32_t NR_SNR_prio[NR_FFT_L / 2];
+DMAMEM float32_t NR_SNR_post[NR_FFT_L / 2];
+DMAMEM float32_t ANR_d[ANR_DLINE_SIZE];
+DMAMEM float32_t ANR_w[ANR_DLINE_SIZE];
 
-float32_t DMAMEM NR_Hk_old[NR_FFT_L / 2];
-float32_t DMAMEM NR_long_tone_gain[NR_FFT_L / 2];
+DMAMEM float32_t NR_Hk_old[NR_FFT_L / 2];
+DMAMEM float32_t NR_long_tone_gain[NR_FFT_L / 2];
 
 int ANR_buff_size = 256;
 int ANR_delay = 16;
@@ -59,7 +60,7 @@ float32_t ANR_ldecr = 3.0;
 float32_t ANR_ngamma = 0.001;
 float32_t ANR_two_mu = 0.0001;
 
-/* PROGMEM */ const float32_t sqrtHann[256] = {
+PROGMEM const float32_t sqrtHann[256] = {
   0, 0.01231966, 0.024637449, 0.036951499, 0.049259941, 0.061560906,
   0.073852527, 0.086132939, 0.098400278, 0.110652682, 0.122888291, 0.135105247, 0.147301698,
   0.159475791, 0.171625679, 0.183749518, 0.195845467, 0.207911691, 0.219946358, 0.231947641, 0.24391372,

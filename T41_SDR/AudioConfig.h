@@ -11,8 +11,9 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#define MAX_AUDIO_BLOCKS 500
-//#define MAX_AUDIO_BLOCKS 250
+                                // heap left
+//#define MAX_AUDIO_BLOCKS 500  // 93k
+#define MAX_AUDIO_BLOCKS 250    // 156k
 //#define MAX_AUDIO_BLOCKS 150
 //#define MAX_AUDIO_BLOCKS 100
 

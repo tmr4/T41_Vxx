@@ -105,7 +105,7 @@ extern int zoom_sample_ptr;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-void InitHilbertFilters() {
+FLASHMEM void InitHilbertFilters() {
   // Hilbert filters
   // *** TODO: examine these filter coeficients
   // see: https://groups.io/g/SoftwareControlledHamRadio/topic/t41_hilbert_filter_design/113214259
@@ -119,7 +119,7 @@ void InitHilbertFilters() {
   }
 }
 
-void InitFIRFilters(int sampleRate) {
+FLASHMEM void InitFIRFilters(int sampleRate) {
   /****************************************************************************************
      Receive decimation and interpolation FIR filters design
 

@@ -428,18 +428,19 @@ FLASHMEM void AGCPrep() {
   AGCLoadValues();
 }
 
-#define RB_SIZE                     (int) (MAX_SAMPLE_RATE * MAX_N_TAU * MAX_TAU_ATTACK + 1)
+#define RB_SIZE (int)(MAX_SAMPLE_RATE * MAX_N_TAU * MAX_TAU_ATTACK + 1)
+// *** TODO: look to initialize these ***
+DMAMEM float32_t abs_ring[RB_SIZE];
+DMAMEM float32_t ring[RB_SIZE * 2];
 
 /*****
   Purpose: Audio AGC()*****/
 void AGC() {
   int k;
   float32_t mult;
+  unsigned ring_buffsize = RB_SIZE;
   static uint8_t decay_type = 0;
   static uint8_t state = 0;
-  unsigned ring_buffsize = RB_SIZE;
-  static float32_t abs_ring[RB_SIZE];
-  static float32_t ring[RB_SIZE * 2];
   float32_t abs_out_sample;
   static float32_t fast_backaverage = 0;
   static float32_t hang_backaverage = 0;
