@@ -47,8 +47,8 @@ public:
 
   Property<int> CenterFreq{CURRENT_FREQ_A, "FC"_cat};
   Property<int> NCOFreq{0, "FF"_cat};
-  Property<int> FilterHiCut{3000, "FH"_cat};
-  Property<int> FilterLoCut{200, "FL"_cat};
+  Property<int> FilterHiCut{3000, "NH"_cat};
+  Property<int> FilterLoCut{200, "NL"_cat};
 
   // infobox properties
   Property<int> AudioVolume{30, "VO"_cat};

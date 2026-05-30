@@ -16,18 +16,18 @@ FLASHMEM void Property<T>::Init(T val) {
   value = val;
 }
 
-// fPtr called instead of fPtrInfoBox
+// displayCallback called instead of infoboxCallback
 template <typename T>
 FLASHMEM void Property<T>::Init(T val, FuncPtr _fPtr) {
   value = val;
-  fPtr = _fPtr;
+  displayCallback = _fPtr;
 }
 
-// fPtr called instead of  fPtrInfoBox
+// displayCallback called instead of infoboxCallback
 template <typename T>
 FLASHMEM void Property<T>::Init(T val, FuncPtr _fPtr, int _id, bool polled/* = true */) {
   value = val;
-  fPtr = _fPtr;
+  displayCallback = _fPtr;
   id = _id;
   notifyOnPoll = polled;
 }
@@ -46,7 +46,7 @@ FLASHMEM void Property<T>::Init(T val, T _min, T _max, bool circ, int _id, bool 
 }
 
 // w/ min/max
-// fPtr called instead of fPtrInfoBox
+// displayCallback called instead of infoboxCallback
 template <typename T>
 FLASHMEM void Property<T>::Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr, int _id, bool polled/* = true */) {
   value = val;
@@ -54,19 +54,19 @@ FLASHMEM void Property<T>::Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr,
   min = _min;
   max = _max;
   minmaxCircular = circ;
-  fPtr = _fPtr;
+  displayCallback = _fPtr;
   id = _id;
   notifyOnPoll = polled;
 }
 
 // with bounds check int (*bPtrInt)(T)
-// fPtr called instead of  fPtrInfoBox
+// displayCallback called instead of  infoboxCallback
 template <typename T>
 FLASHMEM void Property<T>::Init(T val, BoundPtr _bPtrInt, FuncPtr _fPtr, int _id, bool polled/* = true */) {
   value = val;
   hasMinMax = true;
   bPtrInt = _bPtrInt;
-  fPtr = _fPtr;
+  displayCallback = _fPtr;
   id = _id;
   notifyOnPoll = polled;
 }

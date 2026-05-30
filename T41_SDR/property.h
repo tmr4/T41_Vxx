@@ -39,10 +39,9 @@ static void AddUpdateFunction(int slot, T* instance) {
 */
 
 protected:
-  static inline UpdateCallback infoboxCallback = NULL;
-  static inline UpdateCallback remoteCallback = NULL;
+  static inline UpdateCallback infoboxCallback = nullptr;
+  static inline UpdateCallback remoteCallback = nullptr;
 
-protected:
   uint16_t catToken = 0;
   uint8_t catHash = 0;
 };
@@ -81,10 +80,10 @@ public:
 
   void Init(T val);
 
-  // fPtr called instead of infoboxCallback
+  // displayCallback called instead of infoboxCallback
   void Init(T val, FuncPtr _fPtr);
 
-  // fPtr called instead of  infoboxCallback
+  // displayCallback called instead of  infoboxCallback
   void Init(T val, FuncPtr _fPtr, int _id, bool polled = true);
 
   // w/ min/max
@@ -92,11 +91,11 @@ public:
   void Init(T val, T _min, T _max, bool circ, int _id, bool polled = true);
 
   // w/ min/max
-  // fPtr called instead of infoboxCallback
+  // displayCallback called instead of infoboxCallback
   void Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr, int _id, bool polled = true);
 
   // with bounds check int (*bPtrInt)(T)
-  // fPtr called instead of  infoboxCallback
+  // displayCallback called instead of  infoboxCallback
   void Init(T val, BoundPtr _bPtrInt, FuncPtr _fPtr, int _id, bool polled = true);
 
   bool Poll(bool updateDisplay, bool updateRemote, bool override = false) {
@@ -123,7 +122,7 @@ public:
   }
 
   //operator T() { return this->value; } // *** compiler complains w/o this, even though it's in the base class ***
-  //operator T() { return value; }
+  operator T() { return value; }
   const T& operator=(const T& val) { return set(val); }
   const T& operator+=(const T& val) { return set(value + val); }
   const T& operator-=(const T& val) { return set(value - val); }
@@ -142,8 +141,8 @@ public:
   }
 
 protected:
-  //using T41Update<T>::catToken;
   using ReadOnlyProperty<T>::catToken;
+  using ReadOnlyProperty<T>::remoteCallback;
 
   void Notify() {
     UpdateDisplay();
@@ -151,14 +150,15 @@ protected:
   }
 
   void UpdateRemote() {
-    //if((T41Update::remoteCallback != NULL) && (id >= 0)) (*T41Update::remoteCallback)(id);
-    if((T41Update::remoteCallback != NULL) && (id >= 0)) (*T41Update::remoteCallback)((int)catToken);
+    //if((T41Update::remoteCallback != nullptr) && (id >= 0)) (*T41Update::remoteCallback)(id);
+    //if((T41Update::remoteCallback != nullptr) && (id >= 0)) (*T41Update::remoteCallback)((int)catToken);
+    if((remoteCallback != nullptr) && (catToken > 0)) remoteCallback((int)catToken);
   }
 
   void UpdateDisplay() {
-    if(fPtr != NULL) {
-      (*fPtr)();
-    } else if((T41Update::infoboxCallback != NULL) && (id >= 0)) {
+    if(displayCallback != nullptr) {
+      (*displayCallback)();
+    } else if((T41Update::infoboxCallback != nullptr) && (id >= 0)) {
       (*T41Update::infoboxCallback)(id);
     }
   }
@@ -181,7 +181,7 @@ private:
     T tmp = value;
     value = val;
     if(hasMinMax) {
-      if(bPtrInt != NULL) {
+      if(bPtrInt != nullptr) {
         value = (int)(*bPtrInt)((int)value);
       } else {
         if(minmaxCircular) {
@@ -202,8 +202,8 @@ private:
     return value;
   }
 
-  FuncPtr fPtr = NULL;
-  BoundPtr bPtrInt = NULL;
+  FuncPtr displayCallback = nullptr;
+  BoundPtr bPtrInt = nullptr;
 
 public:
   void setFromCAT(uint32_t newValue) override { Update((T)newValue); }

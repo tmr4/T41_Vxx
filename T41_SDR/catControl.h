@@ -162,10 +162,9 @@ Index:            1         2         3         4         5         6         7 
 */
 
 #define CAT_HASH_CONSTANT 40305U
-#define CAT_TOKEN_TO_HASH ((token * CAT_HASH_CONSTANT) & 0xFFFF) >> 9
+#define CAT_TOKEN_TO_HASH ((token * CAT_HASH_CONSTANT) & 0xFFFF) >> 9 // create 128-slot hash index
 constexpr uint8_t operator "" _cath(const char* str, size_t len) {
   uint16_t token = (len < 2) ? 0 : (static_cast<uint16_t>(str[0]) << 8) | static_cast<uint16_t>(str[1]);
-  // create 128-slot hash index
   return CAT_TOKEN_TO_HASH;
 }
 
@@ -234,13 +233,14 @@ public:
     }
   }
 
-  void notifyRemote(int item) {
-    //uint16_t cat = catItems[item];
-    uint16_t cat = (uint16_t)item;
+  // notify remote by of a change by inserting the associated
+  // CAT command into processCommand
+  void notifyRemote(int token) {
     char cmd[4] = "xx;";
 
-    cmd[0] = static_cast<char>((cat & 0xFF00) >> 8);
-    cmd[1] = static_cast<char>(cat & 0xFF);
+    // convert token into CAT command
+    cmd[0] = static_cast<char>(((uint16_t)token & 0xFF00) >> 8);
+    cmd[1] = static_cast<char>((uint16_t)token & 0xFF);
     processCommand(cmd);
   }
 
@@ -253,10 +253,9 @@ protected:
   bool useWSJT = false;
 
   void processCommand(const char* cmd) {
-    // convert the 2 character command code into a single uint16_t
-    uint16_t cmdCode = (uint16_t)((cmd[0] << 8) | cmd[1]);
-    uint8_t cmdIndex = (uint16_t)(cmdCode * 40305U) >> 9;
-    const CATCommand* item = commands[cmdIndex];
+    // convert the 2 character command code into its CAT table index
+    uint8_t catHash = CatToken2Hash((uint16_t)((cmd[0] << 8) | cmd[1]));
+    const CATCommand* item = catHash >= 128 ? nullptr : commands[catHash];
 
     if(item) {
       // CAT command found
@@ -272,8 +271,10 @@ protected:
         // *** TODO: consider sending followup if command not properly formed
         return;
       }
+    } else {
+      // *** TODO: consider sending ?; if command not recognized
+      //Serial.printf("bad item: %s, %d\n", cmd, catHash);
     }
-    // *** TODO: consider sending ?; if command not recognized
   }
 
   // *** TODO: consider this against T41ControlSendMsg and if this should be virtual ***
