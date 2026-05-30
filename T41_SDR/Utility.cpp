@@ -633,21 +633,24 @@ void UpdateMemTempLoad() {
 }
 
 IntervalTimer stackTimer;
-volatile uint32_t peakStackUsage = 0;
-volatile uint32_t currentStackUsage = 0;
+volatile uint32_t maxStackUsage = 0;
+volatile uint32_t recentMaxStackUsage = 0;
 
 void stackSampleISR() {
-  uint32_t current_sp;
-  __asm__ volatile ("mov %0, sp" : "=r" (current_sp));
-  currentStackUsage = (uint32_t)&_estack - current_sp;
+  uint32_t currentSP;
+  __asm__ volatile ("mov %0, sp" : "=r" (currentSP));
+  uint32_t instantStackUsage = (uint32_t)&_estack - currentSP;
 
-  if(currentStackUsage > peakStackUsage) {
-    peakStackUsage = currentStackUsage;
+  if(instantStackUsage > maxStackUsage) {
+    maxStackUsage = instantStackUsage;
+  }
+  if(instantStackUsage > recentMaxStackUsage) {
+    recentMaxStackUsage = instantStackUsage;
   }
 }
 
 void MaxStackUseSetup() {
-  peakStackUsage = 0;
+  maxStackUsage = 0;
   stackTimer.begin(stackSampleISR, 1000); // timer every 1ms
   //stackTimer.begin(stackSampleISR, 100);
 }

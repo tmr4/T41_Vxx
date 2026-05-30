@@ -12,7 +12,7 @@
 #include "Tune.h"
 #include "Utility.h"
 
-#include "radio.h"
+#include "remoteRadio.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -459,4 +459,4 @@ struct WSJTCommandBuilder {
 static const RemoteCommandTable catCommands __attribute__((section(".progmem.data")));
 static const WSJTCommandBuilder wsjtCommands __attribute__((section(".progmem.data")));
 
-RemoteRadio radio(&catCommands.data[0], &wsjtCommands.data[0]);
+RemoteRadio remoteRadio(&catCommands.data[0], &wsjtCommands.data[0]);

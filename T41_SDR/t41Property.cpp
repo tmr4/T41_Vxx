@@ -5,7 +5,7 @@
 #include "Display.h"
 #include "Encoders.h"
 #include "Noise.h"
-//#include "t41Control.h"
+#include "remoteRadio.h"
 #include "Tune.h"
 
 /*
@@ -46,6 +46,7 @@ Properties that replaced old global variables:
 #define MAX_ZOOM_ENTRIES      5
 
 T41Properties t41;
+extern RemoteRadio remoteRadio;
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -63,7 +64,7 @@ void NotifyPropertyChanged(T val) {
 }
 
 T41Properties::T41Properties() {
-  T41Update::SetUpdateFunctions(UpdateInfoBoxItem, SendCommand);
+  T41Update::SetUpdateFunctions<CatControl, &CatControl::notifyRemote>(UpdateInfoBoxItem, &remoteRadio);
 }
 
 void T41Properties::SetPropertyDefaults() {

@@ -24,7 +24,7 @@
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Process.h"
-#include "..\remote.h"
+#include "..\remoteDisplay.h"
 #include "..\Tune.h"
 #include "..\Utility.h"
 

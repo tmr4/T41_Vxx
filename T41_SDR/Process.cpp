@@ -27,7 +27,7 @@
 
 #include "debug.h"
 
-#include "radio.h"
+#include "remoteRadio.h"
 #include "connectManager.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -37,7 +37,7 @@
 #if DEVICE_REMOTE_OPS_MODE > 0
 extern ConnectManager transport;
 #endif
-extern RemoteRadio radio;
+extern RemoteRadio remoteRadio;
 
 // *** TODO: this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
@@ -1302,7 +1302,7 @@ FASTRUN void ProcessControls() {
   UpdateMemTempLoad();
 
   transport.update();
-  radio.update();
+  remoteRadio.update();
 }
 
 void YieldToProcess(bool updateSpectrum /* = false */) {

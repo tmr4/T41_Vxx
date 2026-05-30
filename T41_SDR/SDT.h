@@ -71,45 +71,45 @@ typedef __uint8_t uint8_t;
 // id for various radio elements
 // used mainly to identify element for display and remote updates
 // T41_ITEM_VOL to T41_ITEM_LOAD are info box items
+// listed in comment is supported CAT command prefix for T41 display items and properties
 #define T41_ITEMS             37
-#define T41_ITEM_VOL          0
-#define T41_ITEM_AGC          1
-#define T41_ITEM_TUNE         2
-#define T41_ITEM_FINE         3
-#define T41_ITEM_ZOOM         4
-#define T41_ITEM_FLOOR        5
-#define T41_ITEM_NOTCH        6
-#define T41_ITEM_FILTER       7
-#define T41_ITEM_COMPRESS     8
-#define T41_ITEM_RFGAIN       9
-#define T41_ITEM_EQUALIZER    10
-#define T41_ITEM_DECODER      11
-#define T41_ITEM_KEY          12
-#define T41_ITEM_KEYER        13
-#define T41_ITEM_FT8          14
-#define T41_ITEM_FT8_INT      15
-#define T41_ITEM_FT8_TX       16
-#define T41_ITEM_FT8_CQ       17
-#define T41_ITEM_FT8_TXF      18
-#define T41_ITEM_FT8_RXF      19
-#define T41_ITEM_STACK        20
-#define T41_ITEM_HEAP         21
-#define T41_ITEM_TEMP         22
-#define T41_ITEM_LOAD         23
-// begin other T41 elements
-#define T41_ITEM_MOUSE        24 // MouseCenterTuneActive
-#define T41_ITEM_NOISE        25 // NoiseFloor
-#define T41_ITEM_RADIO_MODE   26
-#define T41_ITEM_DEMOD_MODE   27
-#define T41_ITEM_BAND         28 // ActiveBand
-#define T41_ITEM_POWER        29 // TxPower
-#define T41_ITEM_FREQ         30 // CenterFreq
-#define T41_ITEM_NCO          31 // NCOFreq
-#define T41_ITEM_FHI          32 // FilterHiCut
-#define T41_ITEM_FLO          33 // FilterLoCut
-#define T41_ITEM_SCALE        34 // FreqSpecScale
-#define T41_ITEM_CW_FILTER    35 // CWFilterIndex
-#define T41_ITEM_CW_DECODER   36
+#define T41_ITEM_VOL           0 // "VO"_cat
+#define T41_ITEM_AGC           1 // "GT"_cat
+#define T41_ITEM_TUNE          2 // "F0"_cat
+#define T41_ITEM_FINE          3 // "F1"_cat
+#define T41_ITEM_ZOOM          4 // "ZM"_cat
+#define T41_ITEM_FLOOR         5 // "NG"_cat
+#define T41_ITEM_NOTCH         6 // "xx"_cat
+#define T41_ITEM_FILTER        7 // "N1"_cat
+#define T41_ITEM_COMPRESS      8 // "xx"_cat
+#define T41_ITEM_RFGAIN        9 // "PG"_cat
+#define T41_ITEM_EQUALIZER    10 // "xx"_cat
+#define T41_ITEM_DECODER      11 // "xx"_cat
+#define T41_ITEM_KEY          12 // "xx"_cat
+#define T41_ITEM_KEYER        13 // "xx"_cat
+#define T41_ITEM_FT8          14 // "xx"_cat
+#define T41_ITEM_FT8_INT      15 // "xx"_cat
+#define T41_ITEM_FT8_TX       16 // "xx"_cat
+#define T41_ITEM_FT8_CQ       17 // "xx"_cat
+#define T41_ITEM_FT8_TXF      18 // "xx"_cat
+#define T41_ITEM_FT8_RXF      19 // "xx"_cat
+#define T41_ITEM_STACK        20 // "xx"_cat
+#define T41_ITEM_HEAP         21 // "xx"_cat
+#define T41_ITEM_TEMP         22 // "xx"_cat
+#define T41_ITEM_LOAD         23 // "xx"_cat
+#define T41_ITEM_MOUSE        24 // "FS"_cat // begin other T41 elements // MouseCenterTuneActive
+#define T41_ITEM_NOISE        25 // "NF"_cat // NoiseFloor
+#define T41_ITEM_RADIO_MODE   26 // "ME"_cat
+#define T41_ITEM_DEMOD_MODE   27 // "MD"_cat
+#define T41_ITEM_BAND         28 // "BD"_cat // ActiveBand
+#define T41_ITEM_POWER        29 // "PC"_cat // TxPower
+#define T41_ITEM_FREQ         30 // "FC"_cat // CenterFreq
+#define T41_ITEM_NCO          31 // "FF"_cat // NCOFreq
+#define T41_ITEM_FHI          32 // "NH"_cat // FilterHiCut
+#define T41_ITEM_FLO          33 // "NL"_cat // FilterLoCut
+#define T41_ITEM_SCALE        34 // "xx"_cat // FreqSpecScale
+#define T41_ITEM_CW_FILTER    35 // "xx"_cat // CWFilterIndex
+#define T41_ITEM_CW_DECODER   36 // "xx"_cat
 //#define T41_ITEM_   37
 //#define T41_ITEM_   38
 //#define T41_ITEM_   39

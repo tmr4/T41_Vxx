@@ -632,41 +632,55 @@ void ClearInfoBox() {
   DrawInfoBoxFrame();
 }
 
-extern volatile uint32_t currentStackUsage;
-extern volatile uint32_t peakStackUsage;
+extern volatile uint32_t recentMaxStackUsage;
+extern volatile uint32_t maxStackUsage;
 
 /*****
   Purpose: Information box follow up function for the Stack item
-            The stack value is more informative when called from within a function that might be stressing the stack
+    Provides three views of stack in successive calls:
+      Total stack:  simply _estack - _ebss
+      Recent Max:   maximum stack usage since last recent max
+      Max:          maximum stack usage since program start
+
+    note: _estack, _ebss are defined by the linker, they are not valid memory
+    locations in all cases - by defining them as arrays, the C++ compiler
+    will use the address of these definitions - it's a big hack, but there's
+    really no clean way to get at linker-defined symbols from the .ld file
+    *** TODO: is this comment still valid? ***
+
+    *** The stack value is more informative when called from within
+        a function that might be stressing the stack. ***
 
   Parameter list:
     int row, col  Row and column of info box item
 *****/
 void IBStackFollowup(int row, int col) {
-  // note: these values are defined by the linker, they are not valid memory
-  // locations in all cases - by defining them as arrays, the C++ compiler
-  // will use the address of these definitions - it's a big hack, but there's
-  // really no clean way to get at linker-defined symbols from the .ld file
-  // *** TODO: is this comment still valid? ***
-  static uint8_t showStack = 0; // 0=total stack, 1=current usage, 2=peak usage
-  uint32_t value = _estack-_ebss;
-
+  uint32_t value = _estack - _ebss;
+  uint16_t color = RA8875_WHITE;
+  static uint8_t showStack = 0; // 0=total stack, 1=recent max, 2=max
 
   noInterrupts();
   switch(showStack) {
     case 1:
-      value = currentStackUsage;
+      color = RA8875_GREEN;
+      value = recentMaxStackUsage;
+      recentMaxStackUsage = 0;
       break;
     case 2:
-      value = peakStackUsage;
+      if(maxStackUsage > value * 0.75) {
+        color = RA8875_RED;
+      } else {
+        color = RA8875_YELLOW;
+      }
+      value = maxStackUsage;
       break;
   }
   interrupts();
 
   tft.setFontScale((enum RA8875tsize)0);
   tft.setCursor(col, row);
-  tft.setTextColor(RA8875_GREEN);
-  tft.print(value/1000);
+  tft.setTextColor(color);
+  tft.print(value / 1000);
   tft.print("k");
   if(++showStack > 2) showStack = 0;
 }

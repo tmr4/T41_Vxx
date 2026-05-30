@@ -199,7 +199,7 @@ CatControl creates the framework for CAT control support. It provides the follow
 class CatControl {
 private:
   const CATCommand* const *commands;
-  static const uint16_t catItems[T41_ITEMS];
+  //static const uint16_t catItems[T41_ITEMS];
 
   static constexpr uint8_t maxCmd = 255;
   static constexpr uint8_t maxMsg = 50; // should be enough to respond to IF;
@@ -235,7 +235,8 @@ public:
   }
 
   void notifyRemote(int item) {
-    uint16_t cat = catItems[item];
+    //uint16_t cat = catItems[item];
+    uint16_t cat = (uint16_t)item;
     char cmd[4] = "xx;";
 
     cmd[0] = static_cast<char>((cat & 0xFF00) >> 8);

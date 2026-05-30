@@ -42,14 +42,14 @@
 #include "keyer.h"
 #include "ft8.h"
 #include "mouse.h"
-#include "remote.h"
+#include "remoteDisplay.h"
 #include "t41Beacon.h"
 
 // *** need to pull what we want from these ***
 //#include "fir_cmsis_5k.h"
 //#include "fir_alt.h"
 
-#include "radio.h"
+#include "remoteRadio.h"
 #include "connectManager.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -57,7 +57,7 @@
 //-------------------------------------------------------------------------------------------------------------
 
 
-extern RemoteRadio radio;
+extern RemoteRadio remoteRadio;
 #if DEVICE_REMOTE_OPS_MODE == 2
 DMAMEM ConnectManager transport(REMOTE_ROLE_REMOTE);
 extern AudioInputSerial1 iqStream;
@@ -307,7 +307,7 @@ FLASHMEM void setup() {
   //T41BeaconSetup();
 
 #if DEVICE_REMOTE_OPS_MODE == 4 || DEVICE_REMOTE_OPS_MODE == 5
-  transport.begin(&radio, &iqStream);
+  transport.begin(&remoteRadio, &iqStream);
 #endif
 
   KeyerSetup(); // testing only
@@ -541,7 +541,7 @@ FASTRUN void loop() {
         switch(t41.DemodMode) {
           case DEMOD_FT8:
               PrepareMicExciterData();
-              radio.update(); // update ft8PTT
+              remoteRadio.update(); // update ft8PTT
             break;
 
           case DEMOD_FT8_INTERNAL:

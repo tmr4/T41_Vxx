@@ -5,15 +5,10 @@
 #include "catControl.h"
 
 class T41Update {
-  typedef void (*FuncPtrInt)(int);
+  typedef void (*UpdateCallback)(int);
 
 public:
   T41Update(uint16_t token) : catToken(token), catHash(CatToken2Hash(token)) {}
-
-  static void SetUpdateFunctions(FuncPtrInt ib, FuncPtrInt rm) {
-    fPtrInfoBox = ib;
-    fPtrRemote = rm;
-  }
 
   uint16_t getCatToken() const { return catToken; }
   uint8_t getCatHash() const { return catHash; }
@@ -21,12 +16,33 @@ public:
   virtual void setFromCAT(uint32_t newValue) = 0;
   virtual uint32_t getForCAT() = 0;
 
-protected:
-  static inline FuncPtrInt fPtrInfoBox = NULL;
-  static inline FuncPtrInt fPtrRemote = NULL;
+  // *** TODO: revisit when infobox is modernized ***
+  template<class T, void (T::*Method)(int)>
+  static void SetUpdateFunctions(UpdateCallback ib, T* instance) {
+    static T* obj = instance; // specific instance of T (static for class)
 
-//protected:
-private:
+    infoboxCallback = ib;
+
+    // lambda with no captures [] converted to a raw function pointer
+    // We use 'obj' (the static pointer) inside to provide the context.
+    remoteCallback = [](int val) {
+      (obj->*Method)(val);
+    };
+  }
+/*
+future consideration:
+template<class T, void (T::*Method)(int)>
+static void AddUpdateFunction(int slot, T* instance) {
+    static T* obj = instance;
+    _callbacks[slot] = [](int val) { (obj->*Method)(val); };
+}
+*/
+
+protected:
+  static inline UpdateCallback infoboxCallback = NULL;
+  static inline UpdateCallback remoteCallback = NULL;
+
+protected:
   uint16_t catToken = 0;
   uint8_t catHash = 0;
 };
@@ -50,7 +66,6 @@ template<typename T>
 class Property : public ReadOnlyProperty<T> {
   typedef void (*FuncPtr)();
   typedef void (*FuncPtrT)(T);
-  typedef void (*FuncPtrInt)(int);
   typedef void (*FuncPtr2Int)(int, int);
   typedef int (*BoundPtr)(int);
 
@@ -66,10 +81,10 @@ public:
 
   void Init(T val);
 
-  // fPtr called instead of fPtrInfoBox
+  // fPtr called instead of infoboxCallback
   void Init(T val, FuncPtr _fPtr);
 
-  // fPtr called instead of  fPtrInfoBox
+  // fPtr called instead of  infoboxCallback
   void Init(T val, FuncPtr _fPtr, int _id, bool polled = true);
 
   // w/ min/max
@@ -77,11 +92,11 @@ public:
   void Init(T val, T _min, T _max, bool circ, int _id, bool polled = true);
 
   // w/ min/max
-  // fPtr called instead of fPtrInfoBox
+  // fPtr called instead of infoboxCallback
   void Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr, int _id, bool polled = true);
 
   // with bounds check int (*bPtrInt)(T)
-  // fPtr called instead of  fPtrInfoBox
+  // fPtr called instead of  infoboxCallback
   void Init(T val, BoundPtr _bPtrInt, FuncPtr _fPtr, int _id, bool polled = true);
 
   bool Poll(bool updateDisplay, bool updateRemote, bool override = false) {
@@ -127,20 +142,24 @@ public:
   }
 
 protected:
+  //using T41Update<T>::catToken;
+  using ReadOnlyProperty<T>::catToken;
+
   void Notify() {
     UpdateDisplay();
     UpdateRemote();
   }
 
   void UpdateRemote() {
-    if((T41Update::fPtrRemote != NULL) && (id >= 0)) (*T41Update::fPtrRemote)(id);
+    //if((T41Update::remoteCallback != NULL) && (id >= 0)) (*T41Update::remoteCallback)(id);
+    if((T41Update::remoteCallback != NULL) && (id >= 0)) (*T41Update::remoteCallback)((int)catToken);
   }
 
   void UpdateDisplay() {
     if(fPtr != NULL) {
       (*fPtr)();
-    } else if((T41Update::fPtrInfoBox != NULL) && (id >= 0)) {
-      (*T41Update::fPtrInfoBox)(id);
+    } else if((T41Update::infoboxCallback != NULL) && (id >= 0)) {
+      (*T41Update::infoboxCallback)(id);
     }
   }
 
