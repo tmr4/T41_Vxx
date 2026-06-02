@@ -377,7 +377,7 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
   // Q_out_L can buffer up to 80 blocks. setMaxBuffers can limit this to prevent play queue from buffering to much
   // I haven't found setMaxBuffers solving a high memory use
-  //Q_out_L.setMaxBuffers(40);
+  Q_out_L.setMaxBuffers(40);
   //Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL); // memory buffer for output queues are limited so this can be set without effect if problem is with input queue
   //Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
 

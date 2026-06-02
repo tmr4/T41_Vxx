@@ -63,82 +63,87 @@ class AudioOutputTCP : public AudioStream {
   AudioOutputTCP() : AudioStream(2, inputQueueArray) {}
 
   void begin() { enabled = true; }
-	void end() { enabled = false; }
+	void end() {
+    enabled = false;
+    noInterrupts();
+    clear();
+    interrupts();
+  }
+
+  void setClient(EthernetClient* _client) {
+    if(_client) {
+      client = _client;
+    } else {
+      noInterrupts();
+      clear();
+      interrupts();
+    }
+  }
 
   // store input stream in queue
   // *** this is called from an interrupt, it can't touch QNEthernet objects ***
   void update() override {
-    audio_block_t *blockL, *blockR;
-    int h;
+    audio_block_t* blockL = receiveReadOnly(0);
+    audio_block_t* blockR = receiveReadOnly(1);
 
-    blockL = receiveReadOnly(0);
-    blockR = receiveReadOnly(1);
-
-    h = (head + 1) % maxBlocks;
-    if(!client || !enabled || (h == tail) || !blockL || !blockR) {
+    if(!client || !enabled || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
-
-      // reset queue
-      while(tail != head) {
-        TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-        blockL = queue[tail][0];
-        blockR = queue[tail][1];
-        tail = (tail + 1) % maxBlocks;
-        release(blockL);
-        release(blockR);
-      }
-      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-
       return;
     }
 
     // we're enabled and have blocks to queue
-    if(h == tail) {
+    if(bufferFull()) {
       // buffer full, drop oldest block
       // *** increase buffer size if here ***
-      audio_block_t *oldestL = queue[tail][0];
-      audio_block_t *oldestR = queue[tail][1];
-      if(oldestL) release(oldestL);
-      if(oldestR) release(oldestR);
-      tail = (tail + 1) % maxBlocks;
+      audio_block_t* oldestL = queue[tail][0];
+      audio_block_t* oldestR = queue[tail][1];
+      if(oldestL) { release(oldestL); queue[tail][0] = nullptr; }
+      if(oldestR) { release(oldestR); queue[tail][1] = nullptr; }
+      tail = (tail + 1) & bufferMask;
     }
+
     queue[head][0] = blockL;
     queue[head][1] = blockR;
-    head = h;
+    head = (head + 1) & bufferMask;
   }
 
   // write queue data out to Ethernet
   void write() {
-    if(enabled) {
+    if(enabled && client) {
+      audio_block_t *blockL, *blockR;
+
       TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
 
-      if(client) {
-        Ethernet.loop();
+      Ethernet.loop();
 
-        if(tail == head) {
-          RESETPROFILEPIN(PROFILER_DECODE_FT8);
-          return; // nothing to write
+      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+      while(client->availableForWrite() >= blockSize) {
+        // take ownership of blocks
+        noInterrupts();
+        if(bufferEmpty()) {
+          interrupts();
+          break; // nothing to write
         }
+        blockL = queue[tail][0];
+        blockR = queue[tail][1];
+        queue[tail][0] = nullptr;
+        queue[tail][1] = nullptr;
+        tail = (tail + 1) & bufferMask;
+        interrupts();
 
-        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-        audio_block_t *blockL, *blockR;
-        while((client->availableForWrite() >= blockSize) && (tail != head)) {
-          TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
-          blockL = queue[tail][0];
-          blockR = queue[tail][1];
+        if(!blockL || !blockR) continue; // buffer empty or update overwrote these
 
-          client->write((uint8_t *)blockL->data, blockSize / 2);
-          client->write((uint8_t *)blockR->data, blockSize / 2);
-          //client->writeFully((uint8_t *)blockL->data, blockSize / 2);
-          //client->writeFully((uint8_t *)blockR->data, blockSize / 2);
+        TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+        client->write((uint8_t *)blockL->data, blockSize / 2);
+        client->write((uint8_t *)blockR->data, blockSize / 2);
+        //client->writeFully((uint8_t *)blockL->data, blockSize / 2);
+        //client->writeFully((uint8_t *)blockR->data, blockSize / 2);
 
-          release(blockL);
-          release(blockR);
-          tail = (tail + 1) % maxBlocks;
-        }
-        client->flush();
+        release(blockL);
+        release(blockR);
       }
+      client->flush();
 
       RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
       RESETPROFILEPIN(PROFILER_DECODE_FT8);
@@ -147,17 +152,31 @@ class AudioOutputTCP : public AudioStream {
   }
 
  private:
-	static constexpr int maxBlocks = 50;
+	static constexpr size_t maxBlocks = 64; // *** must be power of 2 ***
+	static constexpr size_t bufferMask = maxBlocks - 1;
+  static_assert((maxBlocks & (maxBlocks - 1)) == 0, "maxBlocks must be a power of 2");
+
   bool enabled = false;
 
-  EthernetClient *client = nullptr;
+  EthernetClient* client = nullptr;
 
-	audio_block_t * volatile queue[maxBlocks][2];
+	audio_block_t* volatile queue[maxBlocks][2] = {};
 	volatile uint8_t head = 0;
 	volatile uint8_t tail = 0;
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   audio_block_t *inputQueueArray[2];
 
-  friend class ConnectManager;
+  bool bufferFull() { return ((head + 1) & bufferMask) == tail; }
+  bool bufferEmpty() { return head == tail; }
+  void clear() {
+    audio_block_t *blockL, *blockR;
+    while(tail != head) {
+      blockL = queue[tail][0];
+      blockR = queue[tail][1];
+      if(blockL) release(blockL);
+      if(blockR) release(blockR);
+      tail = (tail + 1) & bufferMask;
+    }
+  }
 };

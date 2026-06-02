@@ -39,7 +39,8 @@ private:
 
   const unsigned long POLL_INTERVAL = 40;
   const unsigned long HEARTBEAT_INTERVAL = 500;
-  const unsigned long HEARTBEAT_TIMEOUT = 1200;
+  //const unsigned long HEARTBEAT_TIMEOUT = 1200;
+  const unsigned long HEARTBEAT_TIMEOUT = 2400;
   const int HEARTBEAT_COUNT = 3;
   const unsigned long TCP_RETRY_INTERVAL = 2000;
 
@@ -75,7 +76,7 @@ public:
     role(_role), cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort), tcpDataServer(dPort),
     usbHostSerial1(USBManager::getHost()), usbHostSerial2(USBManager::getHost(), 1) {}
 
-  void begin(CatControl *control, AudioOutputTCP *stream) {
+  void begin(CatControl *control, AudioOutputTCP* stream) {
     if(control && stream) {
       catControl = control;
       tcpOuput = stream;
@@ -85,7 +86,7 @@ public:
     begin();
   }
 
-  void begin(CatControl *control, AudioInputTCP *stream) {
+  void begin(CatControl *control, AudioInputTCP* stream) {
     if(control && stream) {
       catControl = control;
       tcpInput = stream;
@@ -176,9 +177,9 @@ private:
   void handleDisconnected() {
     catControl->link = nullptr;
     if(role == REMOTE_ROLE_T41) {
-      tcpOuput->client = nullptr;
+      tcpOuput->setClient(nullptr);
     } else {
-      tcpInput->client = nullptr;
+      tcpInput->setClient(nullptr);
     }
 
     if(checkUsbPhysicalLink()) {
@@ -225,7 +226,7 @@ private:
 
           if(tcpDataClient && tcpDataClient.connected()) {
             catControl->link = &tcpCmdClient;
-            tcpOuput->client = &tcpDataClient;
+            tcpOuput->setClient(&tcpDataClient);
             setConnected();
           }
         }
@@ -254,7 +255,7 @@ private:
 
           if(tcpDataClient.connected()) {
             catControl->link = &tcpCmdClient;
-            tcpInput->client = &tcpDataClient;
+            tcpInput->setClient(&tcpDataClient);
             setConnected();
           }
         }
@@ -295,9 +296,9 @@ private:
         tcpDataClient.abort();
       }
       if(role == REMOTE_ROLE_T41) {
-        tcpOuput->client = nullptr;
+        tcpOuput->setClient(nullptr);
       } else {
-        tcpInput->client = nullptr;
+        tcpInput->setClient(nullptr);
       }
     }
 
@@ -354,6 +355,7 @@ private:
       } else {
          // normal heartbeat check
         if(now - lastHeartbeat > HEARTBEAT_TIMEOUT) {
+          Serial.println("Missed heartbeat...");
           setLinkLost();
         }
       }

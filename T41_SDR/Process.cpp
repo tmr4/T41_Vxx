@@ -238,7 +238,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static float32_t audiotmp = 0.0f;
   float32_t w;
   static float32_t wold = 0.0f;
-  q15_t q15_buffer_LTemp[2048];
+  //q15_t q15_buffer_LTemp[2048];
   float rfGainValue, intScaler;
   // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8 or 24Hz
   int blocks = t41.DemodMode == DEMOD_FT8 ? 2 : 16;
@@ -326,7 +326,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // *** TODO: needed for current state of internal FT8 decoding, DEMOD_FT8_INTERNAL, hangs otherwise, though interrupts work ***
   if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
     //if(sendGet) {
-    //  Serial.println("clearing @ ProcessReceiverData ...");
+      Serial.println("clearing @ ProcessReceiverData ...");
     //}
     Q_in_L.clear();
     Q_in_R.clear();
@@ -853,8 +853,17 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   /**********************************************************************************
     CONVERT TO INTEGER AND PLAY AUDIO
   **********************************************************************************/
-  arm_float_to_q15(audioBufferL, q15_buffer_LTemp, blocks * 128);
-  Q_out_L.play(q15_buffer_LTemp, blocks * 128);
+  //arm_float_to_q15(audioBufferL, q15_buffer_LTemp, blocks * 128);
+  //Q_out_L.play(q15_buffer_LTemp, blocks * 128);
+  for(int i = 0; i < blocks; i++) {
+    int16_t *buf = Q_out_L.getBuffer();
+    arm_float_to_q15(&audioBufferL[i*128], buf, 128);
+    if (buf != nullptr) {
+      Q_out_L.playBuffer();
+    } else {
+      Serial.println("skipped ProcessReceiverData output...");
+    }
+  }
 
   /*
   // volume testing
