@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include <QNEthernet.h>
+#include <QNEthernet.h> // https://github.com/ssilverman/QNEthernet
 #include <USBHost_t36.h>
 
 //using namespace qnetsilverman;
@@ -99,13 +99,13 @@ public:
   void update() {
     if(!enabled) return;
 
-    USBManager::getHost().Task();
+    if(connectMode == CONNECT_USB) USBManager::getHost().Task();
 
     unsigned long now = millis();
     if(now - pollTimer >= POLL_INTERVAL) {
       pollTimer = now;
 
-      switch (linkState) {
+      switch(linkState) {
         case LINK_DISCONNECTED:   handleDisconnected();   break;
         case LINK_CHECK_HARDWARE: handleCheckHardware();  break;
         case LINK_CONNECTED:      handleConnected();      break;
@@ -113,7 +113,8 @@ public:
       }
     }
 
-    if(linkState != LINK_CONNECTED) delay(10);
+    // *** a little pause here is needed sometimes to ensure reconnection ***
+    if(linkState != LINK_CONNECTED) delay(1);
   }
 
   bool isRemote() const { return role == REMOTE_ROLE_REMOTE; }

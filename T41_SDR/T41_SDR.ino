@@ -51,25 +51,27 @@
 
 #include "remoteRadio.h"
 #include "connectManager.h"
+#include "telemetry.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-
 extern RemoteRadio remoteRadio;
 #if DEVICE_REMOTE_OPS_MODE == 2
-DMAMEM ConnectManager transport(REMOTE_ROLE_REMOTE);
+ConnectManager transport(REMOTE_ROLE_REMOTE);
 extern AudioInputSerial1 iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 3
-DMAMEM ConnectManager transport;
+ConnectManager transport;
 extern AudioOutputHostSerial iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 4
-DMAMEM ConnectManager transport(REMOTE_ROLE_REMOTE);
+ConnectManager transport(REMOTE_ROLE_REMOTE);
 extern AudioInputTCP iqStream;
+Telemetry telemetry;
 #elif DEVICE_REMOTE_OPS_MODE == 5
-DMAMEM ConnectManager transport;
+ConnectManager transport;
 extern AudioOutputTCP iqStream;
+Telemetry telemetry;
 #endif
 
 extern bool beaconFlag;

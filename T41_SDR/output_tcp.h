@@ -47,6 +47,11 @@ T41 timing (w/ T41 standard testing input, Auto NF):
 using namespace qindesign::network;
 
 #include "debug.h"
+#include "telemetry.h"
+
+//-------------------------------------------------------------------------------------------------------------
+// Data
+//-------------------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------------------
 // Forward
@@ -65,42 +70,25 @@ class AudioOutputTCP : public AudioStream {
   void begin() { enabled = true; }
 	void end() {
     enabled = false;
-    noInterrupts();
     clear();
-    interrupts();
   }
 
   void setClient(EthernetClient* _client) {
-    if(_client) {
-      client = _client;
-    } else {
-      noInterrupts();
-      clear();
-      interrupts();
-    }
+    if(!_client) clear();
+    client = _client;
   }
 
   // store input stream in queue
   // *** this is called from an interrupt, it can't touch QNEthernet objects ***
+  // *** only touches head! ***
   void update() override {
     audio_block_t* blockL = receiveReadOnly(0);
     audio_block_t* blockR = receiveReadOnly(1);
 
-    if(!client || !enabled || !blockL || !blockR) {
+    if(!client || !enabled || !blockL || !blockR || bufferFull()) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
       return;
-    }
-
-    // we're enabled and have blocks to queue
-    if(bufferFull()) {
-      // buffer full, drop oldest block
-      // *** increase buffer size if here ***
-      audio_block_t* oldestL = queue[tail][0];
-      audio_block_t* oldestR = queue[tail][1];
-      if(oldestL) { release(oldestL); queue[tail][0] = nullptr; }
-      if(oldestR) { release(oldestR); queue[tail][1] = nullptr; }
-      tail = (tail + 1) & bufferMask;
     }
 
     queue[head][0] = blockL;
@@ -109,20 +97,46 @@ class AudioOutputTCP : public AudioStream {
   }
 
   // write queue data out to Ethernet
+  // *** int EthernetClient::availableForWrite() includes a call
+  //     to Ethernet.loop() so an extra one here is not needed ***
   void write() {
     if(enabled && client) {
       audio_block_t *blockL, *blockR;
+      int available = client->availableForWrite();
+      size_t h;
+      bool bFull;
 
       TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
 
-      Ethernet.loop();
+      // lock stuff for this loop
+      noInterrupts();
+      h = head;
+      bFull = bufferFull();
+      interrupts();
 
-      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-      while(client->availableForWrite() >= blockSize) {
+      // *** buffer full check (usually happens on system glitch) ***
+      // I've tested just dropping the oldest block and adding the new one.
+      // The system recovers after the glitch, but spends sometime doing
+      // the swap with no real gain. The damage (audio artifact) is already done.
+      // Better is to just clear the entire buffer and allow the system to recover
+      // faster instead of trying to force through old data. Setting a flag
+      // to note buffer was fully during an update allows clear() to run from
+      // an interrupt.
+      if(bFull) {
+        telemetry.bufferClearEvent(h, tail, available);
+        clear();
+        h = 0;
+      } else {
+        telemetry.preLoopCheck(h, tail, available);
+      }
+
+      while(available >= blockSize) {
+        telemetry.inLoopCheck(h, tail, available);
+
+        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+
         // take ownership of blocks
-        noInterrupts();
-        if(bufferEmpty()) {
-          interrupts();
+        if(h == tail) { // empty check
           break; // nothing to write
         }
         blockL = queue[tail][0];
@@ -130,20 +144,21 @@ class AudioOutputTCP : public AudioStream {
         queue[tail][0] = nullptr;
         queue[tail][1] = nullptr;
         tail = (tail + 1) & bufferMask;
-        interrupts();
 
         if(!blockL || !blockR) continue; // buffer empty or update overwrote these
 
         TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
-        client->write((uint8_t *)blockL->data, blockSize / 2);
-        client->write((uint8_t *)blockR->data, blockSize / 2);
-        //client->writeFully((uint8_t *)blockL->data, blockSize / 2);
-        //client->writeFully((uint8_t *)blockR->data, blockSize / 2);
+        //client->write((uint8_t *)blockL->data, blockSize / 2);
+        //client->write((uint8_t *)blockR->data, blockSize / 2);
+        client->writeFully((uint8_t *)blockL->data, blockSize / 2);
+        client->writeFully((uint8_t *)blockR->data, blockSize / 2);
 
         release(blockL);
         release(blockR);
+        available -= 512;
+        //available = client->availableForWrite();
       }
-      client->flush();
+      client->flush(); // includes call to Ethernet.loop()
 
       RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
       RESETPROFILEPIN(PROFILER_DECODE_FT8);
@@ -161,16 +176,18 @@ class AudioOutputTCP : public AudioStream {
   EthernetClient* client = nullptr;
 
 	audio_block_t* volatile queue[maxBlocks][2] = {};
-	volatile uint8_t head = 0;
-	volatile uint8_t tail = 0;
+	volatile size_t head = 0;
+	size_t tail = 0;
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   audio_block_t *inputQueueArray[2];
 
   bool bufferFull() { return ((head + 1) & bufferMask) == tail; }
-  bool bufferEmpty() { return head == tail; }
+  //bool bufferEmpty() { return head == tail; }
   void clear() {
     audio_block_t *blockL, *blockR;
+
+    noInterrupts();
     while(tail != head) {
       blockL = queue[tail][0];
       blockR = queue[tail][1];
@@ -178,5 +195,7 @@ class AudioOutputTCP : public AudioStream {
       if(blockR) release(blockR);
       tail = (tail + 1) & bufferMask;
     }
+    head = tail = 0;
+    interrupts();
   }
 };
