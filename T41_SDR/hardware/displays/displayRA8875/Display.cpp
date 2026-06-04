@@ -445,17 +445,17 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   int yPlot, y1Plot;
   int hLo = 0, hHi = 0;
   int wfGradIndex;
-  static int yOldPlot[SPECTRUM_RES];
+  //static int yOldPlot[SPECTRUM_RES];
   static int currentNF = 0;
   uint16_t waterfall[WATERFALL_W];
   int16_t pixelnew, pixelnew1;
 
   // initialize yOldPlot if this is a new spectrum
   // otherwise we use y values from last loop
-  if(newSpectrumFlag) {
-    memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
-    return; // *** TODO: check if this is needed ***
-  }
+  //if(newSpectrumFlag) {
+  //  memset(yOldPlot, SPECTRUM_BOTTOM, SPECTRUM_RES * sizeof(int));
+  //  return; // *** TODO: check if this is needed ***
+  //}
 
   YieldToProcess(true);
 
@@ -468,9 +468,16 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
 
   SETPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
+  // testing buffering freq spectrum on layer 2
+  tft.writeTo(L2);
+  tft.fillRect(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y+20, SPECTRUM_RES, SPECTRUM_HEIGHT-20, RA8875_BLACK);
+  DrawBandwidthBar();
+  tft.writeTo(L2);
+
   // Draw the frequency spectrums, gather data for waterfall
   for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
-    bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
+    //bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
+    bool drawSpec = true, inBoxLow = true, inBoxHigh = true;
 
     // *** TODO: evaluate noise floor default setting for new v12 hardware ***
     // *** TODO: some calibration routines need an adjustment because there is no noise floor adjustment ***
@@ -503,17 +510,17 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     }
 
     // clear erase flag if we don't need to erase anything
-    if((yOldPlot[x1] == SPECTRUM_BOTTOM) && (yOldPlot[x1 + 1] == SPECTRUM_BOTTOM)) {
-      eraseSpec = false;
-    }
-    if((yOldPlot[x1] == SPECTRUM_TOP_Y) && (yOldPlot[x1 + 1] == SPECTRUM_TOP_Y)) {
-      eraseSpec = false;
-    }
+    //if((yOldPlot[x1] == SPECTRUM_BOTTOM) && (yOldPlot[x1 + 1] == SPECTRUM_BOTTOM)) {
+    //  eraseSpec = false;
+    //}
+    //if((yOldPlot[x1] == SPECTRUM_TOP_Y) && (yOldPlot[x1 + 1] == SPECTRUM_TOP_Y)) {
+    //  eraseSpec = false;
+    //}
 
     // erase the old spectrum if needed
-    if(eraseSpec && (displayState == DISPLAY_T41)) {
-      tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
-    }
+    //if(eraseSpec && (displayState == DISPLAY_T41)) {
+    //  tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+    //}
 
     // prevent drawing spectrum outside of the spectrum area
     // also clear draw flag if we don't need to draw anything
@@ -540,7 +547,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     }
 
     // save plot value to erase spectrum next loop
-    yOldPlot[x1] = yPlot;
+    //yOldPlot[x1] = yPlot;
 
     #ifdef T41_REMOTE_DISPLAY
     if(connected) {
@@ -554,13 +561,19 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     if(wfGradIndex > 116) wfGradIndex = 116; // *** above is out of range of gradient ***
     waterfall[x1] = gradient[wfGradIndex];  // Try to put pixel values in middle of gradient array
 
+    tft.writeTo(L1);
     YieldToProcess();
+    tft.writeTo(L2);
   }
 
+  // move spectrum to layer 1
+  tft.BTE_move(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y+20, SPECTRUM_RES, SPECTRUM_HEIGHT-20, SPECTRUM_LEFT_X, SPECTRUM_TOP_Y+20, 2, 1);
+
+  tft.writeTo(L1);
   RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
   // save last plot value for erasing on next loop
-  yOldPlot[SPECTRUM_RES - 1] = y1Plot;
+  //yOldPlot[SPECTRUM_RES - 1] = y1Plot;
 
   // update S-meter once per loop
   DrawSmeterBar();
