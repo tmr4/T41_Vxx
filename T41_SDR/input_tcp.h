@@ -3,13 +3,6 @@
 /*
  AudioInputTCP - Streams 2-channels from set TCP port to connected AudioStream objects
 
-Memory Usage on Teensy 4.1:
-Compiled with: Smallest Code, 528MHz, Serial, 100 blocks Audio memory
-  FLASH: code:270304, data:91056, headers:8300   free for files:7756804
-   RAM1: variables:166432, code:231960, padding:30184   free for local variables:95712
-   RAM2: variables:267840  free for malloc/new:256448
- EXTRAM: variables:480320
-
 Remote timing (w/ T41 standard testing input, Auto NF):
   * Once enabled and connected, data read from TCP port, 512-bytes total, directly to blocks allocated from Audio memory
     * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel }
@@ -95,11 +88,10 @@ public:
   }
 
   // read TCP data into queue
-  // *** int EthernetClient::available() does not call Ethernet.loop() so we call it here ***
+  // *** EthernetClient::available and read call Ethernet.loop() through
+  //     getStateAndLoopOrClose so a call isn't needed here ***
   void read() {
     if(client) {
-      Ethernet.loop();
-
       if(enabled) {
         audio_block_t *blockL, *blockR;
         int available = client->available();

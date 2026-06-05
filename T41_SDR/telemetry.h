@@ -91,7 +91,7 @@ private:
   uint32_t audioMemoryUsage = 0;
 
   void logEventReport() {
-    Serial.println(F("\n--- NETWORK Event REPORT ---"));
+    Serial.println(F("\n--- Network Event Report ---"));
 
     Serial.printf(F("Event duration: %u ms\n"), eventDuration);
 
@@ -108,7 +108,7 @@ private:
     Serial.printf(F("Queue status at start: head: %u tail: %u\n"), head, tail);
     Serial.printf(F("Audio memory usage at start: current: %u max: %u\n"), audioMemoryUsage, audioMemoryUsageMax);
 
-    Serial.println(F("Status: Recovered. Queue Resynced."));
+    Serial.println(F("Status: resuming normal ops"));
     Serial.println(F("---------------------------\n"));
   }
 

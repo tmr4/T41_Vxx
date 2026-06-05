@@ -3,13 +3,6 @@
 /*
  AudioOutputTCP - Streams 2-channels from connected AudioStream objects to set TCP port
 
-Memory Usage on Teensy 4.1:
-Compiled with: Smallest Code, 528MHz, Serial, 100 blocks Audio memory
-  FLASH: code:259036, data:90032, headers:8300   free for files:7769096
-   RAM1: variables:154272, code:220104, padding:9272   free for local variables:140640
-   RAM2: variables:267840  free for malloc/new:256448
- EXTRAM: variables:1200320
-
 T41 timing (w/ T41 standard testing input, Auto NF):
   * update() runs every 667us (2.9ms /44.1kHz * 192kHz), 2-channel input
     * pointers to input blocks stored in circular buffer once enabled and connected
@@ -97,8 +90,8 @@ class AudioOutputTCP : public AudioStream {
   }
 
   // write queue data out to Ethernet
-  // *** int EthernetClient::availableForWrite() includes a call
-  //     to Ethernet.loop() so an extra one here is not needed ***
+  // *** EthernetClient::availableForWrite and flush include a call
+  //     to Ethernet.loop so an extra one here is not needed ***
   void write() {
     if(enabled && client) {
       audio_block_t *blockL, *blockR;
