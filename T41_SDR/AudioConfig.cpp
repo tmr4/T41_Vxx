@@ -122,9 +122,11 @@ AudioInputSerial1 iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 3
 AudioOutputHostSerial iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 4
-AudioInputTCP iqStream;
+//AudioInputTCP iqStream;
+AudioInputUDP iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 5
-AudioOutputTCP iqStream;
+//AudioOutputTCP iqStream;
+AudioOutputUDP iqStream;
 #endif
 #if DEVICE_REMOTE_OPS_MODE > 1
 bool iqStreamActive = true;
@@ -377,9 +379,9 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
   // Q_out_L can buffer up to 80 blocks. setMaxBuffers can limit this to prevent play queue from buffering to much
   // I haven't found setMaxBuffers solving a high memory use
-  Q_out_L.setMaxBuffers(40);
+  //Q_out_L.setMaxBuffers(40);
   //Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL); // memory buffer for output queues are limited so this can be set without effect if problem is with input queue
-  //Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
+  Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
 
 
   // *** TODO: cause discountinuities in calibration tones ***
@@ -463,7 +465,7 @@ void ConfigAudioState(int audioState) {
   // Some modes change AudioPlayQueue objects to NON_STALLING behavior as required for best performance.
   // Return AudioPlayQueue objects to default ORIGINAL behavior (enum behaviour_e {ORIGINAL, NON_STALLING}).
   // *** TODO: determine which modes require NON_STALLING behavior and code below ***
-  Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL);
+  //Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL);
   if(supportsTX) {
     Q_out_L_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
     Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);

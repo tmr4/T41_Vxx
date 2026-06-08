@@ -83,12 +83,12 @@
 // AP GPIO pins: even top, odd bottom, increasing right to left (normal Audio Platform orientation)
 #define PROFILER_MAINLOOP         10 // GPIO #1
 #define PROFILER_PROCESS_RX       41 // GPIO #2
-#define PROFILER_DRAWFREQSPEC     14 // GPIO #3
-#define PROFILER_DRAWAUDIOSPEC    40 // GPIO #4
-#define PROFILER_PROCESS_FRAME      15 // GPIO #5
-#define PROFILER_FT8_REMOTE_RX       32 // GPIO #6
+#define PROFILER_DRAW             14 // GPIO #3
+#define PROFILER_ENTRY            40 // GPIO #4
+#define PROFILER_PROCESS_FRAME    15 // GPIO #5
+#define PROFILER_RX_TX            32 // GPIO #6
 #define PROFILER_DECODE_FT8       16 // GPIO #7
-#define PROFILER_FT8_CAT_TX       29 // GPIO #8
+#define PROFILER_OTHER            29 // GPIO #8
 
 //---- end of Teensy 4.1 Pin assignments
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <lwip/stats.h>
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -8,32 +10,33 @@ class Telemetry {
 public:
   Telemetry() {}
 
-  void init(size_t _head, size_t _tail, int available) {
-    inEvent = true;
+  void init() {
     startTime = millis();
-
     lowAvailableCount = 0;
-
     eventDuration = 0;
     maxLaspe = 0;
     lastInLoopCheck = 0;
-
     totalClearEvents = 0;
     consecutiveClears = 0;
     recentClears = 0;
-
     latestAvailable = 0;
-    //availableAtStart = latestAvailable;
-    availableAtStart = available;
-    head = _head;
-    tail = _tail;
-    audioMemoryUsageMax = AudioMemoryUsageMax();
-    audioMemoryUsage = AudioMemoryUsage();
+    availableAtStart = 0;
+    head = 0;
+    tail = 0;
+    audioMemoryUsageMax = 0;
+    audioMemoryUsage = 0;
   }
 
-  void bufferClearEvent(size_t head, size_t tail, int available) {
-    //if(tail != head) Serial.printf("clearing output queue: head: %u tail: %u\n", head, tail);
-    if(!inEvent) init(head, tail, available);
+  void bufferClearEvent(size_t _head, size_t _tail, int available) {
+    if(!inEvent) {
+      init();
+      inEvent = true;
+      head = _head;
+      tail = _tail;
+      availableAtStart = available;
+      audioMemoryUsageMax = AudioMemoryUsageMax();
+      audioMemoryUsage = AudioMemoryUsage();
+    }
 
     ++totalClearEvents;
     ++consecutiveClears;
@@ -41,7 +44,8 @@ public:
   }
 
   void preLoopCheck(size_t head, size_t tail, int available) {
-    if(inEvent) {
+    //if(inEvent)
+    {
       latestAvailable = available;
       if(latestAvailable < 512) {
         ++lowAvailableCount;
@@ -50,20 +54,36 @@ public:
   }
 
   void inLoopCheck(size_t head, size_t tail, int available) {
+    if(lastInLoopCheck == 0) lastInLoopCheck = millis();
+
+    unsigned long laspe = millis() - lastInLoopCheck;
+
+    if(laspe > maxLaspe) maxLaspe = laspe;
+
+    lastInLoopCheck = millis();
+
     if(inEvent) {
-      unsigned long laspe = millis() - lastInLoopCheck;
-
-      if(laspe > maxLaspe) maxLaspe = laspe;
-      lastInLoopCheck = millis();
-
       if(recentClears == 0) {
         eventDuration = millis() - startTime;
 
         // Report and Reset
         logEventReport();
+        checkTCPGlitches();
         inEvent = false;
       }
       recentClears = 0;
+    } else {
+      if(laspe > 500) {
+        eventDuration = millis() - startTime;
+
+        // Report and Reset
+        logEventReport();
+        checkTCPGlitches();
+        init();
+      } else {
+        startTime = millis();
+        lowAvailableCount = 0;
+      }
     }
   }
 
@@ -110,6 +130,17 @@ private:
 
     Serial.println(F("Status: resuming normal ops"));
     Serial.println(F("---------------------------\n"));
+  }
+
+  void checkTCPGlitches() {
+    //static uint32_t last_retrans = 0;
+    //// Access the internal lwIP TCP statistics
+    //uint32_t current_retrans = lwip_stats.tcp.xmit; // xmit tracks retransmissions in some versions
+    //
+    //if(current_retrans > last_retrans) {
+    //  Serial.printf("TCP RETRANSMIT DETECTED: %d new events\n", current_retrans - last_retrans);
+    //  last_retrans = current_retrans;
+    //}
   }
 
 };

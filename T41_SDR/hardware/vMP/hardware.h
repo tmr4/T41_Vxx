@@ -81,12 +81,12 @@
 // GPIO connector pins bottom to top as shown on breadboard adapter
 #define PROFILER_MAINLOOP          0
 #define PROFILER_PROCESS_RX           1
-#define PROFILER_DRAWFREQSPEC      2
-#define PROFILER_DRAWAUDIOSPEC     3
+#define PROFILER_DRAW      2
+#define PROFILER_ENTRY     3
 #define PROFILER_PROCESS_FRAME  14
-#define PROFILER_FT8_REMOTE_RX       15
+#define PROFILER_RX_TX       15
 #define PROFILER_DECODE_FT8        16
-#define PROFILER_FT8_CAT_TX           17
+#define PROFILER_OTHER           17
 
 //---- end of Teensy 4.1 Pin assignments
 

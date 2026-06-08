@@ -233,19 +233,18 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
     *** Call only when the required number of blocks are available or use CheckReceiverData,
         an inline function that check for this condition.  This eliminate the function call
         overhead. This prevents churn given the frequency of checking vs success (75 to 1). ***
- *****/
+*****/
 int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   static float32_t audiotmp = 0.0f;
   float32_t w;
   static float32_t wold = 0.0f;
-  //q15_t q15_buffer_LTemp[2048];
   float rfGainValue, intScaler;
-  // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8 or 24Hz
-  int blocks = t41.DemodMode == DEMOD_FT8 ? 2 : 16;
   // *** the amount of data required by the frequency spectrum calc depends on the zoom factor ***
   static int reqPasses = 20;
   static int passes = 20;
-  bool updateFreqSpec = false; // true: spectrums updated, otherwise false
+  bool freqSpecUpdatedThisLoop = false; // true: spectrums updated, otherwise false
+  // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8 or 24Hz
+  int blocks = GetBlocks();
 
   /**********************************************************************************
         Get samples from queue buffers
@@ -361,7 +360,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   if((t41.SpectrumZoom == 0) && updateSpectrumData) {
     Calc1xFreqSpec();
-    updateFreqSpec = true;
+    freqSpecUpdatedThisLoop = true;
 
   // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
     //if(calibrateItem == 1) {
@@ -409,11 +408,11 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         // flag that we're ready to update frequency spectrum
         // no need to reset passes, we won't pass through this
         // block again until the next time updateSpectrumData is set
-        updateFreqSpec = true;
+        freqSpecUpdatedThisLoop = true;
         reqPasses = 20;
         passes = 20;
       }
-      CalcZoomFreqSpec(blocks * 128, updateFreqSpec);
+      CalcZoomFreqSpec(blocks * 128, freqSpecUpdatedThisLoop);
     }
   }
 
@@ -480,7 +479,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
     #ifdef USE_BUFFERED_FT8_WAV
     case DEMOD_FT8_INTERNAL:
-      SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      SETPROFILEPIN(PROFILER_RX_TX);
       // transfer to wav buffer to audio buffers
       // and interpolate to 24 kHz to get audio signal for T41
       // *** TODO: evaluate if use of CMISS_DSP library is better ***
@@ -495,7 +494,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
           audioBufferL[2*i] = audioBufferR[i];
         }
       }
-      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      RESETPROFILEPIN(PROFILER_RX_TX);
       break;
     #endif
 
@@ -506,7 +505,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       // wav file sample rate is 12 kHz
       // get a half sized sample and interpolate to the proper size/rate
       // wav FT8 signal data to audioBufferR, audio to audioBufferL
-      SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      SETPROFILEPIN(PROFILER_RX_TX);
       if(ReadFT8Wav(audioBufferR, 128)) {
         // interpolate to 24 kHz to get audio signal for T41
         // *** TODO: evaluate if use of CMISS_DSP library is better ***
@@ -527,7 +526,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
         //  Q_in_R.clear();
         //}
       }
-      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      RESETPROFILEPIN(PROFILER_RX_TX);
       break;
 
     default:
@@ -565,20 +564,20 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     //case DEMOD_FT8:
     //  // *** TODO: consider if AGC (in default below) for FT8 is desirable with WSJT-X ***
     //  // *** without AGC the T41 volume is less in this mode than equivalent SSB ***
-    //  AudioDSP(updateFreqSpec);
+    //  AudioDSP(freqSpecUpdatedThisLoop);
     //  break;
 
     #ifdef USE_BUFFERED_FT8_WAV
     case DEMOD_FT8_INTERNAL: // *** TODO: this is USE_BUFFERED_FT8_WAV only ***
     #endif
     case DEMOD_FT8_WAV:
-      //AudioDSP(updateFreqSpec, 20, false); // no imaginary component for these
-      AudioDSP(updateFreqSpec, false); // no imaginary component for these
+      //AudioDSP(freqSpecUpdatedThisLoop, 20, false); // no imaginary component for these
+      AudioDSP(freqSpecUpdatedThisLoop, false); // no imaginary component for these
       break;
 
     default:
       // prepare audio signals for all other modes
-      AudioDSP(updateFreqSpec);
+      AudioDSP(freqSpecUpdatedThisLoop);
 
       // apply automatic gain control
       // AGC acts upon on the audio data in audioIFFT
@@ -647,7 +646,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, sampleRate / 8.0);
 
       // process audio for demodulated NFM and FT8 wave file
-      AudioDSP(updateFreqSpec, false); // no imaginary component for these
+      AudioDSP(freqSpecUpdatedThisLoop, false); // no imaginary component for these
 
       // apply automatic gain control
       // AGC acts upon on the audio data in audioIFFT
@@ -711,7 +710,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   }
 
   // send audio data to control app if applicable
-  //if(updateFreqSpec && controlDataFlag) {
+  //if(freqSpecUpdatedThisLoop && controlDataFlag) {
     //for(int i = 0; i < AUDIO_SPEC_RES; i++) {
     //  // audioYPixel is already >= 0, limit it to 255
     //  specData[i] = (uint8_t)(audioYPixel[i] > 255 ? 255 : audioYPixel[i]);
@@ -857,8 +856,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   //Q_out_L.play(q15_buffer_LTemp, blocks * 128);
   for(int i = 0; i < blocks; i++) {
     int16_t *buf = Q_out_L.getBuffer();
-    arm_float_to_q15(&audioBufferL[i*128], buf, 128);
     if (buf != nullptr) {
+      arm_float_to_q15(&audioBufferL[i*128], buf, 128);
       Q_out_L.playBuffer();
     } else {
       Serial.println("skipped ProcessReceiverData output...");
@@ -883,7 +882,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   RESETPROFILEPIN(PROFILER_PROCESS_RX);
 
-  return updateFreqSpec ? 2 : 1;
+  return freqSpecUpdatedThisLoop ? 2 : 1;
 }
 
 /*****
@@ -1315,33 +1314,68 @@ FASTRUN void ProcessControls() {
   remoteRadio.update();
 }
 
-void YieldToProcess(bool updateSpectrum /* = false */) {
-  static long prevUpdate = 0;
+#include <lwip/stats.h>
 
-  while(true) {
+void EtherStats() {
+  // Trigger a dump of all enabled statistics every 5 seconds
+  static uint32_t lastPrint = 0;
+  if (millis() - lastPrint > 5000) {
+    lastPrint = millis();
+
+    Serial.println("--- lwIP Statistics ---");
+    stats_display();
+    Serial.println("-----------------------");
+  }
+}
+
+void YieldToProcess(bool updateSpectrum /* = false */) {
+  static unsigned long lastControl = 0;
+  unsigned long start = millis();
+  bool done = false;
+
+  //EtherStats();
+
+  // loop waiting on sufficient IQ data to process
+  do {
+    //TOGGLEPROFILEPIN(PROFILER_OTHER);
+
+    // yield to ethernet traffic
+    /*** Frequent calls here allow extra processing of Ethernet buffers.
+         This creates some churn to the iqStream read/write methods but
+         trying to regulate this call leads to unstable transfers.
+         QNEthernet seems to handle this without problem, while calling
+         at set intervals leads to data loss and/or freezes. ***/
     YieldToEthernet();
+
     if(updateSpectrum) {
-      // wait for spectrum data update
-      if(CheckReceiverData(true) == 2) break;
+      // *** we go through here at the beginning of each loop
+
+      // break after spectrum updated
+      if(CheckReceiverData(true) == 2) done = true;
     } else {
+      // *** we go through here often ***
+
       // process IQ data while sufficient data exists
       // This allows the process to catch up after longer tasks
       // such as the waterfall update. Failing to do this can
       // result in poor audio.
-      if(CheckReceiverData() != 1) break;
+
+      // break when insufficient IQ data is available to process
+      if(CheckReceiverData() == 0) done = true;
     }
-    // process controls if 10ms has passed since last update
-    if(millis() - prevUpdate > 10) {
-      ProcessControls();
-      prevUpdate = millis();
-      //if(++count > 10) {
-      //  // prevent freeze when no input is present
-      //  // *** TODO: revisit this ***
-      //  count = 0;
-      //  break;
-      //}
+
+    // break if no data in 10ms
+    if(millis() - start > 10) {
+      done = true;
     }
+  } while(!done);
+
+  // process controls every 10ms
+  if(millis() - lastControl > 10) {
+    ProcessControls();
+    lastControl = millis();
   }
+  //RESETPROFILEPIN(PROFILER_OTHER);
 }
 
 void YieldForProcess(int ms) {

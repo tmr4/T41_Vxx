@@ -1432,7 +1432,7 @@ FLASHMEM void FT8DecoderLoop() {
             ft8DecoderState = STATE_TX;
           }
 
-          SETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+          SETPROFILEPIN(PROFILER_RX_TX);
         }
 #ifdef TX_TESTING
       } else {
@@ -1448,7 +1448,7 @@ FLASHMEM void FT8DecoderLoop() {
     case STATE_TX:
       DEBUG_RXTX("at STATE_TX...");
 
-      TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      TOGGLEPROFILEPIN(PROFILER_RX_TX);
 
       if(!ft8PTT) {
         // we continue looping through here until start of interval to transmit
@@ -1487,7 +1487,7 @@ FLASHMEM void FT8DecoderLoop() {
       Q_in_L.begin();
       Q_in_R.begin();
 
-      RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      RESETPROFILEPIN(PROFILER_RX_TX);
       break;
   }
 

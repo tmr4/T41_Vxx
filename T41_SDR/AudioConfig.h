@@ -4,6 +4,8 @@
 
 #include "input_tcp.h"
 #include "output_tcp.h"
+#include "input_udp.h"
+#include "output_udp.h"
 #include "input_usb.h"
 #include "output_usb.h"
 
@@ -32,9 +34,11 @@ extern AudioInputSerial1 iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 3
 extern AudioOutputHostSerial iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 4
-extern AudioInputTCP iqStream;
+//extern AudioInputTCP iqStream;
+extern AudioInputUDP iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 5
-extern AudioOutputTCP iqStream;
+//extern AudioOutputTCP iqStream;
+extern AudioOutputUDP iqStream;
 #endif
 
 //-------------------------------------------------------------------------------------------------------------
@@ -52,8 +56,6 @@ void EndAudioStats();
 #endif
 
 inline void __attribute__((always_inline)) YieldToEthernet() {
-  //if(t41.RemoteStatus == REMOTE_CONNECTED)
-  {
   #if DEVICE_REMOTE_OPS_MODE == 2
   #elif DEVICE_REMOTE_OPS_MODE == 3
   #elif DEVICE_REMOTE_OPS_MODE == 4
@@ -61,5 +63,4 @@ inline void __attribute__((always_inline)) YieldToEthernet() {
   #elif DEVICE_REMOTE_OPS_MODE == 5
   iqStream.write();
   #endif
-  }
 }

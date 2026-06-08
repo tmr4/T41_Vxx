@@ -141,6 +141,7 @@ int16_t pos_x_time = 390;
 int16_t pos_y_time = 5;
 int16_t spectrum_x = 10;
 
+uint16_t waterfall[WATERFALL_W];
 /* PROGMEM */ const uint16_t gradient[] = {  // Color array for waterfall background
   0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9,
   0x10, 0x1F, 0x11F, 0x19F, 0x23F, 0x2BF, 0x33F, 0x3BF, 0x43F, 0x4BF,
@@ -447,7 +448,6 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   int wfGradIndex;
   static int yOldPlot[SPECTRUM_RES];
   static int currentNF = 0;
-  uint16_t waterfall[WATERFALL_W];
   int16_t pixelnew, pixelnew1;
 
   // initialize yOldPlot if this is a new spectrum
@@ -457,16 +457,12 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     return; // *** TODO: check if this is needed ***
   }
 
-  YieldToProcess(true);
-
   // set current noise flow level for this loop
   // noise floor is constant for each spectrum update
   // this allows live noise floor updates
   if(t41.LiveNoiseFloor != 1) {
     currentNF = t41.NoiseFloor;
   }
-
-  SETPROFILEPIN(PROFILER_DRAWFREQSPEC);
 
   // Draw the frequency spectrums, gather data for waterfall
   for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
@@ -557,13 +553,8 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     YieldToProcess();
   }
 
-  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
-
   // save last plot value for erasing on next loop
   yOldPlot[SPECTRUM_RES - 1] = y1Plot;
-
-  // update S-meter once per loop
-  DrawSmeterBar();
 
   #ifdef T41_REMOTE_DISPLAY
     if(connected) {
@@ -591,15 +582,21 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   //if(controlDataFlag) {
   //  nf2PC = currentNF;
   //}
+}
+
+FASTRUN void DrawWaterfall() {
+  static int tik = 1, tok = 2;
 
   // scroll the waterfall display
   // Use the Block Transfer Engine (BTE) to move waterfall down a line
   // copy the waterfall between layers in a DMA ping/pong manner, moving it down to row 2
   if(displayState == DISPLAY_T41) {
-    static int tik = 1, tok = 2;
 
     tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfHeight, WATERFALL_L, WATERFALL_T + 1, tik, tok);
-    tft.readStatus(); // Make sure it is done.  Memory moves can take time. This is blocking. *** might need to be changed back to original if blocking nature is modified ***
+    // Make sure it is done.  Memory moves can take time. This is blocking.
+    // *** might need to block here if blocking nature of readStatus is modified ***
+    tft.readStatus();
+
     if(tik == 1) {
       tik = 2;
       tok = 1;
@@ -625,11 +622,8 @@ FASTRUN void DrawAudioSpectrum() {
   int audioYPixel;
   static int yOldAudioPlot[AUDIO_SPEC_RES] = {0};
 
-  SETPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
-
   // update audio spectrum
   for(int i = 0; i < AUDIO_SPEC_RES; i++) {
-
     // don't overwrite audio filter lines
     if((i != filterLoPosition) && (i != filterHiPosition)) {
       // *** TODO: consider adding audio spectrum for transmission ***
@@ -669,8 +663,18 @@ FASTRUN void DrawAudioSpectrum() {
     //}
     YieldToProcess();
   }
+}
 
-  RESETPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
+FASTRUN void UpdateLiveDisplayAreas() {
+  YieldToProcess(true);
+  SETPROFILEPIN(PROFILER_DRAW);
+  DrawFreqSpectrum();
+  RESETPROFILEPIN(PROFILER_DRAW);
+  DrawWaterfall();
+  SETPROFILEPIN(PROFILER_DRAW);
+  DrawAudioSpectrum();
+  RESETPROFILEPIN(PROFILER_DRAW);
+  DrawSmeterBar();
 }
 
 /*****
@@ -1531,7 +1535,7 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
   static uint16_t waterfall[WATERFALL_W] = {0};
 
   for(int i = 0; i < samples; i++) {
-    TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
+    TOGGLEPROFILEPIN(PROFILER_DRAW);
 
     yPlot = SPECTRUM_TOP_Y + 85 - spec[i] / 3;
     y1Plot = SPECTRUM_TOP_Y + 85 - spec[i + 1] / 3;
@@ -1588,7 +1592,7 @@ FLASHMEM void DrawFT8Spectrum(uint8_t *spec, int numSamples, bool rollWaterfall 
     tft.writeRect(WATERFALL_L, SPECTRUM_TOP_Y + 101, WATERFALL_W, 1, waterfall);
   }
 
-  RESETPROFILEPIN(PROFILER_DRAWFREQSPEC);
+  RESETPROFILEPIN(PROFILER_DRAW);
 }
 
 FLASHMEM void ShowFT8SpectrumFreqValues() {

@@ -69,12 +69,12 @@ extern uint16_t GPAB_state;
 // *** TODO: set proper profiler pins if used ***
 #define PROFILER_MAINLOOP         1
 #define PROFILER_PROCESS_RX          1
-#define PROFILER_DRAWFREQSPEC     1
-#define PROFILER_DRAWAUDIOSPEC    1
+#define PROFILER_DRAW     1
+#define PROFILER_ENTRY    1
 #define PROFILER_PROCESS_FRAME  1
-#define PROFILER_FT8_REMOTE_RX       1
+#define PROFILER_RX_TX       1
 #define PROFILER_DECODE_FT8        1
-#define PROFILER_FT8_CAT_TX           1
+#define PROFILER_OTHER           1
 
 //---- end of Teensy 4.1 Pin assignments
 

@@ -813,16 +813,29 @@ void RA8875::_waitBusy(uint8_t res)
 	do {
 		if (res == 0x01) writeCommand(RA8875_DMACR);//dma
 		temp = readStatus();
-		if ((millis() - start) > 10) return;
-    YieldToEthernet();
-    // no need for processing for other types
-    // w/o this check we can fall in here during clock update, d
-    // delaying the start of frequency update
-    if(!dspDone && res == 0x40) {
-      // run ProcessReceiverData successfully once
-      //TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-      if(CheckReceiverData() == 1) {
-        dspDone = true;
+		if ((millis() - start) > 10) {
+      // *** BTE_move often, but not always exits through here ***
+      // *** Given that process timing doesn't change regardless
+      //     of the exit path indicates the BTE_move operaiton
+      //     takes ~10 ms. ***
+      //TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+      return;
+    }
+
+    // BTE_move is always 10ms, likely due to the timing gate above.
+    // *** Does display ever flag BTE_move as complete? ***
+    // Do some other non-display related work during this 10 ms pause.
+    // Skip this for other types because we don't know what may bring
+    // us here. For example w/o this check we can fall in here during
+    // the clock update, delaying the start of frequency update.
+    if(res == 0x40) {
+      //TOGGLEPROFILEPIN(PROFILER_RX_TX);
+      YieldToEthernet();
+      // only need to run ProcessReceiverData successfully once
+      if(!dspDone) {
+        if(CheckReceiverData() == 1) {
+          dspDone = true;
+        }
       }
     }
 	} while ((temp & res) == res);

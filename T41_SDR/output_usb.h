@@ -81,7 +81,7 @@ public:
       return;
     }
 
-    TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+    TOGGLEPROFILEPIN(PROFILER_OTHER);
     _serial->write((uint8_t *)blockL->data, blockSize / 2);
     _serial->write((uint8_t *)blockR->data, blockSize / 2);
     _host->Task();
@@ -90,7 +90,7 @@ public:
     release(blockR);
     RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
     RESETPROFILEPIN(PROFILER_DECODE_FT8);
-    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+    RESETPROFILEPIN(PROFILER_OTHER);
   }
 
 private:

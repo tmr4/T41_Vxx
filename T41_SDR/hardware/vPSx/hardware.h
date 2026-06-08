@@ -101,12 +101,12 @@ extern int calNFAdjust;
 
 #define PROFILER_MAINLOOP         33
 #define PROFILER_PROCESS_RX       34
-#define PROFILER_DRAWFREQSPEC     41
-#define PROFILER_DRAWAUDIOSPEC    14
+#define PROFILER_DRAW     41
+#define PROFILER_ENTRY    14
 #define PROFILER_PROCESS_FRAME      35
-#define PROFILER_FT8_REMOTE_RX       36
+#define PROFILER_RX_TX       36
 #define PROFILER_DECODE_FT8       38
-#define PROFILER_FT8_CAT_TX       16
+#define PROFILER_OTHER       16
 
 // other
 

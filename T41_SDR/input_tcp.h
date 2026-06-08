@@ -27,8 +27,89 @@ Remote timing (w/ T41 standard testing input, Auto NF):
 
  Works with AudioOutputTCP
 
- *** This object could be made more robust with a buffer overflow checks
-     and syncing but early testing hasn't shown a need for this ***
+ *******************************************************************************************
+ The AudioInputTCP and AudioOutputTCP objects experience periodic interruptions. The first
+ normally occurs ~30-45 minutes after startup. There isn't a pattern after that. The next
+ may be up to several hour later.  The typical delay is ~1.7 seconds in duration.
+
+ When the delay occurs, the remote unit normal program flow stops. The program does not
+ return to the main loop or enter the AudioInputTCP::read method. The T41 unit slows down
+ a bit, but continues entering the AudioOutputTCP::write method, but does not write anything.
+
+ The system recovers automatically from these events.
+
+ I haven't been able to track down the exact cause but can rule out the following:
+  1) lost connection
+  2) insufficient or too frequent Ethernet polling
+     All gaps in Ethernet polling have been filled. Ethernet is polled in YieldToProcess,
+     ProcessReceiverData and RA8875::waitBusy. One could argue that it is polled too often,
+     but that would be wrong. Attempts to poll at fixed intervals fail, no matter how short
+     the interval is (even as short as 10us). First, observe that Ethernet.loop is called
+     by many QNEthernet methods and has itself a timing gate to prevent excessive calls.
+     Second, the read/write available methods used here call Ethernet.loop and don't seem
+     to suffer from excessive calls.
+  3) the remote unit is not stuck in QNEthernetClient::read
+  5) the T41 unit is not stuck in QNEthernetClient::writeFully
+  4) Not caused by a full AudioInputTCP or AudioOutputTCP buffer, though the AudioOutputTCP
+     buffer will fill and be dumped 42 times during a typical pause.
+  5) AudioInputTCP not reading the Ethernet buffer. While this doesn't occur until the
+     pause starts, I've recreated it by forcing a stall (not reading the buffer). While I can
+     recreate an ~1.7 second pause by doing this, the nature of the statistics during the
+     pauses are different.
+  6) Insufficient audio memory. There is plenty of audio memory when the pauses occur. A
+     switch to NON_STALLING from ORIGINAL and lowering the max buffers for Q_out_L didn't help.
+  7) I noticed that the most recent pause started in the waterfall yield. The next didn't, but
+     this was after I put the yield within the BTE_move register conditional. Still, with a pause
+     occuring related to Ethernet.loop it doesn't appear to matter from where it's called in
+     my code.
+
+ The Telemetry class allows tracking statistics during the pause, but it hasn't proved useful
+ in determining the root cause. AI speculates the cause is a cascading TCP ACK failure.
+
+ What else has been tried w/o success (in addition to above):
+  1) ARP table refresh every 10 minutes w/ etharp_request(netif_default, &xxxIP4Addr)
+     A few tests with this refresh ran several hours though rather than failing in 30-45min.
+     Another test run without this modification ran for over 4 hours without a pause. So the mod
+     probably isn't a fix.
+  2) Added a logic analyzer pin inside Ethernet.loop. Of course this has no effect on the
+     pause, but it shows that the remote unit is stuck in Ethernet.loop during the pause.
+     The T41 unit continues to operate normally, except it doesn't enter the write loop.
+     (pin set/reset added at void EthernetClass::loop(), starting at line 182 in QNEthernet.cpp)
+  3) Adding an extra call to Ethernet.loop when one of the calls to an "available" method
+     returns less than 512 bytes. It's possible this changed the nature of the pauses seen
+     in #1.
+
+ Other things AI suggested to try:
+  1) disable ? with client->setNoDelay(true), I already do this.
+  2) Enable Statistics: src/lwipopts.h set LWIP_STATS and TCP_STATS to 1
+  3) Reduce RTO: In src/qnethernet_opts.h, set #define LWIP_TCP_RTO_TIME 500 or 100.
+  4) Increase Memory: Increase PBUF_POOL_SIZE to 128 or 256.
+  5) #include <lwip/stats.h> stats_display(); // In loop() every 60 seconds
+  6) #define TCP_SND_BUF (16 * 512) // Increase sender buffer space
+     #define TCP_WND     (16 * 512) // Increase receiver window
+  7) Disable OOSEQ Queue: If your application can handle the sender resending data, set #define TCP_QUEUE_OOSEQ 0. This tells the receiver: "If a packet is out of order, just drop it." This prevents the receiver from ever building that CPU-heavy linked list, ensuring Ethernet.loop() stays fast.
+  8) Look for TCP retransmit (with #2):
+
+#include "lwip/stats.h"
+
+void checkTCPGlitches() {
+    static uint32_t last_retrans = 0;
+    // Access the internal lwIP TCP statistics
+    uint32_t current_retrans = lwip_stats.tcp.xmit; // xmit tracks retransmissions in some versions
+
+    // a pause without a retransmit means the TCP stack isn't the issue.
+    if (current_retrans > last_retrans) {
+        Serial.printf("TCP RETRANSMIT DETECTED: %d new events\n", current_retrans - last_retrans);
+        last_retrans = current_retrans;
+    }
+}
+
+  *** these all proved fruitless, likely because they needed to be combined with other options
+      to be effective. This requires a much deeper understanding of the QNEthernet library ***
+
+  *** Time to move on to UDP ***
+
+ *******************************************************************************************
 */
 
 #include <Arduino.h>
@@ -39,12 +120,6 @@ using namespace qindesign::network;
 
 #include "debug.h"
 #include "telemetry.h"
-
-//-------------------------------------------------------------------------------------------------------------
-// Forward
-//-------------------------------------------------------------------------------------------------------------
-
-void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress& gateway);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -98,8 +173,10 @@ public:
         int n;
         size_t t;
         bool bFull;
+        unsigned long start;
+        bool flag = available < blockSize;
 
-        TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+        SETPROFILEPIN(PROFILER_ENTRY);
 
         // lock stuff for this loop
         noInterrupts();
@@ -145,56 +222,54 @@ public:
         }
 
         while(available >= blockSize) {
-          telemetry.inLoopCheck(head, t, available);
+          start = micros();
 
-          TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+          telemetry.inLoopCheck(head, t, available);
 
           // we have sufficient data to queue
           blockL = allocate();
           blockR = allocate();
 
-          if(!blockL || !blockR || bFull) {
+          if(!blockL || !blockR) {
             if(blockL) release(blockL);
             if(blockR) release(blockR);
-
-            RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-            RESETPROFILEPIN(PROFILER_DECODE_FT8);
-            return;
+            break;
           }
 
+          SETPROFILEPIN(PROFILER_RX_TX);
           n = client->read((uint8_t *)blockL->data, blockSize / 2);
           n += client->read((uint8_t *)blockR->data, blockSize / 2);
+          if(micros() - start > 50) Serial.println("long read in AudioInputTCP");
+
           if(n < blockSize) {
             // read error
             release(blockL);
             release(blockR);
+            Serial.println("incomplete read in AudioInputTCP");
             break;
           }
-          TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+
           queue[head][0] = blockL;
           queue[head][1] = blockR;
           head = (head + 1) & bufferMask;
           available -= 512;
         }
+        if(flag) Ethernet.loop();
       } else {
         uint8_t dump[512];
         // empty Ethernet buffer
         while(client->available() >= 512) {
-          TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
           client->read(dump, 512);
         }
         // get the last bit
         while(client->available()) {
-          TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
           client->read(dump, 1);
         }
       }
     }
 
-    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-    RESETPROFILEPIN(PROFILER_DECODE_FT8);
-    RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
-    RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+    RESETPROFILEPIN(PROFILER_ENTRY);
+    RESETPROFILEPIN(PROFILER_RX_TX);
   }
 
 private:

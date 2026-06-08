@@ -92,7 +92,7 @@ public:
     n = read((void *)blockL->data, blockSize / 2);
     n += read((void *)blockR->data, blockSize / 2);
     if(n == blockSize) {
-      TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+      TOGGLEPROFILEPIN(PROFILER_RX_TX);
       transmit(blockL, 0);
       transmit(blockR, 1);
     }
@@ -101,7 +101,7 @@ public:
     release(blockR);
     RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
     RESETPROFILEPIN(PROFILER_DECODE_FT8);
-    RESETPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+    RESETPROFILEPIN(PROFILER_RX_TX);
   }
 
 private:

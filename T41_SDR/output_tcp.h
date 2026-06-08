@@ -29,13 +29,13 @@ T41 timing (w/ T41 standard testing input, Auto NF):
 
  Works with AudioInputTCP
 
- *** This object could be made more robust with a buffer overflow checks
-     and syncing but early testing hasn't shown a need for this ***
+ *** see AudioInputTCP for notes on a pause that occurs periodically when using these objects ***
 
 */
 
 #include <Arduino.h>
 #include <AudioStream.h>
+
 #include <QNEthernet.h>
 using namespace qindesign::network;
 
@@ -45,12 +45,6 @@ using namespace qindesign::network;
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
-
-//-------------------------------------------------------------------------------------------------------------
-// Forward
-//-------------------------------------------------------------------------------------------------------------
-
-void InitEthernet(const IPAddress& ip, const IPAddress& subnet, const IPAddress& gateway);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -98,8 +92,10 @@ class AudioOutputTCP : public AudioStream {
       int available = client->availableForWrite();
       size_t h;
       bool bFull;
+      unsigned long start;
+      bool flag = available < blockSize;
 
-      TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+      SETPROFILEPIN(PROFILER_ENTRY);
 
       // lock stuff for this loop
       noInterrupts();
@@ -124,38 +120,45 @@ class AudioOutputTCP : public AudioStream {
       }
 
       while(available >= blockSize) {
+        start = micros();
+
         telemetry.inLoopCheck(h, tail, available);
 
-        TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-
-        // take ownership of blocks
         if(h == tail) { // empty check
           break; // nothing to write
         }
+
+        // take ownership of blocks
         blockL = queue[tail][0];
         blockR = queue[tail][1];
         queue[tail][0] = nullptr;
         queue[tail][1] = nullptr;
         tail = (tail + 1) & bufferMask;
 
-        if(!blockL || !blockR) continue; // buffer empty or update overwrote these
+        if(!blockL || !blockR) continue; // buffer empty
 
-        TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+        SETPROFILEPIN(PROFILER_RX_TX);
         //client->write((uint8_t *)blockL->data, blockSize / 2);
         //client->write((uint8_t *)blockR->data, blockSize / 2);
         client->writeFully((uint8_t *)blockL->data, blockSize / 2);
         client->writeFully((uint8_t *)blockR->data, blockSize / 2);
+        if(micros() - start > 50) Serial.println("long write in AudioOutputTCP");
 
         release(blockL);
         release(blockR);
         available -= 512;
         //available = client->availableForWrite();
       }
-      client->flush(); // includes call to Ethernet.loop()
 
-      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-      RESETPROFILEPIN(PROFILER_DECODE_FT8);
-      RESETPROFILEPIN(PROFILER_FT8_CAT_TX);
+      //client->flush(); // includes call to Ethernet.loop()
+      if(flag) {
+        Ethernet.loop();
+      } else {
+        client->flush(); // includes call to Ethernet.loop()
+      }
+
+      RESETPROFILEPIN(PROFILER_ENTRY);
+      RESETPROFILEPIN(PROFILER_RX_TX);
     }
   }
 

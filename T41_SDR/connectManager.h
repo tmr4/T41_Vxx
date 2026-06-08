@@ -2,18 +2,28 @@
 
 #include <Arduino.h>
 #include <QNEthernet.h> // https://github.com/ssilverman/QNEthernet
+#include <lwip/etharp.h>
+//#include <lwip/netif.h>
 #include <USBHost_t36.h>
 
-//using namespace qnetsilverman;
 using namespace qindesign::network;
 
 #include "AudioConfig.h"
 #include "catControl.h"
 #include "t41Property.h"
 
+/*
+
+  I'm still determining the direction of this class. The intent is to allow
+  for various connection types, but that might not be a good use of Teensy RAM
+
+*/
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+extern "C" struct netif* netif_default;
 
 class USBManager {
 private:
@@ -60,14 +70,14 @@ private:
     if(role == REMOTE_ROLE_T41) {
       initEthernet(serverIP);
       tcpCmdServer.begin(cmdPort);
-      tcpDataServer.begin(dataPort);
+      //tcpDataServer.begin(dataPort);
     } else {
       initEthernet(clientIP);
     }
     tcpCmdClient.setConnectionTimeoutEnabled(false);
     tcpCmdClient.setNoDelay(true);
-    tcpDataClient.setConnectionTimeoutEnabled(false);
-    tcpDataClient.setNoDelay(true);
+    //tcpDataClient.setConnectionTimeoutEnabled(false);
+    //tcpDataClient.setNoDelay(true);
     enabled = true;
   }
 
@@ -76,27 +86,48 @@ public:
     role(_role), cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort), tcpDataServer(dPort),
     usbHostSerial1(USBManager::getHost()), usbHostSerial2(USBManager::getHost(), 1) {}
 
-  void begin(CatControl *control, AudioOutputTCP* stream) {
+  //void begin(CatControl *control, AudioOutputTCP* stream) {
+  void begin(CatControl *control, AudioOutputUDP* stream) {
     if(control && stream) {
       catControl = control;
-      tcpOuput = stream;
+      //tcpOuput = stream;
+      udpOuput = stream;
     } else {
       return;
     }
     begin();
   }
 
-  void begin(CatControl *control, AudioInputTCP* stream) {
+  //void begin(CatControl *control, AudioInputTCP* stream) {
+  void begin(CatControl *control, AudioInputUDP* stream) {
     if(control && stream) {
       catControl = control;
-      tcpInput = stream;
+      //tcpInput = stream;
+      udpInput = stream;
     } else {
       return;
     }
     begin();
+  }
+
+  void updateARP() {
+    ip4_addr_t clientIP4Addr, serverIP4Addr;
+    IP4_ADDR(&clientIP4Addr, 192, 168, 1, 101);
+    IP4_ADDR(&serverIP4Addr, 192, 168, 1, 100);
+
+    Serial.println("30 minutes passed...");
+    if(netif_default != nullptr) {
+      if(role == REMOTE_ROLE_T41) {
+        //etharp_request(netif_default, &clientIP4Addr);
+      } else {
+        //etharp_request(netif_default, &serverIP4Addr);
+      }
+    }
   }
 
   void update() {
+    static unsigned long lastARPUpdate = millis();
+
     if(!enabled) return;
 
     if(connectMode == CONNECT_USB) USBManager::getHost().Task();
@@ -115,6 +146,12 @@ public:
 
     // *** a little pause here is needed sometimes to ensure reconnection ***
     if(linkState != LINK_CONNECTED) delay(1);
+
+    // print note every 30 minutes
+    if(millis() - lastARPUpdate > 1800000) {
+      updateARP();
+      lastARPUpdate = millis();
+    }
   }
 
   bool isRemote() const { return role == REMOTE_ROLE_REMOTE; }
@@ -136,14 +173,18 @@ private:
   //AudioStream audioStream;
   AudioInputSerial1 *usbInput = nullptr;
   AudioOutputHostSerial *usbOutput = nullptr;
-  AudioInputTCP *tcpInput = nullptr;
-  AudioOutputTCP *tcpOuput = nullptr;
+  //AudioInputTCP *tcpInput = nullptr;
+  //AudioOutputTCP *tcpOuput = nullptr;
+  AudioInputUDP *udpInput = nullptr;
+  AudioOutputUDP *udpOuput = nullptr;
 
   unsigned long pollTimer = 0;
   unsigned long lastHeartbeat = 0;
   unsigned long lastHbTX = 0;
   int heartbeatCount = -1;
   unsigned long tcpRetryTimer = 0;
+
+  static constexpr uint16_t udpBuffer = (DEVICE_REMOTE_OPS_MODE == 5) ? 1 : 32;
 
   uint16_t cmdPort;
   uint16_t dataPort;
@@ -154,7 +195,8 @@ private:
 
   // data sockets (governed by command socket state)
   EthernetServer tcpDataServer;
-  EthernetClient tcpDataClient;
+  //EthernetClient tcpDataClient;
+  EthernetUDP udpDataClient{udpBuffer};
 
   bool isInitialized = false;
 
@@ -178,9 +220,11 @@ private:
   void handleDisconnected() {
     catControl->link = nullptr;
     if(role == REMOTE_ROLE_T41) {
-      tcpOuput->setClient(nullptr);
+      //tcpOuput->setClient(nullptr);
+      udpOuput->setClient(nullptr);
     } else {
-      tcpInput->setClient(nullptr);
+      //tcpInput->setClient(nullptr);
+      udpInput->setClient(nullptr);
     }
 
     if(checkUsbPhysicalLink()) {
@@ -220,14 +264,17 @@ private:
 
         // data port connects only after cmd port connects
         if(tcpCmdClient && tcpCmdClient.connected()) {
-          if(!tcpDataClient || !tcpDataClient.connected()) {
-            //tcpDataClient = tcpDataServer.available();
-            tcpDataClient = tcpDataServer.accept();
-          }
+          //if(!tcpDataClient || !tcpDataClient.connected()) {
+          //  //tcpDataClient = tcpDataServer.available();
+          //  tcpDataClient = tcpDataServer.accept();
+          //}
 
-          if(tcpDataClient && tcpDataClient.connected()) {
+          //if(tcpDataClient && tcpDataClient.connected())
+          {
             catControl->link = &tcpCmdClient;
-            tcpOuput->setClient(&tcpDataClient);
+            //tcpOuput->setClient(&tcpDataClient);
+            udpOuput->setClient(&udpDataClient);
+            udpDataClient.begin(dataPort);
             setConnected();
           }
         }
@@ -247,16 +294,19 @@ private:
 
         // data port connects only after cmd port connects
         if(tcpCmdClient.connected()) {
-          if(!tcpDataClient.connected() && !tcpDataClient.connecting()) {
-            tcpDataClient.abort();
-            tcpDataClient.setConnectionTimeoutEnabled(false);
-            tcpDataClient.connect(serverIP, dataPort);
-            tcpDataClient.setNoDelay(true);
-          }
+          //if(!tcpDataClient.connected() && !tcpDataClient.connecting()) {
+          //  tcpDataClient.abort();
+          //  tcpDataClient.setConnectionTimeoutEnabled(false);
+          //  tcpDataClient.connect(serverIP, dataPort);
+          //  tcpDataClient.setNoDelay(true);
+          //}
 
-          if(tcpDataClient.connected()) {
+          //if(tcpDataClient.connected())
+          {
             catControl->link = &tcpCmdClient;
-            tcpInput->setClient(&tcpDataClient);
+            //tcpInput->setClient(&tcpDataClient);
+            udpInput->setClient(&udpDataClient);
+            udpDataClient.begin(dataPort);
             setConnected();
           }
         }
@@ -272,8 +322,8 @@ private:
     } else if(connectMode == CONNECT_ETHERNET) {
       // both links must be up
       structureHealthy = (checkEthernetPhysicalLink() &&
-                          tcpCmdClient && tcpCmdClient.connected() &&
-                          tcpDataClient && tcpDataClient.connected());
+                          tcpCmdClient && tcpCmdClient.connected()); // &&
+                          //tcpDataClient && tcpDataClient.connected());
     }
 
     if(!structureHealthy) {
@@ -290,16 +340,18 @@ private:
       if(Ethernet.linkState()) {
         // just stop if link is still up
         tcpCmdClient.stop();
-        tcpDataClient.stop();
+        //tcpDataClient.stop();
       } else {
         // abort on cable loss
         tcpCmdClient.abort();
-        tcpDataClient.abort();
+        //tcpDataClient.abort();
       }
       if(role == REMOTE_ROLE_T41) {
-        tcpOuput->setClient(nullptr);
+        //tcpOuput->setClient(nullptr);
+        udpOuput->setClient(nullptr);
       } else {
-        tcpInput->setClient(nullptr);
+        //tcpInput->setClient(nullptr);
+        udpInput->setClient(nullptr);
       }
     }
 

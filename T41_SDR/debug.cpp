@@ -105,22 +105,22 @@ void TogglePins() {
         TOGGLEPROFILEPIN(PROFILER_PROCESS_RX);
         break;
       case 2:
-        TOGGLEPROFILEPIN(PROFILER_DRAWFREQSPEC);
+        TOGGLEPROFILEPIN(PROFILER_DRAW);
         break;
       case 3:
-        TOGGLEPROFILEPIN(PROFILER_DRAWAUDIOSPEC);
+        TOGGLEPROFILEPIN(PROFILER_ENTRY);
         break;
       case 4:
         TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
         break;
       case 5:
-        TOGGLEPROFILEPIN(PROFILER_FT8_REMOTE_RX);
+        TOGGLEPROFILEPIN(PROFILER_RX_TX);
         break;
       case 6:
         TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
         break;
       case 7:
-        TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+        TOGGLEPROFILEPIN(PROFILER_OTHER);
         break;
     }
     delay(1);

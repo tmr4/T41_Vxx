@@ -60,17 +60,13 @@
 extern RemoteRadio remoteRadio;
 #if DEVICE_REMOTE_OPS_MODE == 2
 ConnectManager transport(REMOTE_ROLE_REMOTE);
-extern AudioInputSerial1 iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 3
 ConnectManager transport;
-extern AudioOutputHostSerial iqStream;
 #elif DEVICE_REMOTE_OPS_MODE == 4
 ConnectManager transport(REMOTE_ROLE_REMOTE);
-extern AudioInputTCP iqStream;
 Telemetry telemetry;
 #elif DEVICE_REMOTE_OPS_MODE == 5
 ConnectManager transport;
-extern AudioOutputTCP iqStream;
 Telemetry telemetry;
 #endif
 
@@ -327,18 +323,18 @@ FLASHMEM void setup() {
   digitalWrite(PROFILER_PROCESS_RX, LOW);
   pinMode(PROFILER_MAINLOOP, OUTPUT);
   digitalWrite(PROFILER_MAINLOOP, LOW);
-  pinMode(PROFILER_DRAWFREQSPEC, OUTPUT);
-  digitalWrite(PROFILER_DRAWFREQSPEC, LOW);
-  pinMode(PROFILER_DRAWAUDIOSPEC, OUTPUT);
-  digitalWrite(PROFILER_DRAWAUDIOSPEC, LOW);
+  pinMode(PROFILER_DRAW, OUTPUT);
+  digitalWrite(PROFILER_DRAW, LOW);
+  pinMode(PROFILER_ENTRY, OUTPUT);
+  digitalWrite(PROFILER_ENTRY, LOW);
   pinMode(PROFILER_PROCESS_FRAME, OUTPUT);
   digitalWrite(PROFILER_PROCESS_FRAME, LOW);
-  pinMode(PROFILER_FT8_REMOTE_RX, OUTPUT);
-  digitalWrite(PROFILER_FT8_REMOTE_RX, LOW);
+  pinMode(PROFILER_RX_TX, OUTPUT);
+  digitalWrite(PROFILER_RX_TX, LOW);
   pinMode(PROFILER_DECODE_FT8, OUTPUT);
   digitalWrite(PROFILER_DECODE_FT8, LOW);
-  pinMode(PROFILER_FT8_CAT_TX, OUTPUT);
-  digitalWrite(PROFILER_FT8_CAT_TX, LOW);
+  pinMode(PROFILER_OTHER, OUTPUT);
+  digitalWrite(PROFILER_OTHER, LOW);
 #endif
 }
 
@@ -410,7 +406,7 @@ FASTRUN void loop() {
   }
 #endif
 
-  ProcessControls();
+  //ProcessControls(); // *** needed for any processes that skips YieldToProcess ***
 
   // check for UI button press and process accordingly
   valPin = ReadSelectedPushButton();
@@ -482,17 +478,12 @@ FASTRUN void loop() {
   // save radio state for next loop
   lastState = t41.RadioState;
 
-  // skip processing remote unit without connection
-  if(transport.isRemote() && !transport.connected()) return;
-
   // 4. process radio state
-  //Serial.print(t41.RadioState); Serial.print(", "); Serial.println(displayState);
   switch(t41.RadioState) {
     case RECEIVE_STATE:
       switch(displayState) {
         case DISPLAY_T41:
-          DrawFreqSpectrum();
-          DrawAudioSpectrum();
+          UpdateLiveDisplayAreas();
           break;
 
         case DISPLAY_T41_FT8_DECODE:
@@ -555,7 +546,7 @@ FASTRUN void loop() {
             // without this about 5ms of decay pulse will remain
             // to play at next interval (even with pause below)
             if(ft8TxSignalBuf != NULL && i < 151680 + 128) {
-              TOGGLEPROFILEPIN(PROFILER_FT8_CAT_TX);
+              TOGGLEPROFILEPIN(PROFILER_OTHER);
               PrepareFT8ExciterIQData(ft8TxSignalBuf + i);
               i += 128;
             } else {
