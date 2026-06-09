@@ -29,9 +29,7 @@ Remote timing (w/ T41 standard testing input, Auto NF):
      early testing hasn't shown a need for this ***
 */
 
-#include <Arduino.h>
-#include <AudioStream.h>
-
+#include "connectBase.h"
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -53,12 +51,12 @@ extern "C" {
 //-------------------------------------------------------------------------------------------------------------
 
 template< int (*available)(), int (*read)(void *, uint32_t) >
-class AudioInputSerialT : public AudioStream {
+class AudioInputSerialT : public AudioConnectBase {
 public:
-  AudioInputSerialT() : AudioStream(0, nullptr) {}
+  AudioInputSerialT() : AudioConnectBase(0, nullptr) {}
 
-	void begin() { enabled = true; }
-	void end() { enabled = false;	}
+	//void begin() { enabled = true; }
+	//void end() { enabled = false;	}
 
   void update() override {
     audio_block_t *blockL, *blockR;
@@ -107,8 +105,6 @@ public:
 private:
   bool enabled = false;
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
-
-  friend class ConnectManager;
 };
 
 using AudioInputSerial = AudioInputSerialT< usb_serial_available, usb_serial_read >;

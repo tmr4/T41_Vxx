@@ -24,6 +24,7 @@ public:
     The Set method must be used to assign a value.
   */
   ReadOnlyProperty<int> RadioID{RADIO_ID, "ID"_cat};
+  ReadOnlyProperty<int> RadioRole{RADIO_ROLE};
   Property<int> RadioState{RECONFIGURE_STATE};
 
   Property<float> SampleRate{192000.0};

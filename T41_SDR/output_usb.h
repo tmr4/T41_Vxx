@@ -30,32 +30,31 @@ T41 timing (w/ T41 standard testing input, Auto NF):
 
 */
 
-#include <Arduino.h>
-#include <AudioStream.h>
 #include <USBHost_t36.h>
 
+#include "connectBase.h"
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
-// Code
+// Data
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioOutputHostSerial : public AudioStream {
+class AudioOutputHostSerial : public AudioConnectBase {
 public:
-  AudioOutputHostSerial() : AudioStream(2, inputQueueArray) {}
+  AudioOutputHostSerial() : AudioConnectBase(2, inputQueueArray) {}
 
-  void init(USBHost* host, USBSerial_BigBuffer* serial) {
-    _host = host;
-    _serial = serial;
+  void init(USBHost* _host, USBSerial_BigBuffer* _serial) {
+    host = _host;
+    serial = _serial;
   }
-	void begin() {
-    if(!_host || !_serial) {
+	void begin() override {
+    if(!host || !serial) {
       enabled = false;
     } else {
       enabled = true;
     }
   }
-	void end() { enabled = false;	}
+	//void end() { enabled = false;	}
 
   void update() override {
     audio_block_t *blockL, *blockR;
@@ -72,8 +71,8 @@ public:
     }
 
     TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
-    _host->Task();
-    if(_serial->availableForWrite() < blockSize) {
+    host->Task();
+    if(serial->availableForWrite() < blockSize) {
       release(blockL);
       release(blockR);
       RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
@@ -82,9 +81,9 @@ public:
     }
 
     TOGGLEPROFILEPIN(PROFILER_OTHER);
-    _serial->write((uint8_t *)blockL->data, blockSize / 2);
-    _serial->write((uint8_t *)blockR->data, blockSize / 2);
-    _host->Task();
+    serial->write((uint8_t *)blockL->data, blockSize / 2);
+    serial->write((uint8_t *)blockR->data, blockSize / 2);
+    host->Task();
 
     release(blockL);
     release(blockR);
@@ -96,11 +95,9 @@ public:
 private:
   bool enabled = false;
 
-  USBHost* _host = nullptr;
-  USBSerial_BigBuffer* _serial = nullptr;
+  USBHost* host = nullptr;
+  USBSerial_BigBuffer* serial = nullptr;
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   audio_block_t *inputQueueArray[2];
-
-  friend class ConnectManager;
 };

@@ -117,22 +117,16 @@ AudioRecordQueue Q_in_R;
 // The T41 IQ data stream is transfered to a remote unit over USB Host/Ethernet. The remote
 // unit receives the data on USB serial/Ethernet. The specific objects are declared below
 // based on the mode selected in the hardware config file, hardwareConfig.h, for each unit.
-#if DEVICE_REMOTE_OPS_MODE == 2
-AudioInputSerial1 iqStream;
-#elif DEVICE_REMOTE_OPS_MODE == 3
-AudioOutputHostSerial iqStream;
-#elif DEVICE_REMOTE_OPS_MODE == 4
-//AudioInputTCP iqStream;
-AudioInputUDP iqStream;
-#elif DEVICE_REMOTE_OPS_MODE == 5
-//AudioOutputTCP iqStream;
-AudioOutputUDP iqStream;
+#if RADIO_ROLE == 1
+AudioOutputHostSerial iqStreamUSB;
+AudioOutputUDP iqStreamUDP;
+#elif RADIO_ROLE == 2
+AudioInputSerial1 iqStreamUSB;
+AudioInputUDP iqStreamUDP;
 #endif
-#if DEVICE_REMOTE_OPS_MODE > 1
-bool iqStreamActive = true;
-#else
-bool iqStreamActive = false;
-#endif
+
+// default to a UDP connection
+AudioConnectBase* iqStream = &iqStreamUDP;
 
 // Audio outputs
 // I2S quad output: ch 1&2 on pin 7, ch 3&4 on pin 32
@@ -255,6 +249,22 @@ FLASHMEM int SetI2SFreq(int freq) {
   return freq;
 }
 
+// connectMode: 0: USB, 1: UDP
+void SetupRemoteIQStream(int connectMode) {
+  if(t41.RadioRole == 0) return;
+
+  iqStream = connectMode ? (AudioConnectBase*)&iqStreamUDP : (AudioConnectBase*)&iqStreamUSB;
+  if(t41.RadioRole == 1) {
+    // T41
+    pc_IQ_L.connect(i2s_quadIn, 2, *iqStream, 0);
+    pc_IQ_R.connect(i2s_quadIn, 3, *iqStream, 1);
+  } else {
+    // remote
+    pc_Q_in_L.connect(*iqStream, 0, Q_in_L, 0);
+    pc_Q_in_R.connect(*iqStream, 1, Q_in_R, 0);
+  }
+}
+
 /*****
   Set up audio objects
 
@@ -334,11 +344,6 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
 
-    if(iqStreamActive) {
-      pc_IQ_L.connect(i2s_quadIn, 2, iqStream, 0);
-      pc_IQ_R.connect(i2s_quadIn, 3, iqStream, 1);
-    }
-
     // RX output and sidetone on I2S channel 3(left)
     // I2S on pin 32 (also headphone and line out w/ 2nd audio adapter)
     pc_Q_out_L.connect(Q_out_L, 0, i2s_quadOut, 2);
@@ -355,16 +360,9 @@ void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
     // establish audio connections
     // RX input on I2S channels 1, 2 (pin 8)
-    if(iqStreamActive) {
-      pc_Q_in_L.connect(iqStream, 0, Q_in_L, 0);
-      pc_Q_in_R.connect(iqStream, 1, Q_in_R, 0);
-    }
 #if LOCAL_AUDIO_DATA
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
-    // *** could stream this to a remote unit as well ***
-    //pc_IQ_L.connect(i2s_quadIn, 0, iqStream, 0);
-    //pc_IQ_R.connect(i2s_quadIn, 1, iqStream, 1);
 #endif
 
     // RX output on I2S channel 1(left)

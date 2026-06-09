@@ -29,17 +29,14 @@ extern AudioPlayQueue Q_out_R;
 extern AudioPlayQueue Q_out_L_Ex;
 extern AudioPlayQueue Q_out_R_Ex;
 
-#if DEVICE_REMOTE_OPS_MODE == 2
-extern AudioInputSerial1 iqStream;
-#elif DEVICE_REMOTE_OPS_MODE == 3
-extern AudioOutputHostSerial iqStream;
-#elif DEVICE_REMOTE_OPS_MODE == 4
-//extern AudioInputTCP iqStream;
-extern AudioInputUDP iqStream;
-#elif DEVICE_REMOTE_OPS_MODE == 5
-//extern AudioOutputTCP iqStream;
-extern AudioOutputUDP iqStream;
+#if RADIO_ROLE == 1
+extern AudioOutputHostSerial iqStreamUSB;
+extern AudioOutputUDP iqStreamUDP;
+#elif RADIO_ROLE == 2
+extern AudioInputSerial1 iqStreamUSB;
+extern AudioInputUDP iqStreamUDP;
 #endif
+extern AudioConnectBase* iqStream;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -47,6 +44,8 @@ extern AudioOutputUDP iqStream;
 
 void AudioSetup(int sampleRate, bool supportsTX = true);
 void ConfigAudioState(int audioState);
+
+void SetupRemoteIQStream(int connectMode);
 
 void SetupMicCompressors(boolean use_HP_filter, float knee_dBFS, float comp_ratio, float attack_sec, float release_sec);
 
@@ -56,11 +55,9 @@ void EndAudioStats();
 #endif
 
 inline void __attribute__((always_inline)) YieldToEthernet() {
-  #if DEVICE_REMOTE_OPS_MODE == 2
-  #elif DEVICE_REMOTE_OPS_MODE == 3
-  #elif DEVICE_REMOTE_OPS_MODE == 4
-  iqStream.read();
-  #elif DEVICE_REMOTE_OPS_MODE == 5
-  iqStream.write();
-  #endif
+#if RADIO_ROLE == 1
+  iqStream->writeToQueue();
+#elif RADIO_ROLE == 2
+  iqStream->readToQueue();
+#endif
 }

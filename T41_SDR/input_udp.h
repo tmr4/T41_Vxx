@@ -7,24 +7,22 @@
 
 */
 
-#include <Arduino.h>
-#include <AudioStream.h>
-
 #include <QNEthernet.h>
 using namespace qindesign::network;
 
+#include "connectBase.h"
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioInputUDP : public AudioStream {
+class AudioInputUDP : public AudioConnectBuffered<size_t, volatile size_t> {
 public:
-  AudioInputUDP() : AudioStream(0, nullptr) {}
+  AudioInputUDP() : AudioConnectBuffered(0, nullptr) {}
 
-  void begin() { enabled = true; }
-	void end() {
+  //void begin() { enabled = true; }
+	void end() override {
     enabled = false;
     clear();
   }
@@ -57,21 +55,18 @@ public:
   }
 
   // read UDP data into queue
-  void read() {
+  void readToQueue() override {
     if(client) {
       if(enabled) {
         audio_block_t *blockL, *blockR;
         int available = client->parsePacket();
         int n;
-        //size_t t;
         bool bFull;
-        unsigned long start;
 
         SETPROFILEPIN(PROFILER_ENTRY);
 
         // lock stuff for this loop
         noInterrupts();
-        //t = tail;
         bFull = bufferFull();
         interrupts();
 
@@ -106,20 +101,12 @@ public:
         // an interrupt.
         if(bFull) {
           Serial.println("buffer full in AudioInputUDP");
-          //telemetry.bufferClearEvent(head, t, available);
           clear();
-          //t = 0;
-        } else {
-          //telemetry.preLoopCheck(head, t, available);
         }
 
         while(available > 0) {
           // IQ packet is 256-bytes I, 256-bytes Q, uint32 sequence
           if(available == blockSize + sizeof(uint32_t)) {
-            start = micros();
-
-            //telemetry.inLoopCheck(head, t, available);
-
             // we have sufficient data to queue
             blockL = allocate();
             blockR = allocate();
@@ -134,18 +121,12 @@ public:
             n = client->read((uint8_t *)blockL->data, blockSize / 2);
             n += client->read((uint8_t *)blockR->data, blockSize / 2);
             client->read((uint8_t *)&sequenceCounter, sizeof(uint32_t));
-            if(micros() - start > 50) Serial.println("long read in AudioInputUDP");
-            //Serial.printf("%u %u\n", sequenceCounter, lastSequenceCounter);
 
             if(sequenceCounter != (lastSequenceCounter + 1)) {
-              //Serial.printf("not equal %u %u\n", sequenceCounter, lastSequenceCounter+1);
               Serial.printf("%u dropped packets in AudioInputUDP\n", sequenceCounter - expectedSequenceCounter);
-              //Serial.printf("%u %u\n", sequenceCounter, lastSequenceCounter);
 
               // reset
               expectedSequenceCounter = sequenceCounter;
-            //} else {
-            //  Serial.printf("equal %u %u\n", sequenceCounter, lastSequenceCounter+1);
             }
             lastSequenceCounter = sequenceCounter;
             ++expectedSequenceCounter;
@@ -180,12 +161,6 @@ public:
   }
 
 private:
-	static constexpr size_t maxBlocks = 64; // *** must be power of 2 ***
-	static constexpr size_t bufferMask = maxBlocks - 1;
-  static_assert((maxBlocks & (maxBlocks - 1)) == 0, "maxBlocks must be a power of 2");
-
-  bool enabled = false;
-
   EthernetUDP *client = nullptr;
   uint32_t sequenceCounter = 0;
   uint32_t lastSequenceCounter = 0;
@@ -195,25 +170,5 @@ private:
 	volatile size_t tail = 0;
 	size_t head = 0;
 
-  bool bufferClearEvent = false;
-
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
-
-  bool bufferFull() { return ((head + 1) & bufferMask) == tail; }
-  //bool bufferEmpty() { return head == tail; }
-  void clear() {
-    audio_block_t *blockL, *blockR;
-
-    noInterrupts();
-    for(size_t i = 0; i < maxBlocks; i++) {
-      blockL = queue[i][0];
-      blockR = queue[i][1];
-      if(blockL) release(blockL);
-      if(blockR) release(blockR);
-      queue[i][0] = nullptr;
-      queue[i][1] = nullptr;
-    }
-    head = tail = 0;
-    interrupts();
-  }
 };

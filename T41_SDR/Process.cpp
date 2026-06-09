@@ -34,7 +34,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#if DEVICE_REMOTE_OPS_MODE > 0
+#if RADIO_ROLE > 0
 extern ConnectManager transport;
 #endif
 extern RemoteRadio remoteRadio;

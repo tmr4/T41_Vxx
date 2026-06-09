@@ -7,24 +7,22 @@
 
 */
 
-#include <Arduino.h>
-#include <AudioStream.h>
-
 #include <QNEthernet.h>
 using namespace qindesign::network;
 
+#include "connectBase.h"
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioOutputUDP : public AudioStream {
+class AudioOutputUDP : public AudioConnectBuffered<volatile size_t, size_t> {
  public:
-  AudioOutputUDP() : AudioStream(2, inputQueueArray) {}
+  AudioOutputUDP() : AudioConnectBuffered(2, inputQueueArray) {}
 
-  void begin() { enabled = true; }
-	void end() {
+  //void begin() override { enabled = true; }
+	void end() override {
     enabled = false;
     clear();
   }
@@ -58,7 +56,7 @@ class AudioOutputUDP : public AudioStream {
   }
 
   // write queue data out to UDP
-  void write() {
+  void writeToQueue() override {
     if(enabled && client) {
       audio_block_t *blockL, *blockR;
       size_t h;
@@ -108,39 +106,11 @@ class AudioOutputUDP : public AudioStream {
   }
 
  private:
-	static constexpr size_t maxBlocks = 64; // *** must be power of 2 ***
-	static constexpr size_t bufferMask = maxBlocks - 1;
-  static_assert((maxBlocks & (maxBlocks - 1)) == 0, "maxBlocks must be a power of 2");
-
-  bool enabled = false;
-
   EthernetUDP* client = nullptr;
   IPAddress clientIP{0, 0, 0, 0};
   uint16_t dataPort = 0;
   uint32_t sequenceCounter = 0;
 
-	audio_block_t* volatile queue[maxBlocks][2] = {};
-	volatile size_t head = 0;
-	size_t tail = 0;
-
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   audio_block_t *inputQueueArray[2];
-
-  bool bufferFull() { return ((head + 1) & bufferMask) == tail; }
-  //bool bufferEmpty() { return head == tail; }
-  void clear() {
-    audio_block_t *blockL, *blockR;
-
-    noInterrupts();
-    for(size_t i = 0; i < maxBlocks; i++) {
-      blockL = queue[i][0];
-      blockR = queue[i][1];
-      if(blockL) release(blockL);
-      if(blockR) release(blockR);
-      queue[i][0] = nullptr;
-      queue[i][1] = nullptr;
-    }
-    head = tail = 0;
-    interrupts();
-  }
 };

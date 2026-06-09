@@ -68,7 +68,7 @@ T41Properties::T41Properties() {
 }
 
 void T41Properties::SetPropertyDefaults() {
-  int remoteStatus = DEVICE_REMOTE_OPS_MODE > 0 ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
+  int remoteStatus = RADIO_ROLE > 0 ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
   RadioState.Init(RECONFIGURE_STATE);
 

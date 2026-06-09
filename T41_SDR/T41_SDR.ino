@@ -58,16 +58,11 @@
 //-------------------------------------------------------------------------------------------------------------
 
 extern RemoteRadio remoteRadio;
-#if DEVICE_REMOTE_OPS_MODE == 2
-ConnectManager transport(REMOTE_ROLE_REMOTE);
-#elif DEVICE_REMOTE_OPS_MODE == 3
+
+#if RADIO_ROLE == 1
 ConnectManager transport;
-#elif DEVICE_REMOTE_OPS_MODE == 4
+#elif RADIO_ROLE == 2
 ConnectManager transport(REMOTE_ROLE_REMOTE);
-Telemetry telemetry;
-#elif DEVICE_REMOTE_OPS_MODE == 5
-ConnectManager transport;
-Telemetry telemetry;
 #endif
 
 extern bool beaconFlag;
@@ -304,8 +299,8 @@ FLASHMEM void setup() {
 
   //T41BeaconSetup();
 
-#if DEVICE_REMOTE_OPS_MODE == 4 || DEVICE_REMOTE_OPS_MODE == 5
-  transport.begin(&remoteRadio, &iqStream);
+#if RADIO_ROLE > 0
+  transport.begin(&remoteRadio, &iqStreamUDP, &iqStreamUSB);
 #endif
 
   KeyerSetup(); // testing only

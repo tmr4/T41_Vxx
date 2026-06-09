@@ -1,11 +1,9 @@
 #pragma once
 
 #include <Arduino.h>
-#include <QNEthernet.h> // https://github.com/ssilverman/QNEthernet
-#include <lwip/etharp.h>
-//#include <lwip/netif.h>
 #include <USBHost_t36.h>
 
+#include <QNEthernet.h> // https://github.com/ssilverman/QNEthernet
 using namespace qindesign::network;
 
 #include "AudioConfig.h"
@@ -61,50 +59,48 @@ private:
   const IPAddress serverIP{192, 168, 1, 100};
 
   void begin() {
-    // *** set up usb as appropriate ***
-    //usbHostSerial.begin(1000000);
-    //usbHostSerial1.begin(1000000);
-    //Serial.begin(115200);
-    //SerialUSB1.begin(115200);
+    #if RADIO_ROLE == 1
+    usbHostSerial2.begin(115200);
+    usbHostSerial1.begin(115200);
+    usbOutput->init(&USBManager::getHost(), &usbHostSerial1);
+    #elif RADIO_ROLE == 2
+      Serial.begin(115200);
+      SerialUSB1.begin(115200);
+    #endif
 
     // *** TODO: consider multiple calls to begin ***
     if(role == REMOTE_ROLE_T41) {
       initEthernet(serverIP);
       tcpCmdServer.begin(cmdPort);
-      //tcpDataServer.begin(dataPort);
     } else {
       initEthernet(clientIP);
     }
     tcpCmdClient.setConnectionTimeoutEnabled(false);
     tcpCmdClient.setNoDelay(true);
-    //tcpDataClient.setConnectionTimeoutEnabled(false);
-    //tcpDataClient.setNoDelay(true);
     enabled = true;
   }
 
 public:
   ConnectManager(DeviceRole _role = REMOTE_ROLE_T41, uint16_t cPort = 8000, uint16_t dPort = 8001) :
-    role(_role), cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort), tcpDataServer(dPort),
+    role(_role), cmdPort(cPort), dataPort(dPort), tcpCmdServer(cPort),
     usbHostSerial1(USBManager::getHost()), usbHostSerial2(USBManager::getHost(), 1) {}
 
-  //void begin(CatControl *control, AudioOutputTCP* stream) {
-  void begin(CatControl *control, AudioOutputUDP* stream) {
-    if(control && stream) {
+  void begin(CatControl *control, AudioOutputUDP* udp, AudioOutputHostSerial* usb) {
+    if(control && udp && usb) {
       catControl = control;
-      //tcpOuput = stream;
-      udpOuput = stream;
+      udpOuput = udp;
+      usbOutput = usb;
     } else {
       return;
     }
     begin();
   }
 
-  //void begin(CatControl *control, AudioInputTCP* stream) {
-  void begin(CatControl *control, AudioInputUDP* stream) {
-    if(control && stream) {
+  void begin(CatControl *control, AudioInputUDP* udp, AudioInputSerial1* usb) {
+    if(control && udp && usb) {
       catControl = control;
-      //tcpInput = stream;
-      udpInput = stream;
+      udpInput = udp;
+      usbInput = usb;
     } else {
       return;
     }
@@ -160,7 +156,7 @@ private:
   int heartbeatCount = -1;
   unsigned long tcpRetryTimer = 0;
 
-  static constexpr uint16_t udpBuffer = (DEVICE_REMOTE_OPS_MODE == 5) ? 1 : 32;
+  static constexpr uint16_t udpBuffer = (RADIO_ROLE == 1) ? 1 : 32;
 
   uint16_t cmdPort;
   uint16_t dataPort;
@@ -183,31 +179,47 @@ private:
     // DTR is a reliable indicator that Serial has connected to a host
     // *** it is not a reliable indicator of a disconnect ***
     // *** !Serial is not a reliable indicator of a disconnect ***
-    //connected = Serial.dtr();
+
+    // *** TODO: look for better USB host connection indicator ***
 
     //return (role == REMOTE_ROLE_T41) ? (usbHostSerial1 && usbHostSerial2)
     //        : (Serial && bool(Serial) && SerialUSB1 && bool(SerialUSB1));
-    return false; // testing Ethernet connection
+    //return false; // testing Ethernet connection
+    #if RADIO_ROLE == 1
+    //return false; // testing Ethernet connection
+    USBManager::getHost().Task();
+    Serial.println((usbHostSerial1 && usbHostSerial2));
+    return (usbHostSerial1 && usbHostSerial2);
+    #elif RADIO_ROLE == 2
+    return Serial.dtr();
+    #endif
   }
 
   bool checkEthernetPhysicalLink() { return Ethernet.linkState(); }
 
   void handleDisconnected() {
     catControl->setLink(nullptr);
-    if(role == REMOTE_ROLE_T41) {
-      udpOuput->setClient(nullptr);
-    } else {
-      udpInput->setClient(nullptr);
+
+    if(connectMode == CONNECT_USB) {
+    } else if(connectMode == CONNECT_ETHERNET) {
+      if(role == REMOTE_ROLE_T41) {
+        udpOuput->setClient(nullptr);
+      } else {
+        udpInput->setClient(nullptr);
+      }
     }
 
-    if(checkUsbPhysicalLink()) {
-      connectMode = CONNECT_USB;
-      linkState = LINK_CHECK_HARDWARE;
-      t41.RemoteStatus = REMOTE_WAITING;
-    } else if(checkEthernetPhysicalLink()) {
+    // an Ethernet connection takes priority since USB host is always active on T41
+    if(checkEthernetPhysicalLink()) {
       connectMode = CONNECT_ETHERNET;
       linkState = LINK_CHECK_HARDWARE;
       t41.RemoteStatus = REMOTE_WAITING;
+      SetupRemoteIQStream(1);
+    }else if(checkUsbPhysicalLink()) {
+      connectMode = CONNECT_USB;
+      linkState = LINK_CHECK_HARDWARE;
+      t41.RemoteStatus = REMOTE_WAITING;
+      SetupRemoteIQStream(0);
     }
   }
 
@@ -224,9 +236,12 @@ private:
     }
 
     if(connectMode == CONNECT_USB) {
-      //catControl->setLink((role == REMOTE_ROLE_T41) ? &usbHostSerial2 : &SerialUSB1);
-      //tcpOuput->client = (role == REMOTE_ROLE_T41) ? &usbHostSerial1 : &Serial;
-      //setConnected();
+      #if RADIO_ROLE == 1
+      catControl->setLink(&usbHostSerial2);
+      #elif RADIO_ROLE == 2
+      catControl->setLink(&SerialUSB1);
+      #endif
+      setConnected();
     } else if(connectMode == CONNECT_ETHERNET) {
       if(role == REMOTE_ROLE_T41) {
         // Server - CAT command port controls connection progression
@@ -269,10 +284,10 @@ private:
   void handleConnected() {
     bool structureHealthy = false;
 
-    if(connectMode == CONNECT_USB) {
-      structureHealthy = checkUsbPhysicalLink();
-    } else if(connectMode == CONNECT_ETHERNET) {
+    if(connectMode == CONNECT_ETHERNET) {
       structureHealthy = (checkEthernetPhysicalLink() && tcpCmdClient && tcpCmdClient.connected());
+    } else if(connectMode == CONNECT_USB) {
+      structureHealthy = checkUsbPhysicalLink();
     }
 
     if(!structureHealthy) {
@@ -313,7 +328,7 @@ private:
   }
 
   void setLinkLost() {
-    iqStream.end();
+    iqStream->end();
     linkState = LINK_LOST;
     t41.RemoteStatus = REMOTE_LOST;
   }
@@ -349,7 +364,7 @@ private:
         if(lastHeartbeat > last) ++heartbeatCount;
 
         if(heartbeatCount >= HEARTBEAT_COUNT) {
-          iqStream.begin();
+          iqStream->begin();
           // *** probably makes sense for remote to send msg to T41 to start sending data ***
           heartbeatCount = -1; // begin normal heartbeat operation
         }
