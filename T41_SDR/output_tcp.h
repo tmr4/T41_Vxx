@@ -135,7 +135,7 @@ class AudioOutputTCP : public AudioStream {
         queue[tail][1] = nullptr;
         tail = (tail + 1) & bufferMask;
 
-        if(!blockL || !blockR) continue; // buffer empty
+        if(!blockL || !blockR) break; // buffer empty
 
         SETPROFILEPIN(PROFILER_RX_TX);
         //client->write((uint8_t *)blockL->data, blockSize / 2);
@@ -184,12 +184,13 @@ class AudioOutputTCP : public AudioStream {
     audio_block_t *blockL, *blockR;
 
     noInterrupts();
-    while(tail != head) {
-      blockL = queue[tail][0];
-      blockR = queue[tail][1];
+    for(size_t i = 0; i < maxBlocks; i++) {
+      blockL = queue[i][0];
+      blockR = queue[i][1];
       if(blockL) release(blockL);
       if(blockR) release(blockR);
-      tail = (tail + 1) & bufferMask;
+      queue[i][0] = nullptr;
+      queue[i][1] = nullptr;
     }
     head = tail = 0;
     interrupts();

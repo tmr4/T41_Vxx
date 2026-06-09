@@ -134,7 +134,7 @@ void RemoteRadio::cat_GT(const char* cmd) {
 // *** ackIdReceipt is provided to acknowledge receipt of a properly formated reply ***
 void RemoteRadio::cat_ID(const char* cmd) {
   ackIdReceipt();
-  heatbeart = millis(); // note time for heartbeat
+  heartbeat = millis(); // note time for heartbeat
 }
 
 // read transceiver status

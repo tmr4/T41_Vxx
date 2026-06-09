@@ -856,7 +856,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   //Q_out_L.play(q15_buffer_LTemp, blocks * 128);
   for(int i = 0; i < blocks; i++) {
     int16_t *buf = Q_out_L.getBuffer();
-    if (buf != nullptr) {
+    if(buf != nullptr) {
       arm_float_to_q15(&audioBufferL[i*128], buf, 128);
       Q_out_L.playBuffer();
     } else {

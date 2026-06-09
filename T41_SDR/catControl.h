@@ -244,6 +244,14 @@ public:
     processCommand(cmd);
   }
 
+  void setLink(Stream* _link) {
+    link = _link;
+  }
+
+  unsigned long getHeartbeat() { return heartbeat; }
+
+  void send(const char *msg) { if(link) link->print(msg); }
+
 protected:
   Stream* link = nullptr;
   char cmd[maxCmd + 1]; // leave room for terminating null
@@ -277,15 +285,8 @@ protected:
     }
   }
 
-  // *** TODO: consider this against T41ControlSendMsg and if this should be virtual ***
-  // *** can skip link null check as long as this is called only from update
-  void send(const char *msg) { if(link) link->print(msg); }
-  //void send(const char *msg);
-
   int GetPropertyValue(int token);
 
 protected:
-  unsigned long heatbeart = 0;
-
-  friend class ConnectManager;
+  unsigned long heartbeat = 0;
 };

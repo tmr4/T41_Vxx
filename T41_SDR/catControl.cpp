@@ -79,7 +79,7 @@ int CatControl::GetPropertyValue(int token) {
         // Kenwood TS-2000: ID019;
         value = 24;
       } else {
-        if(transport.isRemote()) heatbeart = millis(); // note time for heartbeat
+        if(transport.isRemote()) heartbeat = millis(); // note time for heartbeat
         value = t41.RadioID;
       }
       break;

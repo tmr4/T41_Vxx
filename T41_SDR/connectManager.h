@@ -17,6 +17,8 @@ using namespace qindesign::network;
   I'm still determining the direction of this class. The intent is to allow
   for various connection types, but that might not be a good use of Teensy RAM
 
+  Currently connection is hardcoded for Ethernet: TCP for command channel and UDP for data
+
 */
 
 //-------------------------------------------------------------------------------------------------------------
@@ -48,9 +50,8 @@ private:
   ConnectMode connectMode = CONNECT_NONE;
 
   const unsigned long POLL_INTERVAL = 40;
-  const unsigned long HEARTBEAT_INTERVAL = 500;
-  //const unsigned long HEARTBEAT_TIMEOUT = 1200;
-  const unsigned long HEARTBEAT_TIMEOUT = 2400;
+  const unsigned long HEARTBEAT_INTERVAL = 15000;
+  const unsigned long HEARTBEAT_TIMEOUT = (HEARTBEAT_INTERVAL * 2);
   const int HEARTBEAT_COUNT = 3;
   const unsigned long TCP_RETRY_INTERVAL = 2000;
 
@@ -110,24 +111,7 @@ public:
     begin();
   }
 
-  void updateARP() {
-    ip4_addr_t clientIP4Addr, serverIP4Addr;
-    IP4_ADDR(&clientIP4Addr, 192, 168, 1, 101);
-    IP4_ADDR(&serverIP4Addr, 192, 168, 1, 100);
-
-    Serial.println("30 minutes passed...");
-    if(netif_default != nullptr) {
-      if(role == REMOTE_ROLE_T41) {
-        //etharp_request(netif_default, &clientIP4Addr);
-      } else {
-        //etharp_request(netif_default, &serverIP4Addr);
-      }
-    }
-  }
-
   void update() {
-    static unsigned long lastARPUpdate = millis();
-
     if(!enabled) return;
 
     if(connectMode == CONNECT_USB) USBManager::getHost().Task();
@@ -146,12 +130,6 @@ public:
 
     // *** a little pause here is needed sometimes to ensure reconnection ***
     if(linkState != LINK_CONNECTED) delay(1);
-
-    // print note every 30 minutes
-    if(millis() - lastARPUpdate > 1800000) {
-      updateARP();
-      lastARPUpdate = millis();
-    }
   }
 
   bool isRemote() const { return role == REMOTE_ROLE_REMOTE; }
@@ -173,8 +151,6 @@ private:
   //AudioStream audioStream;
   AudioInputSerial1 *usbInput = nullptr;
   AudioOutputHostSerial *usbOutput = nullptr;
-  //AudioInputTCP *tcpInput = nullptr;
-  //AudioOutputTCP *tcpOuput = nullptr;
   AudioInputUDP *udpInput = nullptr;
   AudioOutputUDP *udpOuput = nullptr;
 
@@ -195,7 +171,6 @@ private:
 
   // data sockets (governed by command socket state)
   EthernetServer tcpDataServer;
-  //EthernetClient tcpDataClient;
   EthernetUDP udpDataClient{udpBuffer};
 
   bool isInitialized = false;
@@ -218,12 +193,10 @@ private:
   bool checkEthernetPhysicalLink() { return Ethernet.linkState(); }
 
   void handleDisconnected() {
-    catControl->link = nullptr;
+    catControl->setLink(nullptr);
     if(role == REMOTE_ROLE_T41) {
-      //tcpOuput->setClient(nullptr);
       udpOuput->setClient(nullptr);
     } else {
-      //tcpInput->setClient(nullptr);
       udpInput->setClient(nullptr);
     }
 
@@ -258,25 +231,15 @@ private:
       if(role == REMOTE_ROLE_T41) {
         // Server - CAT command port controls connection progression
         if(!tcpCmdClient || !tcpCmdClient.connected()) {
-          //tcpCmdClient = tcpCmdServer.available();
           tcpCmdClient = tcpCmdServer.accept();
         }
 
-        // data port connects only after cmd port connects
+        // data port starts only after cmd port connects
         if(tcpCmdClient && tcpCmdClient.connected()) {
-          //if(!tcpDataClient || !tcpDataClient.connected()) {
-          //  //tcpDataClient = tcpDataServer.available();
-          //  tcpDataClient = tcpDataServer.accept();
-          //}
-
-          //if(tcpDataClient && tcpDataClient.connected())
-          {
-            catControl->link = &tcpCmdClient;
-            //tcpOuput->setClient(&tcpDataClient);
-            udpOuput->setClient(&udpDataClient);
-            udpDataClient.begin(dataPort);
-            setConnected();
-          }
+          catControl->setLink(&tcpCmdClient);
+          udpOuput->setClient(&udpDataClient, clientIP, dataPort);
+          udpDataClient.begin(dataPort);
+          setConnected();
         }
       } else {
         // Client - CAT command channel controls connection progression
@@ -292,23 +255,12 @@ private:
           }
         }
 
-        // data port connects only after cmd port connects
+        // data port starts only after cmd port connects
         if(tcpCmdClient.connected()) {
-          //if(!tcpDataClient.connected() && !tcpDataClient.connecting()) {
-          //  tcpDataClient.abort();
-          //  tcpDataClient.setConnectionTimeoutEnabled(false);
-          //  tcpDataClient.connect(serverIP, dataPort);
-          //  tcpDataClient.setNoDelay(true);
-          //}
-
-          //if(tcpDataClient.connected())
-          {
-            catControl->link = &tcpCmdClient;
-            //tcpInput->setClient(&tcpDataClient);
-            udpInput->setClient(&udpDataClient);
-            udpDataClient.begin(dataPort);
-            setConnected();
-          }
+          catControl->setLink(&tcpCmdClient);
+          udpInput->setClient(&udpDataClient);
+          udpDataClient.begin(dataPort);
+          setConnected();
         }
       }
     }
@@ -320,10 +272,7 @@ private:
     if(connectMode == CONNECT_USB) {
       structureHealthy = checkUsbPhysicalLink();
     } else if(connectMode == CONNECT_ETHERNET) {
-      // both links must be up
-      structureHealthy = (checkEthernetPhysicalLink() &&
-                          tcpCmdClient && tcpCmdClient.connected()); // &&
-                          //tcpDataClient && tcpDataClient.connected());
+      structureHealthy = (checkEthernetPhysicalLink() && tcpCmdClient && tcpCmdClient.connected());
     }
 
     if(!structureHealthy) {
@@ -340,22 +289,18 @@ private:
       if(Ethernet.linkState()) {
         // just stop if link is still up
         tcpCmdClient.stop();
-        //tcpDataClient.stop();
       } else {
         // abort on cable loss
         tcpCmdClient.abort();
-        //tcpDataClient.abort();
       }
       if(role == REMOTE_ROLE_T41) {
-        //tcpOuput->setClient(nullptr);
         udpOuput->setClient(nullptr);
       } else {
-        //tcpInput->setClient(nullptr);
         udpInput->setClient(nullptr);
       }
     }
 
-    catControl->link = nullptr;
+    catControl->setLink(nullptr);
     connectMode = CONNECT_NONE;
     linkState = LINK_DISCONNECTED;
     t41.RemoteStatus = REMOTE_NOT_CONNECTED;
@@ -376,7 +321,7 @@ private:
   // checkUsbPhysicalLink and checkEthernetPhysicalLink are not reliable indicators
   // of connection. checkHeartbeat serves that purpose. In the LINK_CONNECTED state,
   // an ID command is sent from the T41 to the remote units every HEARTBEAT_INTERVAL,
-  // with catControl->heatbeart recording the time of the reaponse. The remote
+  // with catControl->heartbeat recording the time of the reaponse. The remote
   // device considers the receipt of the ID command as a heartbeat.
   // At least HEARTBEAT_COUNT responses must be received before a new connection is
   // considered established and IQ data stream is begun.
@@ -392,11 +337,14 @@ private:
       heartbeatCount = 0;  // begin startup heartbeat operation
     } else {
       unsigned long last = lastHeartbeat;
+      unsigned long hbInt = HEARTBEAT_INTERVAL;
 
-      lastHeartbeat = catControl->heatbeart;
+      lastHeartbeat = catControl->getHeartbeat();
 
       // heartbeat validation
       if(heartbeatCount >= 0) {
+        hbInt = 1000; // send a heartbeat every second during startup
+
          // startup heartbeat check
         if(lastHeartbeat > last) ++heartbeatCount;
 
@@ -414,7 +362,7 @@ private:
       }
 
       // check heartbeat timing
-      if(role == REMOTE_ROLE_T41 && (now - lastHbTX >= HEARTBEAT_INTERVAL)) {
+      if(role == REMOTE_ROLE_T41 && (now - lastHbTX >= hbInt)) {
         lastHbTX = now;
         catControl->send("ID;");
       }

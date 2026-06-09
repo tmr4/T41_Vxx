@@ -29,9 +29,14 @@ class AudioOutputUDP : public AudioStream {
     clear();
   }
 
-  void setClient(EthernetUDP* _client) {
-    if(!_client) clear();
+  void setClient(EthernetUDP* _client, IPAddress ip = IPAddress(0, 0, 0, 0), uint16_t port = 0) {
+    if(!_client) {
+      clear();
+      return;
+    }
     client = _client;
+    clientIP = ip;
+    dataPort = port;
   }
 
   // store input stream in queue
@@ -58,8 +63,6 @@ class AudioOutputUDP : public AudioStream {
       audio_block_t *blockL, *blockR;
       size_t h;
       bool bFull;
-      unsigned long start;
-      bool flag = true;
 
       SETPROFILEPIN(PROFILER_ENTRY);
 
@@ -69,31 +72,14 @@ class AudioOutputUDP : public AudioStream {
       bFull = bufferFull();
       interrupts();
 
-      // *** buffer full check (usually happens on system glitch) ***
-      // I've tested just dropping the oldest block and adding the new one.
-      // The system recovers after the glitch, but spends sometime doing
-      // the swap with no real gain. The damage (audio artifact) is already done.
-      // Better is to just clear the entire buffer and allow the system to recover
-      // faster instead of trying to force through old data. Setting a flag
-      // to note buffer was fully during an update allows clear() to run from
-      // an interrupt.
       if(bFull) {
-        //telemetry.bufferClearEvent(h, tail, available);
         clear();
         h = 0;
       } else {
-        //telemetry.preLoopCheck(h, tail, available);
       }
 
-      while(flag) {
-        start = micros();
-
-        //telemetry.inLoopCheck(h, tail, available);
-
-        if(h == tail) { // empty check
-          break; // nothing to write
-        }
-
+      // write while queue has data
+      while(h != tail) {
         // take ownership of blocks
         blockL = queue[tail][0];
         blockR = queue[tail][1];
@@ -101,7 +87,7 @@ class AudioOutputUDP : public AudioStream {
         queue[tail][1] = nullptr;
         tail = (tail + 1) & bufferMask;
 
-        if(!blockL || !blockR) continue; // buffer empty
+        if(!blockL || !blockR) break; // normally this just duplicates te h!=tail check
 
         SETPROFILEPIN(PROFILER_RX_TX);
         if(client->beginPacket(clientIP, dataPort)) {
@@ -109,10 +95,8 @@ class AudioOutputUDP : public AudioStream {
           client->write((uint8_t*)blockR->data, blockSize / 2);
           client->write((uint8_t*)&sequenceCounter, sizeof(uint32_t));
           client->endPacket();
-          //Serial.println(sequenceCounter);
           ++sequenceCounter;
         }
-        if(micros() - start > 50) Serial.println("long write in AudioOutputTCP");
 
         release(blockL);
         release(blockR);
@@ -131,8 +115,8 @@ class AudioOutputUDP : public AudioStream {
   bool enabled = false;
 
   EthernetUDP* client = nullptr;
-  const IPAddress clientIP{192, 168, 1, 101};
-  uint16_t dataPort = 8001;
+  IPAddress clientIP{0, 0, 0, 0};
+  uint16_t dataPort = 0;
   uint32_t sequenceCounter = 0;
 
 	audio_block_t* volatile queue[maxBlocks][2] = {};
@@ -148,12 +132,13 @@ class AudioOutputUDP : public AudioStream {
     audio_block_t *blockL, *blockR;
 
     noInterrupts();
-    while(tail != head) {
-      blockL = queue[tail][0];
-      blockR = queue[tail][1];
+    for(size_t i = 0; i < maxBlocks; i++) {
+      blockL = queue[i][0];
+      blockR = queue[i][1];
       if(blockL) release(blockL);
       if(blockR) release(blockR);
-      tail = (tail + 1) & bufferMask;
+      queue[i][0] = nullptr;
+      queue[i][1] = nullptr;
     }
     head = tail = 0;
     interrupts();
