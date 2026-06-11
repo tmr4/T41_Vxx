@@ -7,7 +7,7 @@
 #include <OpenAudio_ArduinoLibrary.h>  // https://github.com/chipaudette/OpenAudio_ArduinoLibrary
 #endif
 
-#include "AudioConfig.h"
+#include "connectManager.h"
 
 /**************************************************************
 T41 audio chain:
@@ -249,20 +249,26 @@ FLASHMEM int SetI2SFreq(int freq) {
   return freq;
 }
 
-// connectMode: 0: USB, 1: UDP
 void SetupRemoteIQStream(int connectMode) {
   if(t41.RadioRole == 0) return;
 
-  iqStream = connectMode ? (AudioConnectBase*)&iqStreamUDP : (AudioConnectBase*)&iqStreamUSB;
+  iqStream = connectMode == CONNECT_ETHERNET ? (AudioConnectBase*)&iqStreamUDP : (AudioConnectBase*)&iqStreamUSB;
+
   if(t41.RadioRole == 1) {
     // T41
+    pc_IQ_L.disconnect();
+    pc_IQ_R.disconnect();
     pc_IQ_L.connect(i2s_quadIn, 2, *iqStream, 0);
     pc_IQ_R.connect(i2s_quadIn, 3, *iqStream, 1);
   } else {
     // remote
+    pc_Q_in_L.disconnect();
+    pc_Q_in_R.disconnect();
     pc_Q_in_L.connect(*iqStream, 0, Q_in_L, 0);
     pc_Q_in_R.connect(*iqStream, 1, Q_in_R, 0);
   }
+
+  iqStream->begin();
 }
 
 /*****

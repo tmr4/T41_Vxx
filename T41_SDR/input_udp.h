@@ -21,7 +21,6 @@ class AudioInputUDP : public AudioConnectBuffered<size_t, volatile size_t> {
 public:
   AudioInputUDP() : AudioConnectBuffered(0, nullptr) {}
 
-  //void begin() { enabled = true; }
 	void end() override {
     enabled = false;
     clear();
@@ -70,41 +69,12 @@ public:
         bFull = bufferFull();
         interrupts();
 
-        if(0) {
-          // forced a TCP stall for telemetry testing
-          static unsigned long lastStall = millis();
-          unsigned long now = millis();
-          static bool forceStall = false;
-          // force a TCP stall every 60s
-          if(now - lastStall > 60000) {
-            forceStall = true;
-            Serial.println("Forcing stall...");
-            lastStall = now;
-          }
-          // ignore ethernet for 0.74s (causes a ~1.5-1.7s stall as system recovers)
-          if(forceStall) {
-            if(now - lastStall < 740) {
-              return;
-            } else {
-              forceStall = false;
-            }
-          }
-        }
-
-        // *** buffer full check (usually happens on system glitch) ***
-        // I've tested just dropping the oldest block and adding the new one.
-        // The system recovers after the glitch, but spends sometime doing
-        // the swap with no real gain. The damage (audio artifact) is already done.
-        // Better is to just clear the entire buffer and allow the system to recover
-        // faster instead of trying to force through old data. Setting a flag
-        // to note buffer was fully during an update allows clear() to run from
-        // an interrupt.
         if(bFull) {
-          Serial.println("buffer full in AudioInputUDP");
+          //Serial.println("buffer full in AudioInputUDP");
           clear();
         }
 
-        while(available > 0) {
+        while(available >= 0) {
           // IQ packet is 256-bytes I, 256-bytes Q, uint32 sequence
           if(available == blockSize + sizeof(uint32_t)) {
             // we have sufficient data to queue
@@ -123,7 +93,7 @@ public:
             client->read((uint8_t *)&sequenceCounter, sizeof(uint32_t));
 
             if(sequenceCounter != (lastSequenceCounter + 1)) {
-              Serial.printf("%u dropped packets in AudioInputUDP\n", sequenceCounter - expectedSequenceCounter);
+              //Serial.printf("%u dropped packets in AudioInputUDP\n", sequenceCounter - expectedSequenceCounter);
 
               // reset
               expectedSequenceCounter = sequenceCounter;
@@ -135,7 +105,7 @@ public:
               // read error
               release(blockL);
               release(blockR);
-              Serial.println("incomplete read in AudioInputUDP");
+              //Serial.println("incomplete read in AudioInputUDP");
               break;
             }
 
@@ -143,7 +113,7 @@ public:
             queue[head][1] = blockR;
             head = (head + 1) & bufferMask;
           } else {
-            Serial.println("incomplete packet in AudioInputUDP");
+            //Serial.println("incomplete packet in AudioInputUDP");
             client->flush();
           }
 
@@ -165,10 +135,6 @@ private:
   uint32_t sequenceCounter = 0;
   uint32_t lastSequenceCounter = 0;
   uint32_t expectedSequenceCounter = 0;
-
-	audio_block_t* volatile queue[maxBlocks][2] = {};
-	volatile size_t tail = 0;
-	size_t head = 0;
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
 };

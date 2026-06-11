@@ -21,7 +21,6 @@ class AudioOutputUDP : public AudioConnectBuffered<volatile size_t, size_t> {
  public:
   AudioOutputUDP() : AudioConnectBuffered(2, inputQueueArray) {}
 
-  //void begin() override { enabled = true; }
 	void end() override {
     enabled = false;
     clear();

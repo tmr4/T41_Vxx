@@ -59,42 +59,36 @@ public:
   void update() override {
     audio_block_t *blockL, *blockR;
 
-    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     blockL = receiveReadOnly(0);
     blockR = receiveReadOnly(1);
 
     if(!enabled || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
-      RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
 
-    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+    SETPROFILEPIN(PROFILER_ENTRY);
     host->Task();
     if(serial->availableForWrite() < blockSize) {
       release(blockL);
       release(blockR);
-      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      RESETPROFILEPIN(PROFILER_ENTRY);
       return;
     }
 
-    TOGGLEPROFILEPIN(PROFILER_OTHER);
+    TOGGLEPROFILEPIN(PROFILER_RX_TX);
     serial->write((uint8_t *)blockL->data, blockSize / 2);
     serial->write((uint8_t *)blockR->data, blockSize / 2);
     host->Task();
 
     release(blockL);
     release(blockR);
-    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-    RESETPROFILEPIN(PROFILER_DECODE_FT8);
-    RESETPROFILEPIN(PROFILER_OTHER);
+    RESETPROFILEPIN(PROFILER_ENTRY);
+    RESETPROFILEPIN(PROFILER_RX_TX);
   }
 
 private:
-  bool enabled = false;
-
   USBHost* host = nullptr;
   USBSerial_BigBuffer* serial = nullptr;
 

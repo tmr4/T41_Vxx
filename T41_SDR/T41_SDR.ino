@@ -401,7 +401,7 @@ FASTRUN void loop() {
   }
 #endif
 
-  //ProcessControls(); // *** needed for any processes that skips YieldToProcess ***
+  ProcessControls(); // *** needed for any processes that skips YieldToProcess ***
 
   // check for UI button press and process accordingly
   valPin = ReadSelectedPushButton();

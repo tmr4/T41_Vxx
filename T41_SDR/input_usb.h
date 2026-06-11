@@ -55,35 +55,30 @@ class AudioInputSerialT : public AudioConnectBase {
 public:
   AudioInputSerialT() : AudioConnectBase(0, nullptr) {}
 
-	//void begin() { enabled = true; }
-	//void end() { enabled = false;	}
-
   void update() override {
     audio_block_t *blockL, *blockR;
     int n;
 
-    TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
     if(!enabled) {
       char dump;
       // empty USB buffer
       while(available()) read(&dump, 1);
-      RESETPROFILEPIN(PROFILER_DECODE_FT8);
       return;
     }
+
+    SETPROFILEPIN(PROFILER_ENTRY);
 
     if(available() < blockSize) {
-      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      RESETPROFILEPIN(PROFILER_ENTRY);
       return;
     }
 
-    TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
     blockL = allocate();
     blockR = allocate();
     if(!blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
-      RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-      RESETPROFILEPIN(PROFILER_DECODE_FT8);
+      RESETPROFILEPIN(PROFILER_ENTRY);
       return;
     }
 
@@ -97,13 +92,12 @@ public:
 
     release(blockL);
     release(blockR);
-    RESETPROFILEPIN(PROFILER_PROCESS_FRAME);
-    RESETPROFILEPIN(PROFILER_DECODE_FT8);
+
+    RESETPROFILEPIN(PROFILER_ENTRY);
     RESETPROFILEPIN(PROFILER_RX_TX);
   }
 
 private:
-  bool enabled = false;
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
 };
 
