@@ -7,7 +7,7 @@
 #include <OpenAudio_ArduinoLibrary.h>  // https://github.com/chipaudette/OpenAudio_ArduinoLibrary
 #endif
 
-#include "connectManager.h"
+#include "AudioConfig.h"
 
 /**************************************************************
 T41 audio chain:
@@ -118,7 +118,7 @@ AudioRecordQueue Q_in_R;
 // unit receives the data on USB serial/Ethernet. The specific objects are declared below
 // based on the mode selected in the hardware config file, hardwareConfig.h, for each unit.
 #if RADIO_ROLE == 1
-AudioOutputHostSerial iqStreamUSB;
+AudioOutputHostSerial iqStreamUSB{USBManager::getHost()};
 AudioOutputUDP iqStreamUDP;
 #elif RADIO_ROLE == 2
 AudioInputSerial1 iqStreamUSB;
@@ -126,7 +126,8 @@ AudioInputUDP iqStreamUDP;
 #endif
 
 // default to a UDP connection
-AudioConnectBase* iqStream = &iqStreamUDP;
+ConnectBase* cbStream = &iqStreamUDP;
+AudioStream* aStream = &iqStreamUDP;
 
 // Audio outputs
 // I2S quad output: ch 1&2 on pin 7, ch 3&4 on pin 32
@@ -249,26 +250,35 @@ FLASHMEM int SetI2SFreq(int freq) {
   return freq;
 }
 
-void SetupRemoteIQStream(int connectMode) {
+void SetupRemoteIQStream(ConnectMode connectMode) {
   if(t41.RadioRole == 0) return;
 
-  iqStream = connectMode == CONNECT_ETHERNET ? (AudioConnectBase*)&iqStreamUDP : (AudioConnectBase*)&iqStreamUSB;
+  if(connectMode == CONNECT_ETHERNET) {
+    //aStream = (ConnectBase*)&iqStreamUDP;
+    aStream = &iqStreamUDP;
+    cbStream = &iqStreamUDP;
+  } else {
+    //aStream = (ConnectBase*)&iqStreamUSB;
+    aStream = &iqStreamUSB;
+    cbStream = &iqStreamUSB;
+  }
+
 
   if(t41.RadioRole == 1) {
     // T41
     pc_IQ_L.disconnect();
     pc_IQ_R.disconnect();
-    pc_IQ_L.connect(i2s_quadIn, 2, *iqStream, 0);
-    pc_IQ_R.connect(i2s_quadIn, 3, *iqStream, 1);
+    pc_IQ_L.connect(i2s_quadIn, 2, *aStream, 0);
+    pc_IQ_R.connect(i2s_quadIn, 3, *aStream, 1);
   } else {
     // remote
     pc_Q_in_L.disconnect();
     pc_Q_in_R.disconnect();
-    pc_Q_in_L.connect(*iqStream, 0, Q_in_L, 0);
-    pc_Q_in_R.connect(*iqStream, 1, Q_in_R, 0);
+    pc_Q_in_L.connect(*aStream, 0, Q_in_L, 0);
+    pc_Q_in_R.connect(*aStream, 1, Q_in_R, 0);
   }
 
-  iqStream->begin();
+  cbStream->begin();
 }
 
 /*****

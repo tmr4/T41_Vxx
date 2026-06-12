@@ -2,10 +2,11 @@
 
 #include <Audio.h>
 
-#include "input_tcp.h"
-#include "output_tcp.h"
-#include "input_udp.h"
-#include "output_udp.h"
+#include "connectBase.h"
+//#include "input_tcp.h"
+//#include "output_tcp.h"
+#include "input_ethernet.h"
+#include "output_ethernet.h"
 #include "input_usb.h"
 #include "output_usb.h"
 
@@ -36,7 +37,7 @@ extern AudioOutputUDP iqStreamUDP;
 extern AudioInputSerial1 iqStreamUSB;
 extern AudioInputUDP iqStreamUDP;
 #endif
-extern AudioConnectBase* iqStream;
+extern ConnectBase* cbStream;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -44,8 +45,6 @@ extern AudioConnectBase* iqStream;
 
 void AudioSetup(int sampleRate, bool supportsTX = true);
 void ConfigAudioState(int audioState);
-
-void SetupRemoteIQStream(int connectMode);
 
 void SetupMicCompressors(boolean use_HP_filter, float knee_dBFS, float comp_ratio, float attack_sec, float release_sec);
 
@@ -56,8 +55,8 @@ void EndAudioStats();
 
 inline void __attribute__((always_inline)) YieldToEthernet() {
 #if RADIO_ROLE == 1
-  iqStream->writeToQueue();
+  cbStream->writeToQueue();
 #elif RADIO_ROLE == 2
-  iqStream->readToQueue();
+  cbStream->readToQueue();
 #endif
 }

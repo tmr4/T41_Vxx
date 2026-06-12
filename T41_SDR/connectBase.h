@@ -1,18 +1,31 @@
 #pragma once
 
 #include <Arduino.h>
-#include <AudioStream.h>
+#include <Audio.h>
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioConnectBase : public AudioStream {
-public:
-  AudioConnectBase(unsigned char ninput, audio_block_t **iqueue) : AudioStream(ninput, iqueue) {}
+enum ConnectMode { CONNECT_NONE, CONNECT_USB, CONNECT_ETHERNET };
 
+class ConnectBase {
+public:
+  //ConnectBase() {}
+
+  virtual void init() {};
 	virtual void begin() { enabled = true; };
 	virtual void end() { enabled = false; }
+
+  virtual bool linkStatus() = 0;
+  virtual bool connect() = 0;
+  virtual bool connected() = 0;
+  virtual void disconnect() {};
+
+  virtual Stream* getCommandStream() = 0;
+
+  virtual ConnectMode getConnectionType() { return CONNECT_NONE; }
+
   virtual void readToQueue() {}
   virtual void writeToQueue() {}
 
@@ -21,9 +34,9 @@ protected:
 };
 
 template <typename H, typename T>
-class AudioConnectBuffered : public AudioConnectBase {
+class ConnectBuffered : public ConnectBase {
 public:
-  AudioConnectBuffered(unsigned char ninput, audio_block_t **iqueue) : AudioConnectBase(ninput, iqueue) {}
+  //ConnectBuffered() {}
 
 protected:
 	static constexpr size_t maxBlocks = 64; // *** must be power of 2 ***
@@ -36,19 +49,4 @@ protected:
 
   bool bufferFull() { return ((head + 1) & bufferMask) == tail; }
   //bool bufferEmpty() { return head == tail; }
-  void clear() {
-    audio_block_t *blockL, *blockR;
-
-    noInterrupts();
-    for(size_t i = 0; i < maxBlocks; i++) {
-      blockL = queue[i][0];
-      blockR = queue[i][1];
-      if(blockL) release(blockL);
-      if(blockR) release(blockR);
-      queue[i][0] = nullptr;
-      queue[i][1] = nullptr;
-    }
-    head = tail = 0;
-    interrupts();
-  }
 };

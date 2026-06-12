@@ -29,7 +29,13 @@ Remote timing (w/ T41 standard testing input, Auto NF):
      early testing hasn't shown a need for this ***
 */
 
+#if RADIO_ROLE == 2
+
+#include <AudioStream.h>
+
 #include "connectBase.h"
+#include "connectManager.h"
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
@@ -46,14 +52,31 @@ extern "C" {
   int usb_serial3_available(void);
 }
 
-//-------------------------------------------------------------------------------------------------------------
-// Code
-//-------------------------------------------------------------------------------------------------------------
-
+// *** TODO: consider specializing this to just Dual Serial ***
 template< int (*available)(), int (*read)(void *, uint32_t) >
-class AudioInputSerialT : public AudioConnectBase {
+class AudioInputSerialT : public AudioStream, public ConnectBase {
 public:
-  AudioInputSerialT() : AudioConnectBase(0, nullptr) {}
+  AudioInputSerialT() : AudioStream(0, nullptr) {}
+
+  void begin() override {
+    //Serial.begin(115200);     // serialCmd *** assumed done ***
+    SerialUSB1.begin(115200); // serialData
+    enabled = true;
+  }
+
+  // DTR is a reliable indicator that Serial has connected to a host
+  // *** it is not a reliable indicator of a disconnect ***
+  // *** !Serial is not a reliable indicator of a disconnect ***
+
+  // *** this is only good on first connection, then it's sticky ***
+  bool linkStatus() override { return Serial.dtr(); }
+
+  bool connect() override { return true; }
+
+  bool connected() override { return Serial && SerialUSB1; }
+
+  Stream* getCommandStream() override { return &Serial; }
+  ConnectMode getConnectionType() override { return CONNECT_USB; }
 
   void update() override {
     audio_block_t *blockL, *blockR;
@@ -106,3 +129,5 @@ using AudioInputSerial = AudioInputSerialT< usb_serial_available, usb_serial_rea
 using AudioInputSerial1 = AudioInputSerialT< usb_serial2_available, usb_serial2_read >;
 
 using AudioInputSerial2 = AudioInputSerialT< usb_serial3_available, usb_serial3_read >;
+
+#endif

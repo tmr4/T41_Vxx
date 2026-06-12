@@ -1,17 +1,17 @@
 #pragma once
 
 /*
- AudioOutputHostSerial - Streams 2-channels from connected input objects to specified USB Host serial object
+ AudioOutputHostSerial - Streams 2-channels from connected input objects to specified USB Host serialData object
 
 T41 timing (w/ T41 standard testing input, Auto NF):
-  * 2-channel input, 512-bytes total, written directly to USB Host serial (not buffered)
+  * 2-channel input, 512-bytes total, written directly to USB Host serialData (not buffered)
     * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel }
   * update() run every 667us (2.9ms /44.1kHz * 192kHz)
-  * ~205us to write 512-bytes to USB Host serial
+  * ~205us to write 512-bytes to USB Host serialData
   * ~2.8ms to process the 16 blocks of data required to form a frame for display
     * T41 take twice as long to process data due to the longer time required to
-      write to USB Host serial than the remote needs to read the same amount of
-      data from USB serial.
+      write to USB Host serialData than the remote needs to read the same amount of
+      data from USB serialData.
   * This time adds to the time to complete one update of display (frame):
     * ~150ms or ~6.7 frames/sec with remote attached
     * ~96ms w/o remote ~10.4 frames/sec
@@ -30,31 +30,44 @@ T41 timing (w/ T41 standard testing input, Auto NF):
 
 */
 
+#if RADIO_ROLE == 1
+
+#include <AudioStream.h>
 #include <USBHost_t36.h>
 
 #include "connectBase.h"
+#include "connectManager.h"
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioOutputHostSerial : public AudioConnectBase {
+class AudioOutputHostSerial : public AudioStream, public ConnectBase {
 public:
-  AudioOutputHostSerial() : AudioConnectBase(2, inputQueueArray) {}
+  AudioOutputHostSerial(USBHost& _host) : AudioStream(2, inputQueueArray),
+    host(&_host), serialCmd(_host, 1), serialData(_host) {}
 
-  void init(USBHost* _host, USBSerial_BigBuffer* _serial) {
-    host = _host;
-    serial = _serial;
+  void begin() override {
+    serialCmd.begin(115200);
+    serialData.begin(115200);
+    enabled = true;
   }
-	void begin() override {
-    if(!host || !serial) {
-      enabled = false;
-    } else {
-      enabled = true;
-    }
+
+  bool linkStatus() override { return true; }
+
+  bool connect() override { return true; }
+
+  bool connected() override {
+    host->Task();
+    //return serialData && serialCmd;
+    //return serialCmd ? true : false;
+    return true;
   }
-	//void end() { enabled = false;	}
+
+  Stream* getCommandStream() override { return &serialCmd; }
+  ConnectMode getConnectionType() override { return CONNECT_USB; }
 
   void update() override {
     audio_block_t *blockL, *blockR;
@@ -70,7 +83,7 @@ public:
 
     SETPROFILEPIN(PROFILER_ENTRY);
     host->Task();
-    if(serial->availableForWrite() < blockSize) {
+    if(serialData.availableForWrite() < blockSize) {
       release(blockL);
       release(blockR);
       RESETPROFILEPIN(PROFILER_ENTRY);
@@ -78,8 +91,8 @@ public:
     }
 
     TOGGLEPROFILEPIN(PROFILER_RX_TX);
-    serial->write((uint8_t *)blockL->data, blockSize / 2);
-    serial->write((uint8_t *)blockR->data, blockSize / 2);
+    serialData.write((uint8_t *)blockL->data, blockSize / 2);
+    serialData.write((uint8_t *)blockR->data, blockSize / 2);
     host->Task();
 
     release(blockL);
@@ -90,8 +103,11 @@ public:
 
 private:
   USBHost* host = nullptr;
-  USBSerial_BigBuffer* serial = nullptr;
+  USBSerial_BigBuffer serialCmd;  // command
+  USBSerial_BigBuffer serialData; // data
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
   audio_block_t *inputQueueArray[2];
 };
+
+#endif

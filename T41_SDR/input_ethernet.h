@@ -7,29 +7,55 @@
 
 */
 
+#if RADIO_ROLE == 2
+
+#include <AudioStream.h>
 #include <QNEthernet.h>
 using namespace qindesign::network;
 
 #include "connectBase.h"
+#include "connectManager.h"
+#include "tcpManager.h"
+
 #include "debug.h"
 
 //-------------------------------------------------------------------------------------------------------------
-// Code
+// Data
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioInputUDP : public AudioConnectBuffered<size_t, volatile size_t> {
+class AudioInputUDP : public AudioStream, public ConnectBuffered<size_t, volatile size_t> {
 public:
-  AudioInputUDP() : AudioConnectBuffered(0, nullptr) {}
+  AudioInputUDP(uint16_t cPort = 8000, uint16_t dPort = 8001) : AudioStream(0, nullptr),
+    cmdPort(cPort), dataPort(dPort) {}
 
 	void end() override {
     enabled = false;
     clear();
   }
 
-  void setClient(EthernetUDP* _client) {
-    if(!_client) clear();
-    client = _client;
+  bool linkStatus() override { return Ethernet.linkState(); }
+
+  bool connect() override {
+    tcpClient.connect();
+
+    if(tcpClient.connected()) {
+      udpClient.begin(dataPort);
+      enabled = true;
+      return true;
+    }
+
+    return false;
   }
+
+  void disconnect() override {
+    tcpClient.disconnect();
+    end();
+  }
+
+  bool connected() override { return tcpClient.connected(); }
+
+  Stream* getCommandStream() override { return tcpClient.getClient(); }
+  ConnectMode getConnectionType() override { return CONNECT_ETHERNET; }
 
   // send queued data to stream
   // *** this is called from an interrupt, it can't touch QNEthernet objects ***
@@ -55,10 +81,10 @@ public:
 
   // read UDP data into queue
   void readToQueue() override {
-    if(client) {
+    if(udpClient) {
       if(enabled) {
         audio_block_t *blockL, *blockR;
-        int available = client->parsePacket();
+        int available = udpClient->parsePacket();
         int n;
         bool bFull;
 
@@ -88,9 +114,9 @@ public:
             }
 
             SETPROFILEPIN(PROFILER_RX_TX);
-            n = client->read((uint8_t *)blockL->data, blockSize / 2);
-            n += client->read((uint8_t *)blockR->data, blockSize / 2);
-            client->read((uint8_t *)&sequenceCounter, sizeof(uint32_t));
+            n = udpClient->read((uint8_t *)blockL->data, blockSize / 2);
+            n += udpClient->read((uint8_t *)blockR->data, blockSize / 2);
+            udpClient->read((uint8_t *)&sequenceCounter, sizeof(uint32_t));
 
             if(sequenceCounter != (lastSequenceCounter + 1)) {
               //Serial.printf("%u dropped packets in AudioInputUDP\n", sequenceCounter - expectedSequenceCounter);
@@ -114,14 +140,14 @@ public:
             head = (head + 1) & bufferMask;
           } else {
             //Serial.println("incomplete packet in AudioInputUDP");
-            client->flush();
+            udpClient->flush();
           }
 
-          available = client->parsePacket();
+          available = udpClient->parsePacket();
         }
       } else {
-        while(client->parsePacket() >= 0) {
-          client->flush();
+        while(udpClient->parsePacket() >= 0) {
+          udpClient->flush();
         }
       }
     }
@@ -131,10 +157,33 @@ public:
   }
 
 private:
-  EthernetUDP *client = nullptr;
+  TCPClient tcpClient{cmdPort}; // CAT command channel
+  EthernetUDP udpClient{32}; // IQ data channel
+
+  uint16_t cmdPort = 0;
+  uint16_t dataPort = 0;
+
   uint32_t sequenceCounter = 0;
   uint32_t lastSequenceCounter = 0;
   uint32_t expectedSequenceCounter = 0;
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
+
+  void clear() {
+    audio_block_t *blockL, *blockR;
+
+    noInterrupts();
+    for(size_t i = 0; i < maxBlocks; i++) {
+      blockL = queue[i][0];
+      blockR = queue[i][1];
+      if(blockL) release(blockL);
+      if(blockR) release(blockR);
+      queue[i][0] = nullptr;
+      queue[i][1] = nullptr;
+    }
+    head = tail = 0;
+    interrupts();
+  }
 };
+
+#endif

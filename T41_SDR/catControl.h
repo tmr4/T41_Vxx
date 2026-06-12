@@ -182,7 +182,7 @@ inline uint8_t CatToken2Hash(uint16_t token) {
 
 CatControl creates the framework for CAT control support. It provides the following public methods:
 
-  setLink: sets a pointer to the Stream derived communication object
+  setStream: sets a pointer to the Stream derived communication object
 
   update: checks for and processes available CAT commands according to command table provided by child class (see radio.h)
           *** update must be called frequently to check for available commands         ***
@@ -208,16 +208,17 @@ public:
   CatControl(const CATCommand* const *cmds, bool wsjt) : commands(cmds), useWSJT(wsjt) {}
   virtual ~CatControl() {}
 
-  void setLink(Stream& s) { link = &s; }
+  //void setStream(Stream& s) { stream = &s; }
+  void setStream(Stream* s) { stream = s; }
 
   void update() {
-    if(!link) return;
+    if(!stream) return;
 
     // timeout
     if(idx > 0 && (millis() - lastCharTime > timeout)) idx = 0;
 
-    while(link->available()) {
-      char c = link->read();
+    while(stream->available()) {
+      char c = stream->read();
       lastCharTime = millis();
 
       if(c == ';') {
@@ -244,16 +245,12 @@ public:
     processCommand(cmd);
   }
 
-  void setLink(Stream* _link) {
-    link = _link;
-  }
-
   unsigned long getHeartbeat() { return heartbeat; }
 
-  void send(const char *msg) { if(link) link->print(msg); }
+  void send(const char *msg) { if(stream) stream->print(msg); }
 
 protected:
-  Stream* link = nullptr;
+  Stream* stream = nullptr;
   char cmd[maxCmd + 1]; // leave room for terminating null
   char msg[maxMsg + 1]; // leave room for terminating null
   uint8_t idx = 0;
