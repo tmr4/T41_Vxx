@@ -191,7 +191,6 @@ int CatControl::GetPropertyValue(int token, bool fromWSJT /* = false */) {
       value = t41.RFGain;
       break;
     case "SF"_cat: // WSJT-X
-      TOGGLEPROFILEPIN(PROFILER_OTHER);
       vfo = atoi(&wsjtCmd[2]);
       freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
       snprintf(msg, sizeof(msg), "SF%d%011d%d;", vfo, freq, 2);
