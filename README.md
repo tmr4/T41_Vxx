@@ -20,9 +20,9 @@ See [Ongoing and Recent Work](https://github.com/tmr4/T41_Vxx/blob/main/RecentWo
 
 This software supports several versions of T41 hardware. To customize the software for specific hardware version, copy the files from the desired hardware subfolder (in the *T41_SDR/hardware* folder) and paste them into the *T41_SDR/src* folder.
 
-Support for the T41 display is handled differently. To add support for a specific display, copy the folder for the desired display (in the *T41_SDR/hardware/diplays* folder) and paste the folder into the *T41_SDR/src* folder.
+Support for the T41 display is handled differently. To add support for a specific display, copy the folder for the desired display (in the *T41_SDR/hardware/diplays* folder) and paste the entire folder into the *T41_SDR/src* folder.
 
-When managing the project, it's best to keep the *src* folder free of hardware specific files when committing changes.  Just copy any changed hardware files back to their specific hardware version folders, delete the hardware files in the *src* folder and proceed as normal.  Note that the *ft8_lib* folder should remain in the *src* folder.
+When managing the project, it's best to keep the *src* folder free of hardware specific files when committing changes.  Just copy any changed hardware files back to their specific hardware version folders, delete the hardware files in the *src* folder and proceed as normal.  Note that the *ft8_lib* folder should remain in the *src* folder. An alternative is to add the *src* folder to your *.gitignore* file. This has the downside of any changes you make to the files in the source folder won't be highlighted during your coding.
 
 For more detail see [Accomodating Hardware Differences](https://github.com/tmr4/T41_Vxx/blob/main/hardware.md).
 
