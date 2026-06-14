@@ -353,7 +353,7 @@ void RemoteRadio::wsjt_AI(const char* cmd) {}
 // "FA;" (length 3) or "FAxxxxxxxxxxx;" (length 14)
 void RemoteRadio::wsjt_FA(const char* cmd) {
   long f = atol(&cmd[2]);
-  ChangeBand(f);
+  //ChangeBand(f);
   t41.SetFreqA(f);
 }
 
@@ -361,7 +361,7 @@ void RemoteRadio::wsjt_FA(const char* cmd) {
 // "FB;" (length 3) or "FBxxxxxxxxxxx;" (length 14)
 void RemoteRadio::wsjt_FB(const char* cmd) {
   long f = atol(&cmd[2]);
-  ChangeBand(f);
+  //ChangeBand(f);
   t41.SetFreqB(f);
 }
 
@@ -452,6 +452,7 @@ struct WSJTCommandBuilder {
   }
 };
 
+// *** this is declared here after the CAT command tables have been constructed ***
 
 // *** use of __attribute__((section(".progmem.data") vs PROGMEM resolves MethodName##_Wrapper
 //     section type conflict with catCommands set as PROGMEM or can use PROGMEM here and use
@@ -459,4 +460,8 @@ struct WSJTCommandBuilder {
 static const RemoteCommandTable catCommands __attribute__((section(".progmem.data")));
 static const WSJTCommandBuilder wsjtCommands __attribute__((section(".progmem.data")));
 
+#if T41_WSJT_CAT_AUDIO
 RemoteRadio remoteRadio(&catCommands.data[0], &wsjtCommands.data[0]);
+#else
+RemoteRadio remoteRadio(&catCommands.data[0]);
+#endif

@@ -123,11 +123,11 @@
 #define T41_WSJT_CAT_AUDIO        false
 
 // automatically configure radio for selected remote operation and services
-#if (RADIO_ROLE < 0) || (RADIO_ROLE > 9)
+#if (RADIO_ROLE < 0) || (RADIO_ROLE > 13)
   #undef RADIO_ROLE
   #define RADIO_ROLE 0
 #else
-  #if RADIO_ROLE == 1
+  #if RADIO_ROLE == 7
     // *** for passing CAT/audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
     // USB cable from the USB serial connection on this unit (T41) to a USB connection on the PC
     // Compile with an Audio option selected, such as "Serial + MIDI + Audio"
@@ -151,11 +151,27 @@
 
 /*
 
-RADIO_ROLE = 7
 Memory Usage on Teensy 4.1:
+
+RADIO_ROLE = 7, Serial
   FLASH: code:273632, data:92408, headers:8740   free for files:7751684
    RAM1: variables:137760, code:229880, padding:32264   free for local variables:124384
    RAM2: variables:339648  free for malloc/new:184640
  EXTRAM: variables:1200320
+
+RADIO_ROLE = 7, Serial + Midi + Audio
+  FLASH: code:275792, data:92908, headers:9152   free for files:7748612
+   RAM1: variables:138464, code:232040, padding:30104   free for local variables:123680
+   RAM2: variables:345408  free for malloc/new:178880
+ EXTRAM: variables:1200320
+
+RADIO_ROLE = 7, Serial + Midi + Audio, T41_WSJT_CAT_AUDIO = true, useWSJT = true
+  FLASH: code:277488, data:93684, headers:8728   free for files:7746564
+   RAM1: variables:138880, code:233736, padding:28408   free for local variables:123264
+   RAM2: variables:345408  free for malloc/new:178880
+ EXTRAM: variables:1200320
+
+
+WSJT-X comms error
 
 */

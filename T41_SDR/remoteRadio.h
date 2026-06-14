@@ -24,7 +24,8 @@ parent class on construction. See the bottom of radio.cpp for an example table.
 
 class RemoteRadio : public CatControl {
 public:
-  RemoteRadio(const CATCommand* const *cat, const CATCommand* const *wsjt, bool useWSJT = false) : CatControl(useWSJT ? wsjt : cat, useWSJT) {}
+  RemoteRadio(const CATCommand* const *cat, const CATCommand* const *wsjt) : CatControl(cat, wsjt) {}
+  RemoteRadio(const CATCommand* const *cat) : CatControl(cat) {}
   //virtual ~RemoteRadio() {}
 
   virtual void ackIdReceipt() {}
@@ -117,7 +118,7 @@ public:
   DEFINE_CAT_COMMAND(RemoteRadio, wsjt_FB, "FB"_cat, "FB%011d;",     3, 14);
   DEFINE_CAT_COMMAND(RemoteRadio, wsjt_FT, "FT"_cat, "FT0;",         3,  4);
   DEFINE_CAT_COMMAND(RemoteRadio, wsjt_KS, "KS"_cat, "KS0%d;",       3,  0);
-  DEFINE_CAT_COMMAND(RemoteRadio, wsjt_SF, "SF"_cat, "SF%d%011d%d;", 3,  0);
+  DEFINE_CAT_COMMAND(RemoteRadio, wsjt_SF, "SF"_cat, "SF%d%011d%d;", 4,  0);
   DEFINE_CAT_COMMAND(RemoteRadio, wsjt_SP, "SP"_cat, "SP%d;",        3,  4);
   DEFINE_CAT_COMMAND(RemoteRadio, wsjt_TB, "TB"_cat, "TB%d;",        3,  4);
   DEFINE_CAT_COMMAND(RemoteRadio, wsjt_TX, "TX"_cat, "",             0,  3);

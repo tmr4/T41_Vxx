@@ -198,20 +198,29 @@ CatControl creates the framework for CAT control support. It provides the follow
 
 */
 
+// *** TODO: instead of this combined class, consider having two instances of a slimmed down class,
+//     one for remote comms, one for WSJT ***
 class CatControl {
 private:
-  const CATCommand* const *commands;
-  //static const uint16_t catItems[T41_ITEMS];
+  const CATCommand* const *catCommands;
+  const CATCommand* const *wsjtCommands;
 
   static constexpr uint8_t maxCmd = 255;
   static constexpr uint8_t maxMsg = 50; // should be enough to respond to IF;
   static constexpr uint8_t timeout = 250;
 
 public:
-  CatControl(const CATCommand* const *cmds, bool wsjt) : commands(cmds), useWSJT(wsjt) {}
+  CatControl(const CATCommand* const *cmds) : catCommands(cmds), wsjtCommands(nullptr), useWSJT(false) {}
+  CatControl(const CATCommand* const *cat, const CATCommand* const *wsjt) : catCommands(cat), wsjtCommands(wsjt), useWSJT(true) {}
   virtual ~CatControl() {}
 
-  void begin() { enabled = true; }
+  void begin() {
+    if(!catCommands || (useWSJT && !wsjtCommands)) {
+      enabled = false;
+    } else {
+      enabled = true;
+    }
+  }
 	void end() { enabled = false; }
 
   //void setStream(Stream& s) { stream = &s; }
@@ -224,27 +233,12 @@ public:
 
   void update() {
     if(enabled) {
+      // handle remote comms
       setStream();
-      if(!stream) return;
+      if(stream) updateStream();
 
-      // timeout
-      if(idx > 0 && (millis() - lastCharTime > timeout)) idx = 0;
-
-      while(stream->available()) {
-        char c = stream->read();
-        lastCharTime = millis();
-
-        if(c == ';') {
-          cmd[idx++] = ';';
-          cmd[idx] = '\0';
-          processCommand(cmd);
-          idx = 0;
-        } else if(idx < maxCmd - 1) { // leave room for ';' and '\0'
-          cmd[idx++] = c;
-        } else {
-          idx = 0;
-        }
-      }
+      // handle WSJT-X comms
+      if(useWSJT) updateWSJT();
     }
   }
 
@@ -263,11 +257,15 @@ public:
 
   unsigned long getHeartbeat() { return heartbeat; }
 
-  void send(const char *msg) {
+  void send(const char *msg, bool fromWSJT = false) {
     if(enabled) {
-      setStream();
-      if(stream && stream->availableForWrite() > 50) {
-        stream->print(msg);
+      if(fromWSJT) {
+        Serial.print(msg);
+      } else {
+        setStream();
+        if(stream && stream->availableForWrite() > 50) {
+          stream->print(msg);
+        }
       }
     }
   }
@@ -279,11 +277,15 @@ protected:
   Stream* stream = nullptr;
   bool runTask = false;
 
-  char cmd[maxCmd + 1]; // leave room for terminating null
+  char streamCmd[maxCmd + 1]; // leave room for terminating null
+  char wsjtCmd[maxCmd + 1]; // leave room for terminating null
   char msg[maxMsg + 1]; // leave room for terminating null
-  uint8_t idx = 0;
-  unsigned long lastCharTime = 0;
+  uint8_t streamIdx = 0;
+  uint8_t wsjtIdx = 0;
+  unsigned long streamLastCharTime = 0;
+  unsigned long wsjtLastCharTime = 0;
   bool useWSJT = false;
+  bool wsjtCallbackHandled = false;
 
   void setStream() {
     if(connectBase && connectBase->connected()) {
@@ -294,19 +296,79 @@ protected:
     }
   }
 
-  void processCommand(const char* cmd) {
+  // *** could combine these next two, but the savings is small and readability decreases ***
+  void updateStream() {
+    if(enabled) {
+      if(!stream) return;
+
+      // timeout
+      if(streamIdx > 0 && (millis() - streamLastCharTime > timeout)) streamIdx = 0;
+
+      while(stream->available()) {
+        char c = stream->read();
+        streamLastCharTime = millis();
+
+        if(c == ';') {
+          streamCmd[streamIdx++] = ';';
+          streamCmd[streamIdx] = '\0';
+          processCommand(streamCmd);
+          streamIdx = 0;
+        } else if(streamIdx < maxCmd - 1) { // leave room for ';' and '\0'
+          streamCmd[streamIdx++] = c;
+        } else {
+          streamIdx = 0;
+        }
+      }
+    }
+  }
+
+  void updateWSJT() {
+    if(enabled) {
+      // timeout
+      if(wsjtIdx > 0 && (millis() - wsjtLastCharTime > timeout)) wsjtIdx = 0;
+
+      while(Serial.available()) {
+        char c = Serial.read();
+        wsjtLastCharTime = millis();
+
+        if(c == ';') {
+          wsjtCmd[wsjtIdx++] = ';';
+          wsjtCmd[wsjtIdx] = '\0';
+          processCommand(wsjtCmd, true);
+          wsjtIdx = 0;
+        } else if(wsjtIdx < maxCmd - 1) { // leave room for ';' and '\0'
+          wsjtCmd[wsjtIdx++] = c;
+        } else {
+          wsjtIdx = 0;
+        }
+      }
+    }
+  }
+
+  void processCommand(const char* cmd, bool fromWSJT = false) {
     if(enabled) {
       // convert the 2 character command code into its CAT table index
       uint8_t catHash = CatToken2Hash((uint16_t)((cmd[0] << 8) | cmd[1]));
-      const CATCommand* item = catHash >= 128 ? nullptr : commands[catHash];
+      const CATCommand* item;
+      int value = 0;
+
+      if(fromWSJT) {
+        item = catHash >= 128 ? nullptr : wsjtCommands[catHash];
+      } else {
+        item = catHash >= 128 ? nullptr : catCommands[catHash];
+      }
 
       if(item) {
         // CAT command found
         if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
           //Serial.println(cmd);
           // read command properly formed
-          snprintf(msg, sizeof(msg), item->format, GetPropertyValue(item->token));
-          send(msg);
+          wsjtCallbackHandled = false;
+          value = GetPropertyValue(item->token, fromWSJT);
+          if(!wsjtCallbackHandled) {
+            snprintf(msg, sizeof(msg), item->format, value);
+            send(msg, fromWSJT);
+          }
         } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
           //Serial.println(cmd);
           // set command properly formed
@@ -323,7 +385,7 @@ protected:
     }
   }
 
-  int GetPropertyValue(int token);
+  int GetPropertyValue(int token, bool fromWSJT = false);
 
 protected:
   unsigned long heartbeat = 0;

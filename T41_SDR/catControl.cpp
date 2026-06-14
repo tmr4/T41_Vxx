@@ -9,6 +9,8 @@
 #include "remoteRadio.h"
 #include "connectManager.h"
 
+#include "debug.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -28,14 +30,15 @@ void SendCommand(int id) {
 
 // get read CAT command value or otherwise perform non-standard action on a read command
 // *** TODO: got to be a better way ***
-int CatControl::GetPropertyValue(int token) {
+int CatControl::GetPropertyValue(int token, bool fromWSJT /* = false */) {
   int value = 0;
   int vfo, freq;
 
   switch(token) {
     case "AI"_cat: // WSJT-X
       snprintf(msg, sizeof(msg), "AI0;"); // Auto info off
-      send(msg);
+      send(msg, fromWSJT);
+      wsjtCallbackHandled = true;
       break;
     case "BD"_cat:
       ChangeBand(-1);
@@ -68,7 +71,8 @@ int CatControl::GetPropertyValue(int token) {
       break;
     case "FT"_cat: // WSJT-X
       snprintf(msg, sizeof(msg), "FT0;"); // T41 always responds transmit on VFO A
-      send(msg);
+      send(msg, fromWSJT);
+      wsjtCallbackHandled = true;
       break;
     case "GT"_cat:
       value = t41.AGCMode;
@@ -153,7 +157,8 @@ int CatControl::GetPropertyValue(int token) {
           //splitVFO ? 1 : 0,             // VFO split status (%d) at index xx
         );
       }
-      send(msg);
+      send(msg, fromWSJT);
+      wsjtCallbackHandled = true;
       break;
     case "KS"_cat:
       value = DEFAULT_KEYER_WPM;
@@ -186,10 +191,12 @@ int CatControl::GetPropertyValue(int token) {
       value = t41.RFGain;
       break;
     case "SF"_cat: // WSJT-X
-      vfo = atoi(&cmd[2]);
+      TOGGLEPROFILEPIN(PROFILER_OTHER);
+      vfo = atoi(&wsjtCmd[2]);
       freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
       snprintf(msg, sizeof(msg), "SF%d%011d%d;", vfo, freq, 2);
-      send(msg);
+      send(msg, fromWSJT);
+      wsjtCallbackHandled = true;
       break;
     case "SM"_cat:
       value = (int)CalcSignalStrength()*10;
