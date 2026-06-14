@@ -2,6 +2,9 @@
 
 #include <Stream.h>
 
+#include "connectBase.h"
+#include "USBManager.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -208,28 +211,39 @@ public:
   CatControl(const CATCommand* const *cmds, bool wsjt) : commands(cmds), useWSJT(wsjt) {}
   virtual ~CatControl() {}
 
+  void begin() { enabled = true; }
+	void end() { enabled = false; }
+
   //void setStream(Stream& s) { stream = &s; }
-  void setStream(Stream* s) { stream = s; }
+  //void setStream(Stream* s) { stream = s; }
+  void setConnectBase(ConnectBase* cb, bool rt = false) {
+    connectBase = cb;
+    runTask = rt;
+    enabled = true;
+  }
 
   void update() {
-    if(!stream) return;
+    if(enabled) {
+      setStream();
+      if(!stream) return;
 
-    // timeout
-    if(idx > 0 && (millis() - lastCharTime > timeout)) idx = 0;
+      // timeout
+      if(idx > 0 && (millis() - lastCharTime > timeout)) idx = 0;
 
-    while(stream->available()) {
-      char c = stream->read();
-      lastCharTime = millis();
+      while(stream->available()) {
+        char c = stream->read();
+        lastCharTime = millis();
 
-      if(c == ';') {
-        cmd[idx++] = ';';
-        cmd[idx] = '\0';
-        processCommand(cmd);
-        idx = 0;
-      } else if(idx < maxCmd - 1) { // leave room for ';' and '\0'
-        cmd[idx++] = c;
-      } else {
-        idx = 0;
+        if(c == ';') {
+          cmd[idx++] = ';';
+          cmd[idx] = '\0';
+          processCommand(cmd);
+          idx = 0;
+        } else if(idx < maxCmd - 1) { // leave room for ';' and '\0'
+          cmd[idx++] = c;
+        } else {
+          idx = 0;
+        }
       }
     }
   }
@@ -237,48 +251,75 @@ public:
   // notify remote by of a change by inserting the associated
   // CAT command into processCommand
   void notifyRemote(int token) {
-    char cmd[4] = "xx;";
+    if(enabled) {
+      char cmd[4] = "xx;";
 
-    // convert token into CAT command
-    cmd[0] = static_cast<char>(((uint16_t)token & 0xFF00) >> 8);
-    cmd[1] = static_cast<char>((uint16_t)token & 0xFF);
-    processCommand(cmd);
+      // convert token into CAT command
+      cmd[0] = static_cast<char>(((uint16_t)token & 0xFF00) >> 8);
+      cmd[1] = static_cast<char>((uint16_t)token & 0xFF);
+      processCommand(cmd);
+    }
   }
 
   unsigned long getHeartbeat() { return heartbeat; }
 
-  void send(const char *msg) { if(stream) stream->print(msg); }
+  void send(const char *msg) {
+    if(enabled) {
+      setStream();
+      if(stream && stream->availableForWrite() > 50) {
+        stream->print(msg);
+      }
+    }
+  }
 
 protected:
+  bool enabled = false;
+
+  ConnectBase* connectBase = nullptr;
   Stream* stream = nullptr;
+  bool runTask = false;
+
   char cmd[maxCmd + 1]; // leave room for terminating null
   char msg[maxMsg + 1]; // leave room for terminating null
   uint8_t idx = 0;
   unsigned long lastCharTime = 0;
   bool useWSJT = false;
 
-  void processCommand(const char* cmd) {
-    // convert the 2 character command code into its CAT table index
-    uint8_t catHash = CatToken2Hash((uint16_t)((cmd[0] << 8) | cmd[1]));
-    const CATCommand* item = catHash >= 128 ? nullptr : commands[catHash];
-
-    if(item) {
-      // CAT command found
-      if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
-        // read command properly formed
-        snprintf(msg, sizeof(msg), item->format, GetPropertyValue(item->token));
-        send(msg);
-      } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
-        // set command properly formed
-        item->action->execute(this, cmd);
-      } else {
-        // command not properly formed
-        // *** TODO: consider sending followup if command not properly formed
-        return;
-      }
+  void setStream() {
+    if(connectBase && connectBase->connected()) {
+      if(runTask) USBManager::getHost().Task();
+      stream = connectBase->getCommandStream();
     } else {
-      // *** TODO: consider sending ?; if command not recognized
-      //Serial.printf("bad item: %s, %d\n", cmd, catHash);
+      stream = nullptr;
+    }
+  }
+
+  void processCommand(const char* cmd) {
+    if(enabled) {
+      // convert the 2 character command code into its CAT table index
+      uint8_t catHash = CatToken2Hash((uint16_t)((cmd[0] << 8) | cmd[1]));
+      const CATCommand* item = catHash >= 128 ? nullptr : commands[catHash];
+
+      if(item) {
+        // CAT command found
+        if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
+          //Serial.println(cmd);
+          // read command properly formed
+          snprintf(msg, sizeof(msg), item->format, GetPropertyValue(item->token));
+          send(msg);
+        } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
+          //Serial.println(cmd);
+          // set command properly formed
+          item->action->execute(this, cmd);
+        } else {
+          // command not properly formed
+          // *** TODO: consider sending followup if command not properly formed
+          return;
+        }
+      } else {
+        // *** TODO: consider sending ?; if command not recognized
+        //Serial.printf("bad item: %s, %d\n", cmd, catHash);
+      }
     }
   }
 

@@ -1,3 +1,5 @@
+#pragma once
+
 // 12 pole Chebyshev 24KSPS 840HZ Fc CW LPF
 //   b0                     b1                   b2
 /* PROGMEM */ float32_t CW_AudioFilterCoeffs1[30] = {

@@ -1,3 +1,5 @@
+#pragma once
+
 #undef  round
 #undef  PI
 #undef  HALF_PI

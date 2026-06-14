@@ -8,6 +8,7 @@
 #endif
 
 #include "AudioConfig.h"
+#include "USBManager.h"
 
 /**************************************************************
 T41 audio chain:
@@ -117,17 +118,17 @@ AudioRecordQueue Q_in_R;
 // The T41 IQ data stream is transfered to a remote unit over USB Host/Ethernet. The remote
 // unit receives the data on USB serial/Ethernet. The specific objects are declared below
 // based on the mode selected in the hardware config file, hardwareConfig.h, for each unit.
-#if RADIO_ROLE == 1
+#if RADIO_ROLE == 7
 AudioOutputHostSerial iqStreamUSB{USBManager::getHost()};
-AudioOutputUDP iqStreamUDP;
-#elif RADIO_ROLE == 2
+AudioOutputEthernet iqStreamEthernet;
+#elif RADIO_ROLE == 6
 AudioInputSerial1 iqStreamUSB;
-AudioInputUDP iqStreamUDP;
+AudioInputEthernet iqStreamEthernet;
 #endif
 
-// default to a UDP connection
-ConnectBase* cbStream = &iqStreamUDP;
-AudioStream* aStream = &iqStreamUDP;
+// default to a Ethernet connection
+ConnectBase* cbStream = &iqStreamEthernet;
+AudioStream* aStream = &iqStreamEthernet;
 
 // Audio outputs
 // I2S quad output: ch 1&2 on pin 7, ch 3&4 on pin 32
@@ -253,24 +254,24 @@ FLASHMEM int SetI2SFreq(int freq) {
 void SetupRemoteIQStream(ConnectMode connectMode) {
   if(t41.RadioRole == 0) return;
 
+  if(cbStream) cbStream->end(); // already done by disconnect()
+
   if(connectMode == CONNECT_ETHERNET) {
-    //aStream = (ConnectBase*)&iqStreamUDP;
-    aStream = &iqStreamUDP;
-    cbStream = &iqStreamUDP;
+    aStream = &iqStreamEthernet;
+    cbStream = &iqStreamEthernet;
   } else {
-    //aStream = (ConnectBase*)&iqStreamUSB;
     aStream = &iqStreamUSB;
     cbStream = &iqStreamUSB;
   }
 
 
-  if(t41.RadioRole == 1) {
+  if(t41.RadioRole == 7) {
     // T41
     pc_IQ_L.disconnect();
     pc_IQ_R.disconnect();
     pc_IQ_L.connect(i2s_quadIn, 2, *aStream, 0);
     pc_IQ_R.connect(i2s_quadIn, 3, *aStream, 1);
-  } else {
+  } else if(t41.RadioRole == 6) {
     // remote
     pc_Q_in_L.disconnect();
     pc_Q_in_R.disconnect();

@@ -1,12 +1,21 @@
 #pragma once
 
 /*
- AudioInputSerialT - Streams 2-channels from selected USB serial object to connect output objects
 
-Remote timing (w/ T41 standard testing input, Auto NF):
+AudioInputSerialT - Streams 2-channels pf data from SerialUSB1 to connect output objects
+                    Handles CAT control channel over Serial
+
+*** Even though the template class can be configured to work with various serial USB object
+    it is currently hardwired to Serial (CAT control) and SerialUSB1 (IQ data) ***
+
+*** Requires Dual Serial ***
+
+Data Structure:
   * USB serial input, 512-bytes total, written directly to 2-channel output (not buffered)
     * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel } input to
       { 256-bytes left channel } and { 256-bytes right channel }
+
+Remote timing (w/ T41 standard testing input, Auto NF):
   * update() run every 667us (2.9ms /44.1kHz * 192kHz)
   * ~3.6us to read 512-bytes from USB serial
   * ~1.4ms to process the 16 blocks of data required to form a frame for display
@@ -29,12 +38,11 @@ Remote timing (w/ T41 standard testing input, Auto NF):
      early testing hasn't shown a need for this ***
 */
 
-#if RADIO_ROLE == 2
+#if RADIO_ROLE == 6
 
 #include <AudioStream.h>
 
 #include "connectBase.h"
-#include "connectManager.h"
 
 #include "debug.h"
 
@@ -58,11 +66,13 @@ class AudioInputSerialT : public AudioStream, public ConnectBase {
 public:
   AudioInputSerialT() : AudioStream(0, nullptr) {}
 
-  void begin() override {
+  void init() override {
     //Serial.begin(115200);     // serialCmd *** assumed done ***
     SerialUSB1.begin(115200); // serialData
-    enabled = true;
   }
+
+  void begin() override { enabled = true; }
+	void end() override { enabled = false; }
 
   // DTR is a reliable indicator that Serial has connected to a host
   // *** it is not a reliable indicator of a disconnect ***
@@ -73,7 +83,8 @@ public:
 
   bool connect() override { return true; }
 
-  bool connected() override { return Serial && SerialUSB1; }
+  //bool connected() override { return Serial && SerialUSB1; }
+  bool connected() override { return true; }
 
   Stream* getCommandStream() override { return &Serial; }
   ConnectMode getConnectionType() override { return CONNECT_USB; }
@@ -121,6 +132,8 @@ public:
   }
 
 private:
+  bool enabled = false;
+
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
 };
 

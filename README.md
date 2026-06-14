@@ -1,3 +1,5 @@
+#### The most recent features, [see recent work](https://github.com/tmr4/T41_Vxx/blob/main/RecentWork.md), in this branch work with hardware versions *vPS* and *vAP*, my T41 and remote test beds. These will roll out to the other hardware versions in the comming weeks.
+
 # T41_Vxx
 
 This is a combination of my T41 v11 and v12 projects, creating a consistent code base for my T41 projects.  The combinations should make it easier to maintain consistency between the two versions and allow me to easily add new versions.

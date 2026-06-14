@@ -4,7 +4,7 @@
 
 #define VERSION "vPS_dev/v0.03" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 #define RADIO_ID 01             // 0-999, radio ID is reported as 24 to WSJT-X (Kenwood TS-890S)
-#define RADIO_ROLE 1            // 0:standard ops, 1:T41 w/ remote ops, 2: remote T41
+#define RADIO_ROLE 7            // 0:standard ops, 1:WSJT-X, *** See Remote operation below for additional settings ***
 
 #define PROFILER_ACTIVE
 
@@ -72,13 +72,15 @@
   Serial object is reserved for WSJT-X use.  Any other use could disrupt WSJT-X control of the T41.
 
   The following remote operating modes are available:
-    Mode                        T41 Mode Index      Remote Mode Index
+    Mode                        T41 RADIO_ROLE      Remote RADIO_ROLE
     None                          0                     na
     WSJT-X                        1                     na
     Remote (USB)                  3                     2
     Remote (Ethernet)             5                     4
     Remote (USB or Ethernet)      7                     6
     Auto Cal (USB)                9                     8
+    CAT only (Ethernet)          11                    10
+    CAT only (USB)               13                    12
 
   The following minimum USB Type compile option is required for each operating modes:
     Mode                           T41                      Remote
@@ -86,46 +88,46 @@
     WSJT-X                        Serial + MIDI + Audio       *
     Remote (USB)**                Serial                     Dual Serial
     Remote (Ethernet)**           Serial                     Serial
-    Remote (USB or Ethernet)**    Dual Serial                Dual Serial
+    Remote (USB or Ethernet)***   Serial                     Dual Serial
     Auto Cal (USB)                Serial                     Serial
+    CAT only (Ethernet)           Serial                     Serial
+    CAT only (USB)                Serial                     Serial
 
-    *  - configure WSJT-X for the serial COM assiciated with the T41 and 44.1kHz audio
-    ** - remote operation includes CAT control and high-speed IQ data transfer for spectrum display and audio
+    *   - configure WSJT-X for the serial COM assiciated with the T41 and 44.1kHz audio
+    **  - remote operation includes CAT control and high-speed IQ data transfer for spectrum display and audio
+    *** - plug and play
 
-  To enable remote operation, set DEVICE_REMOTE_OPS_MODE below to the role of this device, compile and upload.
+  To enable remote operation, set RADIO_ROLE to the role of this device, compile and upload.
   Likewise, set the role of the companion device, compile again and upload to that device. Connect the two
   devices with the selected cable type. Communication between the two devices should commence once the
   connection is established.
 
   The device is then configured as follows:
 
-  T41 connected to a PC running WSJT-X (DEVICE_REMOTE_OPS_MODE=1)
+  T41 connected to a PC running WSJT-X (RADIO_ROLE = 1)
     - USB cable from the USB serial connection on this unit (T41) to a USB connection on the PC
     - Compile with an Audio option selected, such as "Serial + MIDI + Audio"
 
-  Remote device connected to a T41 (DEVICE_REMOTE_OPS_MODE=2)
+  Remote device connected to a T41 (RADIO_ROLE = 2)
     - USB cable from the USB serial connection on this device (remote) to the USB host connection on the T41
     - Compile with at least "Dual Serial" selected
 
-  T41 connected to a remote devise (DEVICE_REMOTE_OPS_MODE=3)
+  T41 connected to a remote devise (RADIO_ROLE = 3)
     - USB cable from the USB host connection on this unit (T41) to the USB serial connection on the remote
 
-  For operation with a remote device, DEVICE_REMOTE_OPS_MODE equals 2 or 3, CAT control and Audio transfer
+  For operation with a remote device, RADIO_ROLE equals 2 or 3, CAT control and Audio transfer
   is assumed. Audio transfer may be disabled in a future update.
 */
-
-// set the remote operation role of this device
-#define DEVICE_REMOTE_OPS_MODE  5
 
 // the following are disabled by defualt and will be set automatically depending on the remote mode selected
 #define T41_WSJT_CAT_AUDIO        false
 
 // automatically configure radio for selected remote operation and services
-#if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 5)
-  #undef DEVICE_REMOTE_OPS_MODE
-  #define DEVICE_REMOTE_OPS_MODE 0
+#if (RADIO_ROLE < 0) || (RADIO_ROLE > 9)
+  #undef RADIO_ROLE
+  #define RADIO_ROLE 0
 #else
-  #if DEVICE_REMOTE_OPS_MODE == 1
+  #if RADIO_ROLE == 1
     // *** for passing CAT/audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
     // USB cable from the USB serial connection on this unit (T41) to a USB connection on the PC
     // Compile with an Audio option selected, such as "Serial + MIDI + Audio"
@@ -147,15 +149,13 @@
 // *** note: debug messages go out over Serial and will be transmitted to these if set to Serial and the unit is connected to the USB host of another unit ***
 #define beaconSerial  Serial
 
-
 /*
 
+RADIO_ROLE = 7
 Memory Usage on Teensy 4.1:
-
-DEVICE_REMOTE_OPS_MODE = 5, HOST_KEYBOARD_MOUSE_SUPPORT = false, Dual Serial
-  FLASH: code:266980, data:91144, headers:8460   free for files:7759880
-   RAM1: variables:172672, code:224008, padding:5368   free for local variables:122240
-   RAM2: variables:384160  free for malloc/new:140128
+  FLASH: code:273632, data:92408, headers:8740   free for files:7751684
+   RAM1: variables:137760, code:229880, padding:32264   free for local variables:124384
+   RAM2: variables:339648  free for malloc/new:184640
  EXTRAM: variables:1200320
 
 */

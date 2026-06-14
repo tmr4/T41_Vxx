@@ -18,7 +18,7 @@ int menuBarSelected = false;
 #include "mouse.h"
 #include "Tune.h"
 
-#include "connectManager.h"
+#include "USBManager.h"
 
 /*  it would be nice to save this memory until a keyboard is plugged in
     but both USBHost and USBHIDParser are needed to automatically detect

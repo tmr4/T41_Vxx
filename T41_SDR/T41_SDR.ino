@@ -50,8 +50,9 @@
 //#include "fir_alt.h"
 
 #include "remoteRadio.h"
-#include "connectManager.h"
 #include "telemetry.h"
+#include "USBManager.h"
+#include "connectManager.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -59,10 +60,10 @@
 
 extern RemoteRadio remoteRadio;
 
-#if RADIO_ROLE == 1
+#if RADIO_ROLE == 7
 ConnectManager transport;
-#elif RADIO_ROLE == 2
-ConnectManager transport(REMOTE_ROLE_REMOTE);
+#elif RADIO_ROLE == 6
+ConnectManager transport(DEVICE_ROLE_REMOTE);
 #endif
 
 extern bool beaconFlag;
@@ -300,7 +301,7 @@ FLASHMEM void setup() {
   //T41BeaconSetup();
 
 #if RADIO_ROLE > 0
-  transport.begin(&remoteRadio, &iqStreamUDP, &iqStreamUSB);
+  transport.begin(&remoteRadio, &iqStreamEthernet, &iqStreamUSB);
 #endif
 
   KeyerSetup(); // testing only

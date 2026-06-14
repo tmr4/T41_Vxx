@@ -1,3 +1,5 @@
+#pragma once
+
 /*
 
 This software accepts hardware specific driver functions listed in the Forwards

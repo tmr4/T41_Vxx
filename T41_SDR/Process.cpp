@@ -28,6 +28,7 @@
 #include "debug.h"
 
 #include "remoteRadio.h"
+#include "USBManager.h"
 #include "connectManager.h"
 
 //-------------------------------------------------------------------------------------------------------------

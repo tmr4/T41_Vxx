@@ -6,16 +6,24 @@
 #include <QNEthernet.h> // https://github.com/ssilverman/QNEthernet
 using namespace qindesign::network;
 
-#include "AudioConfig.h"
 #include "catControl.h"
 #include "t41Property.h"
+#include "connectBase.h"
+#include "USBManager.h"
 
 /*
 
-  I'm still determining the direction of this class. The intent is to allow
-  for various connection types, but that might not be a good use of Teensy RAM
+Manages the connected state between a T41 and connected remote
 
-  Currently connection is hardcoded for Ethernet: TCP for command channel and UDP for data
+Currently supported connections:
+  1) Ethernet/USB plug and play CAT control and IQ data
+
+To come:
+  2) Ethernet only CAT control and IQ data
+  3) USB only CAT control and IQ data
+  4) Ethernet only CAT control
+  5) USB only CAT control
+  6) USB Audio and CAT control (to PC only, requires Serial + MIDI + Audio)
 
 */
 
@@ -23,27 +31,11 @@ using namespace qindesign::network;
 // Forward
 //-------------------------------------------------------------------------------------------------------------
 
-void SetupRemoteIQStream(ConnectMode connectMode);
-
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern "C" struct netif* netif_default;
-
-class USBManager {
-private:
-  static USBHost usbHost;
-  static USBHub usbHub;
-
-public:
-  //USBManager();
-
-  static inline USBHost& getHost() { return usbHost; }
-  static inline void begin() { getHost().begin(); }
-};
-
-enum DeviceRole { REMOTE_ROLE_T41, REMOTE_ROLE_REMOTE };
+enum DeviceRole { DEVICE_ROLE_T41, DEVICE_ROLE_REMOTE };
 enum LinkState { LINK_DISCONNECTED, LINK_CHECK_CONNECTION, LINK_CHECK_HEARTBEAT, LINK_CONNECTED, LINK_LOST };
 
 // Handles USB or Ethernet connection state for remote audio / CAT control
@@ -58,19 +50,10 @@ private:
   ConnectBase* ethernetConnection = nullptr;
 
 public:
-  ConnectManager(DeviceRole _role = REMOTE_ROLE_T41) : role(_role) {}
-
-  //void switchConnection(ConnectBase* connection) {
-  //  if(activeConnection) activeInterface->stop();
-  //  activeConnection = connection;
-  //  activeConnection->begin();
-  //
-  //  Stream* cmdStream = activeConnection->getCommandStream();
-  //  catControl.setStream(cmdStream);
-  //}
+  ConnectManager(DeviceRole _role = DEVICE_ROLE_T41) : role(_role) {}
 
 private:
-  DeviceRole role = REMOTE_ROLE_T41;
+  DeviceRole role = DEVICE_ROLE_T41;
   LinkState linkState = LINK_DISCONNECTED;
 
   const unsigned long POLL_INTERVAL = 40;
@@ -82,13 +65,14 @@ private:
   const int HEARTBEAT_COUNT = 2;
 
 public:
-  void begin(CatControl *control, ConnectBase* udp, ConnectBase* usb) {
-    if(control && udp && usb) {
+  void begin(CatControl *control, ConnectBase* ethernet, ConnectBase* usb) {
+    if(control && ethernet && usb) {
       catControl = control;
-      ethernetConnection = udp;
+      ethernetConnection = ethernet;
       usbConnection = usb;
       enabled = true;
       ethernetConnection->init();
+      usbConnection->init();
     } else {
       activeConnection = nullptr;
       catControl = nullptr;
@@ -103,28 +87,35 @@ public:
 
     if(!enabled) return;
 
+    //if((role == DEVICE_ROLE_T41) && (activeConnection == usbConnection)) USBManager::getHost().Task();
+    if(role == DEVICE_ROLE_T41) USBManager::getHost().Task();
+
+    // don't wait for POLL_INTERVAL if link state is LINK_CHECK_HEARTBEAT
+    // startup checkHeartbeat has it's own timer
+    if(linkState == LINK_CHECK_HEARTBEAT) checkHeartbeat();
+
     unsigned long now = millis();
     if(now - pollTimer >= POLL_INTERVAL) {
       pollTimer = now;
       switch(linkState) {
         case LINK_DISCONNECTED:     handleDisconnected(); break;
         case LINK_CHECK_CONNECTION: handleConnection();   break;
-        case LINK_CHECK_HEARTBEAT:  checkHeartbeat();     break;
+        case LINK_CHECK_HEARTBEAT:  break;
         case LINK_CONNECTED:        handleConnected();    break;
         case LINK_LOST:             handleLinkLost();     break;
       }
     }
 
-    //if((role == REMOTE_ROLE_T41) && (state != linkState)) Serial.println(linkState);
+    //if((role == DEVICE_ROLE_T41) && (state != linkState)) Serial.println(linkState);
 
     // *** a little pause here is needed sometimes to ensure reconnection ***
     if(linkState != LINK_CONNECTED) delay(1);
   }
 
-  bool isRemote() const { return role == REMOTE_ROLE_REMOTE; }
+  ConnectBase* getActiveConnection() { return activeConnection; }
+
+  bool isRemote() const { return role == DEVICE_ROLE_REMOTE; }
   bool connected() const { return linkState == LINK_CONNECTED; }
-  //Stream* getCommandStream() { return commandStreamPointer; }
-  //Stream* getDataStream() { return dataStreamPointer; }
 
 private:
   bool enabled = false;
@@ -137,11 +128,12 @@ private:
   unsigned long lastHbTX = 0;
   int heartbeatCount = -1;
 
+  void yield();
 
   void handleDisconnected() {
-    catControl->setStream(nullptr);
+    if(activeConnection) activeConnection->end(); // already done by disconnect or not needed
+    catControl->end(); // prevent spurious CAT commands stream
     activeConnection = nullptr;
-    //activeConnection->end(); // already done by disconnect or not needed
 
     // check whether a connection has been made
     // an Ethernet connection takes priority since USB connections are sticky
@@ -150,18 +142,17 @@ private:
     } else if(usbConnection && usbConnection->linkStatus()) {
       activeConnection = usbConnection;
     } else {
-      setDisconnected();
       return;
     }
 
     linkState = LINK_CHECK_CONNECTION;
     t41.RemoteStatus = REMOTE_WAITING;
-}
+  }
 
   void handleConnection() {
-    if(activeConnection->linkStatus()) {
+    if(activeConnection && activeConnection->linkStatus()) {
       if(activeConnection->connected()) {
-        catControl->setStream(activeConnection->getCommandStream());
+        catControl->setConnectBase(activeConnection, activeConnection == usbConnection);
         setConnected();
       } else {
         // a disconnect here overcomes sticky USB connection
@@ -169,12 +160,17 @@ private:
         activeConnection->connect();
       }
     } else {
-      setDisconnected();
+      //setDisconnected();
+      setLinkLost();
     }
   }
 
   void handleConnected() {
-    bool structureHealthy = activeConnection->linkStatus() && activeConnection->connected();
+    bool structureHealthy = false;
+
+    if(activeConnection) {
+      structureHealthy = activeConnection->linkStatus() && activeConnection->connected();
+    }
 
     if(structureHealthy) {
       checkHeartbeat();
@@ -185,10 +181,10 @@ private:
 
   void handleLinkLost() {
     // close connections, this is non-blocking
-    activeConnection->disconnect();
+    if(activeConnection) activeConnection->disconnect();
 
     // disconnect CAT driver
-    catControl->setStream(nullptr);
+    catControl->end(); // prevent spurious CAT commands stream
 
     setDisconnected();
   }
@@ -204,70 +200,12 @@ private:
   }
 
   void setLinkLost() {
+    //Serial.println("Link lost...");
+
+    catControl->end(); // prevent spurious CAT commands stream
     linkState = LINK_LOST;
     t41.RemoteStatus = REMOTE_LOST;
   }
 
-  // The check of a physical link is not a reliable indicator of a connection.
-  // checkHeartbeat serves that purpose. In the LINK_CONNECTED state,
-  // an ID command is sent from the T41 to the remote units every HEARTBEAT_INTERVAL,
-  // with catControl->heartbeat recording the time of the reaponse. The remote
-  // device considers the receipt of the ID command as a heartbeat.
-  // At least HEARTBEAT_COUNT responses must be received before a new connection is
-  // considered established and IQ data stream is begun.
-  // The connection is considered lost if a heartbeat response is not received within
-  // HEARTBEAT_TIMEOUT. In that case, the IQ data stream is stopped and the link lost
-  // state is entered.
-  void checkHeartbeat(bool reset = false) {
-    unsigned long now = millis();
-    static unsigned long start = now;
-
-    if(reset) {
-      lastHeartbeat = now;
-      lastHbTX = now;
-      heartbeatCount = 0;  // begin startup heartbeat operation
-      start = now;
-    } else {
-      unsigned long last = lastHeartbeat;
-      unsigned long hbInt = HEARTBEAT_INTERVAL;
-
-      lastHeartbeat = catControl->getHeartbeat();
-
-      // heartbeat validation
-      if(heartbeatCount >= 0) {
-        hbInt = 1000; // send a heartbeat every second during startup
-
-         // startup heartbeat check
-        if(lastHeartbeat > last) ++heartbeatCount;
-
-        if(heartbeatCount >= HEARTBEAT_COUNT) {
-          // *** probably makes sense for remote to send msg to T41 to start sending data ***
-          linkState = LINK_CONNECTED;
-          t41.RemoteStatus = REMOTE_CONNECTED;
-          SetupRemoteIQStream(activeConnection->getConnectionType());
-          heartbeatCount = -1; // begin normal heartbeat operation
-        }
-
-        // USB connections are sticky, use heartbeat to disconnect periodically
-        // so an Ethernet connection can be detected
-        if(now - start > hbInt * (HEARTBEAT_COUNT + 1)) {
-          setDisconnected();
-          heartbeatCount = -1; // begin normal heartbeat operation
-        }
-      } else {
-         // normal heartbeat check
-        if(now - lastHeartbeat > HEARTBEAT_TIMEOUT) {
-          Serial.println("Missed heartbeat...");
-          setLinkLost();
-        }
-      }
-
-      // check heartbeat timing
-      if(role == REMOTE_ROLE_T41 && (now - lastHbTX >= hbInt)) {
-        lastHbTX = now;
-        catControl->send("ID;");
-      }
-    }
-  }
-
+  void checkHeartbeat(bool reset = false);
 };

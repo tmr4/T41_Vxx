@@ -1,11 +1,17 @@
 #pragma once
 
-/*
- AudioOutputHostSerial - Streams 2-channels from connected input objects to specified USB Host serialData object
+#include "SDT.h"
 
-T41 timing (w/ T41 standard testing input, Auto NF):
+/*
+
+AudioOutputHostSerial - Streams 2-channels from connected input objects to USB Host serialData
+                        Handles CAT control channel over USB Host serialCmd
+
+Data Structure:
   * 2-channel input, 512-bytes total, written directly to USB Host serialData (not buffered)
     * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel }
+
+T41 timing (w/ T41 standard testing input, Auto NF):
   * update() run every 667us (2.9ms /44.1kHz * 192kHz)
   * ~205us to write 512-bytes to USB Host serialData
   * ~2.8ms to process the 16 blocks of data required to form a frame for display
@@ -30,13 +36,12 @@ T41 timing (w/ T41 standard testing input, Auto NF):
 
 */
 
-#if RADIO_ROLE == 1
+#if RADIO_ROLE == 7
 
 #include <AudioStream.h>
 #include <USBHost_t36.h>
 
 #include "connectBase.h"
-#include "connectManager.h"
 
 #include "debug.h"
 
@@ -49,24 +54,32 @@ public:
   AudioOutputHostSerial(USBHost& _host) : AudioStream(2, inputQueueArray),
     host(&_host), serialCmd(_host, 1), serialData(_host) {}
 
-  void begin() override {
+  void init() override {
     serialCmd.begin(115200);
     serialData.begin(115200);
-    enabled = true;
   }
 
-  bool linkStatus() override { return true; }
+  void begin() override { enabled = true; }
+	void end() override { enabled = false; }
 
-  bool connect() override { return true; }
+  //bool linkStatus() override { return true; }
+  bool linkStatus() override { return connected(); }
+
+  //bool connect() override { return true; }
+  bool connect() override { return connected(); }
 
   bool connected() override {
     host->Task();
-    //return serialData && serialCmd;
-    //return serialCmd ? true : false;
-    return true;
+    return serialData && serialCmd;
   }
 
-  Stream* getCommandStream() override { return &serialCmd; }
+  Stream* getCommandStream() override {
+    if(serialCmd) {
+      return &serialCmd;
+    } else {
+      return nullptr;
+    }
+  }
   ConnectMode getConnectionType() override { return CONNECT_USB; }
 
   void update() override {
@@ -75,14 +88,18 @@ public:
     blockL = receiveReadOnly(0);
     blockR = receiveReadOnly(1);
 
-    if(!enabled || !blockL || !blockR) {
+    /*****
+      Getting some crashes on reconnection after disconnect. More checks on serialData and calls to Task don't help.
+      See: https://forum.pjrc.com/index.php?threads/usb-host-serial-crash-on-cable-disconnect-reconnect.77973/
+    ******/
+    host->Task();
+    if(!serialData || !enabled || !blockL || !blockR) {
       if(blockL) release(blockL);
       if(blockR) release(blockR);
       return;
     }
 
     SETPROFILEPIN(PROFILER_ENTRY);
-    host->Task();
     if(serialData.availableForWrite() < blockSize) {
       release(blockL);
       release(blockR);
@@ -102,6 +119,8 @@ public:
   }
 
 private:
+  bool enabled = false;
+
   USBHost* host = nullptr;
   USBSerial_BigBuffer serialCmd;  // command
   USBSerial_BigBuffer serialData; // data

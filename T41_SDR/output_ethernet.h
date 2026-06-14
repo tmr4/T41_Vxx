@@ -1,19 +1,25 @@
 #pragma once
 
 /*
- AudioOutputUDP - Streams 2-channels from connected AudioStream objects to set UDP port
 
- Works with AudioInputUDP
+AudioOutputEthernet - Streams 2-channels os data from connected AudioStream objects to UDP data port
+                      Handles CAT control channel TCP connection
+
+Data Structure:
+  * 2-channel input, 512-bytes total, buffered and then written to UDP data port
+    * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel }
+
+ Works with AudioInputEthernet
 
 */
-#if RADIO_ROLE == 1
+
+#if RADIO_ROLE == 7
 
 #include <AudioStream.h>
 #include <QNEthernet.h>
 using namespace qindesign::network;
 
 #include "connectBase.h"
-#include "connectManager.h"
 #include "tcpManager.h"
 
 #include "debug.h"
@@ -27,18 +33,20 @@ struct AudioBufferBase {
   AudioBufferBase() : inputQueueArray{nullptr, nullptr} {}
 };
 
-class AudioOutputUDP : private AudioBufferBase,
-                       public AudioStream,
-                       public ConnectBuffered<volatile size_t, size_t>
+class AudioOutputEthernet : private AudioBufferBase,
+                            public AudioStream,
+                            public ConnectBase
 {
  public:
-  AudioOutputUDP(uint16_t cPort = 8000, uint16_t dPort = 8001) : AudioStream(2, inputQueueArray),
+  AudioOutputEthernet(uint16_t cPort = 8000, uint16_t dPort = 8001) : AudioStream(2, inputQueueArray),
   cmdPort(cPort), dataPort(dPort), tcpServer(cmdPort) {}
 
   void init() override {
     tcpServer.begin();
+    udpClient.begin(dataPort);
   }
 
+	void begin() override { enabled = true; };
 	void end() override {
     enabled = false;
     clear();
@@ -51,12 +59,12 @@ class AudioOutputUDP : private AudioBufferBase,
 
     // CAT command channel governs IQ data channel
     if(tcpServer.connected()) {
-      udpClient.begin(dataPort);
       enabled = true;
-      return true;
+    } else {
+      enabled = false;
     }
 
-    return false;
+    return enabled;
   }
 
   void disconnect() override {
@@ -89,7 +97,7 @@ class AudioOutputUDP : private AudioBufferBase,
 
   // write queue data out to UDP
   void writeToQueue() override {
-    if(udpClient && enabled) {
+    if(enabled) {
       audio_block_t *blockL, *blockR;
       size_t h;
       bool bFull;
@@ -138,6 +146,8 @@ class AudioOutputUDP : private AudioBufferBase,
   }
 
 private:
+  bool enabled = false;
+
   //uint16_t cmdPort = 0;
   //uint16_t dataPort = 0;
   uint16_t cmdPort;
@@ -152,7 +162,16 @@ private:
   uint32_t sequenceCounter = 0;
 
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
+	static constexpr size_t maxBlocks = 64; // *** must be power of 2 ***
+	static constexpr size_t bufferMask = maxBlocks - 1;
+  static_assert((maxBlocks & (maxBlocks - 1)) == 0, "maxBlocks must be a power of 2");
 
+	audio_block_t* volatile queue[maxBlocks][2] = {};
+	volatile size_t head = 0;
+  size_t tail = 0;
+
+  bool bufferFull() { return ((head + 1) & bufferMask) == tail; }
+  //bool bufferEmpty() { return head == tail; }
   void clear() {
     audio_block_t *blockL, *blockR;
 

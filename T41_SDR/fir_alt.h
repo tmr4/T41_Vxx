@@ -1,3 +1,5 @@
+#pragma once
+
 /* PROGMEM */ float32_t coeffs_12k_0_43Fc_0_9BW_p45_LPF_FIR[100] = {
    0.000169289092384370,
    0.000218368207928441,

@@ -2,6 +2,43 @@
 
 ## Ongoing Work
 
+### Plug and Play Remote Unit Connections
+
+So far I've used special compile options to determine the connection type to a remote unit.  That's probably how the software will normally be compiled and run as it keeps unwanted capability from crowding the Teensy memory. However, there could be times that you'd like to connect your T41 to a remote unit over either USB or Ethernet and don't want to reload the software for each connection type. Plug and Play Remote Connections to the rescue. This capability is available by selecting the plug and play radio role for the units in the hardware configuration file (*hardwareConfig.h*).
+
+The plug and play set up is working well except for an occasional glitch where the T41 will crash when the USB cable is disconnected and reconnected. The crash occurs because a pending/partial data transfer when the cable is pulled attempts to finish when the cable is reconnected. In that process, a null pointer related to the old connection is used, causing the crash.
+
+The only way I could solve the problem was modifying the USBHost library. I documented the problem in a [PJRC forum post](https://forum.pjrc.com/index.php?threads/usb-host-serial-crash-on-cable-disconnect-reconnect.77973/). Maybe this will lead to a Teensyduino revision. If not, my version of the T41 code will have another modified library.
+
+### Restructured Remote Communications
+
+As part of my remote unit work, I've restructured all of the code involved in T41 remote communications. Here is a brief overview of the new classes involved.
+
+Communication and Support Classes:
+ * CatControl - processes CAT commands
+ * RemoteRadio - provides the specific CAT commands for the T41 remote and WSJT-X operation
+ * ConnectManager - manages the state of the connection between the T41 and remote
+ * ConnectBase - provides generic connection methods; the Audio USB classes derive from this class.
+ * USBManager - contains the global USBHost and USBHub objects
+ * TCPServer - manages Ethernet TCP connection; member of AudioOutputEthernet
+ * TCPClient - manages Ethernet TCP connection; member of AudioInputEthernet
+ * T41Properties - links T41 properties to their display update method and CAT command; derive from template classes ReadOnlyProperty and Property which derive from T41Update which provides the link to CatControl
+
+The following classes stream IQ data and support the CAT connection between the T41 and remote:
+ * AudioOutputEthernet - IQ data over UDP and CAT over TCP
+ * AudioOutputHostSerial - USB host serial
+ * AudioInputEthernet - IQ data over UDP and CAT over TCP
+ * AudioInputSerial1 - Dual Serial, alias for template class AudioInputSerialT specialized for this mode
+
+```
+                               comm path
+                            USB or Ethernet
+                       T41 <---------------> Remote
+CatControl <-> AudioOutput <- CAT command -> AudioInput <-> CatControl
+i2s_quadIn <-> AudioOutput <--- IQ data ---> AudioInput <-> Q_in_L and Q_in_R
+                       T41 <---------------> Remote
+```
+
 ### Streaming IQ Data to a Remote Unit
 
 I've long wanted to pass audio to a remote unit.  This wasn't possible with my previous wireless remote. The Bluetooth I used to transfer T41 data just wasn't fast enough.  With the T41 Desktop Companion (Audio Platform, AP hardware version) I decided to try out USB transfer. That proved successful.
@@ -18,7 +55,7 @@ You can find these objects in *input_usb.h* and *output_usb.h*.  These object ar
 
 I've also worked out streaming IQ data over TCP. They are Audio library objects similar to the USB objects. You can find them in *input_tcp.h* and *output_tcp.h*. The main wrinkle in these objects is that Ethernet related calls can't be made from an interrupt state. That means we can't take advantage of the Audio Stream update function to drive the input/output, but the object's read/write functions must be called frequently to drive the data flow. The update function either fills a buffer from Audio Stream objects for sending data to the TCP port (output_tcp.h) or empties a buffer filled from a TCP port to the connected Audio Stream objects (input_tcp.h). The major advantage with these objects is that they can be connected to a local network.  Here is an Ethernet enabled Audio Platform acting as a *T41 Bedside Companion*, connected to a local network in my bedroom.  The T41, with a test signal, is at my workbench connected to the local network there. The four encoders serve the same purpose as on the T41. Most other options are available with the attached mouse.  Actions on this unit are duplicated on the T41 and visa-versa. I haven't worked out TX on this yet, but it should be possible.
 
-![displayILI9341](https://github.com/tmr4/T41_Vxx/blob/inout_ether/images/T41_AP_Bedside.png)
+![Desktop Companion](https://github.com/tmr4/T41_Vxx/blob/main/images/T41_AP_Bedside.png)
 
 
 ### Global Working Variables to Properties

@@ -1,3 +1,5 @@
+#pragma once
+
 //=================== Excite Coefficients ============
 
 // 48 Tap Kaiser filters Dec and Interpolation
