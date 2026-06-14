@@ -18,7 +18,7 @@ Communication and Support Classes:
  * CatControl - processes CAT commands
  * RemoteRadio - provides the specific CAT commands for the T41 remote and WSJT-X operation
  * ConnectManager - manages the state of the connection between the T41 and remote
- * ConnectBase - provides generic connection methods; the Audio USB classes derive from this class.
+ * ConnectBase - provides generic connection methods; the Audio classes derive from this class
  * USBManager - contains the global USBHost and USBHub objects
  * TCPServer - manages Ethernet TCP connection; member of AudioOutputEthernet
  * TCPClient - manages Ethernet TCP connection; member of AudioInputEthernet
@@ -35,7 +35,7 @@ The following classes stream IQ data and support the CAT connection between the 
                             USB or Ethernet
                        T41 <---------------> Remote
 CatControl <-> AudioOutput <- CAT command -> AudioInput <-> CatControl
-i2s_quadIn <-> AudioOutput <--- IQ data ---> AudioInput <-> Q_in_L and Q_in_R
+i2s_quadIn --> AudioOutput ---- IQ data ---> AudioInput --> Q_in_L and Q_in_R
                        T41 <---------------> Remote
 ```
 
