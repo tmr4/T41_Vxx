@@ -166,12 +166,10 @@ RADIO_ROLE = 7, Serial + Midi + Audio
  EXTRAM: variables:1200320
 
 RADIO_ROLE = 7, Serial + Midi + Audio, T41_WSJT_CAT_AUDIO = true, useWSJT = true
-  FLASH: code:277488, data:93684, headers:8728   free for files:7746564
-   RAM1: variables:138880, code:233736, padding:28408   free for local variables:123264
+  FLASH: code:276672, data:93596, headers:8608   free for files:7747588
+   RAM1: variables:138976, code:233032, padding:29112   free for local variables:123168
    RAM2: variables:345408  free for malloc/new:178880
  EXTRAM: variables:1200320
 
-
-WSJT-X comms error
 
 */

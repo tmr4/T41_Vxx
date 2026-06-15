@@ -65,9 +65,10 @@ private:
   const int HEARTBEAT_COUNT = 2;
 
 public:
-  void begin(CatControl *control, ConnectBase* ethernet, ConnectBase* usb) {
-    if(control && ethernet && usb) {
-      catControl = control;
+
+  void begin(CatControl* cat, ConnectBase* ethernet, ConnectBase* usb) {
+    if(cat && ethernet && usb) {
+      catControl = cat;
       ethernetConnection = ethernet;
       usbConnection = usb;
       enabled = true;

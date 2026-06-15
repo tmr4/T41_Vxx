@@ -6,7 +6,7 @@
 #include "hardware.h"
 #include "Utility.h"
 
-#include "remoteRadio.h"
+#include "catControl.h"
 #include "connectManager.h"
 
 #include "debug.h"
@@ -15,9 +15,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern ConnectManager transport;
-extern RemoteRadio remoteRadio;
-//RemoteRadio remoteRadio(&catCommands, &wsjtCommands);
+extern ConnectManager connectManager;
 extern T41Properties t41;
 
 //-------------------------------------------------------------------------------------------------------------
@@ -25,20 +23,20 @@ extern T41Properties t41;
 //-------------------------------------------------------------------------------------------------------------
 
 void SendCommand(int id) {
-  //remoteRadio.notifyRemote(id);
+  //catControl.notifyRemote(id);
 }
 
 // get read CAT command value or otherwise perform non-standard action on a read command
 // *** TODO: got to be a better way ***
-int CatControl::GetPropertyValue(int token, bool fromWSJT /* = false */) {
+int CatControl::GetPropertyValue(int token) {
   int value = 0;
   int vfo, freq;
 
   switch(token) {
     case "AI"_cat: // WSJT-X
       snprintf(msg, sizeof(msg), "AI0;"); // Auto info off
-      send(msg, fromWSJT);
-      wsjtCallbackHandled = true;
+      send(msg);
+      callbackHandled = true;
       break;
     // *** BD/BU aren't standard but send actual band index ***
     case "BD"_cat:
@@ -70,8 +68,8 @@ int CatControl::GetPropertyValue(int token, bool fromWSJT /* = false */) {
       break;
     case "FT"_cat: // WSJT-X
       snprintf(msg, sizeof(msg), "FT0;"); // T41 always responds transmit on VFO A
-      send(msg, fromWSJT);
-      wsjtCallbackHandled = true;
+      send(msg);
+      callbackHandled = true;
       break;
     case "GT"_cat:
       value = t41.AGCMode;
@@ -82,7 +80,7 @@ int CatControl::GetPropertyValue(int token, bool fromWSJT /* = false */) {
         // Kenwood TS-2000: ID019;
         value = 24;
       } else {
-        if(transport.isRemote()) heartbeat = millis(); // note time for heartbeat
+        if(connectManager.isRemote()) heartbeat = millis(); // note time for heartbeat
         value = t41.RadioID;
       }
       break;
@@ -156,8 +154,8 @@ int CatControl::GetPropertyValue(int token, bool fromWSJT /* = false */) {
           //splitVFO ? 1 : 0,             // VFO split status (%d) at index xx
         );
       }
-      send(msg, fromWSJT);
-      wsjtCallbackHandled = true;
+      send(msg);
+      callbackHandled = true;
       break;
     case "KS"_cat:
       value = DEFAULT_KEYER_WPM;
@@ -190,11 +188,11 @@ int CatControl::GetPropertyValue(int token, bool fromWSJT /* = false */) {
       value = t41.RFGain;
       break;
     case "SF"_cat: // WSJT-X
-      vfo = atoi(&wsjtCmd[2]);
+      vfo = atoi(&cmd[2]);
       freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
       snprintf(msg, sizeof(msg), "SF%d%011d%d;", vfo, freq, 2);
-      send(msg, fromWSJT);
-      wsjtCallbackHandled = true;
+      send(msg);
+      callbackHandled = true;
       break;
     case "SM"_cat:
       value = (int)CalcSignalStrength()*10;

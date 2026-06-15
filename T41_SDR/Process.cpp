@@ -27,7 +27,7 @@
 
 #include "debug.h"
 
-#include "remoteRadio.h"
+#include "catControl.h"
 #include "USBManager.h"
 #include "connectManager.h"
 
@@ -36,9 +36,10 @@
 //-------------------------------------------------------------------------------------------------------------
 
 #if RADIO_ROLE > 0
-extern ConnectManager transport;
+extern ConnectManager connectManager;
 #endif
-extern RemoteRadio remoteRadio;
+extern CatControl catControl;
+extern CatControl wsjtControl;
 
 // *** TODO: this is display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
@@ -1311,8 +1312,11 @@ FASTRUN void ProcessControls() {
   UpdateClock();
   UpdateMemTempLoad();
 
-  transport.update();
-  remoteRadio.update();
+  connectManager.update();
+  catControl.update();
+#if T41_WSJT_CAT_AUDIO
+  wsjtControl.update();
+#endif
 }
 
 #include <lwip/stats.h>

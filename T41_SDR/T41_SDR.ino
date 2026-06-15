@@ -49,7 +49,7 @@
 //#include "fir_cmsis_5k.h"
 //#include "fir_alt.h"
 
-#include "remoteRadio.h"
+#include "catControl.h"
 #include "telemetry.h"
 #include "USBManager.h"
 #include "connectManager.h"
@@ -58,12 +58,13 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern RemoteRadio remoteRadio;
+extern CatControl catControl;
+extern CatControl wsjtControl;
 
 #if RADIO_ROLE == 7
-ConnectManager transport;
+ConnectManager connectManager;
 #elif RADIO_ROLE == 6
-ConnectManager transport(DEVICE_ROLE_REMOTE);
+ConnectManager connectManager(DEVICE_ROLE_REMOTE);
 #endif
 
 extern bool beaconFlag;
@@ -301,7 +302,12 @@ FLASHMEM void setup() {
   //T41BeaconSetup();
 
 #if RADIO_ROLE > 0
-  transport.begin(&remoteRadio, &iqStreamEthernet, &iqStreamUSB);
+#if T41_WSJT_CAT_AUDIO
+  connectManager.begin(&catControl, &iqStreamEthernet, &iqStreamUSB);
+#else
+  connectManager.begin(&catControl, &iqStreamEthernet, &iqStreamUSB);
+#endif
+
 #endif
 
   KeyerSetup(); // testing only
@@ -530,7 +536,9 @@ FASTRUN void loop() {
         switch(t41.DemodMode) {
           case DEMOD_FT8:
               PrepareMicExciterData();
-              remoteRadio.update(); // update ft8PTT
+              #if T41_WSJT_CAT_AUDIO
+              wsjtControl.update(); // update ft8PTT
+              #endif
             break;
 
           case DEMOD_FT8_INTERNAL:

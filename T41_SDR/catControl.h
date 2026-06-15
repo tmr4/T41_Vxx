@@ -24,33 +24,32 @@ struct CATAction {
 struct CATCommand {
   const uint16_t token;
   const char* const format;       // answer format
-  //const CATAction* action;
   const CATAction* const action;
   const uint8_t lenR; // read/set command length
   const uint8_t lenS;
 };
 
 // macro to create the methods needed get the CAT command table into PROGMEM
-// *** use of __attribute__((section(".progmem.data") vs PROGMEM resolves MethodName##_Wrapper
+// *** use of __attribute__((section(".progmem.data") vs PROGMEM resolves FunctionName##_Wrapper
 //     section type conflict with catCommands set as PROGMEM or can use PROGMEM here and use
 //     __attribute__((section(".progmem.data") on catCommands ***
-#define DEFINE_CAT_COMMAND(ClassName, MethodName, Token, FormatStr, ReadLen, SetLen) \
+#define DEFINE_CAT_COMMAND(FunctionName, Token, SetFormatStr, ReadLen, SetLen) \
   /* 1. Flash string: fmt_cat_FA */ \
-  static inline const char fmt_##MethodName[] PROGMEM = FormatStr; \
+  static inline const char fmt_##FunctionName[] PROGMEM = SetFormatStr; \
   \
   /* 2. Wrapper: Action_cat_FA */ \
-  struct Action_##MethodName : public CATAction { \
-    void execute(CatControl* parentPtr, const char* cmd) const override { \
-      static_cast<ClassName*>(parentPtr)->MethodName(cmd); \
+  struct Action_##FunctionName : public CATAction { \
+    void execute(CatControl* instance, const char* cmd) const override { \
+      FunctionName(instance, cmd); \
     } \
   }; \
-  static inline const Action_##MethodName MethodName##_Wrapper PROGMEM = {}; \
+  static inline const Action_##FunctionName FunctionName##_Wrapper PROGMEM = {}; \
   \
   /* 3. Flash Struct: cat_FA_cmd */ \
-  static inline const CATCommand MethodName##_cmd PROGMEM = { \
+  static inline const CATCommand FunctionName##_cmd PROGMEM = { \
       Token, \
-      fmt_##MethodName, \
-      &MethodName##_Wrapper, \
+      fmt_##FunctionName, \
+      &FunctionName##_Wrapper, \
       ReadLen, \
       SetLen \
   }
@@ -185,7 +184,7 @@ inline uint8_t CatToken2Hash(uint16_t token) {
 
 CatControl creates the framework for CAT control support. It provides the following public methods:
 
-  setStream: sets a pointer to the Stream derived communication object
+  getStream: sets a pointer to the Stream derived communication object
 
   update: checks for and processes available CAT commands according to command table provided by child class (see radio.h)
           *** update must be called frequently to check for available commands         ***
@@ -198,33 +197,22 @@ CatControl creates the framework for CAT control support. It provides the follow
 
 */
 
-// *** TODO: instead of this combined class, consider having two instances of a slimmed down class,
-//     one for remote comms, one for WSJT ***
 class CatControl {
 private:
   const CATCommand* const *catCommands;
-  const CATCommand* const *wsjtCommands;
 
   static constexpr uint8_t maxCmd = 255;
   static constexpr uint8_t maxMsg = 50; // should be enough to respond to IF;
   static constexpr uint8_t timeout = 250;
 
 public:
-  CatControl(const CATCommand* const *cmds) : catCommands(cmds), wsjtCommands(nullptr), useWSJT(false) {}
-  CatControl(const CATCommand* const *cat, const CATCommand* const *wsjt) : catCommands(cat), wsjtCommands(wsjt), useWSJT(true) {}
+  CatControl(const CATCommand* const *cmds) : catCommands(cmds), useWSJT(false) {}
+  CatControl(const CATCommand* const *cmds, Stream* s) : catCommands(cmds), enabled(true), stream(s), useWSJT(true) {}
   virtual ~CatControl() {}
 
-  void begin() {
-    if(!catCommands || (useWSJT && !wsjtCommands)) {
-      enabled = false;
-    } else {
-      enabled = true;
-    }
-  }
+  void begin() { enabled = true; }
 	void end() { enabled = false; }
 
-  //void setStream(Stream& s) { stream = &s; }
-  //void setStream(Stream* s) { stream = s; }
   void setConnectBase(ConnectBase* cb, bool rt = false) {
     connectBase = cb;
     runTask = rt;
@@ -233,12 +221,27 @@ public:
 
   void update() {
     if(enabled) {
-      // handle remote comms
-      setStream();
-      if(stream) updateStream();
+      getStream();
+      if(!stream) return;
 
-      // handle WSJT-X comms
-      if(useWSJT) updateWSJT();
+      // timeout
+      if(idx > 0 && (millis() - lastCharTime > timeout)) idx = 0;
+
+      while(stream->available()) {
+        char c = stream->read();
+        lastCharTime = millis();
+
+        if(c == ';') {
+          cmd[idx++] = ';';
+          cmd[idx] = '\0';
+          processCommand(cmd);
+          idx = 0;
+        } else if(idx < maxCmd - 1) { // leave room for ';' and '\0'
+          cmd[idx++] = c;
+        } else {
+          idx = 0;
+        }
+      }
     }
   }
 
@@ -257,17 +260,17 @@ public:
   }
 
   unsigned long getHeartbeat() { return heartbeat; }
+  void setHeartbeat(unsigned long hb) { heartbeat = hb; }
+  bool isWSJT() { return useWSJT; }
 
-  void send(const char *msg, bool fromWSJT = false) {
+  virtual void ackIdReceipt() {}
+
+  void send(const char *msg) {
     if(enabled) {
       //Serial.printf("Sent: %s\n", msg);
-      if(fromWSJT) {
-        Serial.print(msg);
-      } else {
-        setStream();
-        if(stream && stream->availableForWrite() > 50) {
-          stream->print(msg);
-        }
+      getStream();
+      if(stream && stream->availableForWrite() > 50) {
+        stream->print(msg);
       }
     }
   }
@@ -279,18 +282,17 @@ protected:
   Stream* stream = nullptr;
   bool runTask = false;
 
-  char streamCmd[maxCmd + 1]; // leave room for terminating null
-  char wsjtCmd[maxCmd + 1]; // leave room for terminating null
+  char cmd[maxCmd + 1]; // leave room for terminating null
   char msg[maxMsg + 1]; // leave room for terminating null
-  uint8_t streamIdx = 0;
-  uint8_t wsjtIdx = 0;
-  unsigned long streamLastCharTime = 0;
-  unsigned long wsjtLastCharTime = 0;
+  uint8_t idx = 0;
+  unsigned long lastCharTime = 0;
   bool useWSJT = false;
-  bool wsjtCallbackHandled = false;
+  bool callbackHandled = false;
 
-  void setStream() {
-    if(connectBase && connectBase->connected()) {
+  void getStream() {
+    if(useWSJT) {
+      return;
+    } else if(connectBase && connectBase->connected()) {
       if(runTask) USBManager::getHost().Task();
       stream = connectBase->getCommandStream();
     } else {
@@ -298,78 +300,25 @@ protected:
     }
   }
 
-  // *** could combine these next two, but the savings is small and readability decreases ***
-  void updateStream() {
-    if(enabled) {
-      if(!stream) return;
-
-      // timeout
-      if(streamIdx > 0 && (millis() - streamLastCharTime > timeout)) streamIdx = 0;
-
-      while(stream->available()) {
-        char c = stream->read();
-        streamLastCharTime = millis();
-
-        if(c == ';') {
-          streamCmd[streamIdx++] = ';';
-          streamCmd[streamIdx] = '\0';
-          processCommand(streamCmd);
-          streamIdx = 0;
-        } else if(streamIdx < maxCmd - 1) { // leave room for ';' and '\0'
-          streamCmd[streamIdx++] = c;
-        } else {
-          streamIdx = 0;
-        }
-      }
-    }
-  }
-
-  void updateWSJT() {
-    if(enabled) {
-      // timeout
-      if(wsjtIdx > 0 && (millis() - wsjtLastCharTime > timeout)) wsjtIdx = 0;
-
-      while(Serial.available()) {
-        char c = Serial.read();
-        wsjtLastCharTime = millis();
-
-        if(c == ';') {
-          wsjtCmd[wsjtIdx++] = ';';
-          wsjtCmd[wsjtIdx] = '\0';
-          processCommand(wsjtCmd, true);
-          wsjtIdx = 0;
-        } else if(wsjtIdx < maxCmd - 1) { // leave room for ';' and '\0'
-          wsjtCmd[wsjtIdx++] = c;
-        } else {
-          wsjtIdx = 0;
-        }
-      }
-    }
-  }
-
-  void processCommand(const char* cmd, bool fromWSJT = false) {
+  void processCommand(const char* cmd) {
     if(enabled) {
       // convert the 2 character command code into its CAT table index
       uint8_t catHash = CatToken2Hash((uint16_t)((cmd[0] << 8) | cmd[1]));
       const CATCommand* item;
       int value = 0;
 
-      if(fromWSJT) {
-        item = catHash >= 128 ? nullptr : wsjtCommands[catHash];
-      } else {
-        item = catHash >= 128 ? nullptr : catCommands[catHash];
-      }
+      item = catHash >= 128 ? nullptr : catCommands[catHash];
 
       if(item) {
         // CAT command found
         if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
           //Serial.printf("Received read: %s\n", cmd);
           // read command properly formed
-          wsjtCallbackHandled = false;
-          value = GetPropertyValue(item->token, fromWSJT);
-          if(!wsjtCallbackHandled) {
+          callbackHandled = false;
+          value = GetPropertyValue(item->token);
+          if(!callbackHandled) {
             snprintf(msg, sizeof(msg), item->format, value);
-            send(msg, fromWSJT);
+            send(msg);
           }
         } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
           //Serial.printf("Received set: %s\n", cmd);
@@ -387,7 +336,7 @@ protected:
     }
   }
 
-  int GetPropertyValue(int token, bool fromWSJT = false);
+  int GetPropertyValue(int token);
 
 protected:
   unsigned long heartbeat = 0;

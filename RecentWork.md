@@ -15,8 +15,7 @@ The only way I could solve the problem was modifying the USBHost library. I docu
 As part of my remote unit work, I've restructured all of the code involved in T41 remote communications. Here is a brief overview of the new classes involved.
 
 Communication and Support Classes:
- * CatControl - processes CAT commands
- * RemoteRadio - provides the specific CAT commands for the T41 remote and WSJT-X operation
+ * CatControl - processes CAT commands (the file remoteRadio.cpp - provides the specific CAT commands for the T41 remote and WSJT-X operation)
  * ConnectManager - manages the state of the connection between the T41 and remote
  * ConnectBase - provides generic connection methods; the Audio classes derive from this class
  * USBManager - contains the global USBHost and USBHub objects
