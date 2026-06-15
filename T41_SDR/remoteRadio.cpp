@@ -29,19 +29,23 @@ extern bool ft8PTT;
 // Generic CAT commands - PC or remote unit control commands
 //-------------------------------------------------------------------------------------------------------------
 
-// *** comments below show both read/set command structure,
-//     but these functions only cover set commands ***
+// *********************************************************
+//     comments below show both read/set command structure,
+//     but these function bodies only cover set commands
+// *********************************************************
 
 // read/set band down
 // "BD;" (length 3) or "BDx;" (length 4)
 void RemoteRadio::cat_BD(const char* cmd) {
-  ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
+  //ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
+  ChangeBand(atoi(&cmd[2]), false);
 }
 
 // read/set band up
 // "BU;" (length 3) or "BUx;" (length 4)
 void RemoteRadio::cat_BU(const char* cmd) {
-  ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
+  //ChangeBand(t41.ActiveBand - atoi(&cmd[2]), false);
+  ChangeBand(atoi(&cmd[2]), false);
 }
 
 // set data start
@@ -353,15 +357,16 @@ void RemoteRadio::wsjt_AI(const char* cmd) {}
 // "FA;" (length 3) or "FAxxxxxxxxxxx;" (length 14)
 void RemoteRadio::wsjt_FA(const char* cmd) {
   long f = atol(&cmd[2]);
-  //ChangeBand(f);
+  ChangeBand(f);
   t41.SetFreqA(f);
+  //notifyRemote("FA"_cat);
 }
 
 // read/set VFO B frequency
 // "FB;" (length 3) or "FBxxxxxxxxxxx;" (length 14)
 void RemoteRadio::wsjt_FB(const char* cmd) {
   long f = atol(&cmd[2]);
-  //ChangeBand(f);
+  ChangeBand(f);
   t41.SetFreqB(f);
 }
 

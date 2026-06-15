@@ -23,11 +23,11 @@ Properties that replaced old global variables:
     AudioVolume
     FilterHiCut
     FilterLoCut
+    ActiveBand;
 
   // the following properties don't provide any notifications
     // these are mainly used to keep track of the VFO frequencies
     ActiveVFO
-    ActiveBand;
     InactiveFreq;
     InactiveBand;
 

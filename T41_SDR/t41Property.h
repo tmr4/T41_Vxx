@@ -41,7 +41,7 @@ public:
   // polled properties
   Property<int> RadioMode{SSB_MODE, "ME"_cat};
   Property<int> DemodMode{DEMOD_LSB, "MD"_cat};
-  Property<int> ActiveBand{BAND_40M};
+  Property<int> ActiveBand{BAND_40M, "BD"_cat};
   Property<int> TxPower{DEFAULT_POWER_LEVEL, "PC"_cat};
 
   Property<int> CenterFreq{CURRENT_FREQ_A, "FC"_cat};

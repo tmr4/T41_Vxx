@@ -101,7 +101,7 @@ typedef __uint8_t uint8_t;
 #define T41_ITEM_NOISE        25 // "NF"_cat // NoiseFloor
 #define T41_ITEM_RADIO_MODE   26 // "ME"_cat
 #define T41_ITEM_DEMOD_MODE   27 // "MD"_cat
-#define T41_ITEM_BAND         28 // "BD"_cat // ActiveBand
+#define T41_ITEM_BAND         28 // "BD"_cat // ActiveBand *** uses BD code to send active band index ***
 #define T41_ITEM_POWER        29 // "PC"_cat // TxPower
 #define T41_ITEM_FREQ         30 // "FC"_cat // CenterFreq
 #define T41_ITEM_NCO          31 // "FF"_cat // NCOFreq

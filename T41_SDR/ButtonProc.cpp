@@ -52,7 +52,13 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
 
   PreChangeBandHardware();
 
-  // *** SSB/data demolation mode are unchanged across band changes ***
+  if(notify) {
+    t41.ActiveBand += change;
+  } else {
+    t41.ActiveBand.Update(change);
+  }
+
+  // *** data demolation mode is unchanged across band changes ***
   if((t41.RadioMode == SSB_MODE) || (t41.RadioMode == CW_MODE)) {
     t41.DemodMode = ValidateDemodMode(-1);
   }
@@ -64,12 +70,6 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
     t41.CenterFreq.Update(lastFrequencies[t41.ActiveBand][vfo]);
   }
   t41.NCOFreq.Update(0);
-
-  if(notify) {
-    t41.ActiveBand += change;
-  } else {
-    t41.ActiveBand.Update(from + change);
-  }
 
   // save band info if not calibrating
   // *** TODO: calibrate check from v12, validate for v11 calibration routines
@@ -106,7 +106,7 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
   PostChangeBandHardware();
 }
 
-/*
+
 // make a band change if needed due to a frequency change
 FLASHMEM void ChangeBand(long newFreq) {
   int newBand = BAND_80M;
@@ -123,7 +123,7 @@ FLASHMEM void ChangeBand(long newFreq) {
     ChangeBand(newBand - t41.ActiveBand);
   }
 }
-*/
+
 
 /*****
   Purpose: Toggle which filter is adjusted by filter encoder

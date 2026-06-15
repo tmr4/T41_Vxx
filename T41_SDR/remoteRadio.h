@@ -82,8 +82,8 @@ private:
 
 public:
   // command table construction helpers
-  DEFINE_CAT_COMMAND(RemoteRadio, cat_BD, "BD"_cat, "",          3,  4);
-  DEFINE_CAT_COMMAND(RemoteRadio, cat_BU, "BU"_cat, "",          3,  4);
+  DEFINE_CAT_COMMAND(RemoteRadio, cat_BD, "BD"_cat, "BD%d;",     3,  4);
+  DEFINE_CAT_COMMAND(RemoteRadio, cat_BU, "BU"_cat, "BU%d;",     3,  4);
   DEFINE_CAT_COMMAND(RemoteRadio, cat_DP, "DP"_cat, "",          0,  3);
   DEFINE_CAT_COMMAND(RemoteRadio, cat_DS, "DS"_cat, "",          0,  3);
   DEFINE_CAT_COMMAND(RemoteRadio, cat_FA, "FA"_cat, "FA%011d;",  3, 14);

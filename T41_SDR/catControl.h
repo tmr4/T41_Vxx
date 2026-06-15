@@ -251,6 +251,7 @@ public:
       // convert token into CAT command
       cmd[0] = static_cast<char>(((uint16_t)token & 0xFF00) >> 8);
       cmd[1] = static_cast<char>((uint16_t)token & 0xFF);
+      //Serial.printf("Notify remote: %s\n", cmd);
       processCommand(cmd);
     }
   }
@@ -259,6 +260,7 @@ public:
 
   void send(const char *msg, bool fromWSJT = false) {
     if(enabled) {
+      //Serial.printf("Sent: %s\n", msg);
       if(fromWSJT) {
         Serial.print(msg);
       } else {
@@ -361,7 +363,7 @@ protected:
       if(item) {
         // CAT command found
         if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
-          //Serial.println(cmd);
+          //Serial.printf("Received read: %s\n", cmd);
           // read command properly formed
           wsjtCallbackHandled = false;
           value = GetPropertyValue(item->token, fromWSJT);
@@ -370,7 +372,7 @@ protected:
             send(msg, fromWSJT);
           }
         } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
-          //Serial.println(cmd);
+          //Serial.printf("Received set: %s\n", cmd);
           // set command properly formed
           item->action->execute(this, cmd);
         } else {

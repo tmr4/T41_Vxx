@@ -73,7 +73,7 @@ protected:
 
 public:
   using ReadOnlyProperty<T>::value;
-  //using ReadOnlyProperty<T>::operator T; // *** this isn't useful, see below ***
+  using ReadOnlyProperty<T>::operator T; // *** this isn't useful, see below ***
 
   Property(T val) : ReadOnlyProperty<T>(val) {}
   Property(T val, uint16_t token) : ReadOnlyProperty<T>(val, token) {}
@@ -104,10 +104,12 @@ public:
     if(override) {
       Notify();
     } else if((hasChanged && notifyOnPoll)) {
+      //Serial.printf("Both update: id: %d, value: %d, display: %d, remote: %d\n", id, value, updateDisplay, updateRemote);
       if(updateDisplay) UpdateDisplay();
       if(updateRemote) UpdateRemote();
     } else if(updated) {
       if(updateDisplay) UpdateDisplay();
+      //Serial.printf("Display update: id: %d, value: %d, display: %d\n", id, value, updateDisplay);
     }
 
     updated = false;
@@ -122,7 +124,7 @@ public:
   }
 
   //operator T() { return this->value; } // *** compiler complains w/o this, even though it's in the base class ***
-  operator T() { return value; }
+  //operator T() { return value; }
   const T& operator=(const T& val) { return set(val); }
   const T& operator+=(const T& val) { return set(value + val); }
   const T& operator-=(const T& val) { return set(value - val); }
@@ -193,12 +195,14 @@ private:
         }
       }
     }
-    if(tmp != val) {
+    if(tmp != value) {
       hasChanged = true;
       if(!notifyOnPoll) {
         Notify();
       }
+      //Serial.printf("id: %d, value: %d, tmp: %d, hasChanged: %d\n", id, value, tmp, hasChanged);
     }
+
     return value;
   }
 

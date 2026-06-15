@@ -40,13 +40,12 @@ int CatControl::GetPropertyValue(int token, bool fromWSJT /* = false */) {
       send(msg, fromWSJT);
       wsjtCallbackHandled = true;
       break;
+    // *** BD/BU aren't standard but send actual band index ***
     case "BD"_cat:
-      ChangeBand(-1);
-      // SendAS(); // PC control specific ???
+      value = t41.ActiveBand;
       break;
     case "BU"_cat:
-      ChangeBand(1);
-      // SendAS(); // PC control specific ???
+      value = t41.ActiveBand;
       break;
     case "FA"_cat:
       value = t41.GetFreqA();
