@@ -22,13 +22,51 @@ extern T41Properties t41;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+void CatControl::processCommand(const char* cmd) {
+  if(enabled) {
+    // convert the 2 character command code into its CAT table index
+    uint8_t catHash = CatToken2Hash((uint16_t)((cmd[0] << 8) | cmd[1]));
+    const CATCommand* item;
+
+    item = catHash >= 128 ? nullptr : catCommands[catHash];
+
+    if(item) {
+      // CAT command found
+      if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
+        //Serial.printf("Received read: %s\n", cmd);
+        // read command properly formed
+        uint16_t index = item->readPropertyIndex;
+        int value = t41.getPropValue(index);
+
+        if(value == -999) {
+          HandleNonstandardProperty(item);
+        } else {
+          snprintf(msg, sizeof(msg), item->format, value);
+          send(msg);
+        }
+      } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
+        //Serial.printf("Received set: %s\n", cmd);
+        // set command properly formed
+        item->action->execute(this, cmd);
+      } else {
+        // command not properly formed
+        // *** TODO: consider sending followup if command not properly formed
+        return;
+      }
+    } else {
+      // *** TODO: consider sending ?; if command not recognized
+      //Serial.printf("bad item: %s, %d\n", cmd, catHash);
+    }
+  }
+}
+
 void SendCommand(int id) {
   //catControl.notifyRemote(id);
 }
 
-// get value for answer CAT command or otherwise perform non-standard action on a read command
-// *** TODO: got to be a better way ***
-int CatControl::GetPropertyValue(int token) {
+// handle answer CAT command for undefined properties nonstandard answer formats
+void CatControl::HandleNonstandardProperty(const CATCommand* item) {
+  uint16_t token = item->token;
   int value = 0;
   int vfo, freq;
 
@@ -36,39 +74,14 @@ int CatControl::GetPropertyValue(int token) {
     case "AI"_cat: // WSJT-X
       value = 0; // Auto info off
       break;
-    // *** BD/BU aren't standard but send actual band index ***
-    case "BD"_cat:
-      value = t41.ActiveBand;
-      break;
-    case "BU"_cat:
-      value = t41.ActiveBand;
-      break;
     case "FA"_cat:
       value = t41.GetFreqA();
       break;
     case "FB"_cat:
       value = t41.GetFreqB();
       break;
-    case "FC"_cat:
-      value = t41.CenterFreq;
-      break;
-    case "FF"_cat:
-      value = t41.NCOFreq;
-      break;
-    case "FS"_cat:
-      value = !t41.MouseCenterTuneActive;
-      break;
-    case "F0"_cat:
-      value = t41.CenterTuneIndex;
-      break;
-    case "F1"_cat:
-      value = t41.FineTuneIndex;
-      break;
     case "FT"_cat: // WSJT-X
       value = 0; // T41 always responds transmit on VFO A
-      break;
-    case "GT"_cat:
-      value = t41.AGCMode;
       break;
     case "ID"_cat:
       if(useWSJT) {
@@ -151,54 +164,22 @@ int CatControl::GetPropertyValue(int token) {
         );
       }
       send(msg);
-      callbackHandled = true;
+      return;
       break;
     case "KS"_cat:
       value = DEFAULT_KEYER_WPM;
       break;
-    case "MD"_cat:
-      value = t41.DemodMode;
-      break;
-    case "ME"_cat:
-      value = t41.RadioMode;
-      break;
-    case "NF"_cat:
-      value = t41.NoiseFloor;
-      break;
-    case "NG"_cat:
-      value = t41.LiveNoiseFloor;
-      break;
-    case "NH"_cat:
-      value = t41.FilterHiCut;
-      break;
-    case "NL"_cat:
-      value = t41.FilterLoCut;
-      break;
-    case "N1"_cat:
-      value = t41.NoiseFilter;
-      break;
-    case "PC"_cat:
-      value = t41.TxPower;
-      break;
-    case "PG"_cat:
-      value = t41.RFGain;
-      break;
     case "SF"_cat: // WSJT-X
       vfo = atoi(&cmd[2]);
       freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
-      snprintf(msg, sizeof(msg), "SF%d%011d%d;", vfo, freq, 2);
+      snprintf(msg, sizeof(msg), item->format, vfo, freq, 2);
       send(msg);
-      callbackHandled = true;
+      return;
       break;
     case "SM"_cat:
       value = (int)CalcSignalStrength()*10;
       break;
-    case "VO"_cat:
-      value = t41.AudioVolume;
-      break;
-    case "ZM"_cat:
-      value = t41.SpectrumZoom;
-      break;
   }
-  return value;
+  snprintf(msg, sizeof(msg), item->format, value);
+  send(msg);
 }

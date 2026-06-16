@@ -65,6 +65,44 @@ void NotifyPropertyChanged(T val) {
 
 T41Properties::T41Properties() {
   T41Update::SetUpdateFunctions<CatControl, &CatControl::notifyRemote>(UpdateInfoBoxItem, &catControl);
+
+  prop[T41_ITEM_VOL       ] = &AudioVolume;
+  prop[T41_ITEM_AGC       ] = &AGCMode;
+  prop[T41_ITEM_TUNE      ] = &CenterTuneIndex;
+  prop[T41_ITEM_FINE      ] = &FineTuneIndex;
+  prop[T41_ITEM_ZOOM      ] = &SpectrumZoom;
+  prop[T41_ITEM_FLOOR     ] = &LiveNoiseFloor;
+  prop[T41_ITEM_NOTCH     ] = &AutoNotch;
+  prop[T41_ITEM_FILTER    ] = &NoiseFilter;
+  prop[T41_ITEM_COMPRESS  ] = &Compressor;
+  prop[T41_ITEM_RFGAIN    ] = &RFGain;
+  prop[T41_ITEM_EQUALIZER ] = &RxEqualizer;
+  prop[T41_ITEM_DECODER   ] = &CWDecoder;
+  prop[T41_ITEM_KEY       ] = &KeyType;
+  prop[T41_ITEM_KEYER     ] = nullptr;
+  prop[T41_ITEM_FT8       ] = nullptr;
+  prop[T41_ITEM_FT8_INT   ] = nullptr;
+  prop[T41_ITEM_FT8_TX    ] = nullptr;
+  prop[T41_ITEM_FT8_CQ    ] = nullptr;
+  prop[T41_ITEM_FT8_TXF   ] = nullptr;
+  prop[T41_ITEM_FT8_RXF   ] = nullptr;
+  prop[T41_ITEM_STACK     ] = nullptr;
+  prop[T41_ITEM_HEAP      ] = nullptr;
+  prop[T41_ITEM_TEMP      ] = nullptr;
+  prop[T41_ITEM_LOAD      ] = nullptr;
+  prop[T41_ITEM_MOUSE     ] = &MouseCenterTuneActive;
+  prop[T41_ITEM_NOISE     ] = &NoiseFloor;
+  prop[T41_ITEM_RADIO_MODE] = &RadioMode;
+  prop[T41_ITEM_DEMOD_MODE] = &DemodMode;
+  prop[T41_ITEM_BAND      ] = &ActiveBand;
+  prop[T41_ITEM_POWER     ] = &TxPower;
+  prop[T41_ITEM_FREQ      ] = &CenterFreq;
+  prop[T41_ITEM_NCO       ] = &NCOFreq;
+  prop[T41_ITEM_FHI       ] = &FilterHiCut;
+  prop[T41_ITEM_FLO       ] = &FilterLoCut;
+  prop[T41_ITEM_SCALE     ] = &FreqSpecScale;
+  prop[T41_ITEM_CW_FILTER ] = &CWFilterIndex;
+  prop[T41_ITEM_CW_DECODER] = nullptr;
 }
 
 void T41Properties::SetPropertyDefaults() {

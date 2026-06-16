@@ -10,11 +10,11 @@ class T41Update {
 public:
   T41Update(uint16_t token) : catToken(token), catHash(CatToken2Hash(token)) {}
 
-  uint16_t getCatToken() const { return catToken; }
-  uint8_t getCatHash() const { return catHash; }
+  //uint16_t getCatToken() const { return catToken; }
+  //uint8_t getCatHash() const { return catHash; }
 
-  virtual void setFromCAT(uint32_t newValue) = 0;
-  virtual uint32_t getForCAT() = 0;
+  //virtual void setValue(uint32_t newValue) = 0;
+  virtual int getValue() = 0;
 
   // *** TODO: revisit when infobox is modernized ***
   template<class T, void (T::*Method)(int)>
@@ -29,14 +29,14 @@ public:
       (obj->*Method)(val);
     };
   }
-/*
-future consideration:
-template<class T, void (T::*Method)(int)>
-static void AddUpdateFunction(int slot, T* instance) {
-    static T* obj = instance;
-    _callbacks[slot] = [](int val) { (obj->*Method)(val); };
-}
-*/
+  /*
+  future consideration:
+  template<class T, void (T::*Method)(int)>
+  static void AddUpdateFunction(int slot, T* instance) {
+      static T* obj = instance;
+      _callbacks[slot] = [](int val) { (obj->*Method)(val); };
+  }
+  */
 
 protected:
   static inline UpdateCallback infoboxCallback = nullptr;
@@ -54,8 +54,8 @@ public:
 
   operator T() { return value; }
 
-  void setFromCAT(uint32_t newValue) override { }
-  uint32_t getForCAT() override { return (uint32_t)value; }
+  //void setValue(uint32_t newValue) override { }
+  int getValue() override { return (int)value; }
 
 protected:
   T value;
@@ -210,5 +210,5 @@ private:
   BoundPtr bPtrInt = nullptr;
 
 public:
-  void setFromCAT(uint32_t newValue) override { Update((T)newValue); }
+  //void setValue(uint32_t newValue) override { Update((T)newValue); }
 };

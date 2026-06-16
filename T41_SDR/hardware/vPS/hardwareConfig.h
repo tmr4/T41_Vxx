@@ -171,5 +171,12 @@ RADIO_ROLE = 7, Serial + Midi + Audio, T41_WSJT_CAT_AUDIO = true, useWSJT = true
    RAM2: variables:345408  free for malloc/new:178880
  EXTRAM: variables:1200320
 
+RADIO_ROLE = 7, Serial + Midi + Audio, T41_WSJT_CAT_AUDIO = true, useWSJT = true
+added t41 properties table, eliminated their GetPropertyValue case
+  FLASH: code:276352, data:93748, headers:8776   free for files:7747588
+   RAM1: variables:139104, code:232712, padding:29432   free for local variables:123040
+   RAM2: variables:345408  free for malloc/new:178880
+ EXTRAM: variables:1200320
+
 
 */
