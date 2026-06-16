@@ -21,7 +21,7 @@ objects for the selected radio role.  The set functions are defined in the form:
 
 A helping macro simplifies preparing the command table. It's of the form:
 
-  DEFINE_CAT_COMMAND(supportedCommand, token, setFormatStr, readLen, setLen);
+  DEFINE_CAT_COMMAND(supportedCommand, token, answerFormatStr, readLen, setLen);
 
 A CAT command table can be use alone or passed a connection manager.
 See the bottom of file for an example command table.
@@ -422,7 +422,7 @@ DEFINE_CAT_COMMAND(cat_FB, "FB"_cat, "FB%011d;",  3, 14);
 DEFINE_CAT_COMMAND(cat_FC, "FC"_cat, "FC%011d;",  3, 14);
 DEFINE_CAT_COMMAND(cat_FF, "FF"_cat, "FF%011d;",  3, 14);
 DEFINE_CAT_COMMAND(cat_FS, "FS"_cat, "FS%d;",     3,  3);
-DEFINE_CAT_COMMAND(cat_FT, "FT"_cat, "",          0,  4);
+DEFINE_CAT_COMMAND(cat_FT, "FT"_cat, "FT%d;",     3,  4);
 DEFINE_CAT_COMMAND(cat_F0, "F0"_cat, "F0%d;",     3,  4);
 DEFINE_CAT_COMMAND(cat_F1, "F1"_cat, "F1%d;",     3,  4);
 DEFINE_CAT_COMMAND(cat_GT, "GT"_cat, "GT%d;",     3,  4);
@@ -444,7 +444,7 @@ DEFINE_CAT_COMMAND(cat_TM, "TM"_cat, "",          0, 14);
 DEFINE_CAT_COMMAND(cat_VO, "VO"_cat, "VO%03d;",   3,  6);
 DEFINE_CAT_COMMAND(cat_ZM, "ZM"_cat, "ZM%d;",     3,  4);
 
-DEFINE_CAT_COMMAND(cat_AI, "AI"_cat, "AI0;",         3,  0);
+DEFINE_CAT_COMMAND(cat_AI, "AI"_cat, "AI%d;",     3,  0);
 //DEFINE_CAT_COMMAND(cat_FA, "FA"_cat, "FA%011d;",     3, 14);
 //DEFINE_CAT_COMMAND(cat_FB, "FB"_cat, "FB%011d;",     3, 14);
 //DEFINE_CAT_COMMAND(cat_FT, "FT"_cat, "FT0;",         3,  4);

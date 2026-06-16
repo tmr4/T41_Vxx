@@ -26,7 +26,7 @@ void SendCommand(int id) {
   //catControl.notifyRemote(id);
 }
 
-// get read CAT command value or otherwise perform non-standard action on a read command
+// get value for answer CAT command or otherwise perform non-standard action on a read command
 // *** TODO: got to be a better way ***
 int CatControl::GetPropertyValue(int token) {
   int value = 0;
@@ -34,9 +34,7 @@ int CatControl::GetPropertyValue(int token) {
 
   switch(token) {
     case "AI"_cat: // WSJT-X
-      snprintf(msg, sizeof(msg), "AI0;"); // Auto info off
-      send(msg);
-      callbackHandled = true;
+      value = 0; // Auto info off
       break;
     // *** BD/BU aren't standard but send actual band index ***
     case "BD"_cat:
@@ -67,9 +65,7 @@ int CatControl::GetPropertyValue(int token) {
       value = t41.FineTuneIndex;
       break;
     case "FT"_cat: // WSJT-X
-      snprintf(msg, sizeof(msg), "FT0;"); // T41 always responds transmit on VFO A
-      send(msg);
-      callbackHandled = true;
+      value = 0; // T41 always responds transmit on VFO A
       break;
     case "GT"_cat:
       value = t41.AGCMode;
