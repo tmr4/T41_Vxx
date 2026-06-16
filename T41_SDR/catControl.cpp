@@ -35,14 +35,14 @@ void CatControl::processCommand(const char* cmd) {
       if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
         //Serial.printf("Received read: %s\n", cmd);
         // read command properly formed
-        uint16_t index = item->readPropertyIndex;
-        int value = t41.getPropValue(index);
+        const T41Update* ptr = item->readProperty;
 
-        if(value == -999) {
-          HandleNonstandardProperty(item);
-        } else {
+        if(ptr) {
+          int value = item->readProperty->getValue();
           snprintf(msg, sizeof(msg), item->format, value);
           send(msg);
+        } else {
+          HandleNonstandardProperty(item);
         }
       } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
         //Serial.printf("Received set: %s\n", cmd);

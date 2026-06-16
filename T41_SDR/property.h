@@ -14,7 +14,7 @@ public:
   //uint8_t getCatHash() const { return catHash; }
 
   //virtual void setValue(uint32_t newValue) = 0;
-  virtual int getValue() = 0;
+  virtual int getValue() const = 0;
 
   // *** TODO: revisit when infobox is modernized ***
   template<class T, void (T::*Method)(int)>
@@ -55,7 +55,7 @@ public:
   operator T() { return value; }
 
   //void setValue(uint32_t newValue) override { }
-  int getValue() override { return (int)value; }
+  int getValue() const override { return (int)value; }
 
 protected:
   T value;

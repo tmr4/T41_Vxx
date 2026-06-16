@@ -97,24 +97,9 @@ public:
   int equalizerRx[EQUALIZER_CELL_COUNT] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
   int equalizerTx[EQUALIZER_CELL_COUNT] = {0, 0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0};   // Provide equalizer optimized for SSB voice based on Neville's tests.  KF5N November 2, 2023
 
-  T41Update* getProp(int index) { return prop[index]; }
-  int getPropValue(int index) {
-    T41Update* ptr;
-    int value = -999; // unsupported property
-
-    if(index != 999) {
-      ptr = prop[index];
-      if(ptr) value = ptr->getValue();
-    }
-    return value;
-  }
-
-protected:
+  protected:
 
 private:
-  // link of property index to T41Update base
-  T41Update* prop[T41_ITEMS];
-
   static constexpr int maxFreqIncIndex = 8;
   static constexpr int freqIncValues[maxFreqIncIndex] = { 10, 50, 100, 250, 1000, 10000, 100000, 1000000 };
 

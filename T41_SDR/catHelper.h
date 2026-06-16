@@ -2,14 +2,12 @@
 
 #include <Stream.h>
 
-//#include "connectBase.h"
-//#include "USBManager.h"
-
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
 class CatControl;
+class T41Update;
 
 //-------------------------------------------------------------------------------------------------------------
 // Helpers
@@ -21,9 +19,8 @@ struct CATAction {
 
 struct CATCommand {
   const uint16_t token;             // "xx"_cat
-  const uint16_t readPropertyIndex; //
-  //const T41Update* readProperty;    //
-  const uint16_t actnPropertyIndex; //
+  const T41Update* readProperty;    //
+  const T41Update* actnProperty;    //
   const char* const format;         // answer format
   const CATAction* const action;    // set function
   const uint8_t lenR;               // read command length
@@ -39,7 +36,8 @@ struct CATCommand {
 // *** use of __attribute__((section(".progmem.data") vs PROGMEM resolves SetFunctionName##_Wrapper
 //     section type conflict with catCommands set as PROGMEM or can use PROGMEM here and use
 //     __attribute__((section(".progmem.data") on catCommands ***
-#define DEFINE_CAT_CMD_PROP(Token, ReadPropertyIndex, SetFunctionName, AnswerFormatStr, ReadLen, SetLen) \
+//#define DEFINE_CAT_CMD_PROP(Token, ReadPropertyIndex, SetFunctionName, AnswerFormatStr, ReadLen, SetLen)
+#define DEFINE_CAT_CMD_PROP(Token, ReadProperty, SetFunctionName, AnswerFormatStr, ReadLen, SetLen) \
   /* 1. Flash string: fmt_cat_FA */ \
   static inline const char fmt_##SetFunctionName[] PROGMEM = AnswerFormatStr; \
   \
@@ -53,13 +51,13 @@ struct CATCommand {
   \
   /* 3. Flash Struct: cat_FA_cmd */ \
   static inline const CATCommand SetFunctionName##_cmd PROGMEM = { \
-      Token, \
-      ReadPropertyIndex, \
-      999, \
-      fmt_##SetFunctionName, \
-      &SetFunctionName##_Wrapper, \
-      ReadLen, \
-      SetLen \
+    Token, \
+    ReadProperty, \
+    nullptr, \
+    fmt_##SetFunctionName, \
+    &SetFunctionName##_Wrapper, \
+    ReadLen, \
+    SetLen \
   }
 
 #define DEFINE_CAT_CMD_ACTN(Token, ActionPropertyIndex, SetFunctionName, AnswerFormatStr, ReadLen, SetLen) \
@@ -76,13 +74,13 @@ struct CATCommand {
   \
   /* 3. Flash Struct: cat_FA_cmd */ \
   static inline const CATCommand SetFunctionName##_cmd PROGMEM = { \
-      Token, \
-      999, \
-      999, \
-      fmt_##SetFunctionName, \
-      &SetFunctionName##_Wrapper, \
-      ReadLen, \
-      SetLen \
+    Token, \
+    nullptr, \
+    nullptr, \
+    fmt_##SetFunctionName, \
+    &SetFunctionName##_Wrapper, \
+    ReadLen, \
+    SetLen \
   }
 
 #define DEFINE_CAT_COMMAND(Token, SetFunctionName, AnswerFormatStr, ReadLen, SetLen) \
@@ -99,13 +97,13 @@ struct CATCommand {
   \
   /* 3. Flash Struct: cat_FA_cmd */ \
   static inline const CATCommand SetFunctionName##_cmd PROGMEM = { \
-      Token, \
-      999, \
-      999, \
-      fmt_##SetFunctionName, \
-      &SetFunctionName##_Wrapper, \
-      ReadLen, \
-      SetLen \
+    Token, \
+    nullptr, \
+    nullptr, \
+    fmt_##SetFunctionName, \
+    &SetFunctionName##_Wrapper, \
+    ReadLen, \
+    SetLen \
   }
 
 // convert 2 character CAT command into a unique uint16_t identifier

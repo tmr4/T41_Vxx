@@ -178,5 +178,10 @@ added t41 properties table, eliminated their GetPropertyValue case
    RAM2: variables:345408  free for malloc/new:178880
  EXTRAM: variables:1200320
 
+property pointer direct to command table, w/o properties table
+  FLASH: code:276016, data:93892, headers:8968   free for files:7747588
+   RAM1: variables:138976, code:232376, padding:29768   free for local variables:123168
+   RAM2: variables:345408  free for malloc/new:178880
+ EXTRAM: variables:1200320
 
 */

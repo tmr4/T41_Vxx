@@ -412,38 +412,38 @@ void cat_TX(CatControl* instance, const char* cmd) {
   ft8PTT = true;
 }
 
-// command table construction helpers
+// command table construction helpers (see catHelper.h)
 // generic commands
-DEFINE_CAT_CMD_PROP("BD"_cat, T41_ITEM_BAND,       cat_BD, "BD%d;",     3,  4); // band down
-DEFINE_CAT_CMD_PROP("BU"_cat, T41_ITEM_BAND,       cat_BU, "BU%d;",     3,  4); // band up
-DEFINE_CAT_CMD_ACTN("DP"_cat,          999,       cat_DP, "",          0,  3); // pause data transfer
-DEFINE_CAT_CMD_ACTN("DS"_cat,          999,       cat_DS, "",          0,  3); // start data transfer
-DEFINE_CAT_CMD_ACTN("FA"_cat,          999,       cat_FA, "FA%011d;",  3, 14); // read/set VFO A frequency
-DEFINE_CAT_CMD_ACTN("FB"_cat,          999,       cat_FB, "FB%011d;",  3, 14); // read/set VFO B frequency
-DEFINE_CAT_CMD_PROP("FC"_cat, T41_ITEM_FREQ,       cat_FC, "FC%011d;",  3, 14); // read/set current VFO center frequency
-DEFINE_CAT_CMD_PROP("FF"_cat, T41_ITEM_NCO,        cat_FF, "FF%011d;",  3, 14); // read/set NCO frequency offset
-DEFINE_CAT_CMD_PROP("FS"_cat, T41_ITEM_MOUSE,      cat_FS, "FS%d;",     3,  3); // toggle fine tune status
-DEFINE_CAT_CMD_ACTN("FT"_cat,          999,       cat_FT, "FT%d;",     3,  4); // set VFO A or B
-DEFINE_CAT_CMD_PROP("F0"_cat, T41_ITEM_TUNE,       cat_F0, "F0%d;",     3,  4); // set center or fine tune increment change
-DEFINE_CAT_CMD_PROP("F1"_cat, T41_ITEM_FINE,       cat_F1, "F1%d;",     3,  4); // set center or fine tune increment change
-DEFINE_CAT_CMD_PROP("GT"_cat, T41_ITEM_AGC,        cat_GT, "GT%d;",     3,  4); // read/set AGC
-DEFINE_CAT_CMD_ACTN("ID"_cat,          999,       cat_ID, "ID%03d;",   3,  6); // read radio ID
-DEFINE_CAT_CMD_ACTN("IF"_cat,          999,       cat_IF, "",          3,  0); // read transceiver status
-DEFINE_CAT_CMD_PROP("MD"_cat, T41_ITEM_DEMOD_MODE, cat_MD, "MD%d;",     3,  4); // read/set demod mode
-DEFINE_CAT_CMD_PROP("ME"_cat, T41_ITEM_RADIO_MODE, cat_ME, "ME%d;",     3,  4); // read/set operating mode
-DEFINE_CAT_CMD_PROP("NF"_cat, T41_ITEM_NOISE,      cat_NF, "NF%04d;",   3,  7); // read/set noise floor
-DEFINE_CAT_CMD_PROP("NG"_cat, T41_ITEM_FLOOR,      cat_NG, "NG%d;",     3,  4); // set live noise floor
-DEFINE_CAT_CMD_PROP("NH"_cat, T41_ITEM_FHI,        cat_NH, "NH%011d;",  3, 14); // set high audio filter frequency
-DEFINE_CAT_CMD_PROP("NL"_cat, T41_ITEM_FLO,        cat_NL, "NL%011d;",  3, 14); // set low audio filter frequency
-DEFINE_CAT_CMD_ACTN("NS"_cat,           999,      cat_NS, "",          0,  5); // inc/dec audio filter
-DEFINE_CAT_CMD_ACTN("NW"_cat,           999,      cat_NW, "",          0,  3); // set 0.5kHz-1.5kHz audio filter
-DEFINE_CAT_CMD_PROP("N1"_cat, T41_ITEM_FILTER,     cat_N1, "N1%d;",     3,  4); // set noise filter
-DEFINE_CAT_CMD_PROP("PC"_cat, T41_ITEM_POWER,      cat_PC, "PC%02d;",   3,  5); // read/set transmit power level
-DEFINE_CAT_CMD_PROP("PG"_cat, T41_ITEM_RFGAIN,     cat_PG, "PG%+03d;",  3,  6); // read/set RF gain
-DEFINE_CAT_CMD_ACTN("SM"_cat,            999,     cat_SM, "SM0%+05d;", 3,  4); // read S-meter
-DEFINE_CAT_CMD_ACTN("TM"_cat,            999,     cat_TM, "",          0, 14); // set Teensy RTC
-DEFINE_CAT_CMD_PROP("VO"_cat, T41_ITEM_VOL,        cat_VO, "VO%03d;",   3,  6); // read/set volume
-DEFINE_CAT_CMD_PROP("ZM"_cat, T41_ITEM_ZOOM,       cat_ZM, "ZM%d;",     3,  4); // read/set spectrum zoom
+DEFINE_CAT_CMD_PROP("BD"_cat,  &t41.ActiveBand,             cat_BD, "BD%d;",     3,  4); // band down
+DEFINE_CAT_CMD_PROP("BU"_cat,  &t41.ActiveBand,             cat_BU, "BU%d;",     3,  4); // band up
+DEFINE_CAT_CMD_ACTN("DP"_cat,  nullptr,                     cat_DP, "",          0,  3); // pause data transfer
+DEFINE_CAT_CMD_ACTN("DS"_cat,  nullptr,                     cat_DS, "",          0,  3); // start data transfer
+DEFINE_CAT_CMD_ACTN("FA"_cat,  nullptr,                     cat_FA, "FA%011d;",  3, 14); // read/set VFO A frequency
+DEFINE_CAT_CMD_ACTN("FB"_cat,  nullptr,                     cat_FB, "FB%011d;",  3, 14); // read/set VFO B frequency
+DEFINE_CAT_CMD_PROP("FC"_cat,  &t41.CenterFreq,             cat_FC, "FC%011d;",  3, 14); // read/set current VFO center frequency
+DEFINE_CAT_CMD_PROP("FF"_cat,  &t41.NCOFreq,                cat_FF, "FF%011d;",  3, 14); // read/set NCO frequency offset
+DEFINE_CAT_CMD_PROP("FS"_cat,  &t41.MouseCenterTuneActive,  cat_FS, "FS%d;",     3,  3); // toggle fine tune status
+DEFINE_CAT_CMD_ACTN("FT"_cat,  nullptr,                     cat_FT, "FT%d;",     3,  4); // set VFO A or B
+DEFINE_CAT_CMD_PROP("F0"_cat,  &t41.CenterTuneIndex,        cat_F0, "F0%d;",     3,  4); // set center or fine tune increment change
+DEFINE_CAT_CMD_PROP("F1"_cat,  &t41.FineTuneIndex,          cat_F1, "F1%d;",     3,  4); // set center or fine tune increment change
+DEFINE_CAT_CMD_PROP("GT"_cat,  &t41.AGCMode,                cat_GT, "GT%d;",     3,  4); // read/set AGC
+DEFINE_CAT_CMD_ACTN("ID"_cat,  nullptr,                     cat_ID, "ID%03d;",   3,  6); // read radio ID
+DEFINE_CAT_CMD_ACTN("IF"_cat,  nullptr,                     cat_IF, "",          3,  0); // read transceiver status
+DEFINE_CAT_CMD_PROP("MD"_cat,  &t41.DemodMode,              cat_MD, "MD%d;",     3,  4); // read/set demod mode
+DEFINE_CAT_CMD_PROP("ME"_cat,  &t41.RadioMode,              cat_ME, "ME%d;",     3,  4); // read/set operating mode
+DEFINE_CAT_CMD_PROP("NF"_cat,  &t41.NoiseFloor,             cat_NF, "NF%04d;",   3,  7); // read/set noise floor
+DEFINE_CAT_CMD_PROP("NG"_cat,  &t41.LiveNoiseFloor,         cat_NG, "NG%d;",     3,  4); // set live noise floor
+DEFINE_CAT_CMD_PROP("NH"_cat,  &t41.FilterHiCut,            cat_NH, "NH%011d;",  3, 14); // set high audio filter frequency
+DEFINE_CAT_CMD_PROP("NL"_cat,  &t41.FilterLoCut,            cat_NL, "NL%011d;",  3, 14); // set low audio filter frequency
+DEFINE_CAT_CMD_ACTN("NS"_cat,  nullptr,                     cat_NS, "",          0,  5); // inc/dec audio filter
+DEFINE_CAT_CMD_ACTN("NW"_cat,  nullptr,                     cat_NW, "",          0,  3); // set 0.5kHz-1.5kHz audio filter
+DEFINE_CAT_CMD_PROP("N1"_cat,  &t41.NoiseFilter,            cat_N1, "N1%d;",     3,  4); // set noise filter
+DEFINE_CAT_CMD_PROP("PC"_cat,  &t41.TxPower,                cat_PC, "PC%02d;",   3,  5); // read/set transmit power level
+DEFINE_CAT_CMD_PROP("PG"_cat,  &t41.RFGain,                 cat_PG, "PG%+03d;",  3,  6); // read/set RF gain
+DEFINE_CAT_CMD_ACTN("SM"_cat,  nullptr,                     cat_SM, "SM0%+05d;", 3,  4); // read S-meter
+DEFINE_CAT_CMD_ACTN("TM"_cat,  nullptr,                     cat_TM, "",          0, 14); // set Teensy RTC
+DEFINE_CAT_CMD_PROP("VO"_cat,  &t41.AudioVolume,            cat_VO, "VO%03d;",   3,  6); // read/set volume
+DEFINE_CAT_CMD_PROP("ZM"_cat,  &t41.SpectrumZoom,           cat_ZM, "ZM%d;",     3,  4); // read/set spectrum zoom
 
 // wsjt-x specific commands
 DEFINE_CAT_COMMAND("AI"_cat, cat_AI, "AI%d;",        3,  0); // auto information

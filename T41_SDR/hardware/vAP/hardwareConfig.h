@@ -125,8 +125,8 @@
 
 RADIO_ROLE = 6
 Memory Usage on Teensy 4.1:
-  FLASH: code:274688, data:92496, headers:8620   free for files:7750660
-   RAM1: variables:131936, code:231256, padding:30888   free for local variables:130208
+  FLASH: code:273648, data:92744, headers:8388   free for files:7751684
+   RAM1: variables:131936, code:230328, padding:31816   free for local variables:130208
    RAM2: variables:352224  free for malloc/new:172064
  EXTRAM: variables:480320
 
