@@ -341,7 +341,7 @@ void UpdateAudioFilterMask(float *coeffs_I, float *coeffs_Q, int numCoeffs, floa
   Parameter list:
     int decFilterBW - desired decimate bandwidth (default 0)
 *****/
-void SetDecIntFIRFilters(int decFilterBW = 0) {
+FLASHMEM void SetDecIntFIRFilters(int decFilterBW = 0) {
   float limit = t41.FilterHiCut;
 
   if(limit > 10000.0) {

@@ -363,49 +363,6 @@ void cat_ZM(CatControl* instance, const char* cmd) {
 
 *********************************************************************************************************/
 
-// Auto Information
-// "AI;" (length 3) or "AIx;" (length 4) x=0 off; x=1 on?
-void cat_AI(CatControl* instance, const char* cmd) {}
-/*
-// read/set VFO A frequency
-// "FA;" (length 3) or "FAxxxxxxxxxxx;" (length 14)
-void cat_FA(CatControl* instance, const char* cmd) {
-  long f = atol(&cmd[2]);
-  ChangeBand(f);
-  t41.SetFreqA(f);
-  //notifyRemote("FA"_cat);
-}
-
-// read/set VFO B frequency
-// "FB;" (length 3) or "FBxxxxxxxxxxx;" (length 14)
-void cat_FB(CatControl* instance, const char* cmd) {
-  long f = atol(&cmd[2]);
-  ChangeBand(f);
-  t41.SetFreqB(f);
-}
-
-// read/set VFO A or B
-// "FTx;" (length 4) x=0 VFO A; x=1 VFO B
-void cat_FT(CatControl* instance, const char* cmd) {
-  VFOSelect(atoi(&cmd[2]));
-}
-*/
-// read keying Speed
-// "KS;" (length 3)
-void cat_KS(CatControl* instance, const char* cmd) {}
-
-// read VFO frequency and mode
-// "SF;" (length 3)
-void cat_SF(CatControl* instance, const char* cmd) {}
-
-// Split VFO
-// "SP;" (length 3) or "SPx;" (length 4)
-void cat_SP(CatControl* instance, const char* cmd) {}
-
-// Split
-// "TB;" (length 3) or "TBx;" (length 4)
-void cat_TB(CatControl* instance, const char* cmd) {}
-
 // set TX
 // "TX;" (length 3)
 void cat_TX(CatControl* instance, const char* cmd) {
@@ -423,7 +380,7 @@ DEFINE_CAT_CMD_ACTN("FB"_cat,  nullptr,                     cat_FB, "FB%011d;", 
 DEFINE_CAT_CMD_PROP("FC"_cat,  &t41.CenterFreq,             cat_FC, "FC%011d;",  3, 14); // read/set current VFO center frequency
 DEFINE_CAT_CMD_PROP("FF"_cat,  &t41.NCOFreq,                cat_FF, "FF%011d;",  3, 14); // read/set NCO frequency offset
 DEFINE_CAT_CMD_PROP("FS"_cat,  &t41.MouseCenterTuneActive,  cat_FS, "FS%d;",     3,  3); // toggle fine tune status
-DEFINE_CAT_CMD_ACTN("FT"_cat,  nullptr,                     cat_FT, "FT%d;",     3,  4); // set VFO A or B
+DEFINE_CAT_CMD_PROP("FT"_cat,  &t41.wsjtFT,                 cat_FT, "FT%d;",     3,  4); // set TX VFO A or B *** just configured for WSJT-X for now as VFO A ***
 DEFINE_CAT_CMD_PROP("F0"_cat,  &t41.CenterTuneIndex,        cat_F0, "F0%d;",     3,  4); // set center or fine tune increment change
 DEFINE_CAT_CMD_PROP("F1"_cat,  &t41.FineTuneIndex,          cat_F1, "F1%d;",     3,  4); // set center or fine tune increment change
 DEFINE_CAT_CMD_PROP("GT"_cat,  &t41.AGCMode,                cat_GT, "GT%d;",     3,  4); // read/set AGC
@@ -446,11 +403,13 @@ DEFINE_CAT_CMD_PROP("VO"_cat,  &t41.AudioVolume,            cat_VO, "VO%03d;",  
 DEFINE_CAT_CMD_PROP("ZM"_cat,  &t41.SpectrumZoom,           cat_ZM, "ZM%d;",     3,  4); // read/set spectrum zoom
 
 // wsjt-x specific commands
-DEFINE_CAT_COMMAND("AI"_cat, cat_AI, "AI%d;",        3,  0); // auto information
-DEFINE_CAT_COMMAND("KS"_cat, cat_KS, "KS0%d;",       3,  0); // key speed
-DEFINE_CAT_COMMAND("SF"_cat, cat_SF, "SF%d%011d%d;", 4,  0); // read VFO freq and mode
-DEFINE_CAT_COMMAND("SP"_cat, cat_SP, "SP%d;",        3,  4); // read split VFO
-DEFINE_CAT_COMMAND("TB"_cat, cat_TB, "TB%d;",        3,  4); // read split
+// *** the use of the wsjtCAT prefix below is really only needed for those commands also used above (ID here) ***
+DEFINE_CAT_CMD_RO("AI"_cat, &t41.wsjtAI, wsjtCat_AI, "AI%d;",        3); // auto information
+DEFINE_CAT_CMD_RO("ID"_cat, &t41.wsjtID, wsjtCat_ID, "ID%03d;",      3); // radio ID
+DEFINE_CAT_CMD_RO("KS"_cat, &t41.wsjtKS, wsjtCat_KS, "KS0%d;",       3); // key speed
+DEFINE_CAT_CMD_RO("SF"_cat, nullptr,     wsjtCat_SF, "SF%d%011d%d;", 4); // VFO freq and mode
+DEFINE_CAT_CMD_RO("SP"_cat, &t41.wsjtSP, wsjtCat_SP, "SP%d;",        3); // split VFO
+DEFINE_CAT_CMD_RO("TB"_cat, &t41.wsjtTB, wsjtCat_TB, "TB%d;",        3); // split
 DEFINE_CAT_COMMAND("TX"_cat, cat_TX, "",             0,  3); // TX
 
 // build the command tables
@@ -492,22 +451,21 @@ struct RemoteCommandTable {
   }
 };
 
-// *** this table hasn't been tested yet ***
 struct WSJTCommandBuilder {
   const CATCommand* data[128];
 
   constexpr WSJTCommandBuilder() : data{} {
-    data["AI"_cath] = &cat_AI_cmd;
+    data["AI"_cath] = &wsjtCat_AI_cmd;
     data["FA"_cath] = &cat_FA_cmd;
     data["FB"_cath] = &cat_FB_cmd;
     data["FT"_cath] = &cat_FT_cmd;
-    data["ID"_cath] = &cat_ID_cmd;
+    data["ID"_cath] = &wsjtCat_ID_cmd;
     data["IF"_cath] = &cat_IF_cmd;
-    data["KS"_cath] = &cat_KS_cmd;
+    data["KS"_cath] = &wsjtCat_KS_cmd;
     data["MD"_cath] = &cat_MD_cmd;
-    data["SF"_cath] = &cat_SF_cmd;
-    data["SP"_cath] = &cat_SP_cmd;
-    data["TB"_cath] = &cat_TB_cmd;
+    data["SF"_cath] = &wsjtCat_SF_cmd;
+    data["SP"_cath] = &wsjtCat_SP_cmd;
+    data["TB"_cath] = &wsjtCat_TB_cmd;
     data["TM"_cath] = &cat_TM_cmd;
     data["TX"_cath] = &cat_TX_cmd;
   }

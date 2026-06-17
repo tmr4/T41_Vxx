@@ -71,17 +71,11 @@ void CatControl::HandleNonstandardProperty(const CATCommand* item) {
   int vfo, freq;
 
   switch(token) {
-    case "AI"_cat: // WSJT-X
-      value = 0; // Auto info off
-      break;
     case "FA"_cat:
       value = t41.GetFreqA();
       break;
     case "FB"_cat:
       value = t41.GetFreqB();
-      break;
-    case "FT"_cat: // WSJT-X
-      value = 0; // T41 always responds transmit on VFO A
       break;
     case "ID"_cat:
       if(useWSJT) {
@@ -165,9 +159,6 @@ void CatControl::HandleNonstandardProperty(const CATCommand* item) {
       }
       send(msg);
       return;
-      break;
-    case "KS"_cat:
-      value = DEFAULT_KEYER_WPM;
       break;
     case "SF"_cat: // WSJT-X
       vfo = atoi(&cmd[2]);

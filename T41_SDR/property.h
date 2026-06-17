@@ -46,6 +46,24 @@ protected:
   uint8_t catHash = 0;
 };
 
+class ActionProperty : public T41Update {
+private:
+    void (*actionCallback)(int32_t);
+
+public:
+    ActionProperty(uint16_t token, void (*callback)(int32_t))
+        : T41Update(token), actionCallback(callback) {}
+
+    //void setFromCAT(int32_t parameter) override {
+    //    if (actionCallback != nullptr) {
+    //        actionCallback(parameter);
+    //    }
+    //}
+
+    // action properties always return 0
+  int getValue() const override { return 0; }
+};
+
 template<typename T>
 class ReadOnlyProperty : public T41Update {
 public:
@@ -94,7 +112,7 @@ public:
   // displayCallback called instead of infoboxCallback
   void Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr, int _id, bool polled = true);
 
-  // with bounds check int (*bPtrInt)(T)
+  // with bounds check int (*boundsCallback)(T)
   // displayCallback called instead of  infoboxCallback
   void Init(T val, BoundPtr _bPtrInt, FuncPtr _fPtr, int _id, bool polled = true);
 
@@ -183,8 +201,8 @@ private:
     T tmp = value;
     value = val;
     if(hasMinMax) {
-      if(bPtrInt != nullptr) {
-        value = (int)(*bPtrInt)((int)value);
+      if(boundsCallback != nullptr) {
+        value = (int)(*boundsCallback)((int)value);
       } else {
         if(minmaxCircular) {
           if(value > max) value = min;
@@ -207,7 +225,7 @@ private:
   }
 
   FuncPtr displayCallback = nullptr;
-  BoundPtr bPtrInt = nullptr;
+  BoundPtr boundsCallback = nullptr;
 
 public:
   //void setValue(uint32_t newValue) override { Update((T)newValue); }

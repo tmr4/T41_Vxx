@@ -209,7 +209,7 @@ FLASHMEM void InitFIRFilters(int sampleRate) {
     float dfc
     float Fsamprate
 *****/
-void CalcFIRCoeffs(float *coeffs_I, int numCoeffs, float32_t fc, float32_t Astop, int type, float dfc, float Fsamprate) {
+FLASHMEM void CalcFIRCoeffs(float *coeffs_I, int numCoeffs, float32_t fc, float32_t Astop, int type, float dfc, float Fsamprate) {
   // modified by WMXZ and DD4WH after
   // Wheatley, M. (2011): CuteSDR Technical Manual. www.metronix.com, pages 118 - 120, FIR with Kaiser-Bessel Window
   // assess required number of coefficients by
@@ -305,7 +305,7 @@ void CalcFIRCoeffs(float *coeffs_I, int numCoeffs, float32_t fc, float32_t Astop
     float32_t fHiCut
     float sampleRate
 *****/
-void CalcCplxFIRCoeffs(float * coeffs_I, float * coeffs_Q, int numCoeffs, float32_t fLoCut, float32_t fHiCut, float sampleRate) {
+FLASHMEM void CalcCplxFIRCoeffs(float * coeffs_I, float * coeffs_Q, int numCoeffs, float32_t fLoCut, float32_t fHiCut, float sampleRate) {
   //calculate some normalized filter parameters
   float32_t nFL = fLoCut / sampleRate;
   float32_t nFH = fHiCut / sampleRate;

@@ -949,7 +949,7 @@ FLASHMEM void DrawActiveLetter(int row, int horizontalSpacer, int whichLetterInd
     double               the bearing heading to DX in degrees
 
  *****/
-float BearingHeading(char *dxCallPrefix) {
+FLASHMEM float BearingHeading(char *dxCallPrefix) {
   float deltaLong;  // For radians conversion
   float x, y;       // Temporary variables
 

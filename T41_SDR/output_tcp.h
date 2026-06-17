@@ -33,6 +33,8 @@ T41 timing (w/ T41 standard testing input, Auto NF):
 
 */
 
+#if RADIO_ROLE == -1
+
 #include <Arduino.h>
 #include <AudioStream.h>
 
@@ -196,3 +198,5 @@ class AudioOutputTCP : public AudioStream {
     interrupts();
   }
 };
+
+#endif

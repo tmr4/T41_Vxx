@@ -33,77 +33,92 @@ struct CATCommand {
 //    DEFINE_CAT_CMD_ACTN:
 
 
-// *** use of __attribute__((section(".progmem.data") vs PROGMEM resolves SetFunctionName##_Wrapper
+// *** use of __attribute__((section(".progmem.data") vs PROGMEM resolves SetCallback##_Wrapper
 //     section type conflict with catCommands set as PROGMEM or can use PROGMEM here and use
 //     __attribute__((section(".progmem.data") on catCommands ***
-//#define DEFINE_CAT_CMD_PROP(Token, ReadPropertyIndex, SetFunctionName, AnswerFormatStr, ReadLen, SetLen)
-#define DEFINE_CAT_CMD_PROP(Token, ReadProperty, SetFunctionName, AnswerFormatStr, ReadLen, SetLen) \
+//#define DEFINE_CAT_CMD_PROP(Token, ReadPropertyIndex, SetCallback, AnswerFormatStr, ReadLen, SetLen)
+#define DEFINE_CAT_CMD_PROP(Token, ReadProperty, SetCallback, AnswerFormatStr, ReadLen, SetLen) \
   /* 1. Flash string: fmt_cat_FA */ \
-  static inline const char fmt_##SetFunctionName[] PROGMEM = AnswerFormatStr; \
+  static inline const char fmt_##SetCallback[] PROGMEM = AnswerFormatStr; \
   \
   /* 2. Wrapper: Action_cat_FA */ \
-  struct Action_##SetFunctionName : public CATAction { \
+  struct Action_##SetCallback : public CATAction { \
     void execute(CatControl* instance, const char* cmd) const override { \
-      SetFunctionName(instance, cmd); \
+      SetCallback(instance, cmd); \
     } \
   }; \
-  static inline const Action_##SetFunctionName SetFunctionName##_Wrapper PROGMEM = {}; \
+  static inline const Action_##SetCallback SetCallback##_Wrapper PROGMEM = {}; \
   \
   /* 3. Flash Struct: cat_FA_cmd */ \
-  static inline const CATCommand SetFunctionName##_cmd PROGMEM = { \
+  static inline const CATCommand SetCallback##_cmd PROGMEM = { \
     Token, \
     ReadProperty, \
     nullptr, \
-    fmt_##SetFunctionName, \
-    &SetFunctionName##_Wrapper, \
+    fmt_##SetCallback, \
+    &SetCallback##_Wrapper, \
     ReadLen, \
     SetLen \
   }
 
-#define DEFINE_CAT_CMD_ACTN(Token, ActionPropertyIndex, SetFunctionName, AnswerFormatStr, ReadLen, SetLen) \
+#define DEFINE_CAT_CMD_ACTN(Token, ActionProperty, SetCallback, AnswerFormatStr, ReadLen, SetLen) \
   /* 1. Flash string: fmt_cat_FA */ \
-  static inline const char fmt_##SetFunctionName[] PROGMEM = AnswerFormatStr; \
+  static inline const char fmt_##SetCallback[] PROGMEM = AnswerFormatStr; \
   \
   /* 2. Wrapper: Action_cat_FA */ \
-  struct Action_##SetFunctionName : public CATAction { \
+  struct Action_##SetCallback : public CATAction { \
     void execute(CatControl* instance, const char* cmd) const override { \
-      SetFunctionName(instance, cmd); \
+      SetCallback(instance, cmd); \
     } \
   }; \
-  static inline const Action_##SetFunctionName SetFunctionName##_Wrapper PROGMEM = {}; \
+  static inline const Action_##SetCallback SetCallback##_Wrapper PROGMEM = {}; \
   \
   /* 3. Flash Struct: cat_FA_cmd */ \
-  static inline const CATCommand SetFunctionName##_cmd PROGMEM = { \
+  static inline const CATCommand SetCallback##_cmd PROGMEM = { \
     Token, \
     nullptr, \
-    nullptr, \
-    fmt_##SetFunctionName, \
-    &SetFunctionName##_Wrapper, \
+    ActionProperty, \
+    fmt_##SetCallback, \
+    &SetCallback##_Wrapper, \
     ReadLen, \
     SetLen \
   }
 
-#define DEFINE_CAT_COMMAND(Token, SetFunctionName, AnswerFormatStr, ReadLen, SetLen) \
+#define DEFINE_CAT_COMMAND(Token, SetCallback, AnswerFormatStr, ReadLen, SetLen) \
   /* 1. Flash string: fmt_cat_FA */ \
-  static inline const char fmt_##SetFunctionName[] PROGMEM = AnswerFormatStr; \
+  static inline const char fmt_##SetCallback[] PROGMEM = AnswerFormatStr; \
   \
   /* 2. Wrapper: Action_cat_FA */ \
-  struct Action_##SetFunctionName : public CATAction { \
+  struct Action_##SetCallback : public CATAction { \
     void execute(CatControl* instance, const char* cmd) const override { \
-      SetFunctionName(instance, cmd); \
+      SetCallback(instance, cmd); \
     } \
   }; \
-  static inline const Action_##SetFunctionName SetFunctionName##_Wrapper PROGMEM = {}; \
+  static inline const Action_##SetCallback SetCallback##_Wrapper PROGMEM = {}; \
   \
   /* 3. Flash Struct: cat_FA_cmd */ \
-  static inline const CATCommand SetFunctionName##_cmd PROGMEM = { \
+  static inline const CATCommand SetCallback##_cmd PROGMEM = { \
     Token, \
     nullptr, \
     nullptr, \
-    fmt_##SetFunctionName, \
-    &SetFunctionName##_Wrapper, \
+    fmt_##SetCallback, \
+    &SetCallback##_Wrapper, \
     ReadLen, \
     SetLen \
+  }
+
+#define DEFINE_CAT_CMD_RO(Token, ReadProperty, CmdName, AnswerFormatStr, ReadLen) \
+  /* 1. Flash string: fmt_cat_FA */ \
+  static inline const char fmt_##CmdName[] PROGMEM = AnswerFormatStr; \
+  \
+  /* 3. Flash Struct: cat_FA_cmd */ \
+  static inline const CATCommand CmdName##_cmd PROGMEM = { \
+    Token, \
+    ReadProperty, \
+    nullptr, \
+    fmt_##CmdName, \
+    nullptr, \
+    ReadLen, \
+    0 \
   }
 
 // convert 2 character CAT command into a unique uint16_t identifier

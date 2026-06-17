@@ -41,7 +41,7 @@ float32_t omega2 = 0.0;
       // taken from Warren Pratt´s WDSP, 2016
   // http://svn.tapr.org/repos_sdr_hpsdr/trunk/W5WC/PowerSDR_HPSDR_mRX_PS/Source/wdsp/
 *****/
-void AMDecodeSAM() {
+FLASHMEM void AMDecodeSAM() {
   float32_t tauR = 0.02;  // original 0.02;
   float32_t tauI = 1.4;   // original 1.4;
   float32_t dc = 0.0;

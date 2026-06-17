@@ -1171,7 +1171,7 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
   Purpose: Calcculate zoom magnification when Spectrum Zoom = 1
 *****/
 // *** updateSpectrumData is assumed true ***
-void Calc1xFreqSpec() {
+FLASHMEM void Calc1xFreqSpec() {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
   float32_t spec_help = 0.0;
   float32_t LPFcoeff = 0.7;

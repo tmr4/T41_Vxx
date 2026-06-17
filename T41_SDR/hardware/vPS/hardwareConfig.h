@@ -153,34 +153,9 @@
 
 Memory Usage on Teensy 4.1:
 
-RADIO_ROLE = 7, Serial
-  FLASH: code:273632, data:92408, headers:8740   free for files:7751684
-   RAM1: variables:137760, code:229880, padding:32264   free for local variables:124384
-   RAM2: variables:339648  free for malloc/new:184640
- EXTRAM: variables:1200320
-
 RADIO_ROLE = 7, Serial + Midi + Audio
-  FLASH: code:275792, data:92908, headers:9152   free for files:7748612
-   RAM1: variables:138464, code:232040, padding:30104   free for local variables:123680
-   RAM2: variables:345408  free for malloc/new:178880
- EXTRAM: variables:1200320
-
-RADIO_ROLE = 7, Serial + Midi + Audio, T41_WSJT_CAT_AUDIO = true, useWSJT = true
-  FLASH: code:276672, data:93596, headers:8608   free for files:7747588
-   RAM1: variables:138976, code:233032, padding:29112   free for local variables:123168
-   RAM2: variables:345408  free for malloc/new:178880
- EXTRAM: variables:1200320
-
-RADIO_ROLE = 7, Serial + Midi + Audio, T41_WSJT_CAT_AUDIO = true, useWSJT = true
-added t41 properties table, eliminated their GetPropertyValue case
-  FLASH: code:276352, data:93748, headers:8776   free for files:7747588
-   RAM1: variables:139104, code:232712, padding:29432   free for local variables:123040
-   RAM2: variables:345408  free for malloc/new:178880
- EXTRAM: variables:1200320
-
-property pointer direct to command table, w/o properties table
-  FLASH: code:276016, data:93892, headers:8968   free for files:7747588
-   RAM1: variables:138976, code:232376, padding:29768   free for local variables:123168
+  FLASH: code:277152, data:93900, headers:8848   free for files:7746564
+   RAM1: variables:139072, code:224088, padding:5288   free for local variables:155840
    RAM2: variables:345408  free for malloc/new:178880
  EXTRAM: variables:1200320
 

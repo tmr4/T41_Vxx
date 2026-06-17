@@ -112,6 +112,8 @@ void checkTCPGlitches() {
  *******************************************************************************************
 */
 
+#if RADIO_ROLE == -1
+
 #include <Arduino.h>
 #include <AudioStream.h>
 
@@ -307,3 +309,5 @@ private:
     interrupts();
   }
 };
+
+#endif

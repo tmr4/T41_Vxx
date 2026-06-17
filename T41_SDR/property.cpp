@@ -59,13 +59,13 @@ FLASHMEM void Property<T>::Init(T val, T _min, T _max, bool circ, FuncPtr _fPtr,
   notifyOnPoll = polled;
 }
 
-// with bounds check int (*bPtrInt)(T)
+// with bounds check int (*boundsCallback)(T)
 // displayCallback called instead of  infoboxCallback
 template <typename T>
 FLASHMEM void Property<T>::Init(T val, BoundPtr _bPtrInt, FuncPtr _fPtr, int _id, bool polled/* = true */) {
   value = val;
   hasMinMax = true;
-  bPtrInt = _bPtrInt;
+  boundsCallback = _bPtrInt;
   displayCallback = _fPtr;
   id = _id;
   notifyOnPoll = polled;

@@ -17,7 +17,7 @@ bool memCheck = false;
 #define printf Serial.printf
 extern "C" uint8_t external_psram_size;
 
-void memInfo() {
+FLASHMEM void memInfo() {
   constexpr auto RAM_BASE   = 0x2020'0000;
                               constexpr auto RAM_SIZE   = 512 << 10;
                               constexpr auto FLASH_BASE = 0x6000'0000;

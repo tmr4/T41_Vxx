@@ -67,7 +67,7 @@ T41Properties::T41Properties() {
   T41Update::SetUpdateFunctions<CatControl, &CatControl::notifyRemote>(UpdateInfoBoxItem, &catControl);
 }
 
-void T41Properties::SetPropertyDefaults() {
+FLASHMEM void T41Properties::SetPropertyDefaults() {
   int remoteStatus = RADIO_ROLE > 0 ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
 
   RadioState.Init(RECONFIGURE_STATE);

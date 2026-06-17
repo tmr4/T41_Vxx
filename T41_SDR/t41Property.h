@@ -78,6 +78,14 @@ public:
 
   Property<int> DroppedBlock{0}; // blocks were dropped since last update: 0=false, 1=true
 
+  // WSJT-X specific properties
+  ReadOnlyProperty<int> wsjtAI{0};  // Auto info: T41 always responds 0 (off)
+  ReadOnlyProperty<int> wsjtFT{0};  // TX VFO: T41 always responds 0 (VFO A)
+  ReadOnlyProperty<int> wsjtID{24}; // Kenwood TS-890S ID
+  ReadOnlyProperty<int> wsjtKS{DEFAULT_KEYER_WPM}; // Keying speed
+  ReadOnlyProperty<int> wsjtSP{0};  // Split VFO: T41 always responds 0
+  ReadOnlyProperty<int> wsjtTB{0};  // Split: T41 always responds 0 (off)
+
   // helper functions
   void SetPropertyDefaults();
 

@@ -281,7 +281,7 @@ int GetSNRColor(int snr, int *index) {
   return color;
 }
 
-void DisplayBeaconsSNR(int beacon) {
+FLASHMEM void DisplayBeaconsSNR(int beacon) {
   char message[48];
   int rowCount = 5;
   int columnOffset = 256;
@@ -801,7 +801,7 @@ void DrawBeaconBearing(char *beaconPrefix, int color) {
 
 // unfortunately this needs duplicated because the original clears the screen and sets a font
 // TODO: see if the above can be resolved to reduce redundant code ***
-float BeaconBearingHeading(char *dxCallPrefix) {
+FLASHMEM float BeaconBearingHeading(char *dxCallPrefix) {
   float deltaLong;  // For radians conversion
   float x, y;       // Temporary variables
   int countryIndex = -1;

@@ -176,7 +176,7 @@ void RA8875::selectCS(uint8_t module)
 	module: sets the SPI interface (it depends from MCU). Default:0
 */
 /**************************************************************************/
-void RA8875::begin(const enum RA8875sizes s,uint8_t colors, uint32_t SPIMaxSpeed, uint32_t SPIMaxReadSpeed )
+FLASHMEM void RA8875::begin(const enum RA8875sizes s,uint8_t colors, uint32_t SPIMaxSpeed, uint32_t SPIMaxReadSpeed )
 {
 	_errorCode = 0;
 	_displaySize = s;
@@ -617,7 +617,7 @@ void RA8875::begin(const enum RA8875sizes s,uint8_t colors, uint32_t SPIMaxSpeed
 	  [private]
 */
 /**************************************************************************/
-void RA8875::_initialize()
+FLASHMEM void RA8875::_initialize()
 {
 	_inited = false;
 // HACK to setup SPI MODE 3
@@ -7051,7 +7051,7 @@ void RA8875::drawFontBits(bool opaque, uint32_t bits, uint32_t numbits, int32_t 
 	}
 }
 
-void RA8875::drawGFXFontChar(unsigned int c) {
+FLASHMEM void RA8875::drawGFXFontChar(unsigned int c) {
 	// Lets do Adafruit GFX character output here as well
     if(c == '\r') 	 return;
     // Some quick and dirty tests to see if we can

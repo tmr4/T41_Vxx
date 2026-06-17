@@ -123,10 +123,11 @@
 
 /*
 
-RADIO_ROLE = 6
 Memory Usage on Teensy 4.1:
-  FLASH: code:273648, data:92744, headers:8388   free for files:7751684
-   RAM1: variables:131936, code:230328, padding:31816   free for local variables:130208
+
+RADIO_ROLE = 6 Dual Serial
+  FLASH: code:274768, data:92744, headers:8292   free for files:7750660
+   RAM1: variables:132032, code:222040, padding:7336   free for local variables:162880
    RAM2: variables:352224  free for malloc/new:172064
  EXTRAM: variables:480320
 
