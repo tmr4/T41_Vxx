@@ -444,8 +444,8 @@ FASTRUN void loop() {
       t41.RadioState = RECEIVE_STATE;
       break;
     case DATA_MODE:
-      //Serial.print("ft8PTT: "); Serial.println(ft8PTT);
-      if(ft8PTT) {
+      //Serial.print("WSJT-X TX: "); Serial.println(t41.wsjtPTT);
+      if(t41.wsjtPTT) {
         t41.RadioState = DATA_TRANSMIT_STATE;
       } else {
         t41.RadioState = RECEIVE_STATE;
@@ -530,14 +530,14 @@ FASTRUN void loop() {
       digitalWrite(RXTX, HIGH); // turn on TX relay
       ShowTransmitReceiveStatus();
 
-      while(ft8PTT) {
+      while(t41.wsjtPTT) {
         static int i = 0;
 
         switch(t41.DemodMode) {
           case DEMOD_FT8:
               PrepareMicExciterData();
               #if T41_WSJT_CAT_AUDIO
-              wsjtControl.update(); // update ft8PTT
+              wsjtControl.update(); // update t41.wsjtPTT
               #endif
             break;
 
@@ -555,7 +555,7 @@ FASTRUN void loop() {
               i += 128;
             } else {
               i = 0;
-              ft8PTT = false;
+              t41.wsjtPTT = 0;
               ft8TxSignalBuf = NULL;
             }
             break;
@@ -566,6 +566,7 @@ FASTRUN void loop() {
 
       t41.CenterFreq = oldCenterFreq;
       digitalWrite(RXTX, LOW);
+      ShowTransmitReceiveStatus();
 
       // delay a bit to allow play buffer to empty, otherwise
       // the remaining buffer will be played next time it's connected

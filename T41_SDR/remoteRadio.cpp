@@ -32,9 +32,6 @@ See the bottom of file for an example command table.
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-//extern bool controlDataFlag; // *** data transfers to PC control app are broken ***
-extern bool ft8PTT;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -147,9 +144,12 @@ void cat_GT(CatControl* instance, const char* cmd) {
   UpdateInfoBoxItem(T41_ITEM_AGC);
 }
 
+// normal CAT usage:
 // read radio ID
 // "ID;" (length 3), Answer: "IDxxx;" (length 6)
+// In the T41 it's used as a heartbeat indicator from remote units
 // *** ackIdReceipt is provided to acknowledge receipt of a properly formated reply ***
+// *** this is treated as a set command even though ID isn't changed ***
 void cat_ID(CatControl* instance, const char* cmd) {
   instance->ackIdReceipt();
   instance->setHeartbeat(millis()); // note time for heartbeat
@@ -281,10 +281,12 @@ void cat_ZM(CatControl* instance, const char* cmd) {
 // https://www.kenwood.com/i/products/info/amateur/pdf/ts890_pc_command_en_rev1.pdf
 // https://www.qrzcq.com/pub/RADIO_MANUALS/KENWOOD/KENWOOD--TS-2000-User-Manual.pdf
 //
-// WSJT-X starts by issuing the following commands with TS-890S selected as the rig:
+// WSJT-X starts by issuing the following commands with TS-890S selected as the rig, commands in () may be included:
 //  ID; PS; IF; AI; KS; FA; FT; TB; SF0; IF; FA000xxxxx055; FA; FA; FA; FA000xxxxx000; IF; FT; TB; SF0;
-// (sometimes IF; replaces FT; and sometime FB; FT; is inserted)
-
+// *** sometimes IF; replaces FT; and sometime FB; FT; is inserted ***
+// *** sometimes a command may be repeated, especially on communication error ***
+// *** WSJT-X seems pretty forgiving as long as ID and FA are as expected ***
+//
 // WSJT-X does a periodic poll which issues the following commands in order and expects the normal answer:
 //  w/ TS-890S rig: FT; TB; FA; SF0; (sometime IF; is used in place of FT;)
 //  w/ T41Server: FA; SP; MD;
@@ -292,7 +294,8 @@ void cat_ZM(CatControl* instance, const char* cmd) {
 // When band/freq change is selected in WSJT-X: FA; FA000xxxxxxxx; ID; SF0; (unit must set band if needed)
 //
 // Other commands:
-//  TX; set command sent at beginning of transmission interval (RX; is not used, unit must disable transmission after interval)
+//  TX; set command sent at beginning of transmission interval (usually followed by ID;)
+//  RX; set command sent at end of transmission interval
 //
 /*********************************************************************************************************
    The following methods impliments the following CAT commands:
@@ -349,9 +352,11 @@ void cat_ZM(CatControl* instance, const char* cmd) {
       RX;
 
     SF - Sets and Reads the VFO (SRA)
+      T41 always returns USB, no split mode operation
+      x: 0=VFO A; 1=VFO B, y:VFO freq, z=2 USB
       SFxyyyyyyyyyyyz;
-      SFx; 0=VFO A; 1=VFO B
-      SF0; T41 always returns no split mode operation
+      SFx;
+      SFxyyyyyyyyyyyz;
 
     SP - Split Operation Frequency Setting (SRA)
       SPx;
@@ -368,10 +373,16 @@ void cat_ZM(CatControl* instance, const char* cmd) {
 
 *********************************************************************************************************/
 
+// reset TX
+// "RX;" (length 3)
+void wsjtCat_RX(CatControl* instance, const char* cmd) {
+  t41.wsjtPTT = 0;
+}
+
 // set TX
 // "TX;" (length 3)
-void cat_TX(CatControl* instance, const char* cmd) {
-  ft8PTT = true;
+void wsjtCat_TX(CatControl* instance, const char* cmd) {
+  t41.wsjtPTT = 1;
 }
 
 // command table construction helpers (see catHelper.h)
@@ -411,11 +422,13 @@ DEFINE_CAT_CMD_PROP("ZM"_cat,  &t41.SpectrumZoom,           cat_ZM, "ZM%d;",    
 // *** the use of the wsjtCAT prefix below is really only needed for those commands also used above (ID here) ***
 DEFINE_CAT_CMD_RO("AI"_cat, &t41.wsjtAI, wsjtCat_AI, "AI%d;",        3); // auto information
 DEFINE_CAT_CMD_RO("ID"_cat, &t41.wsjtID, wsjtCat_ID, "ID%03d;",      3); // radio ID
-DEFINE_CAT_CMD_RO("KS"_cat, &t41.wsjtKS, wsjtCat_KS, "KS0%d;",       3); // key speed
+DEFINE_CAT_CMD_RO("KS"_cat, &t41.wsjtKS, wsjtCat_KS, "KS%03d;",       3); // key speed
+DEFINE_CAT_CMD_RO("PS"_cat, &t41.wsjtPS, wsjtCat_PS, "PS%d;",        3); // power
+DEFINE_CAT_COMMAND("RX"_cat,             wsjtCat_RX, "",         0,  3); // RX
 DEFINE_CAT_CMD_RO("SF"_cat, nullptr,     wsjtCat_SF, "SF%d%011d%d;", 4); // VFO freq and mode
 DEFINE_CAT_CMD_RO("SP"_cat, &t41.wsjtSP, wsjtCat_SP, "SP%d;",        3); // split VFO
 DEFINE_CAT_CMD_RO("TB"_cat, &t41.wsjtTB, wsjtCat_TB, "TB%d;",        3); // split
-DEFINE_CAT_COMMAND("TX"_cat, cat_TX, "",             0,  3); // TX
+DEFINE_CAT_COMMAND("TX"_cat,             wsjtCat_TX, "",         0,  3); // TX
 
 // build the command tables
 // *** CATCommand structure placed at hash index of CAT command ***
@@ -468,11 +481,13 @@ struct WSJTCommandBuilder {
     data["IF"_cath] = &cat_IF_cmd;
     data["KS"_cath] = &wsjtCat_KS_cmd;
     data["MD"_cath] = &cat_MD_cmd;
+    data["PS"_cath] = &wsjtCat_PS_cmd;
+    data["RX"_cath] = &wsjtCat_RX_cmd;
     data["SF"_cath] = &wsjtCat_SF_cmd;
     data["SP"_cath] = &wsjtCat_SP_cmd;
     data["TB"_cath] = &wsjtCat_TB_cmd;
     data["TM"_cath] = &cat_TM_cmd;
-    data["TX"_cath] = &cat_TX_cmd;
+    data["TX"_cath] = &wsjtCat_TX_cmd;
   }
 };
 

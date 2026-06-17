@@ -83,8 +83,10 @@ public:
   ReadOnlyProperty<int> wsjtFT{0};  // TX VFO: T41 always responds 0 (VFO A)
   ReadOnlyProperty<int> wsjtID{24}; // Kenwood TS-890S ID
   ReadOnlyProperty<int> wsjtKS{DEFAULT_KEYER_WPM}; // Keying speed
+  ReadOnlyProperty<int> wsjtPS{1};  // Power: T41 always responds 1 (on)
   ReadOnlyProperty<int> wsjtSP{0};  // Split VFO: T41 always responds 0
   ReadOnlyProperty<int> wsjtTB{0};  // Split: T41 always responds 0 (off)
+  Property<int> wsjtPTT{0};         // TX/RX
 
   // helper functions
   void SetPropertyDefaults();

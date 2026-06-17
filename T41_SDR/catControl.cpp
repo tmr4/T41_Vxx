@@ -25,6 +25,16 @@ extern RA8875 tft;
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+void catSpy(const char* cmd, int x) {
+  // *** spy CAT commands in infobox ***
+  static int row = 340;
+  static int col = 540;
+  tft.setCursor(col, row);
+  tft.print(cmd);
+  col += 8 * x;
+  if(col > 795) { col = 540; row += 20; }
+}
+
 void CatControl::processCommand(const char* cmd) {
   if(enabled) {
     // convert the 2 character command code into its CAT table index
@@ -33,19 +43,12 @@ void CatControl::processCommand(const char* cmd) {
 
     item = catHash >= 128 ? nullptr : catCommands[catHash];
 
+    //if(useWSJT) catSpy(cmd, 4);
     if(item) {
       // CAT command found
       if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
         //Serial.printf("Received read: %s\n", cmd);
-        //if(useWSJT) {
-        //  // *** spy WSJT-X commands in infobox ***
-        //  static int row = 340;
-        //  static int col = 540;
-        //  tft.setCursor(col, row);
-        //  tft.print(cmd);
-        //  col += 8 * 4;
-        //  if(col > 795) { col = 540; row += 20; }
-        //}
+        //catSpy(cmd, 4);
 
         // read command properly formed
         const T41Update* ptr = item->readProperty;
@@ -54,35 +57,20 @@ void CatControl::processCommand(const char* cmd) {
           int value = item->readProperty->getValue();
           snprintf(msg, sizeof(msg), item->format, value);
           send(msg);
+          //if(useWSJT) catSpy(msg, 7);
         } else {
           HandleNonstandardProperty(item);
         }
       } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
         //Serial.printf("Received set: %s\n", cmd);
-        //if(useWSJT) {
-        //  // *** spy WSJT-X commands in infobox ***
-        //  static int row = 340;
-        //  static int col = 540;
-        //  tft.setCursor(col, row);
-        //  tft.print(cmd);
-        //  col += 8 * 14;
-        //  if(col > 785) { col = 540; row += 20; }
-        //}
+        //catSpy(cmd, 14);
 
         // set command properly formed
         item->action->execute(this, cmd);
       } else {
         // command not properly formed
         // *** TODO: consider sending followup if command not properly formed
-        //if(useWSJT) {
-        //  // *** spy WSJT-X commands in infobox ***
-        //  static int row = 340;
-        //  static int col = 540;
-        //  tft.setCursor(col, row);
-        //  tft.print(cmd);
-        //  col += 8 * 3;
-        //  if(col > 785) { col = 540; row += 20; }
-        //}
+        //catSpy(cmd, 4);
 
         return;
       }
@@ -111,14 +99,8 @@ void CatControl::HandleNonstandardProperty(const CATCommand* item) {
       value = t41.GetFreqB();
       break;
     case "ID"_cat:
-      if(useWSJT) {
-        // Kenwood TS-890S: ID024; // *** WSJT-X expects this even when TS-2000 is selected ***
-        // Kenwood TS-2000: ID019;
-        value = 24;
-      } else {
-        if(connectManager.isRemote()) heartbeat = millis(); // note time for heartbeat
-        value = t41.RadioID;
-      }
+      if(connectManager.isRemote()) heartbeat = millis(); // note time for heartbeat
+      value = t41.RadioID;
       break;
     case "IF"_cat:
       if(useWSJT) {
@@ -168,6 +150,7 @@ void CatControl::HandleNonstandardProperty(const CATCommand* item) {
           1,            // CTCSS tone frequency
           0             // shift status
         );
+        //catSpy(msg, 20);
       } else {
         // *** Warning: this is not the Kenwood implimentation ***
         sprintf(msg, "IF%011d%d%d%d%03d%+06d%04d%d%d%d%d%d%d%d%d%011d;",
@@ -200,6 +183,7 @@ void CatControl::HandleNonstandardProperty(const CATCommand* item) {
       freq = vfo == 0 ? t41.GetFreqA() : t41.GetFreqB();
       snprintf(msg, sizeof(msg), item->format, vfo, freq, 2);
       send(msg);
+      //catSpy(msg, 20);
       return;
       break;
     case "SM"_cat:

@@ -183,8 +183,6 @@ TxMsg *txQueue[6] = {NULL}; // pointers into txBuf for appropriate msgs
 // index of next message in txQueue to be transmitted
 int txNextMsg = QSO_MSG_0; // default msg
 
-bool ft8PTT = false;
-
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -1167,7 +1165,7 @@ FLASHMEM void TXProcessing() {
 FT8 decoder state machine
 FT8DecoderLoop is called from the main loop on RECEIVE_STATE. This loop performs one chunk of processing according to the
 FT8 decoder state.  It then returns to the main loop to allow other radio operations to continue.  Similar to other transmission
-states, a flag, ft8PTT is used to activate FT8 transmission in main loop. ft8PTT is set in this loop in STATE_TX which is set at
+states, a property, t41.wsjtPTT is used to activate FT8 transmission in main loop. t41.wsjtPTT is set in this loop in STATE_TX which is set at
 the top of an even/odd interval (as selected by ft8IntState) when FT8 transmission is enabled.  Transmission begins within 0.25
 seconds (*** TODO: examine this further ***).
 
@@ -1193,8 +1191,8 @@ is enabled: (1) returns to Buffering state if the next interval is not a transmi
 state.  Input audio processing is then stopped, TX state is set and forced sync flagged.
 
 TX:
-Forced sync. On sync, message signal for interval is generated, ft8PTT set and state changed to TX Update.  TX occurs in main loop
-where ft8PTT is reset.
+Forced sync. On sync, message signal for interval is generated, t41.wsjtPTT set and state changed to TX Update.  TX occurs in main loop
+where t41.wsjtPTT is reset.
 (*** TODO: review timing profile, consider generating message signal in RX Update, but here is probably appropriate because TX freq can change ***)
 
 TX Update:
@@ -1450,7 +1448,7 @@ FLASHMEM void FT8DecoderLoop() {
 
       TOGGLEPROFILEPIN(PROFILER_RX_TX);
 
-      if(!ft8PTT) {
+      if(!t41.wsjtPTT) {
         // we continue looping through here until start of interval to transmit
         AutoSyncFT8();
 
@@ -1458,7 +1456,7 @@ FLASHMEM void FT8DecoderLoop() {
           if(ft8lib_GenFT8(txQueue[txNextMsg]->msg, txQueue[txNextMsg]->freq)) {
             // get msg signal and set FT8 PTT flag
             ft8TxSignalBuf = ft8lib_GetSignal();
-            ft8PTT = true;
+            t41.wsjtPTT = 1;
             ft8DecoderState = STATE_TX_UPDATE;
           } else {
             DEBUG_MSG("ft8lib_GenFT8 failed");
@@ -1466,7 +1464,7 @@ FLASHMEM void FT8DecoderLoop() {
           }
         }
       } else {
-        // ft8PTT is only set to true above, when FT8 state is also advanced
+        // t41.wsjtPTT is only set to 1 above, when FT8 state is also advanced
         // *** should never be active with normal ops, but protects
         //     against an endless loop on a transmission glitch ***
         ft8DecoderState = STATE_BUFFERING;
