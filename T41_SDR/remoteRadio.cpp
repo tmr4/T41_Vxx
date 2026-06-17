@@ -282,13 +282,18 @@ void cat_ZM(CatControl* instance, const char* cmd) {
 // https://www.qrzcq.com/pub/RADIO_MANUALS/KENWOOD/KENWOOD--TS-2000-User-Manual.pdf
 //
 // WSJT-X starts by issuing the following commands with TS-890S selected as the rig:
-//  ID; PS; IF; AI; KS; FA; FT; TB; SF0; IF; FA000xxxxx055; FA; FA; FA; FA000xxxxx000; IF; FT; TB;
-//
+//  ID; PS; IF; AI; KS; FA; FT; TB; SF0; IF; FA000xxxxx055; FA; FA; FA; FA000xxxxx000; IF; FT; TB; SF0;
+// (sometimes IF; replaces FT; and sometime FB; FT; is inserted)
+
 // WSJT-X does a periodic poll which issues the following commands in order and expects the normal answer:
 //  w/ TS-890S rig: FT; TB; FA; SF0; (sometime IF; is used in place of FT;)
 //  w/ T41Server: FA; SP; MD;
 //
-// When band/freq change is selected in WSJT-X: FA; FA000xxxxxxxx; ID; SF0;
+// When band/freq change is selected in WSJT-X: FA; FA000xxxxxxxx; ID; SF0; (unit must set band if needed)
+//
+// Other commands:
+//  TX; set command sent at beginning of transmission interval (RX; is not used, unit must disable transmission after interval)
+//
 /*********************************************************************************************************
    The following methods impliments the following CAT commands:
     S=set, R=read, A=answer

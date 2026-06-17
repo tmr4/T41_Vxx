@@ -18,6 +18,9 @@
 extern ConnectManager connectManager;
 extern T41Properties t41;
 
+#include "src\displayRA8875\RA8875\src\RA8875.h"
+extern RA8875 tft;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -34,6 +37,16 @@ void CatControl::processCommand(const char* cmd) {
       // CAT command found
       if(item->lenR != 0 && cmd[item->lenR-1] == ';') {
         //Serial.printf("Received read: %s\n", cmd);
+        //if(useWSJT) {
+        //  // *** spy WSJT-X commands in infobox ***
+        //  static int row = 340;
+        //  static int col = 540;
+        //  tft.setCursor(col, row);
+        //  tft.print(cmd);
+        //  col += 8 * 4;
+        //  if(col > 795) { col = 540; row += 20; }
+        //}
+
         // read command properly formed
         const T41Update* ptr = item->readProperty;
 
@@ -46,11 +59,31 @@ void CatControl::processCommand(const char* cmd) {
         }
       } else if(item->lenS != 0 && cmd[item->lenS-1] == ';') {
         //Serial.printf("Received set: %s\n", cmd);
+        //if(useWSJT) {
+        //  // *** spy WSJT-X commands in infobox ***
+        //  static int row = 340;
+        //  static int col = 540;
+        //  tft.setCursor(col, row);
+        //  tft.print(cmd);
+        //  col += 8 * 14;
+        //  if(col > 785) { col = 540; row += 20; }
+        //}
+
         // set command properly formed
         item->action->execute(this, cmd);
       } else {
         // command not properly formed
         // *** TODO: consider sending followup if command not properly formed
+        //if(useWSJT) {
+        //  // *** spy WSJT-X commands in infobox ***
+        //  static int row = 340;
+        //  static int col = 540;
+        //  tft.setCursor(col, row);
+        //  tft.print(cmd);
+        //  col += 8 * 3;
+        //  if(col > 785) { col = 540; row += 20; }
+        //}
+
         return;
       }
     } else {
@@ -89,6 +122,8 @@ void CatControl::HandleNonstandardProperty(const CATCommand* item) {
       break;
     case "IF"_cat:
       if(useWSJT) {
+        // *** TODO: verify that this is latest WSJT-X IF; format ***
+        //
         // WSJT-X recieved w/ USB Serial+Audio: IF00007048000125004+0000000001000361100007030000; which is 48, expects 37
         //                            1         2         3      |  4
         //                  0123456789012345678901234567890123456789012345678
