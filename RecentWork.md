@@ -8,9 +8,12 @@ Running WSJT-X with audio and CAT control over USB has one drawback: the only Te
 
 ![catSpy](https://github.com/tmr4/T41_Vxx/blob/main/images/catSpy.jpg)
 
-The image shows the WSJT-X startup communications with the rig set to Kenwood TS-890s. The text in white are WSJT-X CAT commands to the T41. The text in green are the T41 replies. WSJT-X is pretty forgiving in the responses received when establishing a connection. What's absolutely required are proper responses to the ID and FA commands. You can see that WSJT-X changes the frequency a small amount during the startup sequence to verify that it has control of the frequency. After a successful connection, WSJT-X will poll the unit at the frequency specified in Settings->Radio->Poll Interval.
+The image shows the WSJT-X startup communications with the rig set to Kenwood TS-890s. The text in white are WSJT-X CAT commands to the T41. The text in green are the T41 replies. WSJT-X is pretty forgiving in the responses received when establishing a connection. What's absolutely required are proper responses to the ID and FA commands. You can see that WSJT-X changes the frequency a small amount during the startup sequence to verify that it has control of the frequency.
 
-For this rig, depending on your settings, WSJT-X also uses the TX, RX, and SP commands during normal operation. The commands used with other rigs may differ.
+After a successful connection, WSJT-X will poll the unit at the frequency specified in Settings->Radio->Poll Interval. For this rig, depending on your settings, WSJT-X also uses the TX, RX, and SP commands during normal operation. The commands used with other rigs may differ.
+
+
+***BTW -*** you might notice non-standard values for the Heap, Stack, and Load items in the info box. For these items, I cycle through various indicators to keep better track on Teensy resource use. The Heap item cycles through heap memory available, audio memory blocks currently in use, maximum audio memory blocks used since program start, and a dropped audio block warning. The Stack item cycles through the stack available (white), max stack used since last time (green), and max stack used since program start (yellow). The load item shows the traditional DSP load and the average frames per second display update rate.
 
 ### Plug and Play Remote Unit Connections
 

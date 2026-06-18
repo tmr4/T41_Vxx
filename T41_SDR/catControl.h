@@ -13,7 +13,11 @@
 class CatControl;
 
 void SendCommand(int id);
+#if CAT_SPY
 void catSpy(const char* cmd, int type);
+#else
+inline void catSpy(const char* cmd, int type) {}
+#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Helpers
