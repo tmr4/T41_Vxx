@@ -9,8 +9,6 @@
 #include "catControl.h"
 #include "connectManager.h"
 
-#include "debug.h"
-
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -18,22 +16,9 @@
 extern ConnectManager connectManager;
 extern T41Properties t41;
 
-#include "src\displayRA8875\RA8875\src\RA8875.h"
-extern RA8875 tft;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
-
-void catSpy(const char* cmd, int x) {
-  // *** spy CAT commands in infobox ***
-  static int row = 340;
-  static int col = 540;
-  tft.setCursor(col, row);
-  tft.print(cmd);
-  col += 8 * x;
-  if(col > 795) { col = 540; row += 20; }
-}
 
 void CatControl::processCommand(const char* cmd) {
   if(enabled) {
@@ -43,7 +28,7 @@ void CatControl::processCommand(const char* cmd) {
 
     item = catHash >= 128 ? nullptr : catCommands[catHash];
 
-    //if(useWSJT) catSpy(cmd, 4);
+    if(useWSJT) catSpy(cmd, 1);
     if(item) {
       // CAT command found
       if(item->lenR != 0 && cmd[item->lenR-1] == ';') {

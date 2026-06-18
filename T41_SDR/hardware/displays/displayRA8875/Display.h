@@ -31,8 +31,10 @@
 #define OPERATION_STATS_MD    220 // mode
 #define OPERATION_STATS_CWF   245 // CW filter
 #define OPERATION_STATS_DMD   310 // demod mode
-#define OPERATION_STATS_PWR   405 // power level
-#define OPERATION_STATS_REM   480 // remote status
+//#define OPERATION_STATS_PWR   405 // power level
+//#define OPERATION_STATS_REM   480 // remote status
+#define OPERATION_STATS_PWR   373 // power level
+#define OPERATION_STATS_REM   448 // remote status
 
 #define SPECTRUM_RES          512
 #define SPECTRUM_HEIGHT       150 // This is the pixel height of spectrum plot area without disturbing the axes
@@ -56,7 +58,7 @@
 #define WATERFALL_T           (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT + 25)
 #define WATERFALL_BOTTOM      YPIXELS              // use up remainder of 480 rows
 #define WATERFALL_W           SPECTRUM_RES
-#define WATERFALL_H           WATERFALL_BOTTOM - WATERFALL_T
+#define WATERFALL_H           (WATERFALL_BOTTOM - WATERFALL_T)
 
 #define X_R_STATUS_X          (XPIXELS - 55)
 #define X_R_STATUS_Y          0

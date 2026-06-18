@@ -226,6 +226,31 @@ void DrawSMeterContainer();
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+#if CAT_SPY
+void catSpy(const char* cmd, int type) {
+  // *** spy CAT commands in infobox ***
+  int startRow = WATERFALL_BOTTOM - 3 * WATERFALL_H / 4;
+  static int row = startRow;
+  static int col = 0;
+  uint16_t color = type ? RA8875_WHITE : RA8875_GREEN;
+
+  if(col + 8 * (strlen(cmd) + 1) >= WATERFALL_W) { col = 0; row += 20; }
+  if(row >= YPIXELS) {
+    tft.fillRect(0, startRow, WATERFALL_W, YPIXELS-startRow, RA8875_BLACK);
+    row = startRow;
+  }
+  tft.setTextColor(color);
+  tft.setFontScale((enum RA8875tsize)0);
+  tft.setCursor(col, row);
+  tft.print(cmd);
+  col += 8 * (strlen(cmd) + 1);
+  if(col >= WATERFALL_W) { col = 0; row += 20; }
+  if(row >= YPIXELS) {
+    row = startRow;
+  }
+}
+#endif
+
 FLASHMEM void InitDisplay() {
   // set up display
   pinMode(TFT_MOSI, OUTPUT);
@@ -257,6 +282,10 @@ FLASHMEM void InitDisplay() {
   tft.clearMemory();
   tft.writeTo(L1);
   tft.clearMemory();
+
+#if CAT_SPY
+  SetWaterfallHeight(3 * WATERFALL_H / 4);
+#endif
 }
 
 int GetDisplayWidth() {
@@ -591,7 +620,6 @@ FASTRUN void DrawWaterfall() {
   // Use the Block Transfer Engine (BTE) to move waterfall down a line
   // copy the waterfall between layers in a DMA ping/pong manner, moving it down to row 2
   if(displayState == DISPLAY_T41) {
-
     tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfHeight, WATERFALL_L, WATERFALL_T + 1, tik, tok);
     // Make sure it is done.  Memory moves can take time. This is blocking.
     // *** might need to block here if blocking nature of readStatus is modified ***
@@ -877,6 +905,13 @@ FLASHMEM void ShowRemoteStatus() {
       break;
   }
   tft.print("CAT");
+#if T41_WSJT_CAT_AUDIO
+  // *** TODO: add heartbeat to confirm actual connection ***
+  tft.setTextColor(RA8875_WHITE);
+  tft.print("/");
+  tft.setTextColor(RA8875_GREEN);
+  tft.print("WSJT");
+#endif
 }
 
 /*****

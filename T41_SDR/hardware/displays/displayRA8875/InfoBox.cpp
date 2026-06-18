@@ -48,6 +48,7 @@ void IBAGCFollowup(int row, int col);
 void IBZoomFollowup(int row, int col);
 
 void ClearInfoBox();
+void ClearInfoBoxRow(int row);
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -211,7 +212,13 @@ void UpdateInfoBoxItem(int item) {
   // *** TODO: warning the following could be breaking for displays other than the T41 operating display ***
   //if(displayState == DISPLAY_T41)
   {
-    if(!infoBoxItemActive[item] || (item >= IB_NUM_ITEMS)) return;
+    if(item >= IB_NUM_ITEMS) return;
+    if(!infoBoxItemActive[item]) {
+      // erase item
+      // *** TODO: this could erase other feature specific items that use the same row ***
+      ClearInfoBoxRow(yOffset);
+      return;
+    }
 
     tft.setFontScale((enum RA8875tsize)infoBox[item].fontSize);
     tft.fillRect(xOffset, yOffset, tft.getFontWidth() * infoBox[item].clearWidth, tft.getFontHeight(), RA8875_BLACK);

@@ -7,6 +7,7 @@
 #define RADIO_ROLE 7            // 0:standard ops, 1:WSJT-X, *** See Remote operation below for additional settings ***
 
 #define PROFILER_ACTIVE
+#define CAT_SPY true            // set to true to examine CAT communication traffic in waterfall area
 
 #define MASTER_CLK_MULT 4ULL // FOURSQRP QSD frontend requires 4x clock
 

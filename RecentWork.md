@@ -2,6 +2,16 @@
 
 ## Ongoing Work
 
+### CAT Communication Spy
+
+Running WSJT-X with audio and CAT control over USB has one drawback: the only Teensy serial port available is taken by WSJT-X. This makes it difficult to debug the CAT communications traffic. I added a simple display routine to show the comm traffic in the lower portion of the waterfall area.
+
+![catSpy](https://github.com/tmr4/T41_Vxx/blob/main/images/atSpy.jpg)
+
+The image shows the WSJT-X startup communications with the rig set to Kenwood TS-890s. The text in white are WSJT-X CAT commands to the T41. The text in green are the T41 replies. WSJT-X is pretty forgiving in the responses received when establishing a connection. What's absolutely required are proper responses to the ID and FA commands. You can see that WSJT-X changes the frequency a small amount during the startup sequence to verify that it has control of the frequency. After a successful connection, WSJT-X will poll the unit at the frequency specified in Settings->Radio->Poll Interval.
+
+For this rig, depending on your settings, WSJT-X also uses the TX, RX, and SP commands during normal operation. The commands used with other rigs may differ.
+
 ### Plug and Play Remote Unit Connections
 
 So far I've used special compile options to determine the connection type to a remote unit.  That's probably how the software will normally be compiled and run as it keeps unwanted capability from crowding the Teensy memory. However, there could be times that you'd like to connect your T41 to a remote unit over either USB or Ethernet and don't want to reload the software for each connection type. Plug and Play Remote Connections to the rescue. This capability is available by selecting the plug and play radio role for the units in the hardware configuration file (*hardwareConfig.h*).

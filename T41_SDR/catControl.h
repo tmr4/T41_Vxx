@@ -13,6 +13,7 @@
 class CatControl;
 
 void SendCommand(int id);
+void catSpy(const char* cmd, int type);
 
 //-------------------------------------------------------------------------------------------------------------
 // Helpers
@@ -75,7 +76,7 @@ public:
 
         if(c == ';') {
           cmd[idx++] = ';';
-          cmd[idx] = '\0';
+          cmd[idx] = '\0'; // terminate it
           processCommand(cmd);
           idx = 0;
         } else if(idx < maxCmd - 1) { // leave room for ';' and '\0'
@@ -112,6 +113,7 @@ public:
       //Serial.printf("Sent: %s\n", msg);
       getStream();
       if(stream && stream->availableForWrite() > 50) {
+        if(useWSJT) catSpy(msg, 0);
         stream->print(msg);
       }
     }
