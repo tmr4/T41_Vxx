@@ -6,7 +6,7 @@
 
 Running WSJT-X with audio and CAT control over USB has one drawback: the only Teensy serial port available is taken by WSJT-X. This makes it difficult to debug the CAT communications traffic. I added a simple display routine to show the comm traffic in the lower portion of the waterfall area.
 
-![catSpy](https://github.com/tmr4/T41_Vxx/blob/main/images/atSpy.jpg)
+![catSpy](https://github.com/tmr4/T41_Vxx/blob/main/images/catSpy.jpg)
 
 The image shows the WSJT-X startup communications with the rig set to Kenwood TS-890s. The text in white are WSJT-X CAT commands to the T41. The text in green are the T41 replies. WSJT-X is pretty forgiving in the responses received when establishing a connection. What's absolutely required are proper responses to the ID and FA commands. You can see that WSJT-X changes the frequency a small amount during the startup sequence to verify that it has control of the frequency. After a successful connection, WSJT-X will poll the unit at the frequency specified in Settings->Radio->Poll Interval.
 
