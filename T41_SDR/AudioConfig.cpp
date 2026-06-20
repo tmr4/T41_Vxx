@@ -121,6 +121,8 @@ AudioRecordQueue Q_in_R;
 #if RADIO_ROLE == 7
 AudioOutputHostSerial iqStreamUSB{USBManager::getHost()};
 AudioOutputEthernet iqStreamEthernet;
+#elif RADIO_ROLE == 4
+AudioInputEthernet iqStreamEthernet;
 #elif RADIO_ROLE == 6
 AudioInputSerial1 iqStreamUSB;
 AudioInputEthernet iqStreamEthernet;
@@ -150,13 +152,16 @@ AudioConnection pc_Q_in_L, pc_Q_in_R, pc_Q_in_L_Ex, pc_Q_out_L, pc_Q_out_L_Ex, p
 // currently USB Audio only used with WSJT-X FT8
 // *** TODO: put these in the proper place for setup ***
 #if T41_WSJT_CAT_AUDIO
-AudioOutputUSB usbOut;
-AudioAmplifier amp1; // WSJT-X needs some amplification to detect signal *** TODO: this needs refined with PC input volume adjustment ***
-AudioConnection pc_amp1(Q_out_L, amp1);
-AudioConnection pc_usb1(amp1, 0, usbOut, 0);
+// *** WSJT-X recommends a signal strength of 30db with signal with only noise ***
+// some amplification needed to give reasonable PC input volume setting
+AudioOutputUSB wsjtOut;
+AudioAmplifier wsjtAmp;
+AudioConnection pc_wsjtAmp(Q_out_L, wsjtAmp);
+AudioConnection pc_usb1(wsjtAmp, 0, wsjtOut, 0);
+//AudioConnection pc_usb1(Q_out_L, 0, wsjtOut, 0);
 
-AudioInputUSB usbIn;
-AudioConnection pc_usb2(usbIn, Q_in_L_Ex);
+AudioInputUSB wsjtIn;
+AudioConnection pc_usb2(wsjtIn, Q_in_L_Ex);
 #endif
 
 #ifdef USE_MIC_COMPRESSION
@@ -259,9 +264,11 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
   if(connectMode == CONNECT_ETHERNET) {
     aStream = &iqStreamEthernet;
     cbStream = &iqStreamEthernet;
+#if RADIO_ROLE == 7 || RADIO_ROLE == 6
   } else {
     aStream = &iqStreamUSB;
     cbStream = &iqStreamUSB;
+#endif
   }
 
 
@@ -271,7 +278,7 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
     pc_IQ_R.disconnect();
     pc_IQ_L.connect(i2s_quadIn, 2, *aStream, 0);
     pc_IQ_R.connect(i2s_quadIn, 3, *aStream, 1);
-  } else if(t41.RadioRole == 6) {
+  } else if((t41.RadioRole == 4) || (t41.RadioRole == 6)) {
     // remote
     pc_Q_in_L.disconnect();
     pc_Q_in_R.disconnect();
@@ -410,8 +417,14 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 #endif
 
 #if T41_WSJT_CAT_AUDIO
-  // *** TODO: revisit gain needed for WSJT-X ***
-  amp1.gain(100);
+// *** WSJT-X recommends a signal strength of 30db with signal with only noise ***
+// adjust amplification to give reasonable PC input volume setting
+// 100 gain requires PC volume of 1
+// 10 gain requires PC volume of 88
+// 15 gain requires PC volume of 70
+// 20 gain requires PC volume of 60
+// 25 gain requires PC volume of ~30
+  wsjtAmp.gain(25);
   pc_usb2.disconnect(); // USB
 #endif
   AudioMemoryUsageMaxReset(); // reset max audio mem usage
@@ -500,7 +513,7 @@ void ConfigAudioState(int audioState) {
             //Q_in_L_Ex.end();
             //Q_in_L_Ex.clear();
 
-            pc_amp1.connect();
+            pc_wsjtAmp.connect();
           #endif
           break;
 
@@ -553,7 +566,7 @@ void ConfigAudioState(int audioState) {
             pc_usb2.connect(); // USB
             Q_in_L_Ex.begin();
 
-            pc_amp1.disconnect();
+            pc_wsjtAmp.disconnect();
             Q_out_Start();
           #endif
           break;

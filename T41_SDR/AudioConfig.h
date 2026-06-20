@@ -33,6 +33,8 @@ extern AudioPlayQueue Q_out_R_Ex;
 #if RADIO_ROLE == 7
 extern AudioOutputHostSerial iqStreamUSB;
 extern AudioOutputEthernet iqStreamEthernet;
+#elif RADIO_ROLE == 4
+extern AudioInputEthernet iqStreamEthernet;
 #elif RADIO_ROLE == 6
 extern AudioInputSerial1 iqStreamUSB;
 extern AudioInputEthernet iqStreamEthernet;
@@ -57,7 +59,7 @@ inline void __attribute__((always_inline)) YieldToEthernet() {
   if(cbStream) {
 #if RADIO_ROLE == 7
     cbStream->writeToQueue();
-#elif RADIO_ROLE == 6
+#elif RADIO_ROLE == 4 || RADIO_ROLE == 6
     cbStream->readToQueue();
 #endif
   }

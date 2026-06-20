@@ -63,7 +63,7 @@ extern CatControl wsjtControl;
 
 #if RADIO_ROLE == 7
 ConnectManager connectManager;
-#elif RADIO_ROLE == 6
+#elif RADIO_ROLE == 4 || RADIO_ROLE == 6
 ConnectManager connectManager(DEVICE_ROLE_REMOTE);
 #endif
 
@@ -301,13 +301,10 @@ FLASHMEM void setup() {
 
   //T41BeaconSetup();
 
-#if RADIO_ROLE > 0
-#if T41_WSJT_CAT_AUDIO
+#if RADIO_ROLE == 7 || RADIO_ROLE == 6
   connectManager.begin(&catControl, &iqStreamEthernet, &iqStreamUSB);
-#else
-  connectManager.begin(&catControl, &iqStreamEthernet, &iqStreamUSB);
-#endif
-
+#elif RADIO_ROLE == 4
+  connectManager.begin(&catControl, &iqStreamEthernet, nullptr);
 #endif
 
   KeyerSetup(); // testing only

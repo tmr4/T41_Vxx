@@ -14,7 +14,7 @@ Data Structure:
 
 */
 
-#if RADIO_ROLE == 6
+#if RADIO_ROLE == 4 || RADIO_ROLE == 6
 
 #include <AudioStream.h>
 #include <QNEthernet.h>

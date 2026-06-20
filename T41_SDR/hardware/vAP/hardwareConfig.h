@@ -4,7 +4,7 @@
 
 #define VERSION "vAP_dev/v0.03" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 #define RADIO_ID 02             // 0-999, radio ID is reported as 24 to WSJT-X (Kenwood TS-890S)
-#define RADIO_ROLE 6            // 0:standard ops, 1:WSJT-X, *** See Remote operation below for additional settings ***
+#define RADIO_ROLE 4            // 0:standard ops, 1:WSJT-X, *** See Remote operation below for additional settings ***
 
 #define PROFILER_ACTIVE
 
@@ -95,11 +95,11 @@
 #define T41_WSJT_CAT_AUDIO        false
 
 // automatically configure radio for selected remote operation and services
-#if (RADIO_ROLE < 0) || (RADIO_ROLE > 9)
+#if (RADIO_ROLE < 0) || (RADIO_ROLE > 13)
   #undef RADIO_ROLE
   #define RADIO_ROLE 0
 #else
-  #if RADIO_ROLE == 1
+  #if RADIO_ROLE == 4
     // *** for passing CAT/audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
     // USB cable from the USB serial connection on this unit (T41) to a USB connection on the PC
     // Compile with an Audio option selected, such as "Serial + MIDI + Audio"

@@ -128,7 +128,7 @@
   #undef RADIO_ROLE
   #define RADIO_ROLE 0
 #else
-  #if RADIO_ROLE == 7
+  #if RADIO_ROLE == 1
     // *** for passing CAT/audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
     // USB cable from the USB serial connection on this unit (T41) to a USB connection on the PC
     // Compile with an Audio option selected, such as "Serial + MIDI + Audio"

@@ -67,18 +67,27 @@ private:
 public:
 
   void begin(CatControl* cat, ConnectBase* ethernet, ConnectBase* usb) {
-    if(cat && ethernet && usb) {
+    if(cat) {
       catControl = cat;
+    } else {
+      catControl = nullptr;
+    }
+    if(ethernet) {
       ethernetConnection = ethernet;
-      usbConnection = usb;
-      enabled = true;
       ethernetConnection->init();
+    } else {
+      ethernetConnection = nullptr;
+    }
+    if(usb) {
+      usbConnection = usb;
       usbConnection->init();
     } else {
-      activeConnection = nullptr;
-      catControl = nullptr;
-      ethernetConnection = nullptr;
       usbConnection = nullptr;
+    }
+    if(cat && ethernet) {
+      enabled = true;
+    } else {
+      activeConnection = nullptr;
       enabled = false;
     }
   }
