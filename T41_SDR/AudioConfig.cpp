@@ -26,10 +26,19 @@ T41 audio chain:
     v11/v12 radios and can be removed. I've left it in for now as it's used w/ vPS.
 
     Receive path:
-      PCM1808 ADC -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> PCM5102 DAC
+      All:
+        PCM1808 ADC -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L -> i2s_quadOut (ch 3) -> PCM5102 DAC
+      To WSJT-X:
+        Q_out_L -> wsjtAmp -> wsjtOut -> (audio + CAT on Serial over USB) -> WSJT-X
 
     Transmit path:
-      Audio adapter mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
+      SSB:
+        Audio adapter mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
+      CW:
+        CWTransmit -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
+      WSJT-X:
+        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
+
       Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> PCM5102 DAC
 
 
@@ -39,19 +48,45 @@ T41 audio chain:
     audioControl_2 control object on high address associated w/ audio adapter #2 (set to I2C address 0x2A address, high)
 
     Receive path:
-      IQ signals -> Audio adapter #2 line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone
+      All:
+        IQ signals -> Audio adapter #2 line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone
+      To WSJT-X:
+        Q_out_L -> wsjtAmp -> wsjtOut -> (audio + CAT on Serial over USB) -> WSJT-X
 
     Transmit path:
-      Audio adapter #1 mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
+      SSB:
+        Audio adapter #1 mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
+      CW:
+        CWTransmit -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
+      WSJT-X:
+        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
+
       Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone
 
 
 
-  vAP (has single audio adapter circuit):
+  vAP (remote unit has single audio adapter circuit):
     audioControl_1 control object on low address associated w/ audio adapter circuit #1 (set to default I2C address 0x0A address, low)
 
     Receive path:
-      aStream -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 1) -> Audio adapter #1 headphone
+      T41 -> aStream -> Q_in_L/R -> DSP - > Q_out_L -> i2s_quadOut (ch 1) -> Audio adapter #1 headphone
+
+    Transmit path (*** experimental ***):
+      SSB:
+        to come
+      CW:
+        to come
+      WSJT-X:
+        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> DSP - > Q_out_L/R_Ex -> aStream -> T41
+
+
+
+  Remote unit audio connection details:
+    Receive path:
+      T41 i2s_quadIn -> aStream -> USB or Ethernet cable -> aStream -> Remote Q_in_L/R
+
+    Transmit path (*** experimental ***):
+      Remote Q_out_L/R_Ex -> aStream -> USB or Ethernet cable -> aStream -> T41 Q_out_L/R_Ex
 
 
 
@@ -109,6 +144,15 @@ elapsedMicros usecAudio;
 AudioControlSGTL5000 audioControl_1; // controller for the Teensy Audio Board microphone
 AudioControlSGTL5000 audioControl_2; // control object PCM1808 ADC (doesn't actually control ADC) https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
 
+/*
+Note: When adding new audio objects, observe: https://www.pjrc.com/teensy/td_libs_AudioConnection.html
+
+Audio objects should be created in the order data is processed, inputs, playback and synthesis, then effects, filters, mixers, and lastly outputs.
+
+Connections are most efficient when made from an earlier object (in the order they are created) to a later one. Connections from a later object
+back to an earlier object can be made, but they add a 1-block delay and consume more memory to implement that delay.
+*/
+
 // Audio inputs
 // I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
 // See https://www.pjrc.com/teensy/gui/?info=AudioInputI2SQuad
@@ -124,12 +168,12 @@ AudioEffectCompressor_F32 comp1, comp2;        // https://www.janbob.com/electro
 AudioConvert_F32toI16 float2Int1, float2Int2;  // https://www.janbob.com/electron/OpenAudio_Design_Tool/index.html?info=AudioConvert_F32toI16
 #endif
 
+#if T41_WSJT_CAT_AUDIO
+AudioInputUSB wsjtIn;
+#endif
+
 AudioRecordQueue Q_in_L_Ex;
 //AudioRecordQueue Q_in_R_Ex; // *** TODO: this will be used in calibration routines, but not needed for microphone ***
-
-// Receive I/Q input (pin 6)
-AudioRecordQueue Q_in_L; // https://www.pjrc.com/teensy/gui/?info=AudioRecordQueue
-AudioRecordQueue Q_in_R;
 
 // Remote Audio - Remote IQ data stream:
 // The T41 IQ data stream is transfered to a remote unit over USB Host/Ethernet. The remote
@@ -148,6 +192,10 @@ AudioInputEthernet iqStreamEthernet;
 // default to a Ethernet connection
 ConnectBase* cbStream = &iqStreamEthernet;
 AudioStream* aStream = &iqStreamEthernet;
+
+// Receive I/Q input (pin 6)
+AudioRecordQueue Q_in_L; // https://www.pjrc.com/teensy/gui/?info=AudioRecordQueue
+AudioRecordQueue Q_in_R;
 
 // Audio outputs
 // I2S quad output: ch 1&2 on pin 7, ch 3&4 on pin 32
@@ -171,13 +219,12 @@ AudioConnection pc_Q_in_L, pc_Q_in_R, pc_Q_in_L_Ex, pc_Q_out_L, pc_Q_out_L_Ex, p
 #if T41_WSJT_CAT_AUDIO
 // *** WSJT-X recommends a signal strength of 30db with signal with only noise ***
 // some amplification needed to give reasonable PC input volume setting
-AudioOutputUSB wsjtOut;
 AudioAmplifier wsjtAmp;
+AudioOutputUSB wsjtOut;
 AudioConnection pc_wsjtAmp(Q_out_L, wsjtAmp);
 AudioConnection pc_usb1(wsjtAmp, 0, wsjtOut, 0);
 //AudioConnection pc_usb1(Q_out_L, 0, wsjtOut, 0);
 
-AudioInputUSB wsjtIn;
 AudioConnection pc_usb2(wsjtIn, Q_in_L_Ex);
 #endif
 
