@@ -12,14 +12,18 @@
 
 /**************************************************************
 T41 audio chain:
-  Software supports both RX/TX and RX only versions. RX support is alway assumed. But because v11/v12 hardware
-  versions do not communicate with their ADC/DAC chips, it isn't possible to automatically determining if TX
-  is supported.  To accomodate this, AudioSetup accepts a boolean indicating if TX is supported.
+  Software supports both RX/TX and RX only versions. RX support is always assumed. But because v11/v12 hardware
+  versions do not communicate with their ADC/DAC chips, it isn't possible to directly determin from the main board
+  if TX is supported.  To accomodate this, AudioSetup accepts a boolean indicating if TX is supported.
+
+  *** TODO: for v12 determine if other I2C chips can be used to automatically determine if TX is possible ***
 
   v11/v12 radios:
-    audioControl_1 control object associated w/ audio adapter (set to I2C address 0x0A address, low)
+    audioControl_1 control object associated w/ audio adapter (set to default I2C address 0x0A address, low)
     audioControl_2 control object associated w/ PCM1808 ADC.  Control object set to I2C address 0x2A address, high,
     but there is no actual I2C communication with the PCM1808. Chip is hardwired for I2S operation (as is PCM5102).
+    audioControl_2 is legacy, dating back to early versions of the T41 software, but it serves no purpose in the
+    v11/v12 radios and can be removed. I've left it in for now as it's used w/ vPS.
 
     Receive path:
       PCM1808 ADC -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> PCM5102 DAC
@@ -28,22 +32,35 @@ T41 audio chain:
       Audio adapter mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
       Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> PCM5102 DAC
 
-  Hardware w/ two audio adapter boards:
-    audioControl_1 control object on low address associated w/ audio adapter #1 (set to I2C address 0x0A address, low)
+
+
+  vPS and hardware w/ two audio adapter boards:
+    audioControl_1 control object on low address associated w/ audio adapter #1 (set to default I2C address 0x0A address, low)
     audioControl_2 control object on high address associated w/ audio adapter #2 (set to I2C address 0x2A address, high)
 
     Receive path:
-      Audio adapter #2 line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone
+      IQ signals -> Audio adapter #2 line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone
 
     Transmit path:
       Audio adapter #1 mic -> i2s_quadIn (ch 1&2) -> Q_in_L/R_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
-      Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone (*** check ***)
+      Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone
 
-  Hardware w/ one audio adapter board (*** Receive only ***):
+
+
+  vAP (has single audio adapter circuit):
+    audioControl_1 control object on low address associated w/ audio adapter circuit #1 (set to default I2C address 0x0A address, low)
+
+    Receive path:
+      aStream -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 1) -> Audio adapter #1 headphone
+
+
+
+  Hardware w/ one audio adapter board (*** Receive only: LOCAL_AUDIO_DATA must be defined ***):
+  *** I don't have a dedicated hardware version set up for this radio role ***
     audioControl_1 control object on low address
 
     Receive path:
-      Audio adapter line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter headphone (or line out)
+      IQ signals -> Audio adapter line in -> i2s_quadIn (ch 3&4) -> Q_in_L/R -> DSP - > Q_out_L/R -> i2s_quadOut (ch 3) -> Audio adapter headphone (or line out)
 
 ***************************************************************/
 
