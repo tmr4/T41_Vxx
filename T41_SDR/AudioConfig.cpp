@@ -69,24 +69,24 @@ T41 audio chain:
     audioControl_1 control object on low address associated w/ audio adapter circuit #1 (set to default I2C address 0x0A address, low)
 
     Receive path:
-      T41 -> aStream -> Q_in_L/R -> DSP - > Q_out_L -> i2s_quadOut (ch 1) -> Audio adapter #1 headphone
+      Remote connection (USB or Ethernet cable) -> aStream -> Q_in_L/R -> DSP - > Q_out_L -> i2s_quadOut (ch 1) -> Audio adapter #1 headphone
 
     Transmit path (*** experimental ***):
       SSB:
         to come
       CW:
         to come
-      WSJT-X:
-        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> DSP - > Q_out_L/R_Ex -> aStream -> T41
+      WSJT-X (*** only possible w/ T41 connection over Ethernet ***):
+        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> DSP - > Q_out_L/R_Ex -> aStream -> Remote connection (USB or Ethernet cable)
 
 
 
-  Remote unit audio connection details:
+  T41-Remote unit audio connection detail:
     Receive path:
-      T41 i2s_quadIn -> aStream -> USB or Ethernet cable -> aStream -> Remote Q_in_L/R
+      T41 i2s_quadIn -> aStream -> Remote connection (USB or Ethernet cable) -> aStream -> Remote Q_in_L/R
 
     Transmit path (*** experimental ***):
-      Remote Q_out_L/R_Ex -> aStream -> USB or Ethernet cable -> aStream -> T41 Q_out_L/R_Ex
+      Remote Q_out_L/R_Ex -> aStream -> Remote connection (USB or Ethernet cable) -> aStream -> T41 Q_out_L/R_Ex
 
 
 
