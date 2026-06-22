@@ -341,27 +341,23 @@ FLASHMEM void AGCLoadValues() {
       break;
 
     case 1:                                           //agcLONG
-
       hangtime = 2.000;
       tau_decay = 2.000;
       break;
 
     case 2:                                           //agcSLOW
-
       hangtime = 1.000;
       tau_decay = 0.5;
       break;
 
     case 3:                                           //agcMED
       hang_thresh = 1.0; // *** this is effectively commented out in original ***
-
       hangtime = 0.000;
       tau_decay = 0.250;
       break;
 
     case 4:                                           //agcFAST
       hang_thresh = 1.0;
-
       hangtime = 0.0;
       tau_decay = 0.050;
       break;
@@ -399,12 +395,19 @@ FLASHMEM void AGCLoadValues() {
   hang_decay_mult = 1.0 - expf(-1.0 / (sample_rate * tau_hang_decay));
 }
 
+#define RB_SIZE (int)(MAX_SAMPLE_RATE * MAX_N_TAU * MAX_TAU_ATTACK + 1)
+// *** these need to be initialize to zero, alignment is optional ***
+DMAMEM float32_t abs_ring[RB_SIZE] __attribute__((aligned(4)));
+DMAMEM float32_t ring[RB_SIZE * 2] __attribute__((aligned(4)));
+
 /*****
   setup AGC
 *****/
 FLASHMEM void AGCPrep() {
-  // Start variables taken from wdsp
+  CLEAR_VAR(abs_ring);
+  CLEAR_VAR(ring);
 
+  // Start variables taken from wdsp
   tau_attack      = 0.001;            // tau_attack
   tau_decay       = 0.250;
   n_tau           = 4;
@@ -427,11 +430,6 @@ FLASHMEM void AGCPrep() {
 
   AGCLoadValues();
 }
-
-#define RB_SIZE (int)(MAX_SAMPLE_RATE * MAX_N_TAU * MAX_TAU_ATTACK + 1)
-// *** TODO: look to initialize these ***
-DMAMEM float32_t abs_ring[RB_SIZE];
-DMAMEM float32_t ring[RB_SIZE * 2];
 
 /*****
   Purpose: Audio AGC()*****/

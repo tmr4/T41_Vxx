@@ -327,7 +327,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // *** TODO: needed for current state of internal FT8 decoding, DEMOD_FT8_INTERNAL, hangs otherwise, though interrupts work ***
   if((Q_in_L.available() > 50) && (Q_in_R.available() > 50)) {
     //if(sendGet) {
-      Serial.println("clearing @ ProcessReceiverData ...");
+      //Serial.println("clearing @ ProcessReceiverData ...");
     //}
     Q_in_L.clear();
     Q_in_R.clear();
@@ -854,15 +854,14 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   /**********************************************************************************
     CONVERT TO INTEGER AND PLAY AUDIO
   **********************************************************************************/
-  //arm_float_to_q15(audioBufferL, q15_buffer_LTemp, blocks * 128);
-  //Q_out_L.play(q15_buffer_LTemp, blocks * 128);
   for(int i = 0; i < blocks; i++) {
     int16_t *buf = Q_out_L.getBuffer();
     if(buf != nullptr) {
       arm_float_to_q15(&audioBufferL[i*128], buf, 128);
-      Q_out_L.playBuffer();
+        Q_out_L.playBuffer();
     } else {
-      Serial.println("skipped ProcessReceiverData output...");
+      //Serial.println("skipped ProcessReceiverData output...");
+      t41.DroppedBlock = 1;
     }
   }
 

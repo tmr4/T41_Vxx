@@ -32,6 +32,8 @@ See the bottom of file for an example command table.
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern CatControl catControl;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -237,6 +239,17 @@ void cat_PG(CatControl* instance, const char* cmd) {
   t41.RFGain.Update(atoi(&cmd[2]));
 }
 
+// reset TX
+// "RX;" (length 3)
+void cat_RX(CatControl* instance, const char* cmd) {
+  if(instance->isWSJT()) {
+    t41.wsjtPTT = 0;
+    catControl.send(cmd);
+  } else {
+    t41.wsjtPTT = 0;
+  }
+}
+
 // read S-meter (non-standard Kenwood command)
 // "SM;" (length 3)
 // "SMx;" (length 4) x= 0: dbm; 1: S-meter
@@ -248,6 +261,17 @@ void cat_SM(CatControl* instance, const char* cmd) {}
 void cat_TM(CatControl* instance, const char* cmd) {
   Teensy3Clock.set(atol(&cmd[2]));
   setTime(atol(&cmd[2]));
+}
+
+// set TX
+// "TX;" (length 3)
+void cat_TX(CatControl* instance, const char* cmd) {
+  if(instance->isWSJT()) {
+    t41.wsjtPTT = 1;
+    catControl.send(cmd);
+  } else {
+    t41.wsjtPTT = 1;
+  }
 }
 
 // read/set volume
@@ -373,18 +397,6 @@ void cat_ZM(CatControl* instance, const char* cmd) {
 
 *********************************************************************************************************/
 
-// reset TX
-// "RX;" (length 3)
-void wsjtCat_RX(CatControl* instance, const char* cmd) {
-  t41.wsjtPTT = 0;
-}
-
-// set TX
-// "TX;" (length 3)
-void wsjtCat_TX(CatControl* instance, const char* cmd) {
-  t41.wsjtPTT = 1;
-}
-
 // command table construction helpers (see catHelper.h)
 // generic commands
 DEFINE_CAT_CMD_PROP("BD"_cat,  &t41.ActiveBand,             cat_BD, "BD%d;",     3,  4); // band down
@@ -413,8 +425,10 @@ DEFINE_CAT_CMD_ACTN("NW"_cat,  nullptr,                     cat_NW, "",         
 DEFINE_CAT_CMD_PROP("N1"_cat,  &t41.NoiseFilter,            cat_N1, "N1%d;",     3,  4); // set noise filter
 DEFINE_CAT_CMD_PROP("PC"_cat,  &t41.TxPower,                cat_PC, "PC%02d;",   3,  5); // read/set transmit power level
 DEFINE_CAT_CMD_PROP("PG"_cat,  &t41.RFGain,                 cat_PG, "PG%+03d;",  3,  6); // read/set RF gain
+DEFINE_CAT_COMMAND("RX"_cat,                                cat_RX, "",          0,  3); // RX
 DEFINE_CAT_CMD_ACTN("SM"_cat,  nullptr,                     cat_SM, "SM0%+05d;", 3,  4); // read S-meter
 DEFINE_CAT_CMD_ACTN("TM"_cat,  nullptr,                     cat_TM, "",          0, 14); // set Teensy RTC
+DEFINE_CAT_COMMAND("TX"_cat,                                cat_TX, "",          0,  3); // TX
 DEFINE_CAT_CMD_PROP("VO"_cat,  &t41.AudioVolume,            cat_VO, "VO%03d;",   3,  6); // read/set volume
 DEFINE_CAT_CMD_PROP("ZM"_cat,  &t41.SpectrumZoom,           cat_ZM, "ZM%d;",     3,  4); // read/set spectrum zoom
 
@@ -424,11 +438,9 @@ DEFINE_CAT_CMD_RO("AI"_cat, &t41.wsjtAI, wsjtCat_AI, "AI%d;",        3); // auto
 DEFINE_CAT_CMD_RO("ID"_cat, &t41.wsjtID, wsjtCat_ID, "ID%03d;",      3); // radio ID
 DEFINE_CAT_CMD_RO("KS"_cat, &t41.wsjtKS, wsjtCat_KS, "KS%03d;",       3); // key speed
 DEFINE_CAT_CMD_RO("PS"_cat, &t41.wsjtPS, wsjtCat_PS, "PS%d;",        3); // power
-DEFINE_CAT_COMMAND("RX"_cat,             wsjtCat_RX, "",         0,  3); // RX
 DEFINE_CAT_CMD_RO("SF"_cat, nullptr,     wsjtCat_SF, "SF%d%011d%d;", 4); // VFO freq and mode
 DEFINE_CAT_CMD_RO("SP"_cat, &t41.wsjtSP, wsjtCat_SP, "SP%d;",        3); // split VFO
 DEFINE_CAT_CMD_RO("TB"_cat, &t41.wsjtTB, wsjtCat_TB, "TB%d;",        3); // split
-DEFINE_CAT_COMMAND("TX"_cat,             wsjtCat_TX, "",         0,  3); // TX
 
 // build the command tables
 // *** CATCommand structure placed at hash index of CAT command ***
@@ -462,8 +474,10 @@ struct RemoteCommandTable {
     data["N1"_cath] = &cat_N1_cmd;
     data["PC"_cath] = &cat_PC_cmd;
     data["PG"_cath] = &cat_PG_cmd;
+    data["RX"_cath] = &cat_RX_cmd;
     data["SM"_cath] = &cat_SM_cmd;
     data["TM"_cath] = &cat_TM_cmd;
+    data["TX"_cath] = &cat_TX_cmd;
     data["VO"_cath] = &cat_VO_cmd;
     data["ZM"_cath] = &cat_ZM_cmd;
   }
@@ -482,12 +496,12 @@ struct WSJTCommandBuilder {
     data["KS"_cath] = &wsjtCat_KS_cmd;
     data["MD"_cath] = &cat_MD_cmd;
     data["PS"_cath] = &wsjtCat_PS_cmd;
-    data["RX"_cath] = &wsjtCat_RX_cmd;
+    data["RX"_cath] = &cat_RX_cmd;
     data["SF"_cath] = &wsjtCat_SF_cmd;
     data["SP"_cath] = &wsjtCat_SP_cmd;
     data["TB"_cath] = &wsjtCat_TB_cmd;
     data["TM"_cath] = &cat_TM_cmd;
-    data["TX"_cath] = &wsjtCat_TX_cmd;
+    data["TX"_cath] = &cat_TX_cmd;
   }
 };
 

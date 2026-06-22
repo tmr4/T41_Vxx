@@ -221,7 +221,7 @@ FLASHMEM void SoftReset() {
 void MaxStackUseSetup();
 
 FLASHMEM void setup() {
-  int sampleRate = 192000.0;
+  int sampleRate = 192000;
 
   Serial.begin(9600);
   /* check for CrashReport stored from previous run */
@@ -532,10 +532,12 @@ FASTRUN void loop() {
 
         switch(t41.DemodMode) {
           case DEMOD_FT8:
-              PrepareMicExciterData();
-              #if T41_WSJT_CAT_AUDIO
-              wsjtControl.update(); // update t41.wsjtPTT
-              #endif
+            //if(t41.RadioRole == 7) PrepareMicExciterData();
+            #if T41_WSJT_CAT_AUDIO
+            wsjtControl.update(); // update t41.wsjtPTT
+            #else
+            catControl.update(); // update t41.wsjtPTT
+            #endif
             break;
 
           case DEMOD_FT8_INTERNAL:

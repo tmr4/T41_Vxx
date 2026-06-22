@@ -15,14 +15,14 @@ public:
   void begin();
 
   // T41 properties
-  /*
-    RadioState is a read-only property.  It's intended to be set only in the main loop
-    or in the execution loops of routines that bypass that loop, such as during
-    calibration. As a read-only property, RadioState can't be assigned a value directly.
-    The Set method must be used to assign a value.
-  */
   ReadOnlyProperty<int> RadioID{RADIO_ID, "ID"_cat};
   ReadOnlyProperty<int> RadioRole{RADIO_ROLE};
+
+  /*
+    RadioState is a quasi read-only property.  It's intended to be set only in the main loop
+    or in the execution loops of routines that bypass that loop, such as during
+    calibration. As such, RadioState shouldn't be assigned a value directly outside those areas.
+  */
   Property<int> RadioState{RECONFIGURE_STATE};
 
   Property<float> SampleRate{192000.0};

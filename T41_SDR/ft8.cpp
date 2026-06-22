@@ -29,10 +29,14 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+//#define SPECTRUM_TESTING // plots frequency spectrum frame instead of waterfall (change frame with volume knob)
+
+#ifdef SPECTRUM_TESTING
 // TODO: display dependent
 //#include <RA8875.h>
 #include "src\displayRA8875\RA8875\src\RA8875.h" // based on: https://github.com/mjs513/RA8875/tree/RA8875_t4 (adds yield to BTE_move)
 extern RA8875 tft;
+#endif
 
 #define DEBUG_MSG(msg)
 //#define DEBUG_MSG(msg) Serial.println(msg)
@@ -266,7 +270,6 @@ FLASHMEM void ExitFT8() {
 // Internal FT8 Testing Code
 //-------------------------------------------------------------------------------------------------------------
 
-//#define SPECTRUM_TESTING // plots frequency spectrum frame instead of waterfall (change frame with volume knob)
 //#define TX_TESTING // generates mock RX messages for "CQ KN6ZDE CM87" TX test
 
 // TX_TESTING only available on project system to prevent inadvertent transmissions

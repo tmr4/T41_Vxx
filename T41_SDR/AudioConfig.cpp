@@ -141,8 +141,6 @@ elapsedMicros usecAudio;
 
 //AudioControlSGTL5000_Extended audioControl_1; // controller for the Teensy Audio Board microphone https://www.janbob.com/electron/OpenAudio_Design_Tool/index.html?info=AudioControlSGTL5000
 // https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
-AudioControlSGTL5000 audioControl_1; // controller for the Teensy Audio Board microphone
-AudioControlSGTL5000 audioControl_2; // control object PCM1808 ADC (doesn't actually control ADC) https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
 
 /*
 Note: When adding new audio objects, observe: https://www.pjrc.com/teensy/td_libs_AudioConnection.html
@@ -198,16 +196,16 @@ AudioRecordQueue Q_in_L; // https://www.pjrc.com/teensy/gui/?info=AudioRecordQue
 AudioRecordQueue Q_in_R;
 
 // Audio outputs
-// I2S quad output: ch 1&2 on pin 7, ch 3&4 on pin 32
-// See https://www.pjrc.com/teensy/gui/?info=AudioOutputI2SQuad
-AudioOutputI2SQuad i2s_quadOut;
-
 // Exciter I/Q (pin 7)
 AudioPlayQueue Q_out_L_Ex; // https://www.pjrc.com/teensy/gui/?info=AudioPlayQueue
 AudioPlayQueue Q_out_R_Ex;
 
 // Receiver audio and Sidetone (pin 32)
 AudioPlayQueue Q_out_L;
+
+// I2S quad output: ch 1&2 on pin 7, ch 3&4 on pin 32
+// See https://www.pjrc.com/teensy/gui/?info=AudioOutputI2SQuad
+AudioOutputI2SQuad i2s_quadOut;
 
 // audio connections are created empty
 // source/destination set in AudioSetup
@@ -246,6 +244,10 @@ AudioAmplifier outputAmp; // gain of 0 or 1 handled efficiently. https://www.pjr
 AudioConnection pc_Q_out_L(Q_out_L, 0, outputAmp, 0);
 AudioConnection pc_OutputAmp(outputAmp, 0, i2s_quadOut, 2);
 */
+//AudioControlSGTL5000_Extended audioControl_1; // controller for the Teensy Audio Board microphone https://www.janbob.com/electron/OpenAudio_Design_Tool/index.html?info=AudioControlSGTL5000
+// https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
+AudioControlSGTL5000 audioControl_1; // controller for the Teensy Audio Board microphone
+AudioControlSGTL5000 audioControl_2; // control object PCM1808 ADC (doesn't actually control ADC) https://www.pjrc.com/teensy/gui/?info=AudioControlSGTL5000
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -377,6 +379,7 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
 
 *****/
 FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
+//FASTRUN void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
   supportsTX = _supportsTX;
 
   // set I2S freq to sample rate
@@ -437,9 +440,6 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     pc_Q_out_L.connect(Q_out_L, 0, i2s_quadOut, 2);
   } else {
     // RX only
-    // setup input from audio adapter line in for RX
-    // *** TODO: examine USB audio ***
-    audioControl_1.inputSelect(AUDIO_INPUT_LINEIN);
 
     // set headphone audio out volume
     // *** the following doesn't change the line out level ***
@@ -449,6 +449,10 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     // establish audio connections
     // RX input on I2S channels 1, 2 (pin 8)
 #if LOCAL_AUDIO_DATA
+    // setup input from audio adapter line in for RX
+    // *** TODO: examine USB audio ***
+    audioControl_1.inputSelect(AUDIO_INPUT_LINEIN);
+
     pc_Q_in_L.connect(i2s_quadIn, 0, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 1, Q_in_R, 0);
 #endif
@@ -469,7 +473,6 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
   //Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL); // memory buffer for output queues are limited so this can be set without effect if problem is with input queue
   Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING); // FT8 decoding slow without this *** TODO: examine audio memory issues ***
 
-
   // *** TODO: cause discountinuities in calibration tones ***
   //Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
   //Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
@@ -487,7 +490,7 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 // 10 gain requires PC volume of 88
 // 15 gain requires PC volume of 70
 // 20 gain requires PC volume of 60
-// 25 gain requires PC volume of ~30
+// 25 gain requires PC volume of 50
   wsjtAmp.gain(25);
   pc_usb2.disconnect(); // USB
 #endif
