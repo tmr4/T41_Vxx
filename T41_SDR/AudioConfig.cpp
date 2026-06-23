@@ -37,7 +37,7 @@ T41 audio chain:
       CW:
         CWTransmit -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
       WSJT-X:
-        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
+        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> Q_in_L_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter line out -> Exciter
 
       Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> PCM5102 DAC
 
@@ -59,7 +59,7 @@ T41 audio chain:
       CW:
         CWTransmit -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
       WSJT-X:
-        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
+        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> Q_in_L_Ex -> DSP - > Q_out_L/R_Ex -> i2s_quadOut (ch 1&2) -> Audio adapter #1 line out
 
       Sidetone: Q_out_L -> i2s_quadOut (ch 3) -> Audio adapter #2 headphone
 
@@ -77,7 +77,7 @@ T41 audio chain:
       CW:
         to come
       WSJT-X (*** only possible w/ T41 connection over Ethernet ***):
-        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> DSP - > Q_out_L/R_Ex -> aStream -> Remote connection (USB or Ethernet cable)
+        WSJT-X -> (audio + CAT on Serial over USB) -> wsjtIn -> Q_in_L_Ex -> DSP - > Q_out_L/R_Ex -> aStream -> Remote connection (Ethernet cable)
 
 
 

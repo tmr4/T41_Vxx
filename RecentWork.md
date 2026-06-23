@@ -2,6 +2,30 @@
 
 ## Ongoing Work
 
+### Adding WSJT-X TX Capability to Remote Unit
+
+Running WSJT-X with audio and CAT control over USB from the remote unit is fairly easy for RX and passing the CAT commands back to the T41.  All that's left then for full WSJT-X ops from the remote is passing the FT8 TX signal back to the T41. That's best handled by processing the TX signal to IQ data in the remote and passing that back to the T41. This mirrors the RX IQ data the T41 passes to the remote.
+
+A wrinkle is that currently the T41 and remote each handle just one half of the operation, either transmission or reception of the RX IQ data. Passing WSJT-X TX IQ data back to the T41 from the remote requires that both units have both transmission and reception capability.
+
+Here's the updated communication diagram (only an Ethernet link can be used since WSJT-X uses the remote unit Serial connection):
+
+```
+                                comm path
+                              Ethernet Only
+                        T41 <---------------> Remote
+CatControl  <-> AudioOutput <- CAT command -> AudioInput  <-> CatControl
+i2s_quadIn  --> AudioOutput -- RX IQ data --> AudioInput  --> Q_in_L/R
+i2s_quadOut <-- AudioInput  <- TX IQ data --- AudioOutput <-- Q_out_L/R_Ex
+                        T41 <---------------> Remote
+```
+
+During standalone or WSJT-X ops, *Q_out_L/R_Ex* in the T41 are routed to *i2s_quadOut*. This remains the same when WSJT-X is connected to the remote but *i2s_quadOut* is feed directly from AudioInput, as shown above instead of being driven by *PlayExciterIQData* which now happens in the remote. That's similar on the RX side on the remote where AudioInput feeds directly into *Q_in_L/R* to be used in DSP.
+
+It's easy on the remote side as well. There *Q_out_L/R_Ex* are connected to AudioOutput and the streaming occurs automatically when they're played in *PlayExciterIQData*. Thus the only change in core DSP software is a modified audio configuration.
+
+The last wrinkle is making the AudioInput and AudioOutput objects work together in one build. Each is designed as standalone and works with the CAT control and connection manager classes to manage the CAT command and IQ data flow. There's no need to recreate that framework just to send TX IQ data back to the T41, but some refactoring is needed to make things efficient. I'll tackle that next.
+
 ### CAT Communication Spy
 
 Running WSJT-X with audio and CAT control over USB has one drawback: the only Teensy serial port available is taken by WSJT-X. This makes it difficult to debug the CAT communications traffic. I added a simple display routine to show the comm traffic in the lower portion of the waterfall area.

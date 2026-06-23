@@ -239,6 +239,7 @@ void PrepareMicExciterData() {
   }
 }
 
+// Prepare FT8 IQ data from internal FT8 TX signal buffer
 // *** TODO: see if this can be refactored from above ***
 void PrepareFT8ExciterIQData(float *sig) {
   // *** we're at 12kHz sample rate here ***
