@@ -18,7 +18,6 @@ extern float32_t /*DMAMEM*/ prevFreqSpecBuf[1024];
 
 extern float32_t biquad_lowpass1_coeffs[];
 
-extern uint8_t ANR_notch;
 extern uint8_t ANR_notchOn;
 
 extern float32_t audioSpectBuffer[]; // This can't be DMAMEM.  It will break the S-Meter.

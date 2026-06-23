@@ -14,21 +14,14 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-DMAMEM float32_t LMS_NormCoeff_f32[MAX_LMS_TAPS + MAX_LMS_DELAY];
-DMAMEM float32_t LMS_nr_delay[512 + MAX_LMS_DELAY];
-DMAMEM float32_t LMS_StateF32[MAX_LMS_TAPS + MAX_LMS_DELAY];
-uint8_t NR_first_time = 1;
-uint8_t NR_Kim;
-uint8_t NR_use_X = 0;
-const uint8_t NR_L_frames = 3;
-const uint8_t NR_N_frames = 15;
+#define NR_FFT_L                    256
+#define ANR_DLINE_SIZE              512
 
-// *** TODO: noise reduction routines aren't great, see if alignment helps ***
+// *** TODO: noise reduction routines have never been great, see if alignment helps ***
 DMAMEM float32_t NR_FFT_buffer[512] __attribute__((aligned(4)));
 DMAMEM float32_t NR_output_audio_buffer[NR_FFT_L];
 DMAMEM float32_t NR_last_iFFT_result[NR_FFT_L / 2];
 DMAMEM float32_t NR_last_sample_buffer_L[NR_FFT_L / 2];
-DMAMEM float32_t NR_last_sample_buffer_R[NR_FFT_L / 2];
 DMAMEM float32_t NR_X[NR_FFT_L / 2][3];
 DMAMEM float32_t NR_E[NR_FFT_L / 2][15];
 DMAMEM float32_t NR_M[NR_FFT_L / 2];
@@ -38,27 +31,11 @@ DMAMEM float32_t NR_Gts[NR_FFT_L / 2][2];
 DMAMEM float32_t NR_G[NR_FFT_L / 2];
 DMAMEM float32_t NR_SNR_prio[NR_FFT_L / 2];
 DMAMEM float32_t NR_SNR_post[NR_FFT_L / 2];
+DMAMEM float32_t NR_Hk_old[NR_FFT_L / 2];
+//DMAMEM float32_t NR_long_tone_gain[NR_FFT_L / 2];
+
 DMAMEM float32_t ANR_d[ANR_DLINE_SIZE];
 DMAMEM float32_t ANR_w[ANR_DLINE_SIZE];
-
-DMAMEM float32_t NR_Hk_old[NR_FFT_L / 2];
-DMAMEM float32_t NR_long_tone_gain[NR_FFT_L / 2];
-
-int ANR_buff_size = 256;
-int ANR_delay = 16;
-int ANR_in_idx = 0;
-int ANR_dline_size = ANR_DLINE_SIZE;
-int ANR_mask = ANR_dline_size - 1;
-int ANR_taps = 64;
-float32_t ANR_den_mult = 6.25e-10;
-float32_t ANR_gamma = 0.1;
-float32_t ANR_lidx = 120.0;
-float32_t ANR_lidx_min = 120.0;
-float32_t ANR_lidx_max = 200.0;
-float32_t ANR_lincr = 1.0;
-float32_t ANR_ldecr = 3.0;
-float32_t ANR_ngamma = 0.001;
-float32_t ANR_two_mu = 0.0001;
 
 PROGMEM const float32_t sqrtHann[256] = {
   0, 0.01231966, 0.024637449, 0.036951499, 0.049259941, 0.061560906,
@@ -120,214 +97,228 @@ FLASHMEM void Kim1_NR() {
 
      thanks a lot for your support, Michael DL2FW !
    **********************************************************************************/
-  NR_Kim=1;
-  if(NR_Kim == 1)
-  {
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // this is exactly the implementation by
-    // Kim & Ruwisch 2002 - 7th International Conference on Spoken Language Processing Denver, Colorado, USA
-    // with two exceptions:
-    // 1.) we use power instead of magnitude for X
-    // 2.) we need to clamp for negative gains . . .
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // this is exactly the implementation by
+  // Kim & Ruwisch 2002 - 7th International Conference on Spoken Language Processing Denver, Colorado, USA
+  // with two exceptions:
+  // 1.) we use power instead of magnitude for X
+  // 2.) we need to clamp for negative gains . . .
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // perform a loop two times (each time process 128 new samples)
-    // FFT 256 points
-    // frame step 128 samples
-    // half-overlapped data buffers
+  // perform a loop two times (each time process 128 new samples)
+  // FFT 256 points
+  // frame step 128 samples
+  // half-overlapped data buffers
 
-    uint8_t VAD_low = 0;
-    uint8_t VAD_high = 127;
-    float32_t lf_freq; // = (offset - width/2) / (12000 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
-    float32_t uf_freq;
-    float32_t NR_sum;
-    float32_t NR_KIM_K = 1.0;
-    float NR_alpha = 0.95;
-    float NR_beta = 0.85;
-    float32_t NR_onemalpha = (1.0 - NR_alpha);
-    float32_t NR_onemtwobeta = (1.0 - (2.0 * NR_beta));
-    float32_t NR_T;
-    float NR_PSI = 0.0;
+  uint8_t VAD_low = 0;
+  uint8_t VAD_high = 127;
+  float32_t lf_freq; // = (offset - width/2) / (12000 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
+  float32_t uf_freq;
+  float32_t NR_sum;
+  float32_t NR_KIM_K = 1.0;
+  float NR_alpha = 0.95;
+  float NR_beta = 0.85;
+  float32_t NR_onemalpha = (1.0 - NR_alpha);
+  float32_t NR_onemtwobeta = (1.0 - (2.0 * NR_beta));
+  float32_t NR_T;
+  float NR_PSI = 0.0;
+  uint8_t NR_use_X = 0;
+  const uint8_t NR_L_frames = 3;
+  const uint8_t NR_N_frames = 15;
 
-    if(t41.FilterLoCut <= 0 && t41.FilterHiCut >= 0) {
-      lf_freq = 0.0;
-      uf_freq = fmax(-(float32_t)t41.FilterLoCut, (float32_t)t41.FilterHiCut);
+
+  if(t41.FilterLoCut <= 0 && t41.FilterHiCut >= 0) {
+    lf_freq = 0.0;
+    uf_freq = fmax(-(float32_t)t41.FilterLoCut, (float32_t)t41.FilterHiCut);
+  } else {
+    if(t41.FilterLoCut > 0) {
+      lf_freq = (float32_t)t41.FilterLoCut;
+      uf_freq = (float32_t)t41.FilterHiCut;
     } else {
-      if(t41.FilterLoCut > 0) {
-        lf_freq = (float32_t)t41.FilterLoCut;
-        uf_freq = (float32_t)t41.FilterHiCut;
+      uf_freq = -(float32_t)t41.FilterLoCut;
+      lf_freq = -(float32_t)t41.FilterHiCut;
+    }
+  }
+  lf_freq /= (t41.SampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
+  uf_freq /= (t41.SampleRate / 8.0 / NR_FFT_L);
+
+  VAD_low = (int)lf_freq;
+  VAD_high = (int)uf_freq;
+  if(VAD_low == VAD_high) {
+    VAD_high++;
+  }
+  if(VAD_low < 1) {
+    VAD_low = 1;
+  } else if(VAD_low > NR_FFT_L / 2 - 2) {
+    VAD_low = NR_FFT_L / 2 - 2;
+  }
+  if(VAD_high < 1) {
+    VAD_high = 1;
+  } else if(VAD_high > NR_FFT_L / 2) {
+    VAD_high = NR_FFT_L / 2;
+  }
+
+  for(int k = 0; k < 2; k++) {
+    // NR_FFT_buffer is 512 floats big
+    // interleaved r, i, r, i . . .
+    // fill first half of FFT_buffer with last events audio samples
+    for(int i = 0; i < NR_FFT_L / 2; i++) {
+      NR_FFT_buffer[i * 2] = NR_last_sample_buffer_L[i]; // real
+      NR_FFT_buffer[i * 2 + 1] = 0.0; // imaginary
+    }
+    // copy recent samples to last_sample_buffer for next time!
+    for(int i = 0; i < NR_FFT_L  / 2; i++) {
+      NR_last_sample_buffer_L [i] = audioBufferL[i + k * (NR_FFT_L / 2)];
+    }
+    // now fill recent audio samples into second half of FFT_buffer
+    for(int i = 0; i < NR_FFT_L / 2; i++) {
+      NR_FFT_buffer[NR_FFT_L + i * 2] = audioBufferL[i + k * (NR_FFT_L / 2)]; // real
+      NR_FFT_buffer[NR_FFT_L + i * 2 + 1] = 0.0;
+    }
+    // perform windowing on 256 real samples in the NR_FFT_buffer
+    for(int idx = 0; idx < NR_FFT_L; idx++)  {                               // Hann window
+      float32_t temp_sample = 0.5 * (float32_t)(1.0 - (cosf(PI * 2.0 * (float32_t)idx / (float32_t)((NR_FFT_L) - 1))));
+      NR_FFT_buffer[idx * 2] *= temp_sample;
+    }
+
+    #if 0     // Odd way to comment something out. Not sure why they did this. JJP
+
+    // perform windowing on 256 real samples in the NR_FFT_buffer
+    for(int idx = 0; idx < NR_FFT_L; idx++) { // sqrt Hann window
+      NR_FFT_buffer[idx * 2] *= sqrtHann[idx];
+    }
+    #endif
+
+    arm_cfft_f32(NR_FFT, NR_FFT_buffer, 0, 1);
+    for(int i = 0; i < NR_FFT_L / 2; i++) { // take first 128 bin values of the FFT result
+      // it seems that taking power works better than taking magnitude . . . !?
+      //NR_X[i][NR_X_pointer] = sqrtf(NR_FFT_buffer[i * 2] * NR_FFT_buffer[i * 2] + NR_FFT_buffer[i * 2 + 1] * NR_FFT_buffer[i * 2 + 1]);
+      NR_X[i][NR_X_pointer] = (NR_FFT_buffer[i * 2] * NR_FFT_buffer[i * 2] + NR_FFT_buffer[i * 2 + 1] * NR_FFT_buffer[i * 2 + 1]);
+    }
+
+    for(int i = VAD_low; i < VAD_high; i++) { // take first 128 bin values of the FFT result
+      NR_sum = 0.0;
+      for(int j = 0; j < NR_L_frames; j++)
+      { // sum up the L_frames |X|
+        NR_sum = NR_sum + NR_X[i][j];
+      }
+      // divide sum of L_frames |X| by L_frames to calculate the average and save in NR_E
+      NR_E[i][NR_E_pointer] = NR_sum / (float32_t)NR_L_frames;
+    }
+    for(int i = VAD_low; i < VAD_high; i++) { // take first 128 bin values of the FFT result
+                                          // we have to reset the minimum value to the first E value every time we start with a bin
+      NR_M[i] = NR_E[i][0];
+                                          // therefore we start with the second E value (index j == 1)
+      for(uint8_t j = 1; j < NR_N_frames; j++) {
+        if(NR_E[i][j] < NR_M[i]) {
+          NR_M[i] = NR_E[i][j];
+        }
+      }
+    }
+    for(int i = VAD_low; i < VAD_high; i++) { // take first 128 bin values of the FFT result
+      NR_T = NR_X[i][NR_X_pointer] / NR_M[i]; // dies scheint mir besser zu funktionieren !
+      if(NR_T > NR_PSI) {
+        NR_lambda[i] = NR_M[i];
       } else {
-        uf_freq = -(float32_t)t41.FilterLoCut;
-        lf_freq = -(float32_t)t41.FilterHiCut;
-      }
-    }
-    lf_freq /= (t41.SampleRate / 8.0 / NR_FFT_L); // bin BW is 46.9Hz [12000Hz / 256 bins] @96kHz
-    uf_freq /= (t41.SampleRate / 8.0 / NR_FFT_L);
-
-    VAD_low = (int)lf_freq;
-    VAD_high = (int)uf_freq;
-    if(VAD_low == VAD_high) {
-      VAD_high++;
-    }
-    if(VAD_low < 1) {
-      VAD_low = 1;
-    } else if(VAD_low > NR_FFT_L / 2 - 2) {
-      VAD_low = NR_FFT_L / 2 - 2;
-    }
-    if(VAD_high < 1) {
-      VAD_high = 1;
-    } else if(VAD_high > NR_FFT_L / 2) {
-      VAD_high = NR_FFT_L / 2;
-    }
-
-    for(int k = 0; k < 2; k++) {
-      // NR_FFT_buffer is 512 floats big
-      // interleaved r, i, r, i . . .
-      // fill first half of FFT_buffer with last events audio samples
-      for(int i = 0; i < NR_FFT_L / 2; i++) {
-        NR_FFT_buffer[i * 2] = NR_last_sample_buffer_L[i]; // real
-        NR_FFT_buffer[i * 2 + 1] = 0.0; // imaginary
-      }
-      // copy recent samples to last_sample_buffer for next time!
-      for(int i = 0; i < NR_FFT_L  / 2; i++) {
-        NR_last_sample_buffer_L [i] = audioBufferL[i + k * (NR_FFT_L / 2)];
-      }
-      // now fill recent audio samples into second half of FFT_buffer
-      for(int i = 0; i < NR_FFT_L / 2; i++) {
-        NR_FFT_buffer[NR_FFT_L + i * 2] = audioBufferL[i + k * (NR_FFT_L / 2)]; // real
-        NR_FFT_buffer[NR_FFT_L + i * 2 + 1] = 0.0;
-      }
-      // perform windowing on 256 real samples in the NR_FFT_buffer
-      for(int idx = 0; idx < NR_FFT_L; idx++)  {                               // Hann window
-        float32_t temp_sample = 0.5 * (float32_t)(1.0 - (cosf(PI * 2.0 * (float32_t)idx / (float32_t)((NR_FFT_L) - 1))));
-        NR_FFT_buffer[idx * 2] *= temp_sample;
-      }
-
-      #if 0     // Odd way to comment something out. Not sure why they did this. JJP
-
-      // perform windowing on 256 real samples in the NR_FFT_buffer
-      for(int idx = 0; idx < NR_FFT_L; idx++) { // sqrt Hann window
-        NR_FFT_buffer[idx * 2] *= sqrtHann[idx];
-      }
-      #endif
-
-      arm_cfft_f32(NR_FFT, NR_FFT_buffer, 0, 1);
-      for(int i = 0; i < NR_FFT_L / 2; i++) { // take first 128 bin values of the FFT result
-        // it seems that taking power works better than taking magnitude . . . !?
-        //NR_X[i][NR_X_pointer] = sqrtf(NR_FFT_buffer[i * 2] * NR_FFT_buffer[i * 2] + NR_FFT_buffer[i * 2 + 1] * NR_FFT_buffer[i * 2 + 1]);
-        NR_X[i][NR_X_pointer] = (NR_FFT_buffer[i * 2] * NR_FFT_buffer[i * 2] + NR_FFT_buffer[i * 2 + 1] * NR_FFT_buffer[i * 2 + 1]);
-      }
-
-      for(int i = VAD_low; i < VAD_high; i++) { // take first 128 bin values of the FFT result
-        NR_sum = 0.0;
-        for(int j = 0; j < NR_L_frames; j++)
-        { // sum up the L_frames |X|
-          NR_sum = NR_sum + NR_X[i][j];
-        }
-        // divide sum of L_frames |X| by L_frames to calculate the average and save in NR_E
-        NR_E[i][NR_E_pointer] = NR_sum / (float32_t)NR_L_frames;
-      }
-      for(int i = VAD_low; i < VAD_high; i++) { // take first 128 bin values of the FFT result
-                                            // we have to reset the minimum value to the first E value every time we start with a bin
-        NR_M[i] = NR_E[i][0];
-                                            // therefore we start with the second E value (index j == 1)
-        for(uint8_t j = 1; j < NR_N_frames; j++) {
-          if(NR_E[i][j] < NR_M[i]) {
-            NR_M[i] = NR_E[i][j];
-          }
-        }
-      }
-      for(int i = VAD_low; i < VAD_high; i++) { // take first 128 bin values of the FFT result
-        NR_T = NR_X[i][NR_X_pointer] / NR_M[i]; // dies scheint mir besser zu funktionieren !
-        if(NR_T > NR_PSI) {
-          NR_lambda[i] = NR_M[i];
-        } else {
-          NR_lambda[i] = NR_E[i][NR_E_pointer];
-        }
-      }
-
-      for(int i = VAD_low; i < VAD_high; i++) { // take first 128 bin values of the FFT result
-        if(NR_use_X) {
-          NR_G[i] = 1.0 - (NR_lambda[i] * NR_KIM_K / NR_X[i][NR_X_pointer]);
-          if(NR_G[i] < 0.0)
-            NR_G[i] = 0.0;
-        } else {
-          NR_G[i] = 1.0 - (NR_lambda[i] * NR_KIM_K / NR_E[i][NR_E_pointer]);
-          if(NR_G[i] < 0.0)
-            NR_G[i] = 0.0;
-        }
-
-        // time smoothing
-        NR_Gts[i][0] = NR_alpha * NR_Gts[i][1] + (NR_onemalpha) * NR_G[i];
-        NR_Gts[i][1] = NR_Gts[i][0]; // copy for next FFT frame
-      }
-
-      // NR_G is always positive, however often 0.0
-      for(int i = 1; i < ((NR_FFT_L / 2) - 1); i++) {// take first 128 bin values of the FFT result
-        NR_G[i] = NR_beta * NR_Gts[i - 1][0] + NR_onemtwobeta * NR_Gts[i][0] + NR_beta * NR_Gts[i + 1][0];
-      }
-                                                                              // take care of bin 0 and bin NR_FFT_L/2 - 1
-      NR_G[0] = (NR_onemtwobeta + NR_beta) * NR_Gts[0][0] + NR_beta * NR_Gts[1][0];
-      NR_G[(NR_FFT_L / 2) - 1] = NR_beta * NR_Gts[(NR_FFT_L / 2) - 2][0] + (NR_onemtwobeta + NR_beta) * NR_Gts[(NR_FFT_L / 2) - 1][0];
-      for(int i = 0; i < NR_FFT_L / 2; i++) {                                      // try 128:
-        NR_FFT_buffer[i * 2] = NR_FFT_buffer [i * 2] * NR_G[i];                     // real part
-        NR_FFT_buffer[i * 2 + 1] = NR_FFT_buffer [i * 2 + 1] * NR_G[i];             // imag part
-        NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] * NR_G[i]; // real part conjugate symmetric
-        NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] * NR_G[i]; // imag part conjugate symmetric
-      }
-      NR_X_pointer = NR_X_pointer + 1;
-      if(NR_X_pointer >= NR_L_frames) {
-        NR_X_pointer = 0;
-      }
-      // 3b ++NR_E_pointer
-      NR_E_pointer = NR_E_pointer + 1;
-      if(NR_E_pointer >= NR_N_frames) {
-        NR_E_pointer = 0;
-      }
-
-
-      #if 0
-      for(int idx = 1; idx < 20; idx++) {      // bins 2 to 29 attenuated set real values to 0.1 of their original value
-        NR_iFFT_buffer[idx * 2] *= 0.1;
-        NR_iFFT_buffer[NR_FFT_L * 2 - ((idx + 1) * 2)] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
-        NR_iFFT_buffer[idx * 2 + 1] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
-        NR_iFFT_buffer[NR_FFT_L * 2 - ((idx + 1) * 2) + 1] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
-      }
-      #endif
-      arm_cfft_f32(NR_iFFT, NR_FFT_buffer, 1, 1);
-
-      #if 0
-      // perform windowing on 256 real samples in the NR_FFT_buffer
-      for(int idx = 0; idx < NR_FFT_L; idx++) { // sqrt Hann window
-        NR_FFT_buffer[idx * 2] *= sqrtHann[idx];
-      }
-      #endif
-      for(int i = 0; i < NR_FFT_L / 2; i++) { // take real part of first half of current iFFT result and add to 2nd half of last iFFT_result
-        NR_output_audio_buffer[i + k * (NR_FFT_L / 2)] = NR_FFT_buffer[i * 2] + NR_last_iFFT_result[i];
-      }
-
-      for(int i = 0; i < NR_FFT_L / 2; i++) {
-        NR_last_iFFT_result[i] = NR_FFT_buffer[NR_FFT_L + i * 2];
+        NR_lambda[i] = NR_E[i][NR_E_pointer];
       }
     }
 
-    for(int i = 0; i < NR_FFT_L; i++) {
-      audioBufferL[i] = NR_output_audio_buffer[i]; // * 9.0; // * 5.0;
-      audioBufferR[i] = audioBufferL[i];
+    for(int i = VAD_low; i < VAD_high; i++) { // take first 128 bin values of the FFT result
+      if(NR_use_X) {
+        NR_G[i] = 1.0 - (NR_lambda[i] * NR_KIM_K / NR_X[i][NR_X_pointer]);
+        if(NR_G[i] < 0.0)
+          NR_G[i] = 0.0;
+      } else {
+        NR_G[i] = 1.0 - (NR_lambda[i] * NR_KIM_K / NR_E[i][NR_E_pointer]);
+        if(NR_G[i] < 0.0)
+          NR_G[i] = 0.0;
+      }
+
+      // time smoothing
+      NR_Gts[i][0] = NR_alpha * NR_Gts[i][1] + (NR_onemalpha) * NR_G[i];
+      NR_Gts[i][1] = NR_Gts[i][0]; // copy for next FFT frame
     }
-  } // end of Kim et al. 2002 algorithm
+
+    // NR_G is always positive, however often 0.0
+    for(int i = 1; i < ((NR_FFT_L / 2) - 1); i++) {// take first 128 bin values of the FFT result
+      NR_G[i] = NR_beta * NR_Gts[i - 1][0] + NR_onemtwobeta * NR_Gts[i][0] + NR_beta * NR_Gts[i + 1][0];
+    }
+                                                                            // take care of bin 0 and bin NR_FFT_L/2 - 1
+    NR_G[0] = (NR_onemtwobeta + NR_beta) * NR_Gts[0][0] + NR_beta * NR_Gts[1][0];
+    NR_G[(NR_FFT_L / 2) - 1] = NR_beta * NR_Gts[(NR_FFT_L / 2) - 2][0] + (NR_onemtwobeta + NR_beta) * NR_Gts[(NR_FFT_L / 2) - 1][0];
+    for(int i = 0; i < NR_FFT_L / 2; i++) {                                      // try 128:
+      NR_FFT_buffer[i * 2] = NR_FFT_buffer [i * 2] * NR_G[i];                     // real part
+      NR_FFT_buffer[i * 2 + 1] = NR_FFT_buffer [i * 2 + 1] * NR_G[i];             // imag part
+      NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] * NR_G[i]; // real part conjugate symmetric
+      NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] * NR_G[i]; // imag part conjugate symmetric
+    }
+    NR_X_pointer = NR_X_pointer + 1;
+    if(NR_X_pointer >= NR_L_frames) {
+      NR_X_pointer = 0;
+    }
+    // 3b ++NR_E_pointer
+    NR_E_pointer = NR_E_pointer + 1;
+    if(NR_E_pointer >= NR_N_frames) {
+      NR_E_pointer = 0;
+    }
+
+
+    #if 0
+    for(int idx = 1; idx < 20; idx++) {      // bins 2 to 29 attenuated set real values to 0.1 of their original value
+      NR_iFFT_buffer[idx * 2] *= 0.1;
+      NR_iFFT_buffer[NR_FFT_L * 2 - ((idx + 1) * 2)] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
+      NR_iFFT_buffer[idx * 2 + 1] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
+      NR_iFFT_buffer[NR_FFT_L * 2 - ((idx + 1) * 2) + 1] *= 0.1; //NR_iFFT_buffer[idx] * 0.1;
+    }
+    #endif
+    arm_cfft_f32(NR_iFFT, NR_FFT_buffer, 1, 1);
+
+    #if 0
+    // perform windowing on 256 real samples in the NR_FFT_buffer
+    for(int idx = 0; idx < NR_FFT_L; idx++) { // sqrt Hann window
+      NR_FFT_buffer[idx * 2] *= sqrtHann[idx];
+    }
+    #endif
+    for(int i = 0; i < NR_FFT_L / 2; i++) { // take real part of first half of current iFFT result and add to 2nd half of last iFFT_result
+      NR_output_audio_buffer[i + k * (NR_FFT_L / 2)] = NR_FFT_buffer[i * 2] + NR_last_iFFT_result[i];
+    }
+
+    for(int i = 0; i < NR_FFT_L / 2; i++) {
+      NR_last_iFFT_result[i] = NR_FFT_buffer[NR_FFT_L + i * 2];
+    }
+  }
+
+  for(int i = 0; i < NR_FFT_L; i++) {
+    audioBufferL[i] = NR_output_audio_buffer[i]; // * 9.0; // * 5.0;
+    audioBufferR[i] = audioBufferL[i];
+  }
 }
 
-/*****
-  Purpose:   xanr
-*****/
-FLASHMEM void Xanr() {
+FLASHMEM void Xanr(uint8_t ANR_notch) {
   // variable leak LMS algorithm for automatic notch or noise reduction
   // (c) Warren Pratt wdsp library 2016
+  int ANR_buff_size = 256;
+  int ANR_delay = 16;
+  //int ANR_dline_size = ANR_DLINE_SIZE;
+  int ANR_mask = ANR_DLINE_SIZE - 1;
+  int ANR_taps = 64;
+  float32_t ANR_den_mult = 6.25e-10;
+  float32_t ANR_gamma = 0.1;
+  float32_t ANR_lidx = 120.0;
+  float32_t ANR_lidx_min = 120.0;
+  float32_t ANR_lidx_max = 200.0;
+  float32_t ANR_lincr = 1.0;
+  float32_t ANR_ldecr = 3.0;
+  float32_t ANR_ngamma = 0.001;
+  float32_t ANR_two_mu = 0.0001;
+
   int idx;
   float32_t c0, c1;
   float32_t y, error, sigma, inv_sigp;
   float32_t nel, nev;
+
+  static int ANR_in_idx = 0;
 
   for(int i = 0; i < ANR_buff_size; i++) {
     ANR_d[ANR_in_idx] = audioBufferL[i];
@@ -534,11 +525,9 @@ FLASHMEM void SpectralNoiseReduction() {
 
       float32_t v;
       for(int i = VAD_low; i < VAD_high; i++) { // maybe we should limit this to the signal containing bins (filtering!!)
-        {
-          v = NR_SNR_prio[i] * NR_SNR_post[i] / (1.0 + NR_SNR_prio[i]);
-          NR_G[i] = 1.0 / NR_SNR_post[i] * sqrtf((0.7212 * v + v * v));
-          NR_Hk_old[i] = NR_SNR_post[i] * NR_G[i] * NR_G[i]; //
-        }
+        v = NR_SNR_prio[i] * NR_SNR_post[i] / (1.0 + NR_SNR_prio[i]);
+        NR_G[i] = 1.0 / NR_SNR_post[i] * sqrtf((0.7212 * v + v * v));
+        NR_Hk_old[i] = NR_SNR_post[i] * NR_G[i] * NR_G[i]; //
 
         // MUSICAL NOISE TREATMENT HERE, DL2FW
 
@@ -596,10 +585,14 @@ FLASHMEM void SpectralNoiseReduction() {
       // FINAL SPECTRAL WEIGHTING: Multiply current FFT results with NR_FFT_buffer for 128 bins with the 128 bin-specific gain factors G
       //              for(int i = 0; i < NR_FFT_L / 2; i++)                 // try 128:
       for(int i = 0; i < NR_FFT_L / 2; i++) {                              // try 128:
-        NR_FFT_buffer[i * 2]                    = NR_FFT_buffer [i * 2] * NR_G[i] * NR_long_tone_gain[i];              // real part
-        NR_FFT_buffer[i * 2 + 1]                = NR_FFT_buffer [i * 2 + 1] * NR_G[i] * NR_long_tone_gain[i];      // imag part
-        NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] * NR_G[i] * NR_long_tone_gain[i]; // real part conjugate symmetric
-        NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] * NR_G[i] * NR_long_tone_gain[i]; // imag part conjugate symmetric
+        //NR_FFT_buffer[i * 2]                    = NR_FFT_buffer [i * 2] * NR_G[i] * NR_long_tone_gain[i];              // real part
+        //NR_FFT_buffer[i * 2 + 1]                = NR_FFT_buffer [i * 2 + 1] * NR_G[i] * NR_long_tone_gain[i];      // imag part
+        //NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] * NR_G[i] * NR_long_tone_gain[i]; // real part conjugate symmetric
+        //NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] * NR_G[i] * NR_long_tone_gain[i]; // imag part conjugate symmetric
+        NR_FFT_buffer[i * 2]                    = NR_FFT_buffer [i * 2] * NR_G[i];              // real part
+        NR_FFT_buffer[i * 2 + 1]                = NR_FFT_buffer [i * 2 + 1] * NR_G[i];      // imag part
+        NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 2] * NR_G[i]; // real part conjugate symmetric
+        NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] = NR_FFT_buffer[NR_FFT_L * 2 - i * 2 - 1] * NR_G[i]; // imag part conjugate symmetric
       }
 
       /*****************************************************************
@@ -630,44 +623,21 @@ FLASHMEM void SpectralNoiseReduction() {
   }
 }
 
-/*****
-
-*****/
-FLASHMEM void InitLMSNoiseReduction() {
-  uint16_t  calc_taps = 96;
-  float32_t mu_calc;
-  int LMS_nr_strength = 0;
-  arm_lms_norm_instance_f32 LMS_Norm_instance;
-
-  LMS_Norm_instance.numTaps = calc_taps;
-  LMS_Norm_instance.pCoeffs = LMS_NormCoeff_f32;
-  LMS_Norm_instance.pState = LMS_StateF32;
-
-  // Calculate "mu" (convergence rate) from user "DSP Strength" setting.  This needs to be significantly de-linearized to
-  // squeeze a wide range of adjustment (e.g. several magnitudes) into a fairly small numerical range.
-  mu_calc = LMS_nr_strength;   // get user setting
-
-  // New DSP NR "mu" calculation method as of 0.0.214
-  mu_calc /= 2; // scale input value
-  mu_calc += 2; // offset zero value
-  mu_calc /= 10;  // convert from "bels" to "deci-bels"
-  mu_calc = powf(10, mu_calc);  // convert to ratio
-  mu_calc = 1 / mu_calc;    // invert to fraction
-  LMS_Norm_instance.mu = mu_calc;
-
-  arm_fill_f32(0.0, LMS_nr_delay, 512 + 256);
-  arm_fill_f32(0.0, LMS_StateF32, 96 + 256);
-
-  // use "canned" init to initialize the filter coefficients
-  arm_lms_norm_init_f32(&LMS_Norm_instance, calc_taps, &LMS_NormCoeff_f32[0], &LMS_StateF32[0], mu_calc, 256);
-
+FLASHMEM void InitXanr() {
+  CLEAR_VAR(ANR_d);
+  CLEAR_VAR(ANR_w);
 }
 
 /*****
   Purpose:*****/
 FLASHMEM void InitSpectralNoiseReduction() {
-  for(int i = 0; i < NR_FFT_L / 2; i++)
-  {
+  CLEAR_VAR(NR_FFT_buffer);
+  CLEAR_VAR(NR_output_audio_buffer);
+  CLEAR_VAR(NR_last_iFFT_result);
+  CLEAR_VAR(NR_lambda);
+  CLEAR_VAR(NR_G);
+
+  for(int i = 0; i < NR_FFT_L / 2; i++) {
     NR_last_sample_buffer_L[i] = 0.1;
     NR_Hk_old[i] = 0.1; // old gain
     NR_Nest[i][0] = 0.01;
@@ -678,7 +648,11 @@ FLASHMEM void InitSpectralNoiseReduction() {
     NR_X[i][1] = 0.5;
     NR_SNR_post[i] = 2.0;
     NR_SNR_prio[i] = 1.0;
-    NR_first_time = 2;
-    NR_long_tone_gain[i] = 1.0;
+    //NR_long_tone_gain[i] = 1.0;
   }
+}
+
+FLASHMEM void InitNoiseFilters() {
+  InitXanr();
+  InitSpectralNoiseReduction();
 }

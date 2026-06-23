@@ -123,32 +123,11 @@ int SetI2SFreq(int freq);
 FLASHMEM void InitializeDataArrays(int sampleRate) {
   InitFFTArrays();
 
-  CLEAR_VAR(NR_FFT_buffer);
-  CLEAR_VAR(NR_output_audio_buffer);
-  CLEAR_VAR(NR_last_iFFT_result);
-  CLEAR_VAR(NR_last_sample_buffer_L);
-  CLEAR_VAR(NR_last_sample_buffer_R);
-  CLEAR_VAR(NR_M);
-  CLEAR_VAR(NR_lambda);
-  CLEAR_VAR(NR_G);
-  CLEAR_VAR(NR_SNR_prio);
-  CLEAR_VAR(NR_SNR_post);
-  CLEAR_VAR(NR_Hk_old);
-  CLEAR_VAR(NR_X);
-  CLEAR_VAR(NR_Nest);
-  CLEAR_VAR(NR_Gts);
-  CLEAR_VAR(NR_E);
-  CLEAR_VAR(ANR_d);
-  CLEAR_VAR(ANR_w);
-  CLEAR_VAR(LMS_StateF32);
-  CLEAR_VAR(LMS_NormCoeff_f32);
-  CLEAR_VAR(LMS_nr_delay);
-
   // initialize various filters
   InitFIRFilters(sampleRate);
   InitZoomFFTFilter(sampleRate);
-  InitSpectralNoiseReduction();
-  InitLMSNoiseReduction();
+
+  InitNoiseFilters();
 
   // this needs to come after above
   InitAMDemodBiquadFilter(sampleRate);

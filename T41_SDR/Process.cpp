@@ -57,7 +57,6 @@ float32_t audioSpectBuffer[1024]; // This can't be DMAMEM.  It will break the S-
 uint8_t NB_on = 0; // noise blanker: 0 - off, 1 - on
 
 char atom, currentAtom;
-uint8_t ANR_notch = 0;
 uint8_t ANR_notchOn = 0;
 
 float32_t DMAMEM audioFFT[1024] __attribute__((aligned(4)));
@@ -754,8 +753,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       SpectralNoiseReduction();
       break;
     case 3:                               // LMS NR
-      ANR_notch = 0;
-      Xanr();
+      Xanr(0);
       arm_scale_f32(audioBufferL, 1.5, audioBufferL, 256);
       //arm_scale_f32(audioBufferR, 2, audioBufferR, 256);
       break;
@@ -763,8 +761,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   // apply automatic notch if set
   if(ANR_notchOn == 1) {
-    ANR_notch = 1;
-    Xanr();
+    Xanr(1);
     arm_copy_f32(audioBufferR, audioBufferL, 256);
   }
 

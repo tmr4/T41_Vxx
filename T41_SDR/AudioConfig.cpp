@@ -379,7 +379,6 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
 
 *****/
 FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
-//FASTRUN void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
   supportsTX = _supportsTX;
 
   // set I2S freq to sample rate
