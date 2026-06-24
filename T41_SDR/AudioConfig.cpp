@@ -185,11 +185,29 @@ AudioInputEthernet iqStreamEthernet;
 #elif RADIO_ROLE == 6
 AudioInputSerial1 iqStreamUSB;
 AudioInputEthernet iqStreamEthernet;
+#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
+AudioInputFromQueue iqStreamIn;
+AudioOutputToQueue iqStreamOut;
+EthernetBridgeQueue  iqQueue;
+#endif
+#if RADIO_ROLE == 14
+EthernetBridgeClient iqEthernet;
+#elif RADIO_ROLE == 15
+EthernetBridgeServer iqEthernet;
 #endif
 
 // default to a Ethernet connection
+#if RADIO_ROLE == 4 || RADIO_ROLE == 6 || RADIO_ROLE == 7
 ConnectBase* cbStream = &iqStreamEthernet;
 AudioStream* aStream = &iqStreamEthernet;
+#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
+ConnectBase* cbStream = &iqEthernet;
+#endif
+#if RADIO_ROLE == 14
+AudioStream* aStream = &iqStreamIn;
+#elif RADIO_ROLE == 15
+AudioStream* aStream = &iqStreamOut;
+#endif
 
 // Receive I/Q input (pin 6)
 AudioRecordQueue Q_in_L; // https://www.pjrc.com/teensy/gui/?info=AudioRecordQueue
@@ -328,8 +346,17 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
   if(cbStream) cbStream->end(); // already done by disconnect()
 
   if(connectMode == CONNECT_ETHERNET) {
-    aStream = &iqStreamEthernet;
+#if RADIO_ROLE == 4 || RADIO_ROLE == 6 || RADIO_ROLE == 7
     cbStream = &iqStreamEthernet;
+    aStream = &iqStreamEthernet;
+#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
+    cbStream = &iqEthernet;
+#endif
+#if RADIO_ROLE == 14
+    aStream = &iqStreamIn;
+#elif RADIO_ROLE == 15
+    aStream = &iqStreamOut;
+#endif
 #if RADIO_ROLE == 7 || RADIO_ROLE == 6
   } else {
     aStream = &iqStreamUSB;
@@ -338,13 +365,13 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
   }
 
 
-  if(t41.RadioRole == 7) {
+  if(t41.RadioRole == 7 || t41.RadioRole == 15) {
     // T41
     pc_IQ_L.disconnect();
     pc_IQ_R.disconnect();
     pc_IQ_L.connect(i2s_quadIn, 2, *aStream, 0);
     pc_IQ_R.connect(i2s_quadIn, 3, *aStream, 1);
-  } else if((t41.RadioRole == 4) || (t41.RadioRole == 6)) {
+  } else if((t41.RadioRole == 4) || (t41.RadioRole == 6) || (t41.RadioRole == 14)) {
     // remote
     pc_Q_in_L.disconnect();
     pc_Q_in_R.disconnect();
@@ -353,6 +380,11 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
   }
 
   cbStream->begin();
+#if RADIO_ROLE == 14
+  iqStreamIn.begin();
+#elif RADIO_ROLE == 15
+  iqStreamOut.begin();
+#endif
 }
 
 /*****

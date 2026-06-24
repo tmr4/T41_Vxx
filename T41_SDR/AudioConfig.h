@@ -2,7 +2,8 @@
 
 #include <Audio.h>
 
-#include "connectBase.h"
+#include "audioInOutQueue.h"
+#include "ethernetBridge.h"
 //#include "input_tcp.h"
 //#include "output_tcp.h"
 #include "input_ethernet.h"
@@ -38,6 +39,15 @@ extern AudioInputEthernet iqStreamEthernet;
 #elif RADIO_ROLE == 6
 extern AudioInputSerial1 iqStreamUSB;
 extern AudioInputEthernet iqStreamEthernet;
+#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
+extern AudioInputFromQueue iqStreamIn;
+extern AudioOutputToQueue iqStreamOut;
+extern EthernetBridgeQueue iqQueue;
+#endif
+#if RADIO_ROLE == 14
+extern EthernetBridgeClient iqEthernet;
+#elif RADIO_ROLE == 15
+extern EthernetBridgeServer iqEthernet;
 #endif
 extern ConnectBase* cbStream;
 
@@ -63,4 +73,9 @@ inline void __attribute__((always_inline)) YieldToEthernet() {
     cbStream->readToQueue();
 #endif
   }
+#if RADIO_ROLE == 15
+    iqQueue.writeFromQueue();
+#elif RADIO_ROLE == 14
+    iqQueue.readToQueue();
+#endif
 }

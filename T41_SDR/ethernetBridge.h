@@ -2,14 +2,17 @@
 
 /*
 
-EthernetBridge - Streams 2-channels of data from connected AudioStream objects to UDP data port
-                      Handles CAT control channel TCP connection
+EthernetBridgeServer - manages TCP server connection
+
+EthernetBridgeClient - manages TCP client connection
+
+EthernetBridgeQueue - Queues 2-channels to/from related AudioStreams and a UDP data port
 
 Data Structure:
   * 2-channel input, 512-bytes total, buffered and then written to UDP data port
     * { L-channel block, R-channel block } or { 256-bytes left channel, 256-bytes right channel }
 
- Works with AudioInputEthernet
+ Works with AudioInputFromQueue and AudioOutputToQueue
 
 */
 
@@ -113,8 +116,11 @@ class EthernetBridgeQueue {
   EthernetBridgeQueue(uint16_t dPort = 8001) : dataPort(dPort) {}
 
   void init(AudioOutputToQueue* s) {
-    audioStream = s;
-    udpClient.begin(dataPort);
+    if(s) {
+      audioStream = s;
+      udpClient.begin(dataPort);
+      enabled = true;
+    }
   }
 
 	void begin() { if(audioStream) enabled = true; };
@@ -136,7 +142,7 @@ private:
   bool enabled = false;
 
   uint16_t dataPort;
-  EthernetUDP udpClient; // IQ data channel
+  EthernetUDP udpClient{8}; // IQ data channel
   const IPAddress clientIP{192, 168, 1, 101};
 
   uint32_t sequenceCounter = 0;

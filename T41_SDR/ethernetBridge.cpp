@@ -95,7 +95,6 @@ void EthernetBridgeQueue::readToQueue() {
     SETPROFILEPIN(PROFILER_ENTRY);
 
     if(isQueueFull()) {
-      //Serial.println("buffer full in AudioInputEthernet");
       clear();
     }
 
@@ -116,8 +115,6 @@ void EthernetBridgeQueue::readToQueue() {
         udpClient.read((uint8_t *)&sequenceCounter, sizeof(uint32_t));
 
         if(sequenceCounter != (lastSequenceCounter + 1)) {
-          //Serial.printf("%u dropped packets in AudioInputEthernet\n", sequenceCounter - expectedSequenceCounter);
-
           // reset
           expectedSequenceCounter = sequenceCounter;
         }
@@ -127,7 +124,6 @@ void EthernetBridgeQueue::readToQueue() {
         if(n < blockSize) {
           // read error
           release(blockL, blockR);
-          //Serial.println("incomplete read in AudioInputEthernet");
           break;
         }
 
@@ -135,7 +131,6 @@ void EthernetBridgeQueue::readToQueue() {
         queue[head][1] = blockR;
         head = (head + 1) & bufferMask;
       } else {
-        //Serial.println("incomplete packet in AudioInputEthernet");
         udpClient.flush();
       }
 

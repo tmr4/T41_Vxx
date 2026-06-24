@@ -50,7 +50,7 @@
 //#include "fir_alt.h"
 
 #include "catControl.h"
-#include "telemetry.h"
+//#include "telemetry.h"
 #include "USBManager.h"
 #include "connectManager.h"
 
@@ -61,9 +61,9 @@
 extern CatControl catControl;
 extern CatControl wsjtControl;
 
-#if RADIO_ROLE == 7
+#if RADIO_ROLE == 7 || RADIO_ROLE == 15
 ConnectManager connectManager;
-#elif RADIO_ROLE == 4 || RADIO_ROLE == 6
+#elif RADIO_ROLE == 4 || RADIO_ROLE == 6 || RADIO_ROLE == 14
 ConnectManager connectManager(DEVICE_ROLE_REMOTE);
 #endif
 
@@ -280,10 +280,17 @@ FLASHMEM void setup() {
 
   //T41BeaconSetup();
 
-#if RADIO_ROLE == 7 || RADIO_ROLE == 6
+#if RADIO_ROLE == 6 || RADIO_ROLE == 7
   connectManager.begin(&catControl, &iqStreamEthernet, &iqStreamUSB);
 #elif RADIO_ROLE == 4
   connectManager.begin(&catControl, &iqStreamEthernet, nullptr);
+#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
+  connectManager.begin(&catControl, &iqEthernet, nullptr);
+#endif
+#if RADIO_ROLE == 14 || RADIO_ROLE == 15
+  iqQueue.init(&iqStreamOut);
+  iqStreamOut.init(&iqQueue);
+  iqStreamIn.init(&iqQueue);
 #endif
 
   KeyerSetup(); // testing only
