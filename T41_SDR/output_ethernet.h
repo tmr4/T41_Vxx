@@ -2,7 +2,7 @@
 
 /*
 
-AudioOutputEthernet - Streams 2-channels os data from connected AudioStream objects to UDP data port
+AudioOutputEthernet - Streams 2-channels from connected AudioStream objects to UDP data port
                       Handles CAT control channel TCP connection
 
 Data Structure:
