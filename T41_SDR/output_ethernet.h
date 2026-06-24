@@ -99,25 +99,15 @@ class AudioOutputEthernet : private AudioBufferBase,
   void writeToQueue() override {
     if(enabled) {
       audio_block_t *blockL, *blockR;
-      size_t h;
-      bool bFull;
 
       SETPROFILEPIN(PROFILER_ENTRY);
 
-      // lock stuff for this loop
-      noInterrupts();
-      h = head;
-      bFull = bufferFull();
-      interrupts();
-
-      if(bFull) {
+      if(bufferFull()) {
         clear();
-        h = 0;
-      } else {
       }
 
       // write while queue has data
-      while(h != tail) {
+      while(head != tail) {
         // take ownership of blocks
         blockL = queue[tail][0];
         blockR = queue[tail][1];

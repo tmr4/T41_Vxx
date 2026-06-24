@@ -97,20 +97,15 @@ public:
       audio_block_t *blockL, *blockR;
       int available = udpClient.parsePacket();
       int n;
-      bool bFull;
 
       SETPROFILEPIN(PROFILER_ENTRY);
 
-      // lock stuff for this loop
-      noInterrupts();
-      bFull = bufferFull();
-      interrupts();
-
-      if(bFull) {
+      if(bufferFull()) {
         //Serial.println("buffer full in AudioInputEthernet");
         clear();
       }
 
+      // read while data is available
       while(available >= 0) {
         // IQ packet is 256-bytes I, 256-bytes Q, uint32 sequence
         if(available == blockSize + sizeof(uint32_t)) {
