@@ -513,7 +513,7 @@ struct WSJTCommandBuilder {
 static const RemoteCommandTable catCommands __attribute__((section(".progmem.data")));
 static const WSJTCommandBuilder wsjtCommands __attribute__((section(".progmem.data")));
 
-#if T41_WSJT_CAT_AUDIO
+#if WSJT_USB_CAT_AUDIO
 CatControl wsjtControl(&wsjtCommands.data[0], &Serial);
 #endif
 CatControl catControl(&catCommands.data[0]);

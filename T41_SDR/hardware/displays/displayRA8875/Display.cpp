@@ -905,7 +905,7 @@ FLASHMEM void ShowRemoteStatus() {
       break;
   }
   tft.print("CAT");
-#if T41_WSJT_CAT_AUDIO
+#if WSJT_USB_CAT_AUDIO
   // *** TODO: add heartbeat to confirm actual connection ***
   tft.setTextColor(RA8875_WHITE);
   tft.print("/");

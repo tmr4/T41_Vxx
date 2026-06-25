@@ -3,11 +3,7 @@
 #include <Audio.h>
 
 #include "audioInOutQueue.h"
-#include "ethernetBridge.h"
-//#include "input_tcp.h"
-//#include "output_tcp.h"
-#include "input_ethernet.h"
-#include "output_ethernet.h"
+#include "ethernetQueue.h"
 #include "input_usb.h"
 #include "output_usb.h"
 
@@ -31,25 +27,19 @@ extern AudioPlayQueue Q_out_R;
 extern AudioPlayQueue Q_out_L_Ex;
 extern AudioPlayQueue Q_out_R_Ex;
 
-#if RADIO_ROLE == 7
+#if USB_ENABLED
+#if RADIO_ROLE == 0
 extern AudioOutputHostSerial iqStreamUSB;
-extern AudioOutputEthernet iqStreamEthernet;
-#elif RADIO_ROLE == 4
-extern AudioInputEthernet iqStreamEthernet;
-#elif RADIO_ROLE == 6
+#elif RADIO_ROLE == 1
 extern AudioInputSerial1 iqStreamUSB;
-extern AudioInputEthernet iqStreamEthernet;
-#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
+#endif
+#endif
+
+#if ETHERNET_ENABLED
 extern AudioInputFromQueue iqStreamIn;
 extern AudioOutputToQueue iqStreamOut;
-extern EthernetBridgeQueue iqQueue;
+extern EthernetQueue iqQueue;
 #endif
-#if RADIO_ROLE == 14
-extern EthernetBridgeClient iqEthernet;
-#elif RADIO_ROLE == 15
-extern EthernetBridgeServer iqEthernet;
-#endif
-extern ConnectBase* cbStream;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -66,16 +56,11 @@ void EndAudioStats();
 #endif
 
 inline void __attribute__((always_inline)) YieldToEthernet() {
-  if(cbStream) {
-#if RADIO_ROLE == 7
-    cbStream->writeToQueue();
-#elif RADIO_ROLE == 4 || RADIO_ROLE == 6
-    cbStream->readToQueue();
-#endif
-  }
-#if RADIO_ROLE == 15
+#if ETHERNET_ENABLED
+#if RADIO_ROLE == 0
     iqQueue.writeFromQueue();
-#elif RADIO_ROLE == 14
+#elif RADIO_ROLE == 1
     iqQueue.readToQueue();
+#endif
 #endif
 }

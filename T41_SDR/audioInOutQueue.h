@@ -13,36 +13,35 @@ Data Structure:
 #include <Arduino.h>
 #include <AudioStream.h>
 
+#include "connectBase.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-class EthernetBridgeQueue;
+class EthernetQueue;
 
-class AudioInputFromQueue : public AudioStream {
+class AudioInputFromQueue : public AudioStream, public EnableBase {
  public:
   AudioInputFromQueue() : AudioStream(0, nullptr) {}
 
-  void init(EthernetBridgeQueue* q) { queue = q; }
+  void init(EthernetQueue* q) { queue = q; }
 
-	void begin() { if(queue) enabled = true; };
-	void end() { enabled = false; }
+	void begin() override { if(queue) enabled = true; };
 
 private:
-  bool enabled = false;
-  EthernetBridgeQueue* queue = nullptr;
+  EthernetQueue* queue = nullptr;
 
   void update() override;
 };
 
-class AudioOutputToQueue : public AudioStream {
+class AudioOutputToQueue : public AudioStream, public EnableBase {
  public:
   AudioOutputToQueue() : AudioStream(2, inputQueueArray) {}
 
-  void init(EthernetBridgeQueue* q) { queue = q; }
+  void init(EthernetQueue* q) { queue = q; }
 
-	void begin() { if(queue) enabled = true; };
-	void end() { enabled = false; }
+	void begin() override { if(queue) enabled = true; };
 
   void allocateBlocks(audio_block_t*& blockL, audio_block_t*& blockR) {
     blockL = allocate();
@@ -55,8 +54,7 @@ class AudioOutputToQueue : public AudioStream {
   }
 
 private:
-  bool enabled = false;
-  EthernetBridgeQueue* queue = nullptr;
+  EthernetQueue* queue = nullptr;
 
   void update() override;
 

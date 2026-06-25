@@ -50,7 +50,7 @@
 //#include "fir_alt.h"
 
 #include "catControl.h"
-//#include "telemetry.h"
+#include "tcpManager.h"
 #include "USBManager.h"
 #include "connectManager.h"
 
@@ -61,10 +61,19 @@
 extern CatControl catControl;
 extern CatControl wsjtControl;
 
-#if RADIO_ROLE == 7 || RADIO_ROLE == 15
+#if USB_ENABLED || ETHERNET_ENABLED
+#if RADIO_ROLE == 0
 ConnectManager connectManager;
-#elif RADIO_ROLE == 4 || RADIO_ROLE == 6 || RADIO_ROLE == 14
+#else
 ConnectManager connectManager(DEVICE_ROLE_REMOTE);
+#endif
+#endif
+#if ETHERNET_ENABLED
+#if RADIO_ROLE == 1
+TCPClient iqStreamEthernet;
+#elif RADIO_ROLE == 0
+TCPServer iqStreamEthernet;
+#endif
 #endif
 
 extern bool beaconFlag;
@@ -280,17 +289,21 @@ FLASHMEM void setup() {
 
   //T41BeaconSetup();
 
-#if RADIO_ROLE == 6 || RADIO_ROLE == 7
-  connectManager.begin(&catControl, &iqStreamEthernet, &iqStreamUSB);
-#elif RADIO_ROLE == 4
-  connectManager.begin(&catControl, &iqStreamEthernet, nullptr);
-#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
-  connectManager.begin(&catControl, &iqEthernet, nullptr);
+  ConnectBase* cbUSB = nullptr;
+  ConnectBase* cbEthernet = nullptr;
+#if USB_ENABLED
+  cbUSB = &iqStreamUSB;
 #endif
-#if RADIO_ROLE == 14 || RADIO_ROLE == 15
+#if ETHERNET_ENABLED
+  cbEthernet = &iqStreamEthernet;
+  iqStreamEthernet.init();
   iqQueue.init(&iqStreamOut);
   iqStreamOut.init(&iqQueue);
   iqStreamIn.init(&iqQueue);
+#endif
+
+#if USB_ENABLED || ETHERNET_ENABLED
+  connectManager.begin(&catControl, cbEthernet, cbUSB);
 #endif
 
   KeyerSetup(); // testing only
@@ -519,7 +532,7 @@ FASTRUN void loop() {
         switch(t41.DemodMode) {
           case DEMOD_FT8:
             //if(t41.RadioRole == 7) PrepareMicExciterData();
-            #if T41_WSJT_CAT_AUDIO
+            #if WSJT_USB_CAT_AUDIO
             wsjtControl.update(); // update t41.wsjtPTT
             #else
             catControl.update(); // update t41.wsjtPTT

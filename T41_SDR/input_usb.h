@@ -37,8 +37,7 @@ Remote timing (w/ T41 standard testing input, Auto NF):
  *** This object could be made more robust with a buffer and syncing but
      early testing hasn't shown a need for this ***
 */
-
-#if RADIO_ROLE == 6
+#if USB_ENABLED
 
 #include <AudioStream.h>
 
@@ -62,7 +61,7 @@ extern "C" {
 
 // *** TODO: consider specializing this to just Dual Serial ***
 template< int (*available)(), int (*read)(void *, uint32_t) >
-class AudioInputSerialT : public AudioStream, public ConnectBase {
+class AudioInputSerialT : public AudioStream, public ConnectBase, public EnableBase {
 public:
   AudioInputSerialT() : AudioStream(0, nullptr) {}
 
@@ -70,9 +69,6 @@ public:
     //Serial.begin(115200);     // serialCmd *** assumed done ***
     SerialUSB1.begin(115200); // serialData
   }
-
-  void begin() override { enabled = true; }
-	void end() override { enabled = false; }
 
   // DTR is a reliable indicator that Serial has connected to a host
   // *** it is not a reliable indicator of a disconnect ***
@@ -86,7 +82,7 @@ public:
   //bool connected() override { return Serial && SerialUSB1; }
   bool connected() override { return true; }
 
-  Stream* getCommandStream() override { return &Serial; }
+  Stream* getStream() override { return &Serial; }
   ConnectMode getConnectionType() override { return CONNECT_USB; }
 
   void update() override {
@@ -132,8 +128,6 @@ public:
   }
 
 private:
-  bool enabled = false;
-
   static constexpr int blockSize = AUDIO_BLOCK_SAMPLES * sizeof(int16_t) * 2;
 };
 

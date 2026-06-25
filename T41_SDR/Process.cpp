@@ -35,9 +35,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#if RADIO_ROLE > 0
 extern ConnectManager connectManager;
-#endif
 extern CatControl catControl;
 extern CatControl wsjtControl;
 
@@ -1310,7 +1308,7 @@ FASTRUN void ProcessControls() {
 
   connectManager.update();
   catControl.update();
-#if T41_WSJT_CAT_AUDIO
+#if WSJT_USB_CAT_AUDIO
   wsjtControl.update();
 #endif
 }

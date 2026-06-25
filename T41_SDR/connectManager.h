@@ -124,6 +124,10 @@ public:
 
   ConnectBase* getActiveConnection() { return activeConnection; }
 
+  ConnectMode getConnectMode() {
+    if(activeConnection) return activeConnection->getConnectionType();
+    else return CONNECT_NONE;
+  }
   bool isRemote() const { return role == DEVICE_ROLE_REMOTE; }
   bool connected() const { return linkState == LINK_CONNECTED; }
 
@@ -141,7 +145,6 @@ private:
   void yield();
 
   void handleDisconnected() {
-    if(activeConnection) activeConnection->end(); // already done by disconnect or not needed
     catControl->end(); // prevent spurious CAT commands stream
     activeConnection = nullptr;
 

@@ -1,5 +1,5 @@
 
-#include "ethernetBridge.h"
+#include "ethernetQueue.h"
 
 #include "SDT.h"
 
@@ -17,7 +17,7 @@
 
 // *** this is called from an interrupt, it can't touch QNEthernet objects ***
 // *** only modifies head! ***
-bool EthernetBridgeQueue::pushBlocks(audio_block_t* blockL, audio_block_t* blockR) {
+bool EthernetQueue::pushBlocks(audio_block_t* blockL, audio_block_t* blockR) {
   if(isQueueFull()) return false; // queue is full
 
   queue[head][0] = blockL;
@@ -29,7 +29,7 @@ bool EthernetBridgeQueue::pushBlocks(audio_block_t* blockL, audio_block_t* block
 
 // *** this is called from an interrupt, it can't touch QNEthernet objects ***
 // *** only modifies tail! ***
-bool EthernetBridgeQueue::popBlocks(audio_block_t*& blockL, audio_block_t*& blockR) {
+bool EthernetQueue::popBlocks(audio_block_t*& blockL, audio_block_t*& blockR) {
   if(head == tail) return false; // queue is empty, nothing to stream
 
   blockL = queue[tail][0];
@@ -47,7 +47,7 @@ bool EthernetBridgeQueue::popBlocks(audio_block_t*& blockL, audio_block_t*& bloc
 }
 
 // write queue data out to UDP
-void EthernetBridgeQueue::writeFromQueue() {
+void EthernetQueue::writeFromQueue() {
   if(enabled) {
     audio_block_t *blockL, *blockR;
 
@@ -72,9 +72,9 @@ void EthernetBridgeQueue::writeFromQueue() {
       if(udpClient.beginPacket(clientIP, dataPort)) {
         udpClient.write((uint8_t*)blockL->data, blockSize / 2);
         udpClient.write((uint8_t*)blockR->data, blockSize / 2);
-        udpClient.write((uint8_t*)&sequenceCounter, sizeof(uint32_t));
+        //udpClient.write((uint8_t*)&sequenceCounter, sizeof(uint32_t));
         udpClient.endPacket();
-        ++sequenceCounter;
+        //++sequenceCounter;
       }
 
       release(blockL, blockR);
@@ -86,7 +86,7 @@ void EthernetBridgeQueue::writeFromQueue() {
 }
 
 // read UDP data into queue
-void EthernetBridgeQueue::readToQueue() {
+void EthernetQueue::readToQueue() {
   if(enabled) {
     audio_block_t *blockL, *blockR;
     int available = udpClient.parsePacket();
@@ -100,8 +100,9 @@ void EthernetBridgeQueue::readToQueue() {
 
     // read while data is available
     while(available >= 0) {
-      // IQ packet is 256-bytes I, 256-bytes Q, uint32 sequence
-      if(available == blockSize + sizeof(uint32_t)) {
+      // IQ packet is 256-bytes I, 256-bytes Q, uint32 sequence (if enabled)
+      //if(available == blockSize + sizeof(uint32_t)) {
+      if(available == blockSize) {
         // we have sufficient data to queue
         allocate(blockL, blockR);
         if(!blockL || !blockR) {
@@ -112,14 +113,14 @@ void EthernetBridgeQueue::readToQueue() {
         SETPROFILEPIN(PROFILER_RX_TX);
         n = udpClient.read((uint8_t *)blockL->data, blockSize / 2);
         n += udpClient.read((uint8_t *)blockR->data, blockSize / 2);
-        udpClient.read((uint8_t *)&sequenceCounter, sizeof(uint32_t));
+        //udpClient.read((uint8_t *)&sequenceCounter, sizeof(uint32_t));
 
-        if(sequenceCounter != (lastSequenceCounter + 1)) {
-          // reset
-          expectedSequenceCounter = sequenceCounter;
-        }
-        lastSequenceCounter = sequenceCounter;
-        ++expectedSequenceCounter;
+        //if(sequenceCounter != (lastSequenceCounter + 1)) {
+        //  // reset
+        //  expectedSequenceCounter = sequenceCounter;
+        //}
+        //lastSequenceCounter = sequenceCounter;
+        //++expectedSequenceCounter;
 
         if(n < blockSize) {
           // read error
@@ -146,7 +147,7 @@ void EthernetBridgeQueue::readToQueue() {
   RESETPROFILEPIN(PROFILER_RX_TX);
 }
 
-void EthernetBridgeQueue::clear() {
+void EthernetQueue::clear() {
   audio_block_t *blockL, *blockR;
 
   noInterrupts();
@@ -161,10 +162,10 @@ void EthernetBridgeQueue::clear() {
   interrupts();
 }
 
-void EthernetBridgeQueue::allocate(audio_block_t*& blockL, audio_block_t*& blockR) {
+void EthernetQueue::allocate(audio_block_t*& blockL, audio_block_t*& blockR) {
   audioStream->allocateBlocks(blockL, blockR);
 }
 
-void EthernetBridgeQueue::release(audio_block_t* blockL, audio_block_t* blockR) {
+void EthernetQueue::release(audio_block_t* blockL, audio_block_t* blockR) {
   audioStream->releaseBlocks(blockL, blockR);
 }

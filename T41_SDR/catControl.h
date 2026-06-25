@@ -143,7 +143,7 @@ protected:
       return;
     } else if(connectBase && connectBase->connected()) {
       if(runTask) USBManager::getHost().Task();
-      stream = connectBase->getCommandStream();
+      stream = connectBase->getStream();
     } else {
       stream = nullptr;
     }

@@ -88,7 +88,7 @@
 #define DEVICE_REMOTE_OPS_MODE  0
 
 // the following are disabled by defualt and will be set automatically depending on the remote mode selected
-#define T41_WSJT_CAT_AUDIO        false
+#define WSJT_USB_CAT_AUDIO        false
 
 // automatically configure radio for selected remote operation and services
 #if (DEVICE_REMOTE_OPS_MODE < 0) || (DEVICE_REMOTE_OPS_MODE > 5)
@@ -99,8 +99,8 @@
     // *** for passing CAT/audio back and forth with WSJT-X over USB at 44.1kHz sample rate in FT8 mode ***
     // USB cable from the USB serial connection on this unit (T41) to a USB connection on the PC
     // Compile with an Audio option selected, such as "Serial + MIDI + Audio"
-    #undef T41_WSJT_CAT_AUDIO
-    #define T41_WSJT_CAT_AUDIO true
+    #undef WSJT_USB_CAT_AUDIO
+    #define WSJT_USB_CAT_AUDIO true
   #endif
 #endif
 

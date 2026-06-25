@@ -36,7 +36,7 @@ T41 timing (w/ T41 standard testing input, Auto NF):
 
 */
 
-#if RADIO_ROLE == 7
+#if USB_ENABLED
 
 #include <AudioStream.h>
 #include <USBHost_t36.h>
@@ -49,7 +49,7 @@ T41 timing (w/ T41 standard testing input, Auto NF):
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-class AudioOutputHostSerial : public AudioStream, public ConnectBase {
+class AudioOutputHostSerial : public AudioStream, public ConnectBase, public EnableBase {
 public:
   AudioOutputHostSerial(USBHost& _host) : AudioStream(2, inputQueueArray),
     host(&_host), serialCmd(_host, 1), serialData(_host) {}
@@ -58,9 +58,6 @@ public:
     serialCmd.begin(115200);
     serialData.begin(115200);
   }
-
-  void begin() override { enabled = true; }
-	void end() override { enabled = false; }
 
   //bool linkStatus() override { return true; }
   bool linkStatus() override { return connected(); }
@@ -73,7 +70,7 @@ public:
     return serialData && serialCmd;
   }
 
-  Stream* getCommandStream() override {
+  Stream* getStream() override {
     if(serialCmd) {
       return &serialCmd;
     } else {
@@ -119,8 +116,6 @@ public:
   }
 
 private:
-  bool enabled = false;
-
   USBHost* host = nullptr;
   USBSerial_BigBuffer serialCmd;  // command
   USBSerial_BigBuffer serialData; // data

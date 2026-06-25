@@ -8,32 +8,39 @@
 #include <QNEthernet.h>
 using namespace qindesign::network;
 
+#include "connectBase.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-class TCPServer {
+// *** TODO: can simplify ConnectBase and below when connections are separated from streams ***
+
+class TCPServer : public ConnectBase {
 private:
   EthernetServer server;
   EthernetClient client;
 
 public:
-  TCPServer(uint16_t cPort) : cmdPort(cPort) {}
+  TCPServer(uint16_t cPort = 8000) : cmdPort(cPort) {}
 
-  void begin() {
+  void init() override {
     initEthernet(serverIP);
     server.begin(cmdPort);
     client.setConnectionTimeoutEnabled(false);
     client.setNoDelay(true);
   }
 
-  void connect() {
+  bool linkStatus() override { return Ethernet.linkState(); }
+
+  bool connect() override {
     if(!client || !client.connected()) {
       client = server.accept();
     }
+    return connected();
   }
 
-  void disconnect() {
+  void disconnect() override {
     if(Ethernet.linkState()) {
       // just stop if link is still up
       client.stop();
@@ -43,12 +50,13 @@ public:
     }
   }
 
-  bool connected () {
+  bool connected() override {
     //return client && client.connected(); // *** I've been using this, but no QNEthernet examples do ***
     return client.connected();
   }
 
-  Stream* getClient() { return &client; }
+  Stream* getStream() override { return &client; }
+  ConnectMode getConnectionType() override { return CONNECT_ETHERNET; }
 
 private:
   //const IPAddress clientIP{192, 168, 1, 101};
@@ -68,20 +76,22 @@ private:
   }
 };
 
-class TCPClient {
+class TCPClient : public ConnectBase {
 private:
   EthernetClient client;
 
 public:
-  TCPClient(uint16_t cPort) : cmdPort(cPort) {}
+  TCPClient(uint16_t cPort = 8000) : cmdPort(cPort) {}
 
-  void begin() {
+  void init() override {
     initEthernet(clientIP);
     client.setConnectionTimeoutEnabled(false);
     client.setNoDelay(true);
   }
 
-  void connect() {
+  bool linkStatus() override { return Ethernet.linkState(); }
+
+  bool connect() override {
     unsigned long now = millis();
 
     if(!client.connected() && !client.connecting()) {
@@ -93,9 +103,10 @@ public:
         client.setNoDelay(true);
       }
     }
+    return connected();
   }
 
-  void disconnect() {
+  void disconnect() override {
     if(Ethernet.linkState()) {
       // just stop if link is still up
       client.stop();
@@ -104,12 +115,10 @@ public:
       client.abort();
     }
   }
+  bool connected() override { return client.connected(); }
 
-  bool connected () {
-    return client.connected();
-  }
-
-  Stream* getClient() { return &client; }
+  Stream* getStream() override { return &client; }
+  ConnectMode getConnectionType() override { return CONNECT_ETHERNET; }
 
 private:
   const IPAddress clientIP{192, 168, 1, 101};

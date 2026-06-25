@@ -8,6 +8,7 @@
 #endif
 
 #include "AudioConfig.h"
+#include "connectManager.h"
 #include "USBManager.h"
 
 /**************************************************************
@@ -86,7 +87,7 @@ T41 audio chain:
       T41 i2s_quadIn -> aStream -> Remote connection (USB or Ethernet cable) -> aStream -> Remote Q_in_L/R
 
     Transmit path (*** experimental ***):
-      Remote Q_out_L/R_Ex -> aStream -> Remote connection (USB or Ethernet cable) -> aStream -> T41 Q_out_L/R_Ex
+      Remote Q_out_L/R_Ex -> aStream -> Remote connection (USB or Ethernet cable) -> aStream -> T41 i2s_quadOut (ch 1&2)
 
 
 
@@ -166,7 +167,7 @@ AudioEffectCompressor_F32 comp1, comp2;        // https://www.janbob.com/electro
 AudioConvert_F32toI16 float2Int1, float2Int2;  // https://www.janbob.com/electron/OpenAudio_Design_Tool/index.html?info=AudioConvert_F32toI16
 #endif
 
-#if T41_WSJT_CAT_AUDIO
+#if WSJT_USB_CAT_AUDIO
 AudioInputUSB wsjtIn;
 #endif
 
@@ -176,38 +177,22 @@ AudioRecordQueue Q_in_L_Ex;
 // Remote Audio - Remote IQ data stream:
 // The T41 IQ data stream is transfered to a remote unit over USB Host/Ethernet. The remote
 // unit receives the data on USB serial/Ethernet. The specific objects are declared below
-// based on the mode selected in the hardware config file, hardwareConfig.h, for each unit.
-#if RADIO_ROLE == 7
-AudioOutputHostSerial iqStreamUSB{USBManager::getHost()};
-AudioOutputEthernet iqStreamEthernet;
-#elif RADIO_ROLE == 4
-AudioInputEthernet iqStreamEthernet;
-#elif RADIO_ROLE == 6
-AudioInputSerial1 iqStreamUSB;
-AudioInputEthernet iqStreamEthernet;
-#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
+// based on the mode selected in hardwareConfig.h for each unit.
+#if ETHERNET_ENABLED
 AudioInputFromQueue iqStreamIn;
-AudioOutputToQueue iqStreamOut;
-EthernetBridgeQueue  iqQueue;
-#endif
-#if RADIO_ROLE == 14
-EthernetBridgeClient iqEthernet;
-#elif RADIO_ROLE == 15
-EthernetBridgeServer iqEthernet;
+EthernetQueue iqQueue;
 #endif
 
-// default to a Ethernet connection
-#if RADIO_ROLE == 4 || RADIO_ROLE == 6 || RADIO_ROLE == 7
-ConnectBase* cbStream = &iqStreamEthernet;
-AudioStream* aStream = &iqStreamEthernet;
-#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
-ConnectBase* cbStream = &iqEthernet;
+#if USB_ENABLED
+#if RADIO_ROLE == 1
+AudioInputSerial1 iqStreamUSB;
+#elif RADIO_ROLE == 0
+AudioOutputHostSerial iqStreamUSB{USBManager::getHost()};
 #endif
-#if RADIO_ROLE == 14
-AudioStream* aStream = &iqStreamIn;
-#elif RADIO_ROLE == 15
-AudioStream* aStream = &iqStreamOut;
 #endif
+
+AudioStream* aStream = nullptr;
+EnableBase* iqStream = nullptr;
 
 // Receive I/Q input (pin 6)
 AudioRecordQueue Q_in_L; // https://www.pjrc.com/teensy/gui/?info=AudioRecordQueue
@@ -217,6 +202,11 @@ AudioRecordQueue Q_in_R;
 // Exciter I/Q (pin 7)
 AudioPlayQueue Q_out_L_Ex; // https://www.pjrc.com/teensy/gui/?info=AudioPlayQueue
 AudioPlayQueue Q_out_R_Ex;
+
+// TX related declaration in best connection order (Q_out_L/R_Ex comes first)
+#if ETHERNET_ENABLED
+AudioOutputToQueue iqStreamOut;
+#endif
 
 // Receiver audio and Sidetone (pin 32)
 AudioPlayQueue Q_out_L;
@@ -232,7 +222,7 @@ AudioConnection pc_Q_in_L, pc_Q_in_R, pc_Q_in_L_Ex, pc_Q_out_L, pc_Q_out_L_Ex, p
 
 // currently USB Audio only used with WSJT-X FT8
 // *** TODO: put these in the proper place for setup ***
-#if T41_WSJT_CAT_AUDIO
+#if WSJT_USB_CAT_AUDIO
 // *** WSJT-X recommends a signal strength of 30db with signal with only noise ***
 // some amplification needed to give reasonable PC input volume setting
 AudioAmplifier wsjtAmp;
@@ -340,52 +330,89 @@ FLASHMEM int SetI2SFreq(int freq) {
   return freq;
 }
 
-void SetupRemoteIQStream(ConnectMode connectMode) {
-  if(t41.RadioRole == 0) return;
+#if USB_ENABLED || ETHERNET_ENABLED
+extern ConnectManager connectManager;
 
-  if(cbStream) cbStream->end(); // already done by disconnect()
-
+void SetStreamPtrs(ConnectMode connectMode) {
+#if ETHERNET_ENABLED
   if(connectMode == CONNECT_ETHERNET) {
-#if RADIO_ROLE == 4 || RADIO_ROLE == 6 || RADIO_ROLE == 7
-    cbStream = &iqStreamEthernet;
-    aStream = &iqStreamEthernet;
-#elif RADIO_ROLE == 14 || RADIO_ROLE == 15
-    cbStream = &iqEthernet;
+    // *** can simplify this, but this is best for additional radio states ***
+    switch(t41.RadioState) {
+      case RECEIVE_STATE:
+        if(t41.RadioRole == 1) { // remote
+          aStream = &iqStreamIn;
+          iqStream = &iqStreamIn;
+        } else if(t41.RadioRole == 0) { // T41
+          aStream = &iqStreamOut;
+          iqStream = &iqStreamOut;
+        }
+        break;
+      case DATA_TRANSMIT_STATE:
+        if(t41.RadioRole == 0) { // T41
+          aStream = &iqStreamIn;
+          iqStream = &iqStreamIn;
+        } else if(t41.RadioRole == 1) { // remote
+          aStream = &iqStreamOut;
+          iqStream = &iqStreamOut;
+        }
+        break;
+    }
+  }
 #endif
-#if RADIO_ROLE == 14
-    aStream = &iqStreamIn;
-#elif RADIO_ROLE == 15
-    aStream = &iqStreamOut;
-#endif
-#if RADIO_ROLE == 7 || RADIO_ROLE == 6
-  } else {
+#if USB_ENABLED
+  if(connectMode == CONNECT_USB) {
     aStream = &iqStreamUSB;
-    cbStream = &iqStreamUSB;
-#endif
+    iqStream = &iqStreamUSB;
   }
-
-
-  if(t41.RadioRole == 7 || t41.RadioRole == 15) {
-    // T41
-    pc_IQ_L.disconnect();
-    pc_IQ_R.disconnect();
-    pc_IQ_L.connect(i2s_quadIn, 2, *aStream, 0);
-    pc_IQ_R.connect(i2s_quadIn, 3, *aStream, 1);
-  } else if((t41.RadioRole == 4) || (t41.RadioRole == 6) || (t41.RadioRole == 14)) {
-    // remote
-    pc_Q_in_L.disconnect();
-    pc_Q_in_R.disconnect();
-    pc_Q_in_L.connect(*aStream, 0, Q_in_L, 0);
-    pc_Q_in_R.connect(*aStream, 1, Q_in_R, 0);
-  }
-
-  cbStream->begin();
-#if RADIO_ROLE == 14
-  iqStreamIn.begin();
-#elif RADIO_ROLE == 15
-  iqStreamOut.begin();
 #endif
 }
+
+void SetupRemoteIQStream(ConnectMode connectMode) {
+  if(connectMode == 0) return;
+
+  if(iqStream) iqStream->end();
+
+  SetStreamPtrs(connectMode);
+
+  if(aStream) {
+    switch(t41.RadioState) {
+      case RECEIVE_STATE:
+        if(t41.RadioRole == 0) { // T41
+          pc_IQ_L.disconnect();
+          pc_IQ_R.disconnect();
+          pc_IQ_L.connect(i2s_quadIn, 2, *aStream, 0);
+          pc_IQ_R.connect(i2s_quadIn, 3, *aStream, 1);
+        } else if(t41.RadioRole == 1) { // remote
+          pc_Q_in_L.disconnect();
+          pc_Q_in_R.disconnect();
+          pc_Q_in_L.connect(*aStream, 0, Q_in_L, 0);
+          pc_Q_in_R.connect(*aStream, 1, Q_in_R, 0);
+        }
+        break;
+
+      case DATA_TRANSMIT_STATE:
+        pc_Q_out_L_Ex.disconnect();
+        pc_Q_out_R_Ex.disconnect();
+        if(t41.RadioRole == 0) { // T41
+          pc_Q_out_L_Ex.connect(*aStream, 0, i2s_quadOut, 0);
+          pc_Q_out_R_Ex.connect(*aStream, 1, i2s_quadOut, 1);
+        } else if(t41.RadioRole == 1) { // remote
+          pc_Q_out_L_Ex.connect(Q_out_L_Ex, 0, *aStream, 0);
+          pc_Q_out_R_Ex.connect(Q_out_R_Ex, 0, *aStream, 1);
+        }
+        break;
+    }
+  }
+
+  if(iqStream) iqStream->begin();
+}
+
+void SetupRemoteIQStream() {
+  SetupRemoteIQStream(connectManager.getConnectMode());
+}
+#else
+inline void SetupRemoteIQStream() {}
+#endif
 
 /*****
   Set up audio objects
@@ -514,7 +541,7 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
   comp2.setPreGain_dB(-10);
 #endif
 
-#if T41_WSJT_CAT_AUDIO
+#if WSJT_USB_CAT_AUDIO
 // *** WSJT-X recommends a signal strength of 30db with signal with only noise ***
 // adjust amplification to give reasonable PC input volume setting
 // 100 gain requires PC volume of 1
@@ -606,7 +633,7 @@ void ConfigAudioState(int audioState) {
         case DEMOD_FT8:
           //Q_out_Ex_Stop();
 
-          #if T41_WSJT_CAT_AUDIO
+          #if WSJT_USB_CAT_AUDIO
             pc_usb2.disconnect(); // USB
             //Q_in_L_Ex.end();
             //Q_in_L_Ex.clear();
@@ -660,7 +687,7 @@ void ConfigAudioState(int audioState) {
       switch(t41.DemodMode) {
         case DEMOD_FT8:
           // start USB audio transmit chain
-          #if T41_WSJT_CAT_AUDIO
+          #if WSJT_USB_CAT_AUDIO
             pc_usb2.connect(); // USB
             Q_in_L_Ex.begin();
 
@@ -705,6 +732,8 @@ void ConfigAudioState(int audioState) {
     default:
       break;
   }
+
+  SetupRemoteIQStream();
 }
 
 #ifdef USE_MIC_COMPRESSION
