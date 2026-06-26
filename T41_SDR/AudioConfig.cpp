@@ -371,6 +371,7 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
   if(connectMode == 0) return;
 
   if(iqStream) iqStream->end();
+  iqQueue.end();
 
   SetStreamPtrs(connectMode);
 
@@ -408,6 +409,7 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
   }
 
   if(iqStream) iqStream->begin();
+  iqQueue.begin();
 }
 
 void SetupRemoteIQStream() {
