@@ -69,7 +69,11 @@ void EthernetQueue::writeFromQueue() {
       if(!blockL || !blockR) break; // normally this just duplicates te h!=tail check
 
       SETPROFILEPIN(PROFILER_RX_TX);
+#if RADIO_ROLE == 0
       if(udpClient.beginPacket(clientIP, dataPort)) {
+#else
+      if(udpClient.beginPacket(serverIP, dataPort)) {
+#endif
         udpClient.write((uint8_t*)blockL->data, blockSize / 2);
         udpClient.write((uint8_t*)blockR->data, blockSize / 2);
         //udpClient.write((uint8_t*)&sequenceCounter, sizeof(uint32_t));

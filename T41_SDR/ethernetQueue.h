@@ -57,6 +57,7 @@ private:
   uint16_t dataPort;
   EthernetUDP udpClient{8}; // IQ data channel
   const IPAddress clientIP{192, 168, 1, 101};
+  const IPAddress serverIP{192, 168, 1, 100};
 
   // *** sequence counters are useful for testing, but not needed generally ***
   //uint32_t sequenceCounter = 0;

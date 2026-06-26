@@ -531,12 +531,17 @@ FASTRUN void loop() {
 
         switch(t41.DemodMode) {
           case DEMOD_FT8:
-            //if(t41.RadioRole == 7) PrepareMicExciterData();
+            // update t41.wsjtPTT
             #if WSJT_USB_CAT_AUDIO
-            wsjtControl.update(); // update t41.wsjtPTT
+            PrepareMicExciterData();
+            iqQueue.writeFromQueue();
+            wsjtControl.update();
+            catControl.update();
             #else
-            catControl.update(); // update t41.wsjtPTT
+            iqQueue.readToQueue();
+            catControl.update();
             #endif
+            connectManager.update();
             break;
 
           case DEMOD_FT8_INTERNAL:

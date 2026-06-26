@@ -394,8 +394,11 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
         pc_Q_out_L_Ex.disconnect();
         pc_Q_out_R_Ex.disconnect();
         if(t41.RadioRole == 0) { // T41
+#if !WSJT_USB_CAT_AUDIO
+          // *** this breaks WSJT-X TX with T41 in WSJT_USB_CAT_AUDIO mode with remote connected ***
           pc_Q_out_L_Ex.connect(*aStream, 0, i2s_quadOut, 0);
           pc_Q_out_R_Ex.connect(*aStream, 1, i2s_quadOut, 1);
+#endif
         } else if(t41.RadioRole == 1) { // remote
           pc_Q_out_L_Ex.connect(Q_out_L_Ex, 0, *aStream, 0);
           pc_Q_out_R_Ex.connect(Q_out_R_Ex, 0, *aStream, 1);

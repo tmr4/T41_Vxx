@@ -53,7 +53,7 @@ typedef __uint8_t uint8_t;
 #define DEMOD_SAM                   3
 #define DEMOD_NFM                   4
 // Data
-#define DEMOD_FT8                   5
+#define DEMOD_FT8                   5 // for use with WSJT_USB_CAT_AUDIO // *** TODO: consider restricting selecting this mode ***
 #define DEMOD_FT8_INTERNAL          6
 #define DEMOD_FT8_WAV               7
 #define DEMOD_PSK31                 8
