@@ -9,10 +9,13 @@
 
 /*
   Remote operation:
-  T41_Vxx supports operations between a T41 and a remote device, such as WSJT-X, other PC app, or
+  T41_Vxx supports passing CAT/audio between a T41 and a remote device, such as WSJT-X, other PC app, or
   other T41_Vxx enabled devices. Enable the type of connections desired between the T41 and remote
   device below. WSJT-X can be run from either the T41 or remote, but not both at once. WSJT-X from
   the remote requires an Ethernet connection (USB connection not possible as the Serial port is used).
+
+  *** plug and play Ethernet is part of the core code base and cannot be disabled; it does add some
+      overhead which can be minimized by not having a remote unit connected via Ethernet ***
 
   Connection types:
     WSJT_USB_CAT_AUDIO
@@ -20,13 +23,9 @@
       Compile with an Audio option selected, such as "Serial + MIDI + Audio"
       Can't be used with USB_ENABLED when RADIO_ROLE = remote
 
-    ETHERNET_ENABLED
-      For passing CAT/audio back and forth with remote over Ethernet
-      Required with WSJT_USB_CAT_AUDIO when RADIO_ROLE = remote
-
     USB_ENABLED
-      For passing CAT/audio back and forth with remote USB
-      USB cable from the USB Host on T41 to USB Serial on remote unit
+      For passing CAT/audio back and forth with remote over USB
+      USB cable from the USB Host connection on T41 to USB Serial connection on remote unit
       Can't be used with WSJT_USB_CAT_AUDIO when RADIO_ROLE = remote
 
     CAT_ONLY
@@ -37,7 +36,6 @@
   *** see Connection Option Summary below for more detail ***
 */
 #define WSJT_USB_CAT_AUDIO true
-#define ETHERNET_ENABLED   true
 #define USB_ENABLED        false
 #define CAT_ONLY           false // not yet active
 
@@ -134,15 +132,9 @@ Memory Usage on Teensy 4.1:
 
 RADIO_ROLE = 1
 
-USB_ENABLED, ETHERNET_ENABLED, Dual Serial (old values with different audio memory)
-  FLASH: code:274768, data:92744, headers:8292   free for files:7750660
-   RAM1: variables:132032, code:222040, padding:7336   free for local variables:162880
-   RAM2: variables:352224  free for malloc/new:172064
- EXTRAM: variables:480320
-
-ETHERNET_ENABLED, Serial + MIDI + Audio
-  FLASH: code:277016, data:93964, headers:8920   free for files:7746564
-   RAM1: variables:132864, code:224776, padding:4600   free for local variables:162048
+WSJT_USB_CAT_AUDIO, Serial + MIDI + Audio
+  FLASH: code:277320, data:93964, headers:8616   free for files:7746564
+   RAM1: variables:132896, code:225080, padding:4296   free for local variables:162016
    RAM2: variables:338752  free for malloc/new:185536
  EXTRAM: variables:480320
 

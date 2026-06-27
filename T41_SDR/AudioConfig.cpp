@@ -132,6 +132,8 @@ The use of mixers to control audio chain flow is inefficient:
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern ConnectManager connectManager;
+
 extern int currentMicThreshold;
 
 static bool supportsTX = false;
@@ -178,10 +180,8 @@ AudioRecordQueue Q_in_L_Ex;
 // The T41 IQ data stream is transfered to a remote unit over USB Host/Ethernet. The remote
 // unit receives the data on USB serial/Ethernet. The specific objects are declared below
 // based on the mode selected in hardwareConfig.h for each unit.
-#if ETHERNET_ENABLED
 AudioInputFromQueue iqStreamIn;
 EthernetQueue iqQueue;
-#endif
 
 #if USB_ENABLED
 #if RADIO_ROLE == 1
@@ -203,10 +203,8 @@ AudioRecordQueue Q_in_R;
 AudioPlayQueue Q_out_L_Ex; // https://www.pjrc.com/teensy/gui/?info=AudioPlayQueue
 AudioPlayQueue Q_out_R_Ex;
 
-// TX related declaration in best connection order (Q_out_L/R_Ex comes first)
-#if ETHERNET_ENABLED
+// Ethernet TX related declaration in best connection order (Q_out_L/R_Ex comes first)
 AudioOutputToQueue iqStreamOut;
-#endif
 
 // Receiver audio and Sidetone (pin 32)
 AudioPlayQueue Q_out_L;
@@ -330,11 +328,7 @@ FLASHMEM int SetI2SFreq(int freq) {
   return freq;
 }
 
-#if USB_ENABLED || ETHERNET_ENABLED
-extern ConnectManager connectManager;
-
 void SetStreamPtrs(ConnectMode connectMode) {
-#if ETHERNET_ENABLED
   if(connectMode == CONNECT_ETHERNET) {
     // *** can simplify this, but this is best for additional radio states ***
     switch(t41.RadioState) {
@@ -358,7 +352,7 @@ void SetStreamPtrs(ConnectMode connectMode) {
         break;
     }
   }
-#endif
+
 #if USB_ENABLED
   if(connectMode == CONNECT_USB) {
     aStream = &iqStreamUSB;
@@ -415,9 +409,6 @@ void SetupRemoteIQStream(ConnectMode connectMode) {
 void SetupRemoteIQStream() {
   SetupRemoteIQStream(connectManager.getConnectMode());
 }
-#else
-inline void SetupRemoteIQStream() {}
-#endif
 
 /*****
   Set up audio objects

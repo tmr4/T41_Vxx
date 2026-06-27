@@ -35,11 +35,9 @@ extern AudioInputSerial1 iqStreamUSB;
 #endif
 #endif
 
-#if ETHERNET_ENABLED
 extern AudioInputFromQueue iqStreamIn;
 extern AudioOutputToQueue iqStreamOut;
 extern EthernetQueue iqQueue;
-#endif
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -55,12 +53,11 @@ void StartAudioStats();
 void EndAudioStats();
 #endif
 
+// *** for RX use only ***
 inline void __attribute__((always_inline)) YieldToEthernet() {
-#if ETHERNET_ENABLED
 #if RADIO_ROLE == 0
-    iqQueue.writeFromQueue();
+  iqQueue.writeFromQueue();
 #elif RADIO_ROLE == 1
-    iqQueue.readToQueue();
-#endif
+  iqQueue.readToQueue();
 #endif
 }

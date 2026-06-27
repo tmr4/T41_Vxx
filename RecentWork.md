@@ -2,6 +2,56 @@
 
 ## Ongoing Work
 
+### Ethernet, T41 Operation, Loop Flow and Timing
+
+The addition of a remote connection, especially Ethernet, added to the loop complexity. Sprinkled through the code and some online posts are some discussions of T41_Vxx operation, loop flow and timing. The loop I'm referring to is everything that occurs between the start and finish of the main loop. This section provides some historical context and an overview how adding an Ethernet connection changed things.
+
+The loop timing during RX of the original T41 code was driven by the time required to update the display, primarily rendering the frequency and audio spectrums and the waterfall. For best operation, audio and some I/O processing were handled from the main display update routine. This linked operation of the radio to updating the display each loop meaning that some operations, full screen menus for example, silenced the radio. The entire TX operation on the otherhand occurs within a single loop. The T41EEE software and an early version of the v12 software use this approach.
+
+In the current v12 software, Phoenix, each loop processes 16 blocks of audio data, either TX or RX, and a slice of waiting I/O interactions and display updates. The size of the slice of the non-audio operations is set to maintain artifact free audio. Thus it takes many loops to render one frame of the display or respond to multiple I/O events.
+
+The T41_Vxx software operates somewhere between these two. Audio processing in T41_Vxx is no longer driven by display updates. Rather the main display update routines yield to audio processing. This means that the radio can operate without updating the display or even without a dispaly at all. As with the original software, the time to complete a loop in RX is the time to render one frame of the display. As with the original software, an entire TX operation occurs within a single loop.
+
+Adding an Ethernet connection makes this review useful because processing the IQ data required another yield function. Ethernet processing needs to be done approximately every 667 microseconds to ensure smooth data flow. This can't be done from an ISR due to the Ethernet library design. It also can't simply be added to the normal audio processing yield function as that doesn't occur frequently enough. In fact, the audio processing routine calls the Ethernet yield at several points to maintain good Ethernet traffic flow.  With this, a Phoenix-style slice-of approach won't work unless you start slicing the audio processing as well. The trade off? I have to examine longer running processes and sprinkle yields at appropriate places to maintain good IQ data flow. So far, outside of audio processing, the only place I've had to put another Ethernet yield is in the RA8875 wait while busy routine called during the waterfall move.
+
+### Reworked Radio Role and Remote Communication
+
+My use of RADIO_ROLE to specify the supported modes of remote communication was getting overly complicated. I thought having highly configurable options was needed to conserve memory for other features, but this isn't really needed with the addition of PSRAM. Also, code readablility and the functionality of other operating modes, standalone and plug and play in particular, suffered as I've focused exclusively on WSJT-X remote operation with Ethernet recently.
+
+Given this, RADIO_ROLE now simply specifies whether the device is a T41 or remote and I'm going to include plug and play Ethernet as part of the core code. That means the only selectable remote operation modes at compile time are 1) WSJT-X audio/CAT over USB or 2) remote operation over USB. These are mutually exclusive. If I see these impacting performance much, I may revisit this in the future and include these as hardware modules for drop in activation.
+
+As part of making a bidirectional IQ data path between the T41 and remote unit, I've restructured many of the classes previously discussed, splitting some up to avoid duplication. This simiplified many of the classes, but added to the initialization effort. I may revisit this.
+
+Here is a brief overview of the classes involved in T41/remote communication.
+
+Communication and Support Classes:
+ * CatControl - processes CAT commands (the file remoteRadio.cpp - provides the specific CAT commands for the T41 remote and WSJT-X operation)
+ * ConnectBase - provides generic connection methods; the Audio and Ethernet classes derive from this class to provide a common base class link to ConnectManager
+ * ConnectManager - manages the state of the connection between the T41 and remote
+ * EnableBase - provides begin/end/enabled capability; the Audio objects derive from this classs to provide a common base class link to audio config routines
+ * EthernetQueue - queues 2-channels to/from related AudioStreams and a UDP data port
+ * TCPClient - manages Ethernet TCP connection; derives from ConnectBase to provide link to CatControl
+ * TCPServer - manages Ethernet TCP connection; derives from ConnectBase to provide link to CatControl
+ * T41Properties - links T41 properties to their display update method and CAT command; properties derive from ReadOnlyProperty and Property which derive from T41Update which provides the link to CatControl
+
+The following classes derive from AudioStream to stream IQ data to/from other Audio library objects:
+ * AudioOutputToQueue - streams to EthernetQueue
+ * AudioInputFromQueue - streams from EthernetQueue
+
+The above combined with EthernetQueue create a zero-copy T41/remote IQ data transfer.
+
+Here's the updated communication diagram (only an Ethernet link can be used since WSJT-X uses the remote unit Serial connection):
+
+```
+                                                    comm path
+                                                  Ethernet Only
+                                            T41 <---------------> Remote
+                     CatControl <-> TCPServer   <- CAT command ->   TCPClient <-> CatControl
+i2s_quadIn  --> AudioOutput --> EthernetQueue   -- RX IQ data -->   EthernetQueue --> AudioInput  --> Q_in_L/R
+i2s_quadOut <-- AudioInput  <-- EthernetQueue   <- TX IQ data ---   EthernetQueue <-- AudioOutput <-- Q_out_L/R_Ex
+                                            T41 <---------------> Remote
+```
+
 ### Adding WSJT-X TX Capability to Remote Unit
 
 Running WSJT-X with audio and CAT control over USB from the remote unit is fairly easy for RX and passing the CAT commands back to the T41.  All that's left then for full WSJT-X ops from the remote is passing the FT8 TX signal back to the T41. That's best handled by processing the TX signal to IQ data in the remote and passing that back to the T41. This mirrors the RX IQ data the T41 passes to the remote.

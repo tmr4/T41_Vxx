@@ -61,19 +61,12 @@
 extern CatControl catControl;
 extern CatControl wsjtControl;
 
-#if USB_ENABLED || ETHERNET_ENABLED
 #if RADIO_ROLE == 0
 ConnectManager connectManager;
+TCPServer iqStreamEthernet;
 #else
 ConnectManager connectManager(DEVICE_ROLE_REMOTE);
-#endif
-#endif
-#if ETHERNET_ENABLED
-#if RADIO_ROLE == 1
 TCPClient iqStreamEthernet;
-#elif RADIO_ROLE == 0
-TCPServer iqStreamEthernet;
-#endif
 #endif
 
 extern bool beaconFlag;
@@ -294,17 +287,13 @@ FLASHMEM void setup() {
 #if USB_ENABLED
   cbUSB = &iqStreamUSB;
 #endif
-#if ETHERNET_ENABLED
+
   cbEthernet = &iqStreamEthernet;
   iqStreamEthernet.init();
   iqQueue.init(&iqStreamOut);
   iqStreamOut.init(&iqQueue);
   iqStreamIn.init(&iqQueue);
-#endif
-
-#if USB_ENABLED || ETHERNET_ENABLED
   connectManager.begin(&catControl, cbEthernet, cbUSB);
-#endif
 
   KeyerSetup(); // testing only
 

@@ -68,7 +68,7 @@ T41Properties::T41Properties() {
 }
 
 FLASHMEM void T41Properties::SetPropertyDefaults() {
-  int remoteStatus = (USB_ENABLED || ETHERNET_ENABLED) ? REMOTE_NOT_CONNECTED : REMOTE_NOT_AVAIL;
+  int remoteStatus = REMOTE_NOT_CONNECTED;
 
   RadioState.Init(RECONFIGURE_STATE);
 
