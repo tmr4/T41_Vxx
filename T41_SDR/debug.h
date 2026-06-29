@@ -6,7 +6,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-#ifdef PROFILER_ACTIVE
+#if PROFILER_ACTIVE
 #define SETPROFILEPIN(pin) digitalWriteFast(pin, HIGH)
 #define RESETPROFILEPIN(pin) digitalWriteFast(pin, LOW)
 #define TOGGLEPROFILEPIN(pin) digitalToggleFast(pin)

@@ -14,7 +14,6 @@
 #include "..\Process.h"
 #include "RF_Control.h"
 #include "..\Tune.h"
-#include "..\t41Control.h"
 #include "..\Utility.h"
 
 //-------------------------------------------------------------------------------------------------------------

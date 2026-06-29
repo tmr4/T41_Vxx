@@ -15,20 +15,16 @@ extern uint16_t GPAB_state;
 // Conflicts with normal T41 pin assignments can cause operational
 // problems.
 
-// *** TODO: rework this summary ***
-// Project System free Teensy w/ Audio board pins:
-// Notes:
-//  pin 2 is touchscreen interrupt (this seems hardwired, thus a touch pulls this pin low))
-//  pins 6,10-13 are associated with Audio board SD card and memory chip and aren't available if these are used
-// (Teensy sides as Project System display is to right)
-// Left side: 13-17,22,33-38,40,41
-// Right side: 0,1,3,4,10-12,24,25,28-31
+// v11 free Teensy w/ Audio board pins:
+// (Teensy sides as main board installed)
+// up: 33,34,40,41
+// down: 0,1,24-27
 
-// free project system pins after assignments below:
-// *** unused T41 inputs assigned to pin 13 ***
-// *** unused T41 outputs assigned to pin 15 ***
-// Left side: (13),(15),17
-// Right side: 28
+// free v11 pins after assignments below:
+// up: 33,34,40,41
+// down: 0,26,27
+
+// tmp BPF board assignments: 24: SCL2, 25: SDA2
 
 // *** Input Pins ***
 
@@ -41,14 +37,14 @@ extern uint16_t GPAB_state;
 #define TUNE_ENCODER_A          14
 #define TUNE_ENCODER_B          17
 
-#define PTT          37    // TX input
+#define PTT                         37    // TX input
 #define KEYER_DAH_INPUT_RING        35    // Ring connection for keyer  -- default for righthanded user
 #define KEYER_DIT_INPUT_TIP         36    // Tip connection for keyer
 #define BUSY_ANALOG_PIN             39    // This is the analog pin that controls the 18 switches
 
 // *** Output Pins ***
 
-#define RXTX         22    // TX/RX relay
+#define RXTX                        22    // TX/RX relay
 #define MUTE                        38    // Mute Audio,  HIGH = "On" Audio available from Audio PA, LOW = Mute audio
 
 // the v11 T41 uses an RA8875 display
@@ -67,14 +63,14 @@ extern uint16_t GPAB_state;
 #define FILTERPIN15M 29    // 15M filter relay
 
 // *** TODO: set proper profiler pins if used ***
-#define PROFILER_MAINLOOP         1
+#define PROFILER_MAINLOOP            1
 #define PROFILER_PROCESS_RX          1
-#define PROFILER_DRAW     1
-#define PROFILER_ENTRY    1
-#define PROFILER_PROCESS_FRAME  1
-#define PROFILER_RX_TX       1
-#define PROFILER_DECODE_FT8        1
-#define PROFILER_OTHER           1
+#define PROFILER_DRAW                1
+#define PROFILER_ENTRY               1
+#define PROFILER_PROCESS_FRAME       1
+#define PROFILER_RX_TX               1
+#define PROFILER_DECODE_FT8          1
+#define PROFILER_OTHER               1
 
 //---- end of Teensy 4.1 Pin assignments
 

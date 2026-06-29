@@ -2,7 +2,7 @@
 
 #define VERSION "vMP_dev/v0.03" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 
-#define PROFILER_ACTIVE
+#define PROFILER_ACTIVE     false
 
 #define MASTER_CLK_MULT 4ULL // FOURSQRP QSD frontend requires 4x clock
 

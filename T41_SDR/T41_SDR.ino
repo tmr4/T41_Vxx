@@ -305,7 +305,7 @@ FLASHMEM void setup() {
   // this starts the measurements
   TEMPMON_TEMPSENSE0 |= 0x2U;
 
-#ifdef PROFILER_ACTIVE
+#if PROFILER_ACTIVE
   pinMode(PROFILER_PROCESS_RX, OUTPUT);
   digitalWrite(PROFILER_PROCESS_RX, LOW);
   pinMode(PROFILER_MAINLOOP, OUTPUT);

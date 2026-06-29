@@ -35,11 +35,11 @@
 
   *** see Connection Option Summary below for more detail ***
 */
-#define WSJT_USB_CAT_AUDIO true
-#define USB_ENABLED        false
-#define CAT_ONLY           false // not yet active
+#define WSJT_USB_CAT_AUDIO  true
+#define USB_ENABLED         false
+#define CAT_ONLY            false // not yet active
 
-#define PROFILER_ACTIVE
+#define PROFILER_ACTIVE     true
 
 #define MASTER_CLK_MULT 4ULL // FOURSQRP QSD frontend requires 4x clock
 

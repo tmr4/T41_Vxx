@@ -23,7 +23,6 @@
 #include "..\..\Noise.h"
 #include "..\..\Process.h"
 #include "..\..\Tune.h"
-//#include "..\..\t41Control.h"
 #include "..\..\Utility.h"
 
 #include "..\..\debug.h"

@@ -25,8 +25,12 @@
 #include "..\MenuProc.h"
 #include "..\Process.h"
 #include "..\Tune.h"
-#include "..\t41Control.h"
 #include "..\Utility.h"
+
+int calNFAdjust = 25;
+void CalibrateIQ() {}
+
+#if 0
 
 // for v11 only
 // Prerequisite: QSD board RF in connected to QSE RF out with 20 dB attenuator
@@ -2362,3 +2366,5 @@ FLASHMEM void SetFreqCal(long calFreqShift) {
   si5351.output_enable(SI5351_CLK1, 1);
 
 }
+
+#endif
