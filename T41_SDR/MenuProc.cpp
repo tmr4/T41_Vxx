@@ -55,7 +55,7 @@ FLASHMEM void CWOptions() {
     case 0:  // WPM
       //SetWPM();
       // GetMenuValue(minValue, maxValue, startValue, increment, prompt, valueOffset)
-      GetMenuValue(5, MAX_WPM, (int*)&t41.CurrentWPM, 1, "WPM:", 200, NULL, NULL, &SetWPMFollowup);
+      GetMenuValue(5, MAX_WPM, (int*)&t41.CurrentWPM.value, 1, "WPM:", 200, NULL, NULL, &SetWPMFollowup);
       break;
 
     case 1:          // Type of key:
@@ -75,12 +75,12 @@ FLASHMEM void CWOptions() {
     case 4:  // Sidetone volume
       //SetSideToneVolume();
       // GetMenuValue(minValue, maxValue, startValue, increment, prompt, valueOffset)
-      GetMenuValue(0, 100, (int*)&t41.SidetoneVolume, 1, "Volume:", 200, &SetSideToneVolumeSetup, &SetSideToneVolumeValue, &SetSideToneVolumeFollowup);
+      GetMenuValue(0, 100, (int*)&t41.SidetoneVolume.value, 1, "Volume:", 200, &SetSideToneVolumeSetup, &SetSideToneVolumeValue, &SetSideToneVolumeFollowup);
   break;
 
     case 5:                // Transmit relay hold delay
       //SetTransmitDelay();
-      GetMenuValue(0, 9750, (int*)&t41.CWTransmitDelay, 250, "Delay:", 150, NULL, NULL, &SetTransmitDelayFollowup);
+      GetMenuValue(0, 9750, (int*)&t41.CWTransmitDelay.value, 250, "Delay:", 150, NULL, NULL, &SetTransmitDelayFollowup);
       break;
 
     default:  // Cancel

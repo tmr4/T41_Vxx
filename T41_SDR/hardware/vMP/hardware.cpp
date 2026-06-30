@@ -88,11 +88,11 @@ FLASHMEM void RFOptions() {
   //  const char *rfOptions[] = { "Power level", "Gain", "Cancel" };
   switch(secondaryMenuIndex) {
     case 0: // Power Level
-      GetMenuValue(1, 20, (int*)&t41.TxPower, 1, "Power:", 200, NULL, NULL, &RFPowerFollowup);
+      GetMenuValue(1, 20, (int*)&t41.TxPower.value, 1, "Power:", 200, NULL, NULL, &RFPowerFollowup);
       break;
 
     case 1: // Gain
-      GetMenuValue(-60, 10, (int*)&t41.RFGain, 5, "Gain:", 200, NULL, NULL, &RFGainFollowup);
+      GetMenuValue(-60, 10, (int*)&t41.RFGain.value, 5, "Gain:", 200, NULL, NULL, &RFGainFollowup);
       break;
   }
 }

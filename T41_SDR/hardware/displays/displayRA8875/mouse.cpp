@@ -268,8 +268,14 @@ void MouseButtonOpStatsArea(int cursorX, int button) {
     ButtonMode();
   } else if(button == 1 && cursorX > OPERATION_STATS_CWF - 5 && cursorX < OPERATION_STATS_DMD - 5) {
     ToggleCWFilter();
-  } else if(button == 1 && cursorX > OPERATION_STATS_DMD - 5 && cursorX < OPERATION_STATS_DMD + 35) {
+  } else if(button == 1 && cursorX > OPERATION_STATS_DMD - 5 && cursorX < OPERATION_STATS_PWR - 5) {
     // change to the next demod mode
     ChangeDemodMode(t41.DemodMode + 1);
+  } else if(cursorX > OPERATION_STATS_PWR - 5 && cursorX < OPERATION_STATS_REM - 5) {
+    if(button == 1) {
+      t41.TxPower += 1;
+    } else if(button == 2) {
+      t41.TxPower -= 1;
+    }
   }
 }

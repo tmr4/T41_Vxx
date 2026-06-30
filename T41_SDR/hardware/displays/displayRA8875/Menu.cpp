@@ -83,7 +83,7 @@ FLASHMEM void ShowMenuItemValue(int value, int offset /* = 0 */, const char *pro
     tft.print(prompt);
   } else {
     // erase old value
-    tft.fillRect(SECONDARY_MENU_X + offset, MENUS_Y, EACH_MENU_WIDTH, CHAR_HEIGHT, RA8875_MAGENTA);
+    tft.fillRect(SECONDARY_MENU_X + offset, MENUS_Y, EACH_MENU_WIDTH - offset, CHAR_HEIGHT, RA8875_MAGENTA);
   }
 
   // update current value

@@ -139,7 +139,7 @@ FLASHMEM void SetKeyType() {
     SetKeyTypeFollowup();
   } else {
     //GetMenuOption(optionIndex, *currentValue, *setup(), *getValue(), *followup());
-    GetMenuOption(0, (int*)&t41.KeyType, NULL, NULL, &SetKeyTypeFollowup);
+    GetMenuOption(0, (int*)&t41.KeyType.value, NULL, NULL, &SetKeyTypeFollowup);
   }
 }
 
@@ -193,7 +193,7 @@ FLASHMEM void SelectCWFilter() {
   getMenuInc = t41.CWFilterIndex;
 
   //GetMenuOption(optionIndex, *currentValue, *setup(), *getValue(), *followup());
-  GetMenuOption(1, (int*)&t41.CWFilterIndex, NULL, NULL, &SelectCWFilterFollowup);
+  GetMenuOption(1, (int*)&t41.CWFilterIndex.value, NULL, NULL, &SelectCWFilterFollowup);
 }
 
 FLASHMEM void DoPaddleFlipFollowup() {
