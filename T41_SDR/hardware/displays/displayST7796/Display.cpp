@@ -53,7 +53,7 @@ typedef struct {
   const char *dbText;
   float32_t   dBScale;
   uint16_t    pixelsPerDB;
-  uint16_t    baseOffset;
+  float32_t   baseOffset;
   float32_t   offsetIncrement;
 } dispSc;
 
@@ -61,11 +61,11 @@ dispSc displayScale[] =
 {
   //                     not used                             not used
   // dbText    dBScale   pixelsPerDB   baseOffset             offsetIncrement
-  { "20 dB/",  10.0,     2,             24,                   1.00 },
+  { "20 dB/",  10.0,     2,             24.0,                   1.00 },
   { "10 dB/",  20.0,     4,            FREQSPEC_OFFSET_10DB,  0.50 }, // baseOffset calibrated to put peak at same level as audio spectrum (~3/4 scale) with AD3 (1mW -73dB external attenuation, 223.6mVrms @7.047MHz; see "Wavegen for RF in - S9 - 1mW with 73dB external atten.dwf3work")
-  { " 5 dB/",  40.0,     8,             58,                   0.25 },
-  { " 2 dB/",  100.0,    20,           120,                   0.10 },
-  { " 1 dB/",  200.0,    40,           200,                   0.05 }
+  { " 5 dB/",  40.0,     8,             58.0,                   0.25 },
+  { " 2 dB/",  100.0,    20,           120.0,                   0.10 },
+  { " 1 dB/",  200.0,    40,           200.0,                   0.05 }
 };
 
 //int newSpectrumFlag = 0; // 0 - oldNF needs initialized in DrawFreqSpectrum(), 1 - it doesn't need initialized
@@ -185,7 +185,6 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   static int currentNF = 0;
   static uint16_t waterfall[60][WATERFALL_W] = {0}; // circular buffer
   static int head = 0;
-  int16_t pixelnew, pixelnew1;
   int offset = (512-SPECTRUM_RES) / 2;
   bool init = false;
 
@@ -206,17 +205,13 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   }
 
   // Draw the frequency spectrums, gather data for waterfall
+  yPlot = SPECTRUM_NOISE_FLOOR - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[0])) - currentNF;
   for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
     bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
 
     TOGGLEPROFILEPIN(PROFILER_DRAW);
 
-    pixelnew = displayScale[t41.FreqSpecScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1 + offset]));
-    pixelnew1 = displayScale[t41.FreqSpecScale].baseOffset + bands[t41.ActiveBand].pixelOffset + (int16_t) (displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1 + offset]));
-
-    // calculate the freq spectrum plot value
-    yPlot = SPECTRUM_NOISE_FLOOR - pixelnew - currentNF;
-    y1Plot = SPECTRUM_NOISE_FLOOR - pixelnew1 - currentNF;
+    y1Plot = SPECTRUM_NOISE_FLOOR - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1])) - currentNF;
 
     // create rough spectrum histogram if auto noise floor is active
     // the frequency spectrum is 150 pixels high, let's create
@@ -291,6 +286,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     waterfall[head][x1] = gradient[wfGradIndex];  // Try to put pixel values in middle of gradient array
 
     YieldToProcess();
+    yPlot = y1Plot;
   }
 
   // save last plot value for erasing on next loop

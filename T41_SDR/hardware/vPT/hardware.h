@@ -16,7 +16,7 @@ extern int calNFAdjust;
 // Display.h
 
 // radio specific display calibration factors
-#define FREQSPEC_OFFSET_10DB  80
+#define FREQSPEC_OFFSET_10DB  80.0
 
 //---- Teensy 4.1 Pin assignments
 // All Teensy pin assignments are made here.  This makes it easier

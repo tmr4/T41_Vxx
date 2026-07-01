@@ -151,7 +151,6 @@ typedef struct {
   long calFreq; // receive IQ calibration frequency
   float32_t gainCorrection; // is hardware dependent and has to be calibrated ONCE and hardcoded in the band table
   int agcThresh;
-  int16_t pixelOffset;
 } band;
 
 extern band bands[];

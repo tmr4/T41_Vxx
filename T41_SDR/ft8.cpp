@@ -29,6 +29,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+#define MAX_ZOOM_ENTRIES      5
+
 //#define SPECTRUM_TESTING // plots frequency spectrum frame instead of waterfall (change frame with volume knob)
 
 #ifdef SPECTRUM_TESTING
@@ -245,10 +247,13 @@ FLASHMEM bool InitFT8() {
     //t41.IntermediateFreq = 12000.0;
     SetI2SFreq(t41.SampleRate);
     InitFFTArrays();
-    t41.SpectrumZoom = 1;
     InitHilbertFilters();
     SetupDemodFilterBW();
     ResetTuning();
+
+    // limit zoom range for FT8
+    t41.SpectrumZoom.Init(1, 1, 2, true, T41_ITEM_ZOOM);
+    UpdateDisplayFreq();
   }
 
   return result;
@@ -260,9 +265,12 @@ FLASHMEM void ExitFT8() {
     t41.IntermediateFreq = 48000.0;
     SetI2SFreq(t41.SampleRate);
     InitFFTArrays();
-    t41.SpectrumZoom = 1;
     InitHilbertFilters();
     SetupDemodFilterBW();
+
+    // return zoom to normal range
+    t41.SpectrumZoom.Init(1, 0, MAX_ZOOM_ENTRIES - 1, true, T41_ITEM_ZOOM);
+    UpdateDisplayFreq();
   }
 }
 

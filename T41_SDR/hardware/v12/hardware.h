@@ -10,7 +10,7 @@
 #define LIGHT_BLUE tft.Color565(64, 64, 192)
 
 // radio specific display calibration factors
-#define FREQSPEC_OFFSET_10DB  25
+#define FREQSPEC_OFFSET_10DB  25.0
 
 //------------
 // Encoders.h

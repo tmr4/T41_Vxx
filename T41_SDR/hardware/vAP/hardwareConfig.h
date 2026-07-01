@@ -133,8 +133,8 @@ Memory Usage on Teensy 4.1:
 RADIO_ROLE = 1
 
 WSJT_USB_CAT_AUDIO, Serial + MIDI + Audio
-  FLASH: code:277320, data:93964, headers:8616   free for files:7746564
-   RAM1: variables:132896, code:225080, padding:4296   free for local variables:162016
+  FLASH: code:277368, data:93964, headers:8568   free for files:7746564
+   RAM1: variables:132896, code:225016, padding:4360   free for local variables:162016
    RAM2: variables:338752  free for malloc/new:185536
  EXTRAM: variables:480320
 

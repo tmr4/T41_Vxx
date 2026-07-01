@@ -127,13 +127,8 @@ Memory Usage on Teensy 4.1:
 RADIO_ROLE = 0
 
 Serial
-  FLASH: code:268824, data:91696, headers:9140   free for files:7756804
-   RAM1: variables:127712, code:216360, padding:13016   free for local variables:167200
-   RAM2: variables:332736  free for malloc/new:191552
- EXTRAM: variables:1200320
-
-  FLASH: code:276180, data:92720, headers:8948   free for files:7748616
-   RAM1: variables:127744, code:223112, padding:6264   free for local variables:167168
+  FLASH: code:276196, data:92720, headers:8932   free for files:7748616
+   RAM1: variables:127744, code:223000, padding:6376   free for local variables:167168
    RAM2: variables:332736  free for malloc/new:191552
  EXTRAM: variables:480320
 

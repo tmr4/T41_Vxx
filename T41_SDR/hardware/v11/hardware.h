@@ -86,7 +86,7 @@ extern uint16_t GPAB_state;
 // Display.h
 
 // radio specific display calibration factors
-#define FREQSPEC_OFFSET_10DB  80
+#define FREQSPEC_OFFSET_10DB  80.0
 
 //------------
 // Menu.cpp
