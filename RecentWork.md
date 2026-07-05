@@ -2,6 +2,28 @@
 
 ## Ongoing Work
 
+### T41 Remote with WIFI
+
+I've been experimenting with creating a WiFi connection between the T41 and a remote unit.  My early tests show that this is probably possible but will require special attention and maybe a custom board.
+
+The first step is to connect the T41 to a WiFi module. I've done that successfully before with my T41 remote display which transferred the T41 display data to a remote display, but without audio. That needed a relatively low data rate.  I was able to do it over Bluetooth. Now, similar to my Ethernet remote connection, I wanted to include audio. That requires a faster WiFi connection.
+
+A 512-byte block of IQ data is produced by the T41 every 667 microseconds. That needs transferred from the T41 Teensy to the WiFi module and then sent out over UDP WiFi.  SPI is the only viable transfer mechanism between the Teensy and Wifi module at that rate.
+
+For this test, I'm focusing on the v11 T41. SPI1 is available on the Teensy but not readily accessible from the main board. The v11 T41 main board breaks out eight unused pin where headers can be added. From these pins, FlexIO3 can be used to create a virtual SPI port for the transfer. FlexIO SPI has the advantage that it can be run at a faster clock rate than a standard SPI port. FlexIO3 has the disadvantage of not supporting DMA. That means the Teensy processor has to drive the data transfer.
+
+Most of the ProtoSupplies Teensy development boards come with a WiFi module. For the T41 portion of these tests, I mocked up the transfer of IQ data from a Teensy 4.1 to the WiFi module on my ProtoSupplies Prototyping System for Teensy board. The Prototyping System uses an ESP32-S WiFi module. The standard SPI port on that board should be used for best performance. However you have to run in slave mode which the standard Arduino library doesn’t support.
+
+My first test was to see how fast I could transfer a data block between the Teensy and ESP32 module. Theoretically, the Teensy can run a FlexIO SPI bus up to 200 MHz, but speeds above 50 MHz probably require special hardware. The absolute slowest clock speed possible is about 12 MHz, reserving half of the 667-microsecond interval for the WiFi transfer (2/667us*4096bits).
+
+The FlexIO3 SPI speed with the Teensyduino FlexIO library seems to default to a maximum of 15 MHz. At that rate it takes about 273 microseconds to transfer one data block. The ESP32-S module had no problem with transfers at this rate. Early tests showed that the UDP WiFi transfer would take a similar amount of time. Thus the combined data transmission, Teensy to WiFi, fit well within the required transfer window with about 100 microseconds to spare. Of course, it would be nice to have more headroom as I’d like to pass CAT commands back and forth as well.
+
+Next, I tried to see how far I could push the clock. No matter what I tried I couldn’t get past 15 MHz on the FlexIO3 SPI port. After a morning with AI I found a feature (bug?) in the FlexIO library that prevented higher clock speeds. A simple mod allowed faster rates, allowing me to test the limits of this transfer. The transfer was successful at 30 MHz. Dropped packets occurred at 40 MHz.
+
+The 137 microsecond IQ data transfer time over SPI at the 30 MHz clock was attractive. However, I started getting data errors when I turned on the WiFi module. These errors persisted at slower SPI clock rates, even with a longer transfer window. Errors seemed to clear up with a 1MHz SPI clock.
+
+This points to problems with my hardware set up, not surprising since I just used jumper wires to connect the Teensy and ESP32. I think the setup would be ok with a shielded connection or custom PCB, both at the T41 and remote. Unfortunately, I’m not into creating that type of hardware so I won’t be taking this further.
+
 ### Ethernet, T41 Operation, Loop Flow and Timing
 
 The addition of a remote connection, especially Ethernet, added to the loop complexity. Sprinkled through the code and some online posts are some discussions of T41_Vxx operation, loop flow and timing. The loop I'm referring to is everything that occurs between the start and finish of the main loop. This section provides some historical context and an overview how adding an Ethernet connection changed things.
