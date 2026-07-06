@@ -2,7 +2,6 @@
 #include "SDT.h"
 
 #include "ButtonProc.h"
-#include "EEPROM.h"
 #include "Encoders.h"
 #include "Filter.h"
 #include "FIR.h"

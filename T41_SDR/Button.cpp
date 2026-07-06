@@ -3,7 +3,6 @@
 #include "Button.h"
 #include "ButtonProc.h"
 #include "Display.h"
-#include "EEPROM.h"
 #include "ft8.h"
 #include "Menu.h"
 #include "MenuProc.h"
@@ -176,13 +175,6 @@ FLASHMEM void ExecuteButtonPress(int val) {
     case UNUSED_1:  // 16
       ChangeMode(DATA_MODE, DEMOD_FT8_WAV);
       //ChangeMode(DATA_MODE, DEMOD_FT8_INTERNAL);
-
-      // *** TODO: examine restoring this ***
-      // *** TODO: from v12, validate v11 calibration routines
-      // changed from v11: if(calOnFlag == 0) {
-      //if(calibrateItem < 0) {
-      //  ButtonFrequencyEntry();
-      //}
       break;
 
     //case BEARING:  // 17

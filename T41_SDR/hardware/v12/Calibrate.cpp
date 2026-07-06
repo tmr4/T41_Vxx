@@ -12,7 +12,6 @@
 #include "..\debugSerial.h"
 #include "..\Demod.h"
 #include "..\Display.h"
-#include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\Exciter.h"
 #include "..\Filter.h"
@@ -1024,7 +1023,6 @@ FLASHMEM void CalibrateFrequency() {
       switch(val) {
         case MENU_OPTION_SELECT: // 0
           // Save frequency calibration factor and exit
-          EEPROMWrite();
           freqCalFlag = 0;
           break;
 
@@ -1566,7 +1564,6 @@ FLASHMEM void CalibrateReceiveIQ() {
     switch(val) {
       case MENU_OPTION_SELECT: // 0
         // save and exit
-        EEPROMWrite();
         recCalFlag = 0;
         break;
 
@@ -2432,7 +2429,6 @@ FLASHMEM void CalibrateTransmitIQ() {
     switch(val) {
       case MENU_OPTION_SELECT: // 0
         // save and exit
-        EEPROMWrite();
         tranCalFlag = 0;
         break;
 

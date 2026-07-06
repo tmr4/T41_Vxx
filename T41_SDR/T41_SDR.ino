@@ -24,7 +24,6 @@
 #include "CW_Excite.h"
 #include "Display.h"
 #include "DSP_Fn.h"
-#include "EEPROM.h"
 #include "Encoders.h"
 #include "Exciter.h"
 #include "Filter.h"
@@ -156,11 +155,7 @@ FLASHMEM void Splash() {
               This resets the user modifiable radio settings to the startup state
 *****/
 FLASHMEM void SoftReset() {
-  if(LOAD_VARS_FROM_EEPROM) {
-    LoadOpVarsFromEEPROM(LOAD_VARS_FROM_EEPROM);
-  } else {
-    t41.SetPropertyDefaults();
-  }
+  t41.SetPropertyDefaults();
 
   splitVFO = false;
   SoftResetHardware();
@@ -242,7 +237,6 @@ FLASHMEM void setup() {
 
   // SD card is required for normal T41 operations
   // *** TODO: reconsider this ***
-  //if(CheckDataFileEEPROM() == 0) { // *** requires SDEEPROMData.txt on SD card ***
   while(InitializeSDCard() == 0) {
     Debug("No SD card");
     //Serial.println("no sd");
@@ -256,11 +250,6 @@ FLASHMEM void setup() {
   //SaveAnalogSwitchValues();
 
   ClearScreen();
-  EEPROMStartup();
-
-#ifdef DEBUG
-  EEPROMShow();
-#endif
 
   delay(100L);
 

@@ -11,7 +11,6 @@
 #include <Bounce.h>
 
 #include "..\CWProcessing.h"
-#include "..\EEPROM.h"
 #include "..\Menu.h"
 #include "..\MenuProc.h"
 #include "..\Tune.h"
@@ -20,6 +19,8 @@
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
+
+#define NUMBER_OF_SWITCHES       18 // Number of push button switches
 
 #ifdef PROJECTSYSTEM_SWITCH_MATRIX
 int bandswitchPins[] = {
@@ -434,7 +435,7 @@ int ReadSelectedPushButton() {
 }
 
 /*****
-  Purpose: function reads the analog value for each matrix switch and stores that value in EEPROM.
+  Purpose: function reads the analog value for each matrix switch
 *****/
 FLASHMEM void SaveAnalogSwitchValues() {
   int index;

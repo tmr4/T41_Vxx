@@ -6,7 +6,6 @@
 #include "..\Button.h"
 #include "..\CW_Excite.h"
 #include "..\Display.h"
-#include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\hardware.h"
 #include "..\Menu.h"
@@ -119,10 +118,6 @@ FLASHMEM void RFInAttenFollowup() {
   RAtten[t41.ActiveBand] = currentRF_InAtten;
 
   ShowAnalogGain();
-
-  // *** TODO: set to EEPROM ***
-  //EEPROMData.t41.RFGain = t41.RFGain;
-  EEPROMWrite();
 }
 
 FLASHMEM void SetRFInAttenValue() {
@@ -133,19 +128,11 @@ FLASHMEM void SetRFInAttenValue() {
 FLASHMEM void SSBRFOutAttenFollowup() {
   SetRF_OutAtten(currentRF_OutAtten);
   XAttenSSB[t41.ActiveBand] = currentRF_OutAtten;
-
-  // *** TODO: set to EEPROM ***
-  //EEPROMData.t41.RFGain = t41.RFGain;
-  EEPROMWrite();
 }
 
 FLASHMEM void CWRFOutAttenFollowup() {
   SetRF_OutAtten(currentRF_OutAtten);
   XAttenCW[t41.ActiveBand] = currentRF_OutAtten;
-
-  // *** TODO: set to EEPROM ***
-  //EEPROMData.t41.RFGain = t41.RFGain;
-  EEPROMWrite();
 }
 
 /*****
@@ -239,8 +226,6 @@ FLASHMEM void CalibrateOptions() {
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          //EEPROMData.CWPowerCalibrationFactor[t41.ActiveBand] = CWPowerCalibrationFactor[t41.ActiveBand];
-          EEPROMWrite();
           calibrateItem = 5;
         }
       }
@@ -254,7 +239,6 @@ FLASHMEM void CalibrateOptions() {
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMWrite();
           calibrateItem = 5;
         }
       }

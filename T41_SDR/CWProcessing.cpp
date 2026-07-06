@@ -6,7 +6,6 @@
 #include "CWProcessing.h"
 #include "CW_Excite.h"
 #include "Display.h"
-#include "EEPROM.h"
 #include "Encoders.h"
 #include "FIR.h"
 #include "keyer.h"
@@ -112,12 +111,11 @@ float goertzel_mag(int numSamples, int TARGET_FREQUENCY, int SAMPLING_RATE, floa
 //-------------------------------------------------------------------------------------------------------------
 
 /*****
-  Purpose: wrap up SetWPM and save to EEPROM
+  Purpose: wrap up SetWPM
 *****/
 FLASHMEM void SetWPMFollowup() {
   SetTransmitDitLength();
   //.t41.CurrentWPM = t41.CurrentWPM;
-  EEPROMWrite();
   UpdateInfoBoxItem(T41_ITEM_KEY);
 }
 
@@ -207,8 +205,6 @@ FLASHMEM void DoPaddleFlipFollowup() {
     paddleFlip = 0;
   }
 
-  //EEPROMData.t41.PaddleDit = t41.PaddleDit;
-  //EEPROMData.t41.PaddleDah = t41.PaddleDah;
   UpdateInfoBoxItem(T41_ITEM_KEY);
 }
 
@@ -253,16 +249,12 @@ void SetSideToneVolumeValue() {
 }
 
 FLASHMEM void SetSideToneVolumeFollowup() {
-  //EEPROMData.t41.SidetoneVolume = t41.SidetoneVolume;
-  EEPROMWrite();
 }
 
 /*****
   Purpose: Determines how long the transmit relay remains on after last CW atom is sent.
 *****/
 FLASHMEM void SetTransmitDelayFollowup() {
-  //EEPROMData.t41.CWTransmitDelay = t41.CWTransmitDelay;
-  EEPROMWrite();
 }
 
 /*****

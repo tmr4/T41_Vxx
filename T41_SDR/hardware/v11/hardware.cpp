@@ -17,7 +17,6 @@
 #include "..\CWProcessing.h"
 #include "..\Display.h"
 #include "displayRA8875\Display.h"
-#include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\Exciter.h"
 #include "..\hardware.h"
@@ -172,7 +171,6 @@ FLASHMEM void CalibrateOptions() {
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          EEPROMWrite();
           calibrateItem = 5;
         }
       }
@@ -203,8 +201,6 @@ FLASHMEM void CalibrateOptions() {
         val = ProcessButtonPress(val);    // Use ladder value to get menu choice
         if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
           tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-          //EEPROMData.CWPowerCalibrationFactor[t41.ActiveBand] = CWPowerCalibrationFactor[t41.ActiveBand];
-          EEPROMWrite();
           calibrateItem = 5;
         }
       }
@@ -218,7 +214,6 @@ FLASHMEM void CalibrateOptions() {
       //  val = ProcessButtonPress(val);    // Use ladder value to get menu choice
       //  if(val == MENU_OPTION_SELECT) {  // Yep. Make a choice??
       //    tft.fillRect(SECONDARY_MENU_X, MENUS_Y, EACH_MENU_WIDTH + 35, CHAR_HEIGHT, RA8875_BLACK);
-      //    EEPROMWrite();
       //    calibrateItem = 5;
       //  }
       //}

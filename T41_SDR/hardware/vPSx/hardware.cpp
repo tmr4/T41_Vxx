@@ -10,7 +10,6 @@
 #include "..\CW_Excite.h"
 #include "..\CWProcessing.h"
 #include "..\Display.h"
-#include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\ft8.h"
 #include "..\Menu.h"

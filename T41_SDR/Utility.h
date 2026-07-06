@@ -40,7 +40,6 @@ float ApproxAtan(float z);
 void SaveAnalogSwitchValues();
 
 int InitializeSDCard();
-int CheckDataFileEEPROM();
 
 void initTempMon(uint16_t freq, uint32_t lowAlarmTemp, uint32_t highAlarmTemp, uint32_t panicAlarmTemp);
 

@@ -121,8 +121,6 @@ void EraseSecondaryMenu();
 void ShowMenuItem(char const*);
 void ShowMenuItemValue(int, int, char const*);
 void ProcessEqualizerChoices(int, char*);
-void GetFavoriteFrequency();
-void SetFavoriteFrequency();
 
 // mouse
 int GetCursorWidth();

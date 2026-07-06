@@ -17,7 +17,6 @@
 #define debugSerial Serial // Serial or SerialUSB1 or SerialUSB2
 
 //#define DEBUG_SW // debug switch matrix false presses
-//#define DEBUG_EEPROM
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -60,7 +59,7 @@ extern const maps myMapFiles[];
 
 #define SPLASH_DELAY              4000L           // How long to show Splash screen
 
-#define STARTUP_BAND        			1               // This is the 40M band (EEPROM.h)
+#define STARTUP_BAND        			1               // This is the 40M band
 
 #define CENTER_SCREEN_X           400
 #define CENTER_SCREEN_Y           245
@@ -69,8 +68,6 @@ extern const maps myMapFiles[];
 #define RAY_LENGTH                190
 
 #define USE_FULL_MENU             0               // 0 - use top line menus; 1 - use full screen menus
-
-#define LOAD_VARS_FROM_EEPROM     false           // skipping load facilitates testing/dev as don't need to reset when shifting between different versions
 
 #define SDCARD_MESSAGE_LENGTH     3000L           // The number of milliseconds to leave error message on screen
 

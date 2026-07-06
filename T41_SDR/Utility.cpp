@@ -6,7 +6,6 @@
 
 #include "Button.h"
 #include "Display.h"
-#include "EEPROM.h"
 #include "Filter.h"
 #include "FIR.h"
 #include "pi.h"
@@ -267,32 +266,6 @@ float ApproxAtan(float z) {
   const float n1 = 0.97239411f;
   const float n2 = -0.19194795f;
   return (n1 + n2 * z * z) * z;
-}
-
-/*****
-  Purpose: Tries to open the EEPROM SD file to see if an SD card is present in the system
-
-
-  Return value:
-    int               0 = SD not initialized, 1 = has data
-*****/
-FLASHMEM int CheckDataFileEEPROM() {
-  int retVal = 0;
-
-  if(SD.begin(BUILTIN_SDCARD)) {
-    // open the file.
-    File dataFile = SD.open("SDEEPROMData.txt");
-
-    if(dataFile) {
-      retVal = 1;
-    }
-
-    dataFile.close();
-  } else {
-    Serial.print("No SD card or cannot be initialized.");
-  }
-
-  return retVal;
 }
 
 /*****

@@ -8,7 +8,6 @@
 #include "CW_Excite.h"
 #include "Display.h"
 #include "DSP_Fn.h"
-#include "EEPROM.h"
 #include "Encoders.h"
 #include "Exciter.h"
 #include "Filter.h"
@@ -93,21 +92,15 @@ FLASHMEM void RFPowerFollowup() {
   if(t41.RadioMode == CW_MODE) {                                                                                                                                      //AFP 10-13-22
     powerOutCW[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * CWPowerCalibrationFactor[t41.ActiveBand];  //  afp 10-21-22
 
-    //EEPROMData.powerOutCW[t41.ActiveBand] = powerOutCW[t41.ActiveBand];
   } else {
     if(t41.RadioMode == SSB_MODE) {
       powerOutSSB[t41.ActiveBand] = (-.0133 * t41.TxPower * t41.TxPower + .7884 * t41.TxPower + 4.5146) * SSBPowerCalibrationFactor[t41.ActiveBand];  // afp 10-21-22
-      //EEPROMData.powerOutSSB[t41.ActiveBand] = powerOutSSB[t41.ActiveBand];                                                                                                //AFP 10-21-22
     }
   }
-  //EEPROMData.t41.TxPower = t41.TxPower;
-  EEPROMWrite();
   ShowCurrentPowerSetting();
 }
 
 FLASHMEM void RFGainFollowup() {
-  //EEPROMData.t41.RFGain = t41.RFGain;
-  EEPROMWrite();
 }
 
 /*****
@@ -158,9 +151,6 @@ FLASHMEM void VFOSelect(int32_t index) {
   // *** TODO: this seems oddly placed and specific to only v11, investigate ***
   //SetBandRelay(HIGH); // Required when switching VFOs
 
-  //EEPROMData.t41.ActiveVFO = t41.ActiveVFO;
-  EEPROMWrite();
-
   if(t41.RadioMode == CW_MODE) {
     DrawCWFilter();
   }
@@ -171,57 +161,12 @@ FLASHMEM void VFOSelect() {
 }
 
 /*****
-  Purpose: Allow user to set current EEPROM values or restore default settings
-*****/
-FLASHMEM void EEPROMOptions() {
-  //  const char *EEPROMOpts[] = { "Save Current", "Set Defaults", "Get Favorite", "Set Favorite",
-  //                               "Copy EEPROM-->SD", "Copy SD-->EEPROM", "SD EEPROM Dump", "Cancel" };
-  switch(secondaryMenuIndex) {
-    case 0:  // Save current values
-      EEPROMWrite();
-      break;
-
-    case 1:
-      EEPROMSaveDefaults();  // Restore defaults
-      break;
-
-    case 2:
-      GetFavoriteFrequency();  // Get a stored frequency and store in active VFO
-      break;
-
-    case 3:
-      SetFavoriteFrequency();  // Set favorites
-      break;
-
-    case 4:
-      CopyEEPROMToSD();  // Save current EEPROM value to SD
-      break;
-
-    case 5:
-      CopySDToEEPROM();  // Copy from SD to EEPROM
-      EEPROMRead();
-      RedrawDisplayScreen();
-      break;
-
-    case 6:
-      SDEEPROMDump();  // Show SD data
-      break;
-
-    default:
-      break;
-  }
-}
-
-/*****
   set agc to selected option
 *****/
 FLASHMEM void AGCOptions() {
   // const char *AGCChoices[] = { "Off", "Long", "Slow", "Medium", "Fast", "Cancel" };
 
   t41.AGCMode = secondaryMenuIndex;
-
-  //EEPROMData.AGCMode = AGCMode; // Store in EEPROM and...
-  EEPROMWrite();  // ...save it
 }
 
 /*****
@@ -236,8 +181,6 @@ FLASHMEM void SpectrumOptions() {
     return;
   }
   t41.FreqSpecScale = spectrumSet;
-  //EEPROMData.t41.FreqSpecScale = t41.FreqSpecScale;
-  EEPROMWrite();
 }
 
 /*****
@@ -256,7 +199,6 @@ FLASHMEM void EqualizerRecOptions() {
       for(int iFreq = 0; iFreq < EQUALIZER_CELL_COUNT; iFreq++) {
       }
       ProcessEqualizerChoices(0, (char *)"Receive Equalizer");
-      EEPROMWrite();
       RedrawDisplayScreen();
       break;
     case 3:
@@ -278,7 +220,6 @@ FLASHMEM void EqualizerXmtOptions() {
       break;
     case 2:
       ProcessEqualizerChoices(1, (char *)"Transmit Equalizer");
-      EEPROMWrite();
       RedrawDisplayScreen();
       break;
     case 3:
@@ -287,8 +228,6 @@ FLASHMEM void EqualizerXmtOptions() {
 }
 
 FLASHMEM void MicGainFollowup() {
-  //EEPROMData.currentMicGain = currentMicGain;
-  EEPROMWrite();
 }
 
 /*****
@@ -308,35 +247,24 @@ FLASHMEM void MicGainSet() {
 }
 
 FLASHMEM void SetCompressionLevelFollowup() {
-  //EEPROMData.currentMicThreshold = currentMicThreshold;
-  EEPROMWrite();
   UpdateInfoBoxItem(T41_ITEM_COMPRESS);
 }
 
 /*
 FLASHMEM void SetCompressionRatioFollowup() {
   //currentMicCompRatio += ((float) menuEncoderMove * .1);
-
-  EEPROMData.currentMicCompRatio = currentMicCompRatio;
-  EEPROMWrite();
 }
 
 FLASHMEM void SetCompressionAttackFollowup() {
   //currentMicAttack += ((float) menuEncoderMove * 0.1);
   //else if(currentMicAttack < .1)
   //  currentMicAttack = .1;
-
-  EEPROMData.currentMicAttack = currentMicAttack;
-  EEPROMWrite();
 }
 
 FLASHMEM void SetCompressionReleaseFollowup() {
   //currentMicRelease += ((float) menuEncoderMove * 0.1);
   //else if(currentMicRelease < 0.1)                 // 100% max
   //  currentMicRelease = 0.1;
-
-  EEPROMData.currentMicCompRatio = currentMicCompRatio;
-  EEPROMWrite();
 }
 */
 

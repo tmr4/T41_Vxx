@@ -3,7 +3,6 @@
 #include "AudioConfig.h"
 #include "calibrate.h"
 #include "Exciter.h"
-//#include "EEPROM.h"
 #include "Filter.h"
 #include "FIR.h"
 #include "keyer.h"

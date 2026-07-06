@@ -5,7 +5,6 @@
 #include "ButtonProc.h"
 #include "CWProcessing.h"
 #include "Display.h"
-#include "EEPROM.h"
 #include "Encoders.h"
 #include "hardware.h"
 #include "Menu.h"
@@ -32,18 +31,17 @@ int *ptrMenuValueCurrent;
 int8_t menuStatus = NO_MENUS_ACTIVE;
 
 const char * topMenus[] = { "CW Options", "RF Options", "VFO Select",
-                           "EEPROM", "AGC", "Spectrum Options", "Mic Gain", "Mic Comp",
+                           "AGC", "Spectrum Options", "Mic Gain", "Mic Comp",
                            "EQ Rec Set", "EQ Xmt Set", "Calibrate", "Bearing", "Beacon Monitor", "Cancel" };
 
 void (*functionPtr[])() = { &CWOptions, &RFOptions, &VFOSelect,
-                           &EEPROMOptions, &AGCOptions, &SpectrumOptions, &MicGainSet, &MicOptions,
+                           &AGCOptions, &SpectrumOptions, &MicGainSet, &MicOptions,
                            &EqualizerRecOptions, &EqualizerXmtOptions, &CalibrateOptions, &BearingOptions, &BeaconOptions, &Cancel };
 
 const char * secondaryChoices[][8] = {
   /* CW Options */ { "WPM", "Key Type", "CW Filter", "Paddle Flip", "Sidetone Vol", "Xmit Delay", "Cancel" },
   /* RF Options */ { MENU_RF_OPTIONS },
   /* VFO Select */ { "VFO A", "VFO B", "Split", "Cancel" },
-  /* EEPROM */ { "Save Current", "Set Defaults", "Get Favorite", "Set Favorite", "EEPROM-->SD", "SD-->EEPROM", "SD Dump", "Cancel" },
   /* AGC */ { "Off", "Long", "Slow", "Medium", "Fast", "Cancel" },
   /* Spectrum Options */ { "20 dB/unit", "10 dB/unit", " 5 dB/unit", " 2 dB/unit", " 1 dB/unit", "Cancel" },
   /* Mic Gain */ { "Set Mic Gain", "Cancel" },
@@ -56,7 +54,7 @@ const char * secondaryChoices[][8] = {
   /* Beacon */ { "On", "Off", "Cancel" },
   /* Cancel */ { "" }
 };
-const int secondaryMenuCount[] = {7, MENU_RF_COUNT, 4, 8, 6, 6, 2, 7, 4, 4, MENU_CAL_COUNT, 2, 3, 1};
+const int secondaryMenuCount[] = {7, MENU_RF_COUNT, 4, 6, 6, 2, 7, 4, 4, MENU_CAL_COUNT, 2, 3, 1};
 
 const char * menuOptions[][6] = {
   /* keyChoice */ { "Straight Key", "Keyer", "Cancel" },

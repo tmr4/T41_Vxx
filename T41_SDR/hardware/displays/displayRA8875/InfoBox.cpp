@@ -13,7 +13,6 @@
 #include "Display.h"
 #include "..\..\Display.h"
 #include "..\..\DSP_Fn.h"
-#include "..\..\EEPROM.h"
 #include "..\..\Encoders.h"
 #include "..\..\FIR.h"
 #include "..\..\ft8.h"

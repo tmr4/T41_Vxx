@@ -20,7 +20,6 @@ void ButtonDemodMode();
 void ChangeDemodMode(int mode, bool notify = true);
 void ChangeMode(int mode, int demod = -1, bool notify = true);
 void ButtonNotchFilter();
-void ButtonFrequencyEntry();
 void ToggleCWDecoder();
 
 void ChangeFreqIncrement(int change, bool notify = true);

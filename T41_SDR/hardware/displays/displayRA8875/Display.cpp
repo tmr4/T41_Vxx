@@ -10,7 +10,6 @@
 #include "Display.h"
 #include "..\..\Display.h"
 #include "..\..\Encoders.h"
-//#include "EEPROM.h"
 #include "..\..\Exciter.h"
 #include "..\..\Filter.h"
 #include "..\..\ft8.h"
@@ -64,7 +63,6 @@
 
     Some frequency changes resulting from button interaction are updated during the call to DrawFreqSpectrum as well.
     These include:
-      ButtonFrequencyEntry - does this now, but this should be changed.
 
     Info box items are updated individually in response to user interaction with the radio.  The entire box only
     needs redrawn when its area has been used for other purposes.

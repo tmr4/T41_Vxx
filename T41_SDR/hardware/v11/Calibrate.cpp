@@ -15,7 +15,6 @@
 #include "..\CW_Excite.h"
 #include "..\Display.h"
 #include "displayRA8875\Display.h" // allow for display specific code here
-#include "..\EEPROM.h"
 #include "..\Encoders.h"
 #include "..\Exciter.h"
 #include "..\FIR.h"
@@ -1056,7 +1055,6 @@ FLASHMEM bool ProcessIQMenu() {
   switch(val) {
     case MENU_OPTION_SELECT: // 0
       // save and exit
-      EEPROMWrite();
       calFlag = 0;
       break;
 
@@ -1303,7 +1301,6 @@ FLASHMEM bool ProcessPwrMenu() {
   switch(val) {
     case MENU_OPTION_SELECT: // 0
       // save and exit
-      EEPROMWrite();
       Serial.println("select received");
       //calFlag = 0;
       break;

@@ -6,7 +6,6 @@
 #include "ButtonProc.h"
 #include "CWProcessing.h"
 #include "Display.h"
-#include "EEPROM.h"
 #include "Encoders.h"
 #include "Filter.h"
 #include "ft8.h"
@@ -70,12 +69,6 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
     t41.CenterFreq.Update(lastFrequencies[t41.ActiveBand][vfo]);
   }
   t41.NCOFreq.Update(0);
-
-  // save band info if not calibrating
-  // *** TODO: calibrate check from v12, validate for v11 calibration routines
-  if(calibrateItem != 1) {
-    EEPROMWrite();
-  }
 
   if(t41.RadioMode == DATA_MODE) {
     switch(t41.DemodMode) {

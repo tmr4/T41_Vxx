@@ -4,7 +4,6 @@
 #include "..\..\Button.h"
 #include "Display.h"
 #include "..\..\Display.h"
-#include "..\..\EEPROM.h"
 #include "..\..\Encoders.h"
 #include "..\..\hardware.h"
 #include "Menu.h"
@@ -235,6 +234,4 @@ FLASHMEM void ProcessEqualizerChoices(int EQType, char *title) {
       }
     }
   }
-
-  EEPROMWrite();
 }

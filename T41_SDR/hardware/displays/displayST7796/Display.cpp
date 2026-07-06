@@ -10,7 +10,6 @@
 #include "Display.h"
 #include "..\..\Display.h"
 //#include "..\..\Encoders.h"
-////#include "EEPROM.h"
 //#include "..\..\Exciter.h"
 //#include "..\..\Filter.h"
 //#include "..\..\ft8.h"

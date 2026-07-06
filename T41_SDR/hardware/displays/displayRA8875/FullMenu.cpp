@@ -18,7 +18,6 @@ const char *secondaryFunctions[][8] = {
   { "WPM", "Key Type", "CW Filter", "Paddle Flip", "Sidetone Vol", "Xmit Delay", "Cancel" },
   { "Power level", "Gain", "Cancel" },
   { "VFO A", "VFO B", "Split", "Cancel" },
-  { "Save Current", "Set Defaults", "Get Favorite", "Set Favorite", "EEPROM-->SD", "SD-->EEPROM", "SD Dump", "Cancel" },
   { "Off", "Long", "Slow", "Medium", "Fast", "Cancel" },
   { "20 dB/unit", "10 dB/unit", " 5 dB/unit", " 2 dB/unit", " 1 dB/unit", "Cancel" },
   { "Set floor", "Cancel" },

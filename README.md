@@ -101,7 +101,7 @@ Adds a keyboard/memory CW keyer.  It currently requires the keyboard feature but
 
 ### Live noise floor
 
-The noise floor button toggles between Off, Auto and On.  When set to On you can adjust the noise floor with the Filter/Menu/Change encoder live while the radio is operating.  This noise floor setting for each band is preserved to the EEPROM when the noise floor button is toggled back to Off.  When set to Auto, the T41 will maintain the noise floor at the bottom of the frequency display.  This auto noise floor setting is not preserved.  Requires configuration setting USE_LIVE_NOISE_FLOOR set to 1.
+The noise floor button toggles between Off, Auto and On.  When set to On you can adjust the noise floor with the Filter/Menu/Change encoder live while the radio is operating.  When set to Auto, the T41 will maintain the noise floor at the bottom of the frequency display.  This auto noise floor setting is not preserved.  Requires configuration setting USE_LIVE_NOISE_FLOOR set to 1.
 
 ### Narrow-band FM
 
