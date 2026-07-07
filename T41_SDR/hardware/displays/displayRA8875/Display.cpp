@@ -85,7 +85,7 @@
 
   We can clear these as follows:
   For all of these items, I've added switch statements to allow for alernate screens while the radio
-  is operating. The switch statement with on the "displayState" variable.
+  is operating.
 
   With this, the transmit indicator is the only remaining normal operating element on the display.  I've left that for now.
 */
@@ -99,8 +99,6 @@
 #define FLOAT_PRECISION         6             // Assumed precision for a float
 
 //------------------------- Global Variables ----------
-
-int displayState = DISPLAY_T41;
 
 int centerLine = SPECTRUM_RES / 2 + SPECTRUM_LEFT_X;
 
@@ -528,7 +526,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     }
 
     // erase the old spectrum if needed
-    if(eraseSpec && (displayState == DISPLAY_T41)) {
+    if(eraseSpec && (t41.DisplayState == DISPLAY_T41)) {
       tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
     }
 
@@ -552,7 +550,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     }
 
     // draw the new spectrum if needed
-    if(drawSpec && (displayState == DISPLAY_T41)) {
+    if(drawSpec && (t41.DisplayState == DISPLAY_T41)) {
       tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, RA8875_YELLOW);
     }
 
@@ -612,7 +610,7 @@ FASTRUN void DrawWaterfall() {
   // scroll the waterfall display
   // Use the Block Transfer Engine (BTE) to move waterfall down a line
   // copy the waterfall between layers in a DMA ping/pong manner, moving it down to row 2
-  if(displayState == DISPLAY_T41) {
+  if(t41.DisplayState == DISPLAY_T41) {
     tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfHeight, WATERFALL_L, WATERFALL_T + 1, tik, tok);
     // Make sure it is done.  Memory moves can take time. This is blocking.
     // *** might need to block here if blocking nature of readStatus is modified ***

@@ -18,9 +18,7 @@
 // Menu.cpp
 
 #define MENU_RF_OPTIONS  "Power level", "Gain", "Atten In", "Atten Out", "Cancel"
-#define MENU_CAL_OPTIONS "Freq Cal", "Rec Cal", "Xmit Cal", "Two Tone", "CW PA Cal", "SSB PA Cal", "Cancel"
 #define MENU_RF_COUNT    5
-#define MENU_CAL_COUNT   7
 
 //------------
 // Process.cpp

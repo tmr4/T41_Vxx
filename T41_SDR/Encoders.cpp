@@ -30,6 +30,8 @@ volatile int tuneChange;
 volatile int menuEncoderMove;
 volatile long fineTuneEncoderMove;
 
+extern int calibrateItem;
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -48,7 +50,7 @@ void ProcessMenuEncoder() {
   if((calibrateItem >= 1) && (calibrateItem <= 3)) return;
 
   // interpret encoder according to flag settings
-  if(getEncoderValueFlag || (displayState == DISPLAY_FULL_MENU)) {
+  if(getEncoderValueFlag || (t41.DisplayState == DISPLAY_FULL_MENU)) {
     return; // menuEncoderMove processed in GetEncoderValueLive and GetMenuValueLoop routines
   }
 

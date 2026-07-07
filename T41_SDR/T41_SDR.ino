@@ -399,6 +399,7 @@ FASTRUN void loop() {
         t41.RadioState = SSB_TRANSMIT_STATE;
       }
       break;
+
     case CW_MODE:
       if(cwKeyerPTT) {
         t41.RadioState = CW_TRANSMIT_KEYER_STATE;
@@ -413,9 +414,11 @@ FASTRUN void loop() {
         keyPressedOn = 0;
       }
       break;
+
     case DSB_MODE:
       t41.RadioState = RECEIVE_STATE;
       break;
+
     case DATA_MODE:
       //Serial.print("WSJT-X TX: "); Serial.println(t41.wsjtPTT);
       if(t41.wsjtPTT) {
@@ -423,6 +426,10 @@ FASTRUN void loop() {
       } else {
         t41.RadioState = RECEIVE_STATE;
       }
+      break;
+
+    case CAL_MODE:
+      t41.RadioState = FREQ_CAL_STATE;
       break;
   }
 
@@ -456,7 +463,7 @@ FASTRUN void loop() {
   // 4. process radio state
   switch(t41.RadioState) {
     case RECEIVE_STATE:
-      switch(displayState) {
+      switch(t41.DisplayState) {
         case DISPLAY_T41:
           UpdateLiveDisplayAreas();
           break;
@@ -552,6 +559,9 @@ FASTRUN void loop() {
       // the remaining buffer will be played next time it's connected
       //CWPause(25); // 28ms plays on restart
       CWPause(50); // 5ms plays on restart, but it's the same w/ higher delay, first transmit doesn't have this
+      break;
+
+    case FREQ_CAL_STATE:
       break;
 
     default:

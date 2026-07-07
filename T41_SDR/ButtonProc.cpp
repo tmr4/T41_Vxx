@@ -177,6 +177,9 @@ FLASHMEM int ValidateDemodMode(int demod) {
         demod = DEMOD_FT8;
       }
       break;
+
+    case CAL_MODE:
+      break;
   }
 
   return demod;
@@ -204,19 +207,22 @@ FLASHMEM void ChangeDemodMode(int demod, bool notify /* = true */) {
       } else {
         t41.DemodMode.Update(mode);
       }
+
+      SetupDemodFilterBW();
+      UpdateModeDisplay();
       break;
 
     case DATA_MODE:
       ChangeMode(DATA_MODE, mode, notify);
-      return;
+      break;
+
+    case CAL_MODE:
+      t41.DemodMode = mode;
       break;
 
     default:
       break;
   }
-
-  SetupDemodFilterBW();
-  UpdateModeDisplay();
 }
 
 /*****
@@ -224,7 +230,8 @@ FLASHMEM void ChangeDemodMode(int demod, bool notify /* = true */) {
       SSB:  USB <-> LSB
       CW:   USB <-> LSB
       DSB:  AM -> SAM -> FM -> AM (receive only)
-      DATA: FT8 -> FT8.int -> FT8.wav
+      DATA: FT8 -> FT8.int -> FT8.wav -> FT8
+      CAL:
 *****/
 FLASHMEM void ButtonDemodMode() {
   ChangeDemodMode(t41.DemodMode + 1);
@@ -246,7 +253,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
   }
 
   // ignore invalid modes
-  if((mode < SSB_MODE) || (mode > DATA_MODE)) {
+  if((mode < SSB_MODE) || (mode > CAL_MODE)) {
     return; // nothing to do
   }
 
@@ -376,6 +383,9 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
           //t41.DemodMode = DEMOD_PSK31;
           break;
 
+        case CAL_MODE:
+          break;
+
         default:
           break;
       }
@@ -386,7 +396,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
 }
 
 /*****
-  Purpose: change to the next standard mode, SSB -> CW -> DSB -> Data -> SSB
+  Change to the next standard mode, SSB -> CW -> DSB -> Data -> SSB
 *****/
 FLASHMEM void ButtonMode() {
   int mode = t41.RadioMode + 1;

@@ -30,8 +30,6 @@ Display specific functions: *** TODO: complete summary ***
 #define DISPLAY_FULL_MENU           3
 #define DISPLAY_CALIBRATION         4
 
-extern int displayState;
-
 extern int centerLine;
 
 extern bool infoBoxItemActive[];

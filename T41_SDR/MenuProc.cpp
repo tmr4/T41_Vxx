@@ -24,8 +24,6 @@
 
 #define MAX_WPM                  60
 
-int calibrateItem = -1;
-
 int currentMicThreshold = -10;
 float currentMicCompRatio = 5.0;
 float currentMicAttack = 0.1;
@@ -313,6 +311,19 @@ FLASHMEM void MicOptions() {
       break;
   }
   secondaryMenuIndex = -1;
+}
+
+/*****
+  Present the calibration options available and return the selection
+*****/
+FLASHMEM void CalibrationOptions() {
+  // Calibrate { "Freq", "RX IQ", "TX IQ", "Two Tone", "CW Pwr", "SSB Pwr", "Cancel" },
+
+  if(secondaryMenuIndex == 6) {
+
+  } else {
+    CalibrationInit(secondaryMenuIndex);
+  }
 }
 
 /*****

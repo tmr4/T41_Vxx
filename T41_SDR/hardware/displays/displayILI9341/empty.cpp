@@ -7,7 +7,6 @@ bool infoBoxItemActive[24];
 bool beaconFlag;
 int cursorW, cursorH;
 
-//int displayState = -1; // no display
 //int centerLine;
 
 //-------------------------------------------------------------------------------------------------------------

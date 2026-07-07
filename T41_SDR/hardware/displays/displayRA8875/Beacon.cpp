@@ -117,8 +117,8 @@ void BeaconInit() {
   tft.writeTo(L2); // clear layer 2 as well
   tft.fillWindow();
   tft.writeTo(L1);
-  displayState = DISPLAY_BEACON_MONITOR;
-  //displayState = 2; // use for testing that normal updates have been eliminated, should be a blank display with the exception of the xmit indicator
+  t41.DisplayState = DISPLAY_BEACON_MONITOR;
+  //t41.DisplayState = 2; // use for testing that normal updates have been eliminated, should be a blank display with the exception of the xmit indicator
 
   // initialize beacon SNR
   for(int j = 0; j < 18; j++) {
@@ -145,7 +145,7 @@ void BeaconExit() {
   beaconFlag = false;
 
   // set display screen
-  displayState = DISPLAY_T41;
+  t41.DisplayState = DISPLAY_T41;
 
   // clear layer 2
   tft.writeTo(L2);

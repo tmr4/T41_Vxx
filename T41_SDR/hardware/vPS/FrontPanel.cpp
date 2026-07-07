@@ -20,6 +20,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern int calibrateItem;
+
 #define NUMBER_OF_SWITCHES       18 // Number of push button switches
 
 #ifdef PROJECTSYSTEM_SWITCH_MATRIX

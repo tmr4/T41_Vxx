@@ -33,7 +33,6 @@ int ProcessButtonPress(int valPin) { return 0; }
 
 // MenuProc.cpp
 FLASHMEM void RFOptions() {}
-FLASHMEM void CalibrateOptions() {}
 
 // Process.cpp
 void RemoveDCBias() {}

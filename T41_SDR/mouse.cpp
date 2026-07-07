@@ -121,7 +121,7 @@ void MouseButtonSpectrumWaterfall(int button) {
 
       t41.NCOFreq = (cursorX + cursorW / 2 - centerLine) * t41.SampleRate / (1 << t41.SpectrumZoom) / SPECTRUM_RES;
 
-      switch(displayState) {
+      switch(t41.DisplayState) {
         case DISPLAY_T41:
           DrawBandwidthBar();
           break;

@@ -722,9 +722,6 @@ void ConfigAudioState(int audioState) {
       //Q_in_R_Ex.begin();
       break;
 
-    case CALIBRATE_DONE_STATE:
-      break;
-
     default:
       break;
   }

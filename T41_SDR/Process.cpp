@@ -415,11 +415,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     }
   }
 
-  // *** TODO: this is from v11 - reconcile calibration calls within Process.cpp ***
-  //if(calibrateItem >= 0) {
-  //  //CalibrateOptions();
-  //}
-
   YieldToEthernet();
 
   /*************************************************************************************************
@@ -1217,7 +1212,7 @@ FASTRUN void ProcessControls() {
   bool updateDisplay = false;
   bool updateInfoBox = false;
 
-  switch(displayState) {
+  switch(t41.DisplayState) {
     case DISPLAY_T41:
     case DISPLAY_T41_FT8_DECODE:
       updateDisplay = true;

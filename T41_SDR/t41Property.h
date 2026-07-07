@@ -25,6 +25,8 @@ public:
   */
   Property<int> RadioState{RECONFIGURE_STATE};
 
+  Property<int> DisplayState{0}; // DISPLAY_T41
+
   Property<float> SampleRate{192000.0};
   Property<float> IntermediateFreq{48000.0};
 

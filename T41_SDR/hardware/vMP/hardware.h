@@ -100,10 +100,7 @@ extern Rotary fineTuneEncoder;
 // Menu.cpp
 
 #define MENU_RF_OPTIONS  "Power level", "Gain", "Cancel"
-//#define MENU_CAL_OPTIONS "Freq Cal", "CW PA Cal", "Rec Cal", "Xmit Cal", "SSB PA Cal", "Cancel"
-#define MENU_CAL_OPTIONS "Frequency", "CW Pwr", "SSB PA", "IQ", "Two Tone", "Cancel"
 #define MENU_RF_COUNT    3
-#define MENU_CAL_COUNT   6
 
 //------------
 // Process.cpp

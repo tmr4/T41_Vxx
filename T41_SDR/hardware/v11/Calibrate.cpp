@@ -29,8 +29,6 @@
 int calNFAdjust = 25;
 void CalibrateIQ() {}
 
-#if 0
-
 // for v11 only
 // Prerequisite: QSD board RF in connected to QSE RF out with 20 dB attenuator
 
@@ -174,7 +172,7 @@ FLASHMEM void SaveRadioState() {
 FLASHMEM void CalibrationInit() {
   SaveRadioState();
 
-  displayState = DISPLAY_CALIBRATION;
+  t41.DisplayState = DISPLAY_CALIBRATION;
 
   t41.CenterFreq = t41.ActiveFreq();
   t41.NCOFreq = 0;
@@ -245,7 +243,7 @@ FLASHMEM void RestoreRadioState() {
 
   RedrawDisplayScreen();
 
-  displayState = DISPLAY_T41;
+  t41.DisplayState = DISPLAY_T41;
   t41.RadioState = RECONFIGURE_STATE;
 }
 
@@ -2083,7 +2081,7 @@ FLASHMEM void ChangeCalMode(int mode) {
       break;
   }
 
-  //Serial.println(displayState);
+  //Serial.println(t41.DisplayState);
   switch(calType + mode) {
     // IQ cal: case 0-2
     case 0: // receive
@@ -2114,7 +2112,7 @@ FLASHMEM void ChangeCalMode(int mode) {
     default:
       break;
   }
-  //Serial.println(displayState);
+  //Serial.println(t41.DisplayState);
 }
 
 //-------------------------------------------------------------------------------------------------------------
@@ -2363,5 +2361,3 @@ FLASHMEM void SetFreqCal(long calFreqShift) {
   si5351.output_enable(SI5351_CLK1, 1);
 
 }
-
-#endif

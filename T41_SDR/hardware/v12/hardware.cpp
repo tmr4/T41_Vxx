@@ -169,7 +169,7 @@ FLASHMEM void RFOptions() {
 /*****
   Purpose: Present the Calibrate options available and return the selection
 *****/
-FLASHMEM void CalibrateOptions() {
+FLASHMEM void CalibrationOptions() {
   int val;
   //int32_t increment = 100L;
 

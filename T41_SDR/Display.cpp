@@ -10,6 +10,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern int calibrateItem;
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -19,7 +21,7 @@
 //-------------------------------------------------------------------------------------------------------------
 
 FLASHMEM void UpdateModeDisplay() {
-  switch(displayState) {
+  switch(t41.DisplayState) {
     case DISPLAY_T41:
       ShowOperatingStats();
       ShowBandwidthBarValues();
@@ -48,7 +50,7 @@ FLASHMEM void UpdateModeDisplay() {
 
 // updates various display elements associated with tuning frequency
 FLASHMEM void UpdateDisplayFreq() {
-  switch(displayState) {
+  switch(t41.DisplayState) {
     case DISPLAY_T41:
       ShowFrequency();          // update frequency display
       ShowOperatingStats();     // update center frequency in band info
@@ -79,7 +81,7 @@ FLASHMEM void UpdateDisplayFreq() {
 }
 
 FLASHMEM void UpdateDisplayNCOFreq() {
-  switch(displayState) {
+  switch(t41.DisplayState) {
     case DISPLAY_T41:
       ShowFrequency();
       DrawBandwidthBar();
@@ -97,7 +99,7 @@ FLASHMEM void UpdateDisplayNCOFreq() {
 }
 
 FLASHMEM void UpdateDisplayBand() {
-  switch(displayState) {
+  switch(t41.DisplayState) {
     case DISPLAY_T41:
       ShowFrequency();
       ShowOperatingStats();
@@ -129,7 +131,7 @@ FLASHMEM void UpdateDisplayBand() {
 }
 
 FLASHMEM void UpdateDisplayFilters() {
-  switch(displayState) {
+  switch(t41.DisplayState) {
     case DISPLAY_T41:
       ShowBandwidthBarValues();
       DrawBandwidthBar();
@@ -149,7 +151,7 @@ FLASHMEM void UpdateDisplayFilters() {
 }
 
 FLASHMEM void UpdateDisplayZoom() {
-  switch(displayState) {
+  switch(t41.DisplayState) {
     case DISPLAY_T41:
       DrawBandwidthBar();
       ShowSpectrumFreqValues();

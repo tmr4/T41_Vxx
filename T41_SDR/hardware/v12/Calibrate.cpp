@@ -172,7 +172,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
       userScale = t41.FreqSpecScale;
 
       t41.FreqSpecScale = 1; // set vertical scale to 10 dB during calibration
-      displayState = DISPLAY_CALIBRATION;
+      t41.DisplayState = DISPLAY_CALIBRATION;
       t41.SpectrumZoom = 0; // prevents call to CalcZoomFreqSpec in Process.cpp
 
       SetRF_InAtten(RECIEVE_CAL_START_ATTEN);
@@ -202,7 +202,7 @@ FLASHMEM void CalibratePreamble(int calType, int rState, int aState) {
       digitalWrite(RF_XMIT_RELAY, XMIT_SSB);
 
 
-      displayState = DISPLAY_CALIBRATION;
+      t41.DisplayState = DISPLAY_CALIBRATION;
       t41.SpectrumZoom = 2;
       //t41.SpectrumZoom = 3;
       inAtten = 0;
@@ -281,7 +281,7 @@ FLASHMEM void CalibratePost(int calType) {
     case 1: // receive cal
       SetRF_InAtten(currentRF_InAtten);
       SetRF_OutAtten(currentRF_OutAtten);
-      displayState = DISPLAY_T41;
+      t41.DisplayState = DISPLAY_T41;
       if(t41.ActiveBand != userBand) {
         ChangeBand(userBand - t41.ActiveBand);
         t41.ActiveBand = userBand;
@@ -305,7 +305,7 @@ FLASHMEM void CalibratePost(int calType) {
       break;
 
     case 2: // transmit cal
-      displayState = DISPLAY_T41;
+      t41.DisplayState = DISPLAY_T41;
       if(userMode == CW_MODE) {
         digitalWrite(RF_XMIT_RELAY, XMIT_CW);
       }

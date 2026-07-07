@@ -13,6 +13,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern int calibrateItem;
+
 float32_t SAM_carrier_freq_offset = 0.0;
 
 // new synchronous AM PLL & PHASE detector

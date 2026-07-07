@@ -209,7 +209,7 @@ void UpdateInfoBoxItem(int item) {
   int yOffset = infoBox[item].row;
 
   // *** TODO: warning the following could be breaking for displays other than the T41 operating display ***
-  //if(displayState == DISPLAY_T41)
+  //if(t41.DisplayState == DISPLAY_T41)
   {
     if(item >= IB_NUM_ITEMS) return;
     if(!infoBoxItemActive[item]) {

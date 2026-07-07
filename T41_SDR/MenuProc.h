@@ -4,8 +4,6 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern int calibrateItem;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -20,6 +18,6 @@ void EqualizerRecOptions();
 void EqualizerXmtOptions();
 void MicGainSet();
 void MicOptions();
-void CalibrateOptions();
+void CalibrationOptions();
 void BearingOptions();
 void BeaconOptions();

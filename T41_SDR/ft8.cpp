@@ -714,7 +714,7 @@ FLASHMEM bool InitFT8Decoder(const char *call, const char *grid) {
         EraseSpectrumDisplayContainer();
         DrawSpectrumFrame();
         EraseSpectrumWindow();
-        displayState = DISPLAY_T41_FT8_DECODE;
+        t41.DisplayState = DISPLAY_T41_FT8_DECODE;
         ShowFT8SpectrumFreqValues();
         DrawFT8BandwidthBar();
 
@@ -773,7 +773,7 @@ FLASHMEM void ExitFT8Decoder() {
   // clean up ft8_lib
   ft8lib_ExitDecoder();
 
-  displayState = DISPLAY_T41;
+  t41.DisplayState = DISPLAY_T41;
 
   // restore waterfall area
   ResetWaterfallHeight();

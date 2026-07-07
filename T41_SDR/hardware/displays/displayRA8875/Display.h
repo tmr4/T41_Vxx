@@ -124,8 +124,6 @@
 #define  PINK                     0xF81F
 #define  FILTER_WIN               0x10       // Color of SSB filter width
 
-extern int displayState;
-
 extern RA8875 tft;
 
 //-------------------------------------------------------------------------------------------------------------

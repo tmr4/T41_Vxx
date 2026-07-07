@@ -73,7 +73,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
 
     case MAIN_MENU_UP:  // 1
       if(USE_FULL_MENU) {
-        displayState = DISPLAY_FULL_MENU;
+        t41.DisplayState = DISPLAY_FULL_MENU;
         DrawMenuDisplay();                    // Draw selection box and primary menu
         SetPrimaryMenuIndex();                // Scroll through primary indexes and select one
         if(mainMenuIndex < TOP_MENU_COUNT - 1) {
@@ -81,7 +81,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
           functionPtr[mainMenuIndex]();
         }
 
-        displayState = DISPLAY_T41;
+        t41.DisplayState = DISPLAY_T41;
         EraseMenus();
         DrawSpectrumFrame();
         DrawBandwidthBar();
@@ -102,7 +102,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
 
     case MAIN_MENU_DN:  // 4
       if(USE_FULL_MENU) {
-        displayState = DISPLAY_FULL_MENU;
+        t41.DisplayState = DISPLAY_FULL_MENU;
         DrawMenuDisplay();                    // Draw selection box and primary menu
         SetPrimaryMenuIndex();                // Scroll through primary indexes and select one
         if(mainMenuIndex < TOP_MENU_COUNT - 1) {
@@ -110,7 +110,7 @@ FLASHMEM void ExecuteButtonPress(int val) {
           functionPtr[mainMenuIndex]();
         }
 
-        displayState = DISPLAY_T41;
+        t41.DisplayState = DISPLAY_T41;
         EraseMenus();
         DrawSpectrumFrame();
         DrawBandwidthBar();
@@ -134,12 +134,14 @@ FLASHMEM void ExecuteButtonPress(int val) {
       // SSB:  USB <-> LSB
       // CW:   USB <-> LSB
       // DSB:  AM -> SAM -> FM -> AM (receive only)
-      // DATA: FT8 -> FT8.int -> FT8.wav
+      // DATA: FT8 -> FT8.int -> FT8.wav -> FT8
+      // CAL:  Freq -> RX IQ -> TX IQ -> Two Tone -> CW Pwr -> SSB Pwr -> Freq
       ButtonDemodMode();
       break;
 
     case SET_MODE:  // 8
       // change to the next mode: SSB -> CW -> DSB -> DATA -> SSB
+      // *** can't change to CAL_MODE with SET_MODE button, but once there DEMODULATION button changes cal modes ***
       ButtonMode();
       break;
 

@@ -38,8 +38,6 @@
 
 //------------------------- Global Variables ----------
 
-int displayState = DISPLAY_T41;
-
 int centerLine = SPECTRUM_RES / 2 + SPECTRUM_LEFT_X;
 
 int wfHeight = WATERFALL_H;
@@ -265,7 +263,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     }
 
     // erase the old spectrum if needed
-    if(eraseSpec && (displayState == DISPLAY_T41)) {
+    if(eraseSpec && (t41.DisplayState == DISPLAY_T41)) {
       tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], ILI9341_BLACK);
     }
 
@@ -289,7 +287,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     }
 
     // draw the new spectrum if needed
-    if(drawSpec && (displayState == DISPLAY_T41)) {
+    if(drawSpec && (t41.DisplayState == DISPLAY_T41)) {
       tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, ILI9341_YELLOW);
     }
 
@@ -345,7 +343,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   // scroll the waterfall display
   // Use the Block Transfer Engine (BTE) to move waterfall down a line
   // copy the waterfall between layers in a DMA ping/pong manner, moving it down to row 2
-  //if(displayState == DISPLAY_T41) {
+  //if(t41.DisplayState == DISPLAY_T41) {
   //  static int tik = 1, tok = 2;
   //
   //  tft.BTE_move(WATERFALL_L, WATERFALL_T, WATERFALL_W, wfHeight, WATERFALL_L, WATERFALL_T + 1, tik, tok);

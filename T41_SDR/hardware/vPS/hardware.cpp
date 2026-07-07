@@ -82,41 +82,6 @@ FLASHMEM void RFOptions() {
   }
 }
 
-/*****
-  Purpose: Present the Calibrate options available and return the selection
-*****/
-FLASHMEM void CalibrateOptions() {
-  //int val;
-  //int32_t increment = 100L;
-
-  if(calibrateItem < 0) {
-    calibrateItem = secondaryMenuIndex;
-  }
-
-  switch(calibrateItem) {
-    case 0:  // Frequency Cal - uses WWV
-      break;
-
-    case 1:  // CW PA Cal
-      break;
-
-    case 2:  // SSB PA Cal
-      break;
-
-    case 3: // IQ Cal - Gain and Phase
-      break;
-
-    case 4: // Two Tone
-      break;
-
-    case 5: // cancel wrap up calibration
-      break;
-
-    default:  // Cancelled choice
-      break;
-  }
-}
-
 //------------
 // Process.cpp
 
