@@ -320,7 +320,7 @@ FLASHMEM void CalibrationOptions() {
   // Calibrate { "Freq", "RX IQ", "TX IQ", "Two Tone", "CW Pwr", "SSB Pwr", "Cancel" },
 
   if(secondaryMenuIndex == 6) {
-
+    CalibrationExit();
   } else {
     CalibrationInit(secondaryMenuIndex);
   }

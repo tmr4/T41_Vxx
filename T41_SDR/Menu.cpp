@@ -49,12 +49,12 @@ const char * secondaryChoices[][8] = {
   /* Mic Comp */ { "On", "Off", "Set Threshold", "Cancel" }, // only threshold is used currently
   /* EQ Rec Set */ { "On", "Off", "EQSet", "Cancel" },
   /* EQ Xmt Set */ { "On", "Off", "EQSet", "Cancel" },
-  /* Calibrate */ { "Freq", "RX IQ", "TX IQ", "Two Tone", "CW Pwr", "SSB Pwr", "Cancel" },
+  /* Calibrate */ { "Freq", "RX IQ", "TX IQ", "Two Tone", "CW Pwr", "SSB Pwr", "Exit", "Cancel" },
   /* Bearing */ { "Show Map", "Set Prefix", "Cancel" },
   /* Beacon */ { "On", "Off", "Cancel" },
   /* Cancel */ { "" }
 };
-const int secondaryMenuCount[] = {7, MENU_RF_COUNT, 4, 6, 6, 2, 7, 4, 4, 7, 2, 3, 1};
+const int secondaryMenuCount[] = {7, MENU_RF_COUNT, 4, 6, 6, 2, 7, 4, 4, 8, 2, 3, 1};
 
 const char * menuOptions[][6] = {
   /* keyChoice */ { "Straight Key", "Keyer", "Cancel" },
