@@ -213,7 +213,6 @@ PROGMEM const InfoBoxItem infoBox[IB_NUM_ITEMS] = {
 };
 
 #define GENERIC_IB_NUM_ITEMS 15
-
 PROGMEM const InfoBoxItem genericInfoBox[GENERIC_IB_NUM_ITEMS] = {
   volInfoBoxItem,       // Vol
   agcInfoBoxItem,       // AGC
@@ -233,7 +232,6 @@ PROGMEM const InfoBoxItem genericInfoBox[GENERIC_IB_NUM_ITEMS] = {
 };
 
 #define CW_IB_NUM_ITEMS 18
-
 PROGMEM const InfoBoxItem cwInfoBox[CW_IB_NUM_ITEMS] = {
   volInfoBoxItem,       // Vol
   agcInfoBoxItem,       // AGC
@@ -256,7 +254,6 @@ PROGMEM const InfoBoxItem cwInfoBox[CW_IB_NUM_ITEMS] = {
 };
 
 #define FT8_IB_NUM_ITEMS 20
-
 PROGMEM const InfoBoxItem ft8InfoBox[FT8_IB_NUM_ITEMS] = {
   volInfoBoxItem,       // Vol
   agcInfoBoxItem,       // AGC
@@ -280,6 +277,14 @@ PROGMEM const InfoBoxItem ft8InfoBox[FT8_IB_NUM_ITEMS] = {
   loadInfoBoxItem       // Teensy Load
 };
 
+#define CAL_IB_NUM_ITEMS 4
+PROGMEM const InfoBoxItem calInfoBox[CAL_IB_NUM_ITEMS] = {
+  stackInfoBoxItem,     // Stack
+  heapInfoBoxItem,      // Heap
+  tempInfoBoxItem,      // Teensy Temp
+  loadInfoBoxItem       // Teensy Load
+};
+
 const InfoBoxItem* activeInfoBox = genericInfoBox;
 
 //-------------------------------------------------------------------------------------------------------------
@@ -291,17 +296,21 @@ void SetInfoBoxWindow(int window) {
   int numItems = IB_NUM_ITEMS;
 
   switch(window) {
-    case 0:
+    case 0: // most radio modes
       ib = genericInfoBox;
       numItems = GENERIC_IB_NUM_ITEMS;
       break;
-    case 1:
+    case 1: // CW
       ib = cwInfoBox;
       numItems = CW_IB_NUM_ITEMS;
       break;
-    case 2:
+    case 2: // internal FT8
       ib = ft8InfoBox;
       numItems = FT8_IB_NUM_ITEMS;
+      break;
+    case 3: // calibration
+      ib = calInfoBox;
+      numItems = CAL_IB_NUM_ITEMS;
       break;
   }
 
@@ -313,6 +322,7 @@ void SetInfoBoxWindow(int window) {
         infoBoxItemIndex[i] = j;
         break;
       }
+      Serial.println(infoBoxItemIndex[i]);
     }
   }
   activeInfoBox = ib;
@@ -903,7 +913,7 @@ void IBHeapFollowup(int row, int col) {
 // mouse actions
 void MouseButtonInfoBox(int button, int x, int y) {
   // *** TODO: this is weak ***
-  int item, itemX, itemY, itemSize, itemChars, itemW, itemH;
+  int index, item, itemX, itemY, itemSize, itemChars, itemW, itemH;
 
   //Serial.println(x);
   //Serial.println(y);
@@ -919,21 +929,23 @@ void MouseButtonInfoBox(int button, int x, int y) {
   for(int i = 0; i < 5; i++) {
     switch(i) {
       case 0:
-        item = T41_ITEM_TUNE;
+        index = T41_ITEM_TUNE;
         break;
       case 1:
-        item = T41_ITEM_FINE;
+        index = T41_ITEM_FINE;
         break;
       case 2:
-        item = T41_ITEM_ZOOM;
+        index = T41_ITEM_ZOOM;
         break;
       case 3:
-        item = T41_ITEM_FLOOR;
+        index = T41_ITEM_FLOOR;
         break;
       case 4:
-        item = T41_ITEM_DECODER;
+        index = T41_ITEM_DECODER;
         break;
     }
+    item = infoBoxItemIndex[index];
+    if(item == -1) return;
 
     itemX = activeInfoBox[item].col;
     itemY = activeInfoBox[item].row;
@@ -981,42 +993,44 @@ void MouseButtonInfoBox(int button, int x, int y) {
 }
 
 void MouseWheelInfoBox(int wheel, int x, int y) {
-  int item, itemX, itemY, itemSize, itemChars, itemW, itemH;
+  int index, item, itemX, itemY, itemSize, itemChars, itemW, itemH;
 
   // *** TODO: this is weak ***
   for(int i = 0; i < 10; i++) {
     switch(i) {
       case 0:
-        item = T41_ITEM_VOL;
+        index = T41_ITEM_VOL;
         break;
       case 1:
-        item = T41_ITEM_AGC;
+        index = T41_ITEM_AGC;
         break;
       case 2:
-        item = T41_ITEM_TUNE;
+        index = T41_ITEM_TUNE;
         break;
       case 3:
-        item = T41_ITEM_FINE;
+        index = T41_ITEM_FINE;
         break;
       case 4:
-        item = T41_ITEM_ZOOM;
+        index = T41_ITEM_ZOOM;
         break;
       case 5:
-        item = T41_ITEM_FT8_TX;
+        index = T41_ITEM_FT8_TX;
         break;
       case 6:
-        item = T41_ITEM_FT8_TXF;
+        index = T41_ITEM_FT8_TXF;
         break;
       case 7:
-        item = T41_ITEM_FT8_RXF;
+        index = T41_ITEM_FT8_RXF;
         break;
       case 8:
-        item = T41_ITEM_FT8_INT;
+        index = T41_ITEM_FT8_INT;
         break;
       case 9:
-        item = T41_ITEM_FT8_CQ;
+        index = T41_ITEM_FT8_CQ;
         break;
     }
+    item = infoBoxItemIndex[index];
+    if(item == -1) return;
 
     itemX = activeInfoBox[item].col;
     itemY = activeInfoBox[item].row;
@@ -1099,13 +1113,15 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
   }
 }
 
-void HighlightIBItem(uint8_t item, int color) {
-  int label_x;
-  int xOffset = activeInfoBox[item].col;
-  int yOffset = activeInfoBox[item].row;
+void HighlightIBItem(uint8_t index, int color) {
+  int item, label_x, xOffset, yOffset;
 
-  if(item >= IB_NUM_ITEMS) return;
+  if(index >= IB_NUM_ITEMS || index < 0) return;
+  item = infoBoxItemIndex[index];
+  if(item == -1) return;
 
+  xOffset = activeInfoBox[item].col;
+  yOffset = activeInfoBox[item].row;
   tft.setFontScale((enum RA8875tsize)activeInfoBox[item].fontSize);
   //tft.fillRect(xOffset, yOffset, tft.getFontWidth() * activeInfoBox[item].clearWidth, tft.getFontHeight(), RA8875_BLACK);
   tft.setTextColor(color);

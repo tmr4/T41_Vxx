@@ -65,8 +65,7 @@ FLASHMEM void RestoreRadioState() {
   int volSetting = 0;
 
   t41.RadioState = RECONFIGURE_STATE;
-  t41.RadioMode = userRadioMode;
-  t41.DemodMode = userDemodMode;
+  ChangeMode(userRadioMode, userDemodMode);
   t41.DisplayState = userDisplayState;
 
   if(t41.ActiveBand != userActiveBand) {
@@ -117,6 +116,8 @@ FLASHMEM void CalibrationExit() {
 
   t41.DisplayState = DISPLAY_T41;
 
+  SetInfoBoxWindow(0);
+
   // restore screen
   RedrawDisplayScreen();
 }
@@ -131,6 +132,7 @@ FLASHMEM void CalibrationInit(int calType) {
   ClearScreen();
 
   t41.DisplayState = DISPLAY_CALIBRATION;
+  SetInfoBoxWindow(3);
 
   switch(calType) {
     case 0:  // Freq
