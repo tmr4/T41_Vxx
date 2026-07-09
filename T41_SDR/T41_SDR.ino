@@ -179,8 +179,8 @@ FLASHMEM void SoftReset() {
   ShowSpectrumdBScale();
   ShowBandwidthBarValues();
   DrawBandwidthBar();
-  UpdateInfoBox();
   DrawAudioFilterLines();
+  SetInfoBoxWindow(0);
 
   AGCPrep(); // no audio without this unless AGC is off
 

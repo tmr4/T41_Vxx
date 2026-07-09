@@ -61,20 +61,16 @@ extern int currentMicThreshold;
 Metro ms_500 = Metro(500); // display clock updates
 
 typedef  struct {
-  const char *label;      // info box label
-  const char **options;   // label options
-  int *option;            // pointer to option selector or pointer to the actual value if options is NULL
-  int fontSize;           // 0 - small or 1 - large font (large font takes two rows, adjust item rows and/or IB_ROW_#_Y accordingly)
-  int clearWidth;         // maximum number of characters to clear when updating field
-  int highlightFlag;      // 0 - highlight all options in green, 1 - don't highlight first option, 2 - first option white, second option red, other options green
-
-  // specifying row and col index is easiest but less flexible especailly if you use both small and large fonts
-  // as in the fefault info box
-  //int col, row;           // item column and row (up to 10 rows, 2 columns)
-  int col, row;           // item placement by screen pixel (up to 10 rows with small font)
-  void (*followFnPtr)(int row, int col);  // function to run after info box field is updated (note that these may be hard-coded to a particular location
-                          // and will need updated if the underlying item is moved)
-} infoBoxItem;
+  const int index;              // T41 element index
+  const char *label;            // info box label
+  const char** options;         // label options
+  const int* option;            // pointer to option selector or pointer to the actual value if options is NULL
+  const int fontSize;           // 0 - small or 1 - large font (large font takes two rows, adjust item rows and/or IB_ROW_#_Y accordingly)
+  const int clearWidth;         // maximum number of characters to clear when updating field
+  const int highlightFlag;      // 0 - highlight all options in green, 1 - don't highlight first option, 2 - first option white, second option red, other options green
+  const int col, row;           // item column and row
+  void (* const followFnPtr)(int row, int col);  // function to run after info box field is updated (note that these may be hard-coded to a particular location
+} InfoBoxItem;
 
 #define IB_COL_1_X        INFO_BOX_L + 90  // X coordinate for info box 1st column field
 //#define IB_COL_2_X        INFO_BOX_L + 220 // X coordinate for info box 2nd column field
@@ -100,148 +96,266 @@ typedef  struct {
 
 #define DECODER_WPM_X     IB_COL_1_X + 37
 
-const char *agcOpts[] = { "Off", "L", "S", "M", "F" };
-const char *tuneValues[] = { "10", "50", "100", "250", "1000", "10000", "100000", "1000000" };
-const char *ftValues[] = { "10", "50", "250", "500" };
-const char *filter[] = { "Off", "Kim", "Spectral", "LMS" };
-const char *onOff[2] = { "Off", "On" };
-const char *nfOptions[3] = { "Off", "Auto", "On"};
-const char *zoomOptions[] = { "1x ", "2x ", "4x ", "8x ", "16x" };
-
-const char *keyerOpts[] = { "Off", "WPM" };
-const char *optionsWPM[2] = { "Straight Key", "Paddles " };
-
-const char *ft8Opts[] = { "no sync", "sync" };
-const char *ft8TxOpts[] = { "Off", "enabled" };
-const char *ft8IntOpts[] = { "even", "odd" };
-const char *ft8CqOpts[] = { "man", "auto" };
+const char* agcOpts[] = { "Off", "L", "S", "M", "F" };
+const char* tuneValues[] = { "10", "50", "100", "250", "1000", "10000", "100000", "1000000" };
+const char* ftValues[] = { "10", "50", "250", "500" };
+const char* filter[] = { "Off", "Kim", "Spectral", "LMS" };
+const char* onOff[2] = { "Off", "On" };
+const char* nfOptions[3] = { "Off", "Auto", "On"};
+const char* zoomOptions[] = { "1x ", "2x ", "4x ", "8x ", "16x" };
+const char* keyerOpts[] = { "Off", "WPM" };
+const char* optionsWPM[2] = { "Straight Key", "Paddles " };
+const char* ft8Opts[] = { "no sync", "sync" };
+const char* ft8TxOpts[] = { "Off", "enabled" };
+const char* ft8IntOpts[] = { "even", "odd" };
+const char* ft8CqOpts[] = { "man", "auto" };
 
 #define IB_NUM_ITEMS 24
 
-// true = info box is active and shown
-bool infoBoxItemActive[IB_NUM_ITEMS] = {
-  true,  // Vol
-  true,  // AGC
-  true,  // CT Inc
-  true,  // FT Inc
-  true,  // Zoom
-  true,  // Noise Floor
-  true,  // Notch
-  true,  // Noise Filter
-  true,  // Compress
-  true,  // RF Gain
-  true,  // Equalizers
-  false, // Decoder
-  false, // Key Type
-  false, // Keyer
-  false, // FT8 sync
-  false, // FT8 Tx interval
-  false, // FT8 Tx enabled
-  false, // FT8 Tx interval
-  false, // FT8 Tx freq
-  false, // FT8 Rx freq
-  true,  // Stack
-  true,  // Heap
-  true,  // Teensy Temp
-  true   // Teensy Load
+// active window info box item index into infoBox[]
+//int infoBoxItemIndex[IB_NUM_ITEMS] = { -1 }; // this is sufficient, but comments below can be helpful here
+int infoBoxItemIndex[IB_NUM_ITEMS] = {
+   0,    // Vol
+   1,    // AGC
+   2,    // CT Inc
+   3,    // FT Inc
+   4,    // Zoom
+   5,    // Noise Floor
+   6,    // Notch
+   7,    // Noise Filter
+   8,    // Compress
+   9,    // RF Gain
+  10,    // Equalizers
+  -1,    // Decoder
+  -1,    // Key Type
+  -1,    // Keyer
+  -1,    // FT8 sync
+  -1,    // FT8 Tx interval
+  -1,    // FT8 Tx enabled
+  -1,    // FT8 Tx interval
+  -1,    // FT8 Tx freq
+  -1,    // FT8 Rx freq
+  20,    // Stack
+  21,    // Heap
+  22,    // Teensy Temp
+  23     // Teensy Load
 };
 
-// *** TODO: add version ***
-/* PROGMEM */ const infoBoxItem infoBox[] =
-{ //                                                        font    # chars
-  // label         options      option                      size    to erase  flag  col            row,           follow-up function
-  { "Vol:",        NULL,        (int*)&t41.AudioVolume.value,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }, // Vol
-  { "AGC",         agcOpts,     (int*)&t41.AGCMode.value,          1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    &IBAGCFollowup         }, // AGC
-  { "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex.value,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // CT Inc
-  { "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex.value,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }, // FT Inc
-  { "Zoom:",       zoomOptions, (int*)&t41.SpectrumZoom.value,     0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    &IBZoomFollowup        }, // Zoom
-  { "NF Set:",     nfOptions,   (int*)&t41.LiveNoiseFloor.value,   0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }, // Noise Floor
-  { "Notch:",      onOff,       (int*)&ANR_notchOn,          0,        3,      1,   IB_COL_2_X,    IB_ROW_5_Y,    NULL                   }, // Notch
+//                                                                                                                            font    # chars
+//                                             index            label          options      option                            size    to erase  flag  col            row,           follow-up function
+PROGMEM const InfoBoxItem volInfoBoxItem   = { T41_ITEM_VOL,    "Vol:",        NULL,        (int*)&t41.AudioVolume.value,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }; // Vol
+PROGMEM const InfoBoxItem agcInfoBoxItem   = { T41_ITEM_AGC,    "AGC",         agcOpts,     (int*)&t41.AGCMode.value,          1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    &IBAGCFollowup         }; // AGC
+PROGMEM const InfoBoxItem ctInfoBoxItem    = { T41_ITEM_TUNE,   "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex.value,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }; // CT Inc
+PROGMEM const InfoBoxItem ftInfoBoxItem    = { T41_ITEM_FINE,   "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex.value,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }; // FT Inc
+PROGMEM const InfoBoxItem zoomInfoBoxItem  = { T41_ITEM_ZOOM,   "Zoom:",       zoomOptions, (int*)&t41.SpectrumZoom.value,     0,        3,      0,   IB_COL_1_X,    IB_ROW_4_Y,    &IBZoomFollowup        }; // Zoom
+PROGMEM const InfoBoxItem nfInfoBoxItem    = { T41_ITEM_FLOOR,  "NF Set:",     nfOptions,   (int*)&t41.LiveNoiseFloor.value,   0,        4,      1,   IB_COL_2_X,    IB_ROW_4_Y,    NULL                   }; // Noise Floor
+PROGMEM const InfoBoxItem notchInfoBoxItem = { T41_ITEM_NOTCH,  "Notch:",      onOff,       (int*)&ANR_notchOn,                0,        3,      1,   IB_COL_2_X,    IB_ROW_5_Y,    NULL                   }; // Notch
 
-  // Compress and Noise need to be in column 1
-  { "Noise:",      filter,      (int*)&t41.NoiseFilter.value,      0,        8,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }, // Noise Filter
-  { "Compress:",   onOff,       (int*)&t41.Compressor.value,             0,        6,      1,   IB_COL_1_X,    IB_ROW_6_Y,    &IBCompressionFollowup }, // Compress
-  { "RF Gain:",    NULL,        NULL,                        0,        3,      0,   IB_COL_2_X,    IB_ROW_6_Y,    &IBRFGainFollowup      }, // RF Gain
+// Compress and Noise need to be in column 1
+PROGMEM const InfoBoxItem noiseInfoBoxItem    = { T41_ITEM_FILTER,   "Noise:",      filter,      (int*)&t41.NoiseFilter.value,      0,        8,      1,   IB_COL_1_X,    IB_ROW_5_Y,    NULL                   }; // Noise Filter
+PROGMEM const InfoBoxItem compressInfoBoxItem = { T41_ITEM_COMPRESS, "Compress:",   onOff,       (int*)&t41.Compressor.value,       0,        6,      1,   IB_COL_1_X,    IB_ROW_6_Y,    &IBCompressionFollowup }; // Compress
+PROGMEM const InfoBoxItem rfgainInfoBoxItem   = { T41_ITEM_RFGAIN,   "RF Gain:",    NULL,        NULL,                              0,        3,      0,   IB_COL_2_X,    IB_ROW_6_Y,    &IBRFGainFollowup      }; // RF Gain
 
-  // Equalizers takes two columns
-  { "Equalizer:",  NULL,        NULL,                        0,       10,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBEQFollowup          }, // Equalizers
+// Equalizers takes two columns
+PROGMEM const InfoBoxItem equalizerInfoBoxItem   = { T41_ITEM_EQUALIZER, "Equalizer:",  NULL,        NULL,                              0,       10,      1,   IB_COL_1_X,    IB_ROW_7_Y,    &IBEQFollowup          }; // Equalizers
 
-  // Decider takes two columns
-  { "Decoder:",    onOff,       (int*)&t41.CWDecoder.value,        0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }, // Decoder
+// Decoder takes two columns
+PROGMEM const InfoBoxItem decoderInfoBoxItem   = { T41_ITEM_DECODER, "Decoder:",    onOff,       (int*)&t41.CWDecoder.value,        0,        3,      1,   IB_COL_1_X,    IB_ROW_8_Y,    NULL                   }; // Decoder
 
-  // Key type takes two columns
-  { "Key Type:",   optionsWPM,  (int*)&t41.KeyType.value,          0,        2,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }, // Key Type
+// Key type takes two columns
+PROGMEM const InfoBoxItem keytypeInfoBoxItem   = { T41_ITEM_KEY, "Key Type:",   optionsWPM,  (int*)&t41.KeyType.value,          0,        2,      0,   IB_COL_1_X,    IB_ROW_9_Y,    &IBWPMFollowup         }; // Key Type
 
-  // Memory keyer requires 3 rows (10-12)
-  { "Keyer     ",  keyerOpts,   &keyerState,                 0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }, // Keyer
+// Memory keyer requires 3 rows (10-12)
+PROGMEM const InfoBoxItem keyerInfoBoxItem   = { T41_ITEM_KEYER, "Keyer     ",  keyerOpts,   &keyerState,                 0,       10,      1,   IB_COL_1_X,    IB_ROW_10_Y,    &IBKeyerFollowup      }; // Keyer
 
-  { "FT8       ",  ft8Opts,     &ft8SyncState,               0,        8,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   }, // FT8 sync
-  { "Tx Int:",     ft8IntOpts,  &ft8IntState,                0,        4,      0,   IB_COL_2_X,    IB_ROW_9_Y,    NULL                   }, // FT8 Tx interval
-  { "Tx:",         ft8TxOpts,   &ft8TxState,                 0,        7,      1,   IB_COL_1_X,    IB_ROW_10_Y,   NULL                   }, // FT8 Tx enabled
-  { "CQ resp:",    ft8CqOpts,   &ft8CqState,                 0,        4,      1,   IB_COL_2_X,    IB_ROW_10_Y,   NULL                   }, // FT8 Tx interval
-  { "Tx Freq:",    NULL,        &ft8TxFreq,                  0,        5,      0,   IB_COL_1_X,    IB_ROW_11_Y,   &IBFT8RxTxFollowup     }, // FT8 Tx freq
-  { "Rx Freq:",    NULL,        &ft8RxFreq,                  0,        5,      0,   IB_COL_2_X,    IB_ROW_11_Y,   &IBFT8RxTxFollowup     }, // FT8 Rx freq
+// FT8 items
+PROGMEM const InfoBoxItem ft8InfoBoxItem        = { T41_ITEM_FT8,      "FT8       ",  ft8Opts,     &ft8SyncState,               0,        8,      1,   IB_COL_1_X,    IB_ROW_9_Y,    NULL                   }; // FT8 sync
+PROGMEM const InfoBoxItem ft8TxIntInfoBoxItem   = { T41_ITEM_FT8_INT,  "Tx Int:",     ft8IntOpts,  &ft8IntState,                0,        4,      0,   IB_COL_2_X,    IB_ROW_9_Y,    NULL                   }; // FT8 Tx interval
+PROGMEM const InfoBoxItem ft8TxInfoBoxItem      = { T41_ITEM_FT8_TX,   "Tx:",         ft8TxOpts,   &ft8TxState,                 0,        7,      1,   IB_COL_1_X,    IB_ROW_10_Y,   NULL                   }; // FT8 Tx enabled
+PROGMEM const InfoBoxItem ft8CQInfoBoxItem      = { T41_ITEM_FT8_CQ,   "CQ resp:",    ft8CqOpts,   &ft8CqState,                 0,        4,      1,   IB_COL_2_X,    IB_ROW_10_Y,   NULL                   }; // FT8 Tx interval
+PROGMEM const InfoBoxItem ft8TxFreqInfoBoxItem  = { T41_ITEM_FT8_TXF,  "Tx Freq:",    NULL,        &ft8TxFreq,                  0,        5,      0,   IB_COL_1_X,    IB_ROW_11_Y,   &IBFT8RxTxFollowup     }; // FT8 Tx freq
+PROGMEM const InfoBoxItem ft8RxFreqInfoBoxItem  = { T41_ITEM_FT8_RXF,  "Rx Freq:",    NULL,        &ft8RxFreq,                  0,        5,      0,   IB_COL_2_X,    IB_ROW_11_Y,   &IBFT8RxTxFollowup     }; // FT8 Rx freq
 
-  { "Stack:",      NULL,        NULL,                        0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBStackFollowup       }, // Stack
-  // Heap should be in column 1
-  { "Heap:",       NULL,        NULL,                        0,        10,     2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBHeapFollowup        }, // Heap
-  { "Temp:",       NULL,        NULL,                        0,        3,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBTempFollowup        }, // Teensy Temp
-  // Load should be in column 1
-  { "Load:",       NULL,        NULL,                        0,        8,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBLoadFollowup        }  // Teensy Load
+PROGMEM const InfoBoxItem stackInfoBoxItem   = { T41_ITEM_STACK, "Stack:",      NULL,        NULL,                        0,        4,      2,   IB_COL_2_X,    IB_ROW_13_Y,   &IBStackFollowup       }; // Stack
+
+// Heap should be in column 1
+PROGMEM const InfoBoxItem heapInfoBoxItem   = { T41_ITEM_HEAP, "Heap:",       NULL,        NULL,                        0,        10,     2,   IB_COL_1_X,    IB_ROW_13_Y,   &IBHeapFollowup        }; // Heap
+PROGMEM const InfoBoxItem tempInfoBoxItem   = { T41_ITEM_TEMP, "Temp:",       NULL,        NULL,                        0,        3,      1,   IB_COL_2_X,    IB_ROW_14_Y,   &IBTempFollowup        }; // Teensy Temp
+
+// Load should be in column 1
+PROGMEM const InfoBoxItem loadInfoBoxItem   = { T41_ITEM_LOAD, "Load:",       NULL,        NULL,                        0,        8,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBLoadFollowup        };  // Teensy Load
+
+PROGMEM const InfoBoxItem infoBox[IB_NUM_ITEMS] = {
+  volInfoBoxItem,       // Vol
+  agcInfoBoxItem,       // AGC
+  ctInfoBoxItem,        // CT Inc
+  ftInfoBoxItem,        // FT Inc
+  zoomInfoBoxItem,      // Zoom
+  nfInfoBoxItem,        // Noise Floor
+  notchInfoBoxItem,     // Notch
+  noiseInfoBoxItem,     // Noise Filter
+  compressInfoBoxItem,  // Compress
+  rfgainInfoBoxItem,    // RF Gain
+  equalizerInfoBoxItem, // Equalizers
+  decoderInfoBoxItem,   // Decoder
+  keytypeInfoBoxItem,   // Key Type
+  keyerInfoBoxItem,     // Keyer
+  ft8InfoBoxItem,       // FT8 sync
+  ft8TxIntInfoBoxItem,  // FT8 Tx interval
+  ft8TxInfoBoxItem,     // FT8 Tx enabled
+  ft8CQInfoBoxItem,     // FT8 Tx interval
+  ft8TxFreqInfoBoxItem, // FT8 Tx freq
+  ft8RxFreqInfoBoxItem, // FT8 Rx freq
+  stackInfoBoxItem,     // Stack
+  heapInfoBoxItem,      // Heap
+  tempInfoBoxItem,      // Teensy Temp
+  loadInfoBoxItem       // Teensy Load
 };
+
+#define GENERIC_IB_NUM_ITEMS 15
+
+PROGMEM const InfoBoxItem genericInfoBox[GENERIC_IB_NUM_ITEMS] = {
+  volInfoBoxItem,       // Vol
+  agcInfoBoxItem,       // AGC
+  ctInfoBoxItem,        // CT Inc
+  ftInfoBoxItem,        // FT Inc
+  zoomInfoBoxItem,      // Zoom
+  nfInfoBoxItem,        // Noise Floor
+  notchInfoBoxItem,     // Notch
+  noiseInfoBoxItem,     // Noise Filter
+  compressInfoBoxItem,  // Compress
+  rfgainInfoBoxItem,    // RF Gain
+  equalizerInfoBoxItem, // Equalizers
+  stackInfoBoxItem,     // Stack
+  heapInfoBoxItem,      // Heap
+  tempInfoBoxItem,      // Teensy Temp
+  loadInfoBoxItem       // Teensy Load
+};
+
+#define CW_IB_NUM_ITEMS 18
+
+PROGMEM const InfoBoxItem cwInfoBox[CW_IB_NUM_ITEMS] = {
+  volInfoBoxItem,       // Vol
+  agcInfoBoxItem,       // AGC
+  ctInfoBoxItem,        // CT Inc
+  ftInfoBoxItem,        // FT Inc
+  zoomInfoBoxItem,      // Zoom
+  nfInfoBoxItem,        // Noise Floor
+  notchInfoBoxItem,     // Notch
+  noiseInfoBoxItem,     // Noise Filter
+  compressInfoBoxItem,  // Compress
+  rfgainInfoBoxItem,    // RF Gain
+  equalizerInfoBoxItem, // Equalizers
+  decoderInfoBoxItem,   // Decoder
+  keytypeInfoBoxItem,   // Key Type
+  keyerInfoBoxItem,     // Keyer
+  stackInfoBoxItem,     // Stack
+  heapInfoBoxItem,      // Heap
+  tempInfoBoxItem,      // Teensy Temp
+  loadInfoBoxItem       // Teensy Load
+};
+
+#define FT8_IB_NUM_ITEMS 20
+
+PROGMEM const InfoBoxItem ft8InfoBox[FT8_IB_NUM_ITEMS] = {
+  volInfoBoxItem,       // Vol
+  agcInfoBoxItem,       // AGC
+  ctInfoBoxItem,        // CT Inc
+  ftInfoBoxItem,        // FT Inc
+  zoomInfoBoxItem,      // Zoom
+  nfInfoBoxItem,        // Noise Floor
+  notchInfoBoxItem,     // Notch
+  noiseInfoBoxItem,     // Noise Filter
+  compressInfoBoxItem,  // Compress
+  rfgainInfoBoxItem,    // RF Gain
+  ft8InfoBoxItem,       // FT8 sync
+  ft8TxIntInfoBoxItem,  // FT8 Tx interval
+  ft8TxInfoBoxItem,     // FT8 Tx enabled
+  ft8CQInfoBoxItem,     // FT8 Tx interval
+  ft8TxFreqInfoBoxItem, // FT8 Tx freq
+  ft8RxFreqInfoBoxItem, // FT8 Rx freq
+  stackInfoBoxItem,     // Stack
+  heapInfoBoxItem,      // Heap
+  tempInfoBoxItem,      // Teensy Temp
+  loadInfoBoxItem       // Teensy Load
+};
+
+const InfoBoxItem* activeInfoBox = genericInfoBox;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+void SetInfoBoxWindow(int window) {
+  const InfoBoxItem* ib = infoBox;
+  int numItems = IB_NUM_ITEMS;
+
+  switch(window) {
+    case 0:
+      ib = genericInfoBox;
+      numItems = GENERIC_IB_NUM_ITEMS;
+      break;
+    case 1:
+      ib = cwInfoBox;
+      numItems = CW_IB_NUM_ITEMS;
+      break;
+    case 2:
+      ib = ft8InfoBox;
+      numItems = FT8_IB_NUM_ITEMS;
+      break;
+  }
+
+  // note which items are active in this window
+  for(int i = 0; i < IB_NUM_ITEMS; i++) {
+    infoBoxItemIndex[i] = -1;
+    for(int j = 0; j < numItems; j++) {
+      if(ib[j].index == infoBox[i].index) {
+        infoBoxItemIndex[i] = j;
+        break;
+      }
+    }
+  }
+  activeInfoBox = ib;
+  UpdateInfoBox();
+}
+
 /*****
-  Purpose: Updates the specified information box item
+  Update the specified information box item
 
   Parameter list:
-    infoBoxItem *item   Pointer to the info box item to update
+    int index   index of the info box item to update
 *****/
-//void UpdateInfoBoxItem(uint8_t item) {
-void UpdateInfoBoxItem(int item) {
-  int label_x;
-//  int xOffset = infoBox[item].col == 1 ? IB_COL_1_X : IB_COL_2_X;
-//  int yOffset = IB_ROW_1_Y + (infoBox[item].row - 1) * 20;
-  int xOffset = infoBox[item].col;
-  int yOffset = infoBox[item].row;
+void UpdateInfoBoxItem(int index) {
+  int item, label_x, xOffset, yOffset;
 
-  // *** TODO: warning the following could be breaking for displays other than the T41 operating display ***
-  //if(t41.DisplayState == DISPLAY_T41)
-  {
-    if(item >= IB_NUM_ITEMS) return;
-    if(!infoBoxItemActive[item]) {
-      // erase item
-      // *** TODO: this could erase other feature specific items that use the same row ***
-      ClearInfoBoxRow(yOffset);
-      return;
+  if(index >= IB_NUM_ITEMS || index < 0) return;
+  item = infoBoxItemIndex[index];
+  if(item == -1) return;
+
+  xOffset = activeInfoBox[item].col;
+  yOffset = activeInfoBox[item].row;
+  tft.setFontScale((enum RA8875tsize)activeInfoBox[item].fontSize);
+  tft.fillRect(xOffset, yOffset, tft.getFontWidth() * activeInfoBox[item].clearWidth, tft.getFontHeight(), RA8875_BLACK);
+  tft.setTextColor(RA8875_WHITE);
+  label_x = xOffset - 5 - strlen(activeInfoBox[item].label) * tft.getFontWidth();
+  tft.setCursor(label_x, yOffset);
+  tft.print(activeInfoBox[item].label);
+
+  if(activeInfoBox[item].options != NULL) {
+    if((activeInfoBox[item].highlightFlag > 0) && (*activeInfoBox[item].option == 0)) {
+      tft.setTextColor(RA8875_WHITE);
+    } else if((activeInfoBox[item].highlightFlag == 2) && (*activeInfoBox[item].option == 1)) {
+      tft.setTextColor(RA8875_RED);
+    } else {
+      tft.setTextColor(RA8875_GREEN);
     }
 
-    tft.setFontScale((enum RA8875tsize)infoBox[item].fontSize);
-    tft.fillRect(xOffset, yOffset, tft.getFontWidth() * infoBox[item].clearWidth, tft.getFontHeight(), RA8875_BLACK);
-    tft.setTextColor(RA8875_WHITE);
-    label_x = xOffset - 5 - strlen(infoBox[item].label) * tft.getFontWidth();
-    tft.setCursor(label_x, yOffset);
-    tft.print(infoBox[item].label);
+    tft.setCursor(xOffset, yOffset);
+    tft.print(activeInfoBox[item].options[*activeInfoBox[item].option]);
+  }
 
-    if(infoBox[item].options != NULL) {
-      if((infoBox[item].highlightFlag > 0) && (*infoBox[item].option == 0)) {
-        tft.setTextColor(RA8875_WHITE);
-      } else if((infoBox[item].highlightFlag == 2) && (*infoBox[item].option == 1)) {
-        tft.setTextColor(RA8875_RED);
-      } else {
-        tft.setTextColor(RA8875_GREEN);
-      }
-
-      tft.setCursor(xOffset, yOffset);
-      tft.print(infoBox[item].options[*infoBox[item].option]);
-    }
-
-    if(infoBox[item].followFnPtr != NULL) {
-      infoBox[item].followFnPtr(infoBox[item].row, infoBox[item].col);
-    }
+  if(activeInfoBox[item].followFnPtr != NULL) {
+    activeInfoBox[item].followFnPtr(activeInfoBox[item].row, activeInfoBox[item].col);
   }
 }
 
@@ -529,7 +643,7 @@ void IBFT8RxTxFollowup(int row, int col) {
 }
 
 void ClearInfoBoxKeyer() {
-  int row = infoBox[T41_ITEM_KEYER].row;
+  int row = activeInfoBox[T41_ITEM_KEYER].row;
 
   ClearInfoBoxRow(row);
   ClearInfoBoxRow(row + 20);
@@ -589,7 +703,7 @@ void IBKeyerFollowup(int row, int col) {
            Assumes decoder is in column 1 row 9
 *****/
 void UpdateIBWPM() {
-  int yOffset = infoBox[T41_ITEM_DECODER].row;
+  int yOffset = activeInfoBox[T41_ITEM_DECODER].row;
 
   tft.setFontScale((enum RA8875tsize)0);
   tft.setTextColor(RA8875_GREEN);
@@ -604,7 +718,7 @@ void UpdateIBWPM() {
   Purpose: Update CW decode lock indicator in information box
 *****/
 void UpdateDecodeLockIndicator() {
-  int yOffset = infoBox[T41_ITEM_DECODER].row;
+  int yOffset = activeInfoBox[T41_ITEM_DECODER].row;
 
   // ==========  CW decode "lock" indicator
   if(combinedCoeff > 50)
@@ -821,10 +935,10 @@ void MouseButtonInfoBox(int button, int x, int y) {
         break;
     }
 
-    itemX = infoBox[item].col;
-    itemY = infoBox[item].row;
-    itemSize = infoBox[item].fontSize;
-    itemChars = infoBox[item].clearWidth;
+    itemX = activeInfoBox[item].col;
+    itemY = activeInfoBox[item].row;
+    itemSize = activeInfoBox[item].fontSize;
+    itemChars = activeInfoBox[item].clearWidth;
     itemW = (itemSize == 1 ? 16 : 8) * itemChars;
     itemH = itemSize == 1 ? 32 : 16;
 
@@ -904,17 +1018,17 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
         break;
     }
 
-    itemX = infoBox[item].col;
-    itemY = infoBox[item].row;
-    itemSize = infoBox[item].fontSize;
-    itemChars = infoBox[item].clearWidth;
+    itemX = activeInfoBox[item].col;
+    itemY = activeInfoBox[item].row;
+    itemSize = activeInfoBox[item].fontSize;
+    itemChars = activeInfoBox[item].clearWidth;
     itemW = (itemSize == 1 ? 16 : 8) * itemChars;
     itemH = itemSize == 1 ? 32 : 16;
 
     // allow action within a portion of label as well
     if(x > itemX - 50 && x < itemX + itemW && y > itemY && y < itemY + itemH) {
-      //if(infoBox[item].option != NULL)
-      //  Serial.print("before: "); Serial.println(*(infoBox[item].option));
+      //if(activeInfoBox[item].option != NULL)
+      //  Serial.print("before: "); Serial.println(*(activeInfoBox[item].option));
 
       switch(item) {
         case T41_ITEM_VOL:
@@ -966,8 +1080,8 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
           break;
       }
 
-      //if(infoBox[item].option != NULL)
-      //  Serial.print("after: "); Serial.println(*(infoBox[item].option));
+      //if(activeInfoBox[item].option != NULL)
+      //  Serial.print("after: "); Serial.println(*(activeInfoBox[item].option));
       //Serial.print("item: "); Serial.println(item);
       //Serial.print("wheel: "); Serial.println(wheel);
       //Serial.print("x: "); Serial.println(x);
@@ -987,17 +1101,17 @@ void MouseWheelInfoBox(int wheel, int x, int y) {
 
 void HighlightIBItem(uint8_t item, int color) {
   int label_x;
-  int xOffset = infoBox[item].col;
-  int yOffset = infoBox[item].row;
+  int xOffset = activeInfoBox[item].col;
+  int yOffset = activeInfoBox[item].row;
 
   if(item >= IB_NUM_ITEMS) return;
 
-  tft.setFontScale((enum RA8875tsize)infoBox[item].fontSize);
-  //tft.fillRect(xOffset, yOffset, tft.getFontWidth() * infoBox[item].clearWidth, tft.getFontHeight(), RA8875_BLACK);
+  tft.setFontScale((enum RA8875tsize)activeInfoBox[item].fontSize);
+  //tft.fillRect(xOffset, yOffset, tft.getFontWidth() * activeInfoBox[item].clearWidth, tft.getFontHeight(), RA8875_BLACK);
   tft.setTextColor(color);
-  label_x = xOffset - 5 - strlen(infoBox[item].label) * tft.getFontWidth();
+  label_x = xOffset - 5 - strlen(activeInfoBox[item].label) * tft.getFontWidth();
   tft.setCursor(label_x, yOffset);
-  tft.print(infoBox[item].label);
+  tft.print(activeInfoBox[item].label);
 }
 
 /*****

@@ -32,8 +32,6 @@ Display specific functions: *** TODO: complete summary ***
 
 extern int centerLine;
 
-extern bool infoBoxItemActive[];
-
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -101,6 +99,7 @@ void MyDrawFloat(float val, int decimals, int x, int y, char *buff);
 void MyDrawFloatP(float val, int decimals, int x, int y, char *buff, int width);
 
 // info box
+void SetInfoBoxWindow(int window);
 void UpdateInfoBox();
 void UpdateInfoBoxItem(int);
 void HighlightIBItem(unsigned char, int);
@@ -110,6 +109,9 @@ void UpdateDecodeLockIndicator();
 void UpdateClock();
 void HighlightTuneInc();
 void UpdateDisplayZoom();
+
+void DrawInfoBox();
+void DrawInfoBoxItem();
 
 // menu
 void ShowMenu(char const**, int);

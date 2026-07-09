@@ -718,19 +718,7 @@ FLASHMEM bool InitFT8Decoder(const char *call, const char *grid) {
         ShowFT8SpectrumFreqValues();
         DrawFT8BandwidthBar();
 
-        // update FT8 info box items
-        infoBoxItemActive[T41_ITEM_FT8] = true;
-        UpdateInfoBoxItem(T41_ITEM_FT8);
-        infoBoxItemActive[T41_ITEM_FT8_TX] = true;
-        UpdateInfoBoxItem(T41_ITEM_FT8_TX);
-        infoBoxItemActive[T41_ITEM_FT8_TXF] = true;
-        UpdateInfoBoxItem(T41_ITEM_FT8_TXF);
-        infoBoxItemActive[T41_ITEM_FT8_RXF] = true;
-        UpdateInfoBoxItem(T41_ITEM_FT8_RXF);
-        infoBoxItemActive[T41_ITEM_FT8_INT] = true;
-        UpdateInfoBoxItem(T41_ITEM_FT8_INT);
-        infoBoxItemActive[T41_ITEM_FT8_CQ] = true;
-        UpdateInfoBoxItem(T41_ITEM_FT8_CQ);
+        SetInfoBoxWindow(2);
 
         // set up message area
         InitFT8Display();
@@ -788,14 +776,7 @@ FLASHMEM void ExitFT8Decoder() {
 
   // restore waterfall area
 
-  // update FT8 info box items
-  infoBoxItemActive[T41_ITEM_FT8] = false;
-  infoBoxItemActive[T41_ITEM_FT8_TX] = false;
-  infoBoxItemActive[T41_ITEM_FT8_TXF] = false;
-  infoBoxItemActive[T41_ITEM_FT8_RXF] = false;
-  infoBoxItemActive[T41_ITEM_FT8_INT] = false;
-  infoBoxItemActive[T41_ITEM_FT8_CQ] = false;
-  UpdateInfoBox();
+  SetInfoBoxWindow(0);
 }
 
 FLASHMEM bool SetupFT8Wav() {
