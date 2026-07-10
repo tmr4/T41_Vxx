@@ -50,7 +50,7 @@ void EraseSpectrumWindow() {}
 void RedrawDisplayScreen() {}
 void ShowFrequency(bool) {}
 void ShowOperatingStats() {}
-void ShowSAM(float) {}
+void ShowSAMError() {}
 void ShowCurrentPowerSetting() {}
 void DrawSpectrumFrame() {}
 void EraseSpectrumDisplayContainer() {}

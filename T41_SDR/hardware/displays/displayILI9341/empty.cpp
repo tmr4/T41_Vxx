@@ -42,7 +42,7 @@ void EraseSpectrumWindow() {}
 void RedrawDisplayScreen() {}
 //void ShowFrequency() {}
 //void ShowOperatingStats() {}
-void ShowSAM(float) {}
+void ShowSAMError() {}
 //void ShowCurrentPowerSetting() {}
 //void DrawSpectrumFrame() {}
 void EraseSpectrumDisplayContainer() {}

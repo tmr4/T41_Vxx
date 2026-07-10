@@ -13,64 +13,52 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern int calibrateItem;
-
-float32_t SAM_carrier_freq_offset = 0.0;
-
-// new synchronous AM PLL & PHASE detector
-// wdsp Warren Pratt, 2016
-float omegaN = 200.0;                       // PLL bandwidth 50.0 - 1000.0
-float pll_fmax = 4000.0;
-int zeta_help = 65;
-float32_t zeta = (float32_t)zeta_help / 100.0;  // PLL step response: smaller, slower response 1.0 - 0.1
-float32_t omega_min = TWO_PI * -pll_fmax * 1 / 24000;
-float32_t omega_max = TWO_PI * pll_fmax * 1 / 24000;
-float32_t g1 = 1.0 - exp(-2.0 * omegaN * zeta * 1 / 24000);
-float32_t g2 = -g1 + 2.0 * (1 - exp(-omegaN * zeta * 1 / 24000) * cosf(omegaN * 1 / 24000 * sqrtf(1.0 - zeta * zeta)));
-float32_t phzerror = 0.0;
-float32_t det = 0.0;
-float32_t fil_out = 0.0;
-float32_t del_out = 0.0;
-float32_t omega2 = 0.0;
+float SAMFreqError = 0.0;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
 
+float GetSAMFreqError() {
+  return SAMFreqError;
+}
+
 /*****
-  Purpose: AMDecodeSAM()  Notes:  Synchronous AM detection.  Determines the carrier frequency, adjusts freq and replaces the received carrier with a steady signal to prevent fading.
+  Determines the carrier frequency, adjusts freq and replaces the received carrier with a steady signal to prevent fading.
   This alogorithm works best of those implimented
       // taken from Warren Pratt´s WDSP, 2016
-  // http://svn.tapr.org/repos_sdr_hpsdr/trunk/W5WC/PowerSDR_HPSDR_mRX_PS/Source/wdsp/
+  // http://svn.tapr.org/repos_sdr_hpsdr/trunk/W5WC/PowerSDR_HPSDR_mRX_PS/Source/wdsp/ (no longer active)
+  // alt online source: https://github.com/TAPR/OpenHPSDR-wdsp/blob/master/wdsp%202.00/Source/amd.c
 *****/
+// *** 24k sample rate embedded in code ***
 FLASHMEM void AMDecodeSAM() {
-  float32_t tauR = 0.02;  // original 0.02;
-  float32_t tauI = 1.4;   // original 1.4;
-  float32_t dc = 0.0;
-  float32_t dc_insert = 0.0;
-  float32_t dcu = 0.0;
-  float32_t dc_insertu = 0.0;
-  float32_t mtauR = exp(-1 / 24000 * tauR);
-  float32_t onem_mtauR = 1.0 - mtauR;
-  float32_t mtauI = exp(-1 / 24000 * tauI);
-  float32_t onem_mtauI = 1.0 - mtauI;
+  const float omegaN = 200.0;                       // PLL bandwidth 50.0 - 1000.0
+  const float pll_fmax = 4000.0;
+  const float zeta = 0.65;  // PLL step response: smaller, slower response 1.0 - 0.1
+  const float omega_min = TWO_PI * -pll_fmax * 1 / 24000;
+  const float omega_max = TWO_PI * pll_fmax * 1 / 24000;
+  const float g1 = 1.0 - exp(-2.0 * omegaN * zeta * 1 / 24000);
+  const float g2 = -g1 + 2.0 * (1 - exp(-omegaN * zeta * 1 / 24000) * cosf(omegaN * 1 / 24000 * sqrtf(1.0 - zeta * zeta)));
+  const float tauR = 0.02;
+  const float tauI = 1.4;
+  const float mtauR = exp(-1 / 24000 * tauR);
+  const float onem_mtauR = 1.0 - mtauR;
+  const float mtauI = exp(-1 / 24000 * tauI);
+  const float onem_mtauI = 1.0 - mtauI;
+
+  float32_t Sin, Cos, ai, bi, aq, bq, audio, det;
+  float32_t corr[2];
   uint8_t fade_leveler = 1;
-  float32_t SAM_carrier = 0.0;
+  float32_t freqError;
 
-  static float32_t SAM_carrier_freq_offsetOld = 0.0;
+  static float32_t dc = 0.0;
+  static float32_t dc_insert = 0.0;
+  static float32_t omega2 = 0.0;
+  static float32_t del_out = 0.0;
+  static float32_t phzerror = 0.0;
+  static float32_t fil_out = 0.0;
 
-  // taken from Warren Pratt´s WDSP, 2016
-  // http://svn.tapr.org/repos_sdr_hpsdr/trunk/W5WC/PowerSDR_HPSDR_mRX_PS/Source/wdsp/
-  // http://svn.tapr.org/repos_sdr_hpsdr/trunk/W5WC/PowerSDR_HPSDR_mRX_PS/Source/wdsp/
-
-  for(unsigned i = 0; i < 256; i++)
-  {
-    float32_t Sin, Cos;
-    float32_t ai, bi, aq, bq;
-    float32_t audio;
-    float32_t audiou = 0;
-    float32_t corr[2];
-
+  for(unsigned i = 0; i < 256; i++) {
     Sin = arm_sin_f32(phzerror);
     Cos = arm_cos_f32(phzerror);
 
@@ -92,12 +80,6 @@ FLASHMEM void AMDecodeSAM() {
 
     audioBufferL[i] = audio;
 
-    if(fade_leveler) {
-      dcu = mtauR * dcu + onem_mtauR * audiou;
-      dc_insertu = mtauI * dc_insertu + onem_mtauI * corr[0];
-      audiou = audiou + dc_insertu - dcu;
-    }
-    audioBufferR[i] = audiou;
     det = ApproxAtan2(corr[1], corr[0]);
 
     del_out = fil_out;
@@ -115,17 +97,9 @@ FLASHMEM void AMDecodeSAM() {
     while(phzerror < 0.0) phzerror += TWO_PI;
   }
 
-  SAM_carrier =  (omega2 * 24000) / (2 * TWO_PI);
-
-  SAM_carrier_freq_offset = 10.0 * SAM_carrier;
-  SAM_carrier_freq_offset = 0.95 * SAM_carrier_freq_offsetOld + 0.05 * SAM_carrier_freq_offset;
-
-  // *** TODO: calibrate check from v12, validate for v11 routines
-  if(calibrateItem < 0) {
-    ShowSAM(SAM_carrier_freq_offset);
-  }
-
-  SAM_carrier_freq_offsetOld = SAM_carrier_freq_offset;
+  // calc frequency error for external use
+  freqError = (omega2 * 24000) / TWO_PI; // instantaneous error in Hz
+  SAMFreqError = 0.9f * SAMFreqError + 0.1f * freqError; // smoothed for display
 }
 
 /*****

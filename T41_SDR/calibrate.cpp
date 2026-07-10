@@ -1,5 +1,8 @@
 // generic calibration routines
 
+//#include <LinearRegression.h>      // https://github.com/cubiwan/Regressino/
+#include <Linear2DRegression.hpp>  // https://github.com/nkaaf/Arduino-Regression
+
 #include "SDT.h"
 
 #include "ButtonProc.h"
@@ -169,7 +172,66 @@ FLASHMEM void CalibrationInit(int calType) {
 
   Set up prior to IQ calibrations.
  *****/
-FLASHMEM void CalibrateFrequency() {
+FLASHMEM bool CalibrateFrequency(bool startFlag) {
+  /*
+  const int freqAutoLowSet = 500;
+  const int freqAutoIncrementSet = 100;
+  float freqError;
+  bool completeFlag = false;
+
+  static Linear2DRegression *corrFacReg;
+  static int freqCalFactorStart = 0;
+  static int autoCount = 0;
+  static int autoCalOffset = 0;
+  static int correctionFactor = freqCorrectionFactor;
+  static long elapsed = 0;
+
+  if(startFlag) {
+    // start auto frequency calibration
+    corrFacReg = new Linear2DRegression();
+    corrFacReg->reset();
+
+    // set first auto calc point
+    freqCalFactorStart = freqCorrectionFactor;
+    autoCount = 0;
+
+    freqCorrectionFactor = freqCalFactorStart - freqAutoLowSet + autoCount * freqAutoIncrementSet;
+    autoCalOffset = -freqAutoLowSet + autoCount * freqAutoIncrementSet;
+    SetClocks(0);
+    elapsed = millis();
+
+    Serial.print("Performing Frequency Calibration.");
+  } else {
+    // process IQ data and calc frequency error each loop
+    ProcessReceiverData();
+    freqError = 0.20000012146 * SAM_carrier_freq_offset;
+
+    // update frequency error and auto plot every 5 seconds
+    if(elapsed >= 5000) {
+      // update correction factor regression and display
+      corrFacReg->addPoint(0.20000012146 * SAM_carrier_freq_offset, freqCorrectionFactor);
+      correctionFactor = corrFacReg->calculate(0);
+
+      autoCount++; // increment auto plot counter
+      freqCorrectionFactor = freqCalFactorStart - freqAutoLowSet + autoCount * freqAutoIncrementSet;
+      autoCalOffset = -freqAutoLowSet + autoCount * freqAutoIncrementSet;
+
+      SetClocks(0);
+    }
+
+    if(autoCount >= 11) {
+      // auto mode complete, clean up
+      delete corrFacReg;
+
+      freqCorrectionFactor = correctionFactor;
+      Serial.printf("\nFrequency Calibration Factor: %d", freqCorrectionFactor);
+      completeFlag = true;
+    } else {
+      Serial.print(".");
+    }
+  }
+  return completeFlag;
+  */ return false;
 }
 
 /*****

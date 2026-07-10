@@ -8,6 +8,7 @@
 #include "..\..\CW_Excite.h"
 #include "..\..\CWProcessing.h"
 #include "Display.h"
+#include "..\..\Demod.h"
 #include "..\..\Display.h"
 #include "..\..\Encoders.h"
 #include "..\..\Exciter.h"
@@ -1035,11 +1036,13 @@ void ShowDecodedCW(char *buf) {
   tft.print(buf);
 }
 
-void ShowSAM(float offset) {
+void ShowSAMError() {
   tft.setFontScale( (enum RA8875tsize) 0);
-  tft.setCursor(OPERATION_STATS_DMD + 25, OPERATION_STATS_T);
-  tft.fillRect(OPERATION_STATS_DMD + 25, OPERATION_STATS_T, tft.getFontWidth() * 7, tft.getFontHeight(), RA8875_BLUE);
-  tft.print(0.20000012146 * offset, 2);
+  tft.fillRect(OPERATION_STATS_MD + 29, OPERATION_STATS_T, tft.getFontWidth() * 7, tft.getFontHeight(), RA8875_BLUE);
+  tft.setCursor(OPERATION_STATS_MD + 29, OPERATION_STATS_T);
+  //tft.print(0.20000012146 * offset, 1);
+  //tft.print(0.2 * offset, 1); // covert to Hz
+  tft.print(GetSAMFreqError(), 1); // covert to Hz
 }
 
 /*****

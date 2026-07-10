@@ -584,11 +584,12 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   /**********************************************************************************
     Demodulation
-      our time domain output is a combination of the real part (left channel) AND the imaginary part (right channel) of the second half of the audioFFT
+      time domain output is a combination of the real part (left channel) AND the imaginary part (right channel) of the second half of the audioFFT
       The demod mode is accomplished by selecting/combining the real and imaginary parts of the output of the IFFT process.
   **********************************************************************************/
   switch(t41.DemodMode) {
     case DEMOD_AM:
+      // *** see xamd() for an alternative: https://github.com/TAPR/OpenHPSDR-wdsp/blob/master/wdsp%202.00/Source/amd.c ***
       for(int i = 0; i < 256; i++) {     // Magnitude estimation Lyons (2011): page 652 / libcsdr
         audiotmp = AlphaBetaMag(audioIFFT[512 + (i * 2)], audioIFFT[512 + (i * 2) + 1]);
         // DC removal filter -----------------------
@@ -650,6 +651,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
     case DEMOD_SAM:
       AMDecodeSAM();
+      if(t41.DisplayState == DISPLAY_T41) ShowSAMError(); // *** TODO: consider best place for this ***
       break;
 
     case DEMOD_PSK31_WAV:

@@ -74,7 +74,7 @@ void RedrawDisplayScreen();
 void ShowFrequency(bool includeInactiveVFO = false);
 void ShowOperatingStats();
 void ShowRemoteStatus();
-void ShowSAM(float);
+void ShowSAMError();
 void ShowCurrentPowerSetting();
 void DrawSpectrumFrame();
 void EraseSpectrumDisplayContainer();
