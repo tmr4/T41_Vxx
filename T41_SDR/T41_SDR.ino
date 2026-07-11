@@ -53,6 +53,8 @@
 #include "USBManager.h"
 #include "connectManager.h"
 
+#include "calibrate.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -429,7 +431,6 @@ FASTRUN void loop() {
       break;
 
     case CAL_MODE:
-      t41.RadioState = FREQ_CAL_STATE;
       break;
   }
 
@@ -562,6 +563,9 @@ FASTRUN void loop() {
       break;
 
     case FREQ_CAL_STATE:
+      if(CalibrateFrequency(false)) {
+        CalibrationExit();
+      }
       break;
 
     default:

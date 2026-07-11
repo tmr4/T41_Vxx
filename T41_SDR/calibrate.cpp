@@ -6,7 +6,10 @@
 #include "SDT.h"
 
 #include "ButtonProc.h"
+#include "calibrate.h"
+#include "Demod.h"
 #include "Display.h"
+#include "Process.h"
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -27,6 +30,7 @@ float userIQAmpFactor, userIQPhaseFactor;
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+bool CalibrateFrequency(bool startFlag);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -131,7 +135,7 @@ FLASHMEM void CalibrationExit() {
  *****/
 FLASHMEM void CalibrationInit(int calType) {
   SaveRadioState();
-  ChangeMode(CAL_MODE);
+  //ChangeMode(CAL_MODE);
   ClearScreen();
 
   t41.DisplayState = DISPLAY_CALIBRATION;
@@ -139,7 +143,9 @@ FLASHMEM void CalibrationInit(int calType) {
 
   switch(calType) {
     case 0:  // Freq
-      //CalibrateFrequency();
+      t41.RadioState = FREQ_CAL_STATE;
+      ChangeMode(CAL_MODE, DEMOD_SAM);
+      CalibrateFrequency(true);
       break;
 
     case 1:  // RX IQ
@@ -167,24 +173,24 @@ FLASHMEM void CalibrationInit(int calType) {
 // Calibration Routines
 //-------------------------------------------------------------------------------------------------------------
 
+FLASHMEM void SetClocks(int adder) {}
+
 /*****
   Determine frequency correction factor for SI5351
 
   Set up prior to IQ calibrations.
  *****/
 FLASHMEM bool CalibrateFrequency(bool startFlag) {
-  /*
   const int freqAutoLowSet = 500;
   const int freqAutoIncrementSet = 100;
-  float freqError;
   bool completeFlag = false;
 
   static Linear2DRegression *corrFacReg;
   static int freqCalFactorStart = 0;
   static int autoCount = 0;
-  static int autoCalOffset = 0;
+  //static int autoCalOffset = 0;
   static int correctionFactor = freqCorrectionFactor;
-  static long elapsed = 0;
+  static long last = 0;
 
   if(startFlag) {
     // start auto frequency calibration
@@ -196,27 +202,29 @@ FLASHMEM bool CalibrateFrequency(bool startFlag) {
     autoCount = 0;
 
     freqCorrectionFactor = freqCalFactorStart - freqAutoLowSet + autoCount * freqAutoIncrementSet;
-    autoCalOffset = -freqAutoLowSet + autoCount * freqAutoIncrementSet;
+    //autoCalOffset = -freqAutoLowSet + autoCount * freqAutoIncrementSet;
     SetClocks(0);
-    elapsed = millis();
+    last = millis();
 
     Serial.print("Performing Frequency Calibration.");
   } else {
     // process IQ data and calc frequency error each loop
-    ProcessReceiverData();
-    freqError = 0.20000012146 * SAM_carrier_freq_offset;
+    YieldToProcess();
 
-    // update frequency error and auto plot every 5 seconds
-    if(elapsed >= 5000) {
+    // update frequency error every 5 seconds
+    if(millis() - last >= 5000) {
       // update correction factor regression and display
-      corrFacReg->addPoint(0.20000012146 * SAM_carrier_freq_offset, freqCorrectionFactor);
+      corrFacReg->addPoint(GetSAMFreqError(), freqCorrectionFactor);
       correctionFactor = corrFacReg->calculate(0);
 
       autoCount++; // increment auto plot counter
       freqCorrectionFactor = freqCalFactorStart - freqAutoLowSet + autoCount * freqAutoIncrementSet;
-      autoCalOffset = -freqAutoLowSet + autoCount * freqAutoIncrementSet;
+      //autoCalOffset = -freqAutoLowSet + autoCount * freqAutoIncrementSet;
 
       SetClocks(0);
+
+      Serial.print(".");
+      last = millis();
     }
 
     if(autoCount >= 11) {
@@ -224,14 +232,12 @@ FLASHMEM bool CalibrateFrequency(bool startFlag) {
       delete corrFacReg;
 
       freqCorrectionFactor = correctionFactor;
-      Serial.printf("\nFrequency Calibration Factor: %d", freqCorrectionFactor);
+      Serial.printf("\nFrequency Calibration Factor: %d\n", freqCorrectionFactor);
       completeFlag = true;
-    } else {
-      Serial.print(".");
     }
   }
+
   return completeFlag;
-  */ return false;
 }
 
 /*****
