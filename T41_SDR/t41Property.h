@@ -104,6 +104,7 @@ public:
 
   void SetFreqA(int f);
   void SetFreqB(int f);
+  void ResetFreq(int f);
   void SwapActiveVFO();
 
   int equalizerRx[EQUALIZER_CELL_COUNT] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };

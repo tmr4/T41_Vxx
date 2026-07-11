@@ -21,6 +21,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+extern int calibrateItem;
+
 #define NUMBER_OF_SWITCHES       18 // Number of push button switches
 
 extern int bandswitchPins[];
@@ -106,6 +108,7 @@ int switchValues[NUMBER_OF_SWITCHES] = { 905, 853, 802, 752, 705, 653, 604, 556,
 void EncoderFineTuneISR();
 void EncoderMenuChangeFilterISR();
 void EncoderVolumeISR();
+void SetBPFBand(int currentBand);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -191,11 +194,11 @@ FASTRUN void EncoderFineTuneISR() {
   //   - receive calibrate adjusts In/Out attenuation
   //   - transmit calibrate adjusts In/Out attenuation
   //   - two tone adjusts tone 2
-  if((calibrateItem >= 1) && (calibrateItem <= 3)) {
-    calNFAdjust -= fineTuneEncoderMove;
-    fineTuneEncoderMove = 0;
-    return;
-  }
+  //if((calibrateItem >= 1) && (calibrateItem <= 3)) {
+  //  calNFAdjust -= fineTuneEncoderMove;
+  //  fineTuneEncoderMove = 0;
+  //  return;
+  //}
 
   t41.NCOFreq += t41.FtIncrement() * fineTuneEncoderMove;
 
@@ -227,8 +230,21 @@ FASTRUN void EncoderMenuChangeFilterISR() {
   ProcessMenuEncoder();
 }
 
+// *** TODO: why is v11 tune encoder polled while vPS works fine with ISR ***
 int ReadTuneEncoder() {
-  return tuneEncoder.process();
+  char val = tuneEncoder.process();
+  int result = 0;
+
+  switch(val) {
+    case DIR_CW:  // Turned it clockwise, 16
+      result = 1;
+      break;
+
+    case DIR_CCW:  // Turned it counter-clockwise
+      result = -1;
+      break;
+  }
+  return result;
 }
 
 // Switch Matrix
@@ -461,6 +477,13 @@ void PostChangeBandHardware() {
   if(t41.ActiveBand < BAND_12M) {
     digitalWrite(bandswitchPins[t41.ActiveBand], HIGH);
   }
+#ifdef USE_BPF_BOARD
+  if(t41.ActiveBand == BAND_40M) {
+    SetBPFBand(BAND_40M);
+  } else {
+    SetBPFBand(-1);
+  }
+#endif
 }
 
 // General Front Panel Stuff

@@ -178,6 +178,16 @@ void T41Properties::SetFreqB(int f) {
   }
 }
 
+// sets freq of active VFO, set NCOFreq to 0
+void T41Properties::ResetFreq(int f) {
+  NCOFreq = 0L;
+  if(ActiveVFO == VFO_A) {
+    SetFreqA(f);
+  } else {
+    SetFreqB(f);
+  }
+}
+
 void T41Properties::SwapActiveVFO() {
   int tmp = ActiveBand;
 

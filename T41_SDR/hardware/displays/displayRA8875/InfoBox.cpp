@@ -322,7 +322,7 @@ void SetInfoBoxWindow(int window) {
         infoBoxItemIndex[i] = j;
         break;
       }
-      Serial.println(infoBoxItemIndex[i]);
+      //Serial.println(infoBoxItemIndex[i]);
     }
   }
   activeInfoBox = ib;

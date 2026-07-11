@@ -4,7 +4,7 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-extern uint16_t GPAB_state;
+extern uint16_t BPF_GPAB_state;
 
 //---- Teensy 4.1 Pin assignments
 // All Teensy pin assignments are made here.  This makes it easier
@@ -74,14 +74,6 @@ extern uint16_t GPAB_state;
 
 //---- end of Teensy 4.1 Pin assignments
 
-// v11 using v12 BPF
-#define BPF_BOARD_MCP23017_ADDR 0x20   // For BPF #0 Address
-
-// Define BPF Band words
-// Word definition: GPB7 GPB6 ... GPB0 GPA7 GPA6 ... GPA0
-#define BPF_BAND_BYPASS 0x0008
-#define BPF_BAND_40M    0x0800
-
 //------------
 // Display.h
 
@@ -128,8 +120,6 @@ extern int calNFAdjust;
 //------------
 // Calibrate.h
 void CalibrateIQ();
-
-void SetupBPF();
 
 void InitFrontPanel();
 

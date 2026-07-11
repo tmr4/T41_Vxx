@@ -33,7 +33,7 @@ int CWFreqShift = 750;
 *****/
 void ResetTuning() {
   t41.CenterFreq += t41.NCOFreq;
-  t41.NCOFreq = 0L;
+  t41.NCOFreq = 0;
 
   SetFreq(t41.CenterFreq);
 

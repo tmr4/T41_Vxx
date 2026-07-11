@@ -704,6 +704,12 @@ void ConfigAudioState(int audioState) {
       Q_out_Ex_Start();
       break;
 
+    case FREQ_CAL_STATE:
+      // start receive audio chain
+      Q_in_Start();
+      Q_out_Start();
+      break;
+
     case CALIBRATE_TRANSMIT_STATE:
       // set calibration state
       Q_in_Start();

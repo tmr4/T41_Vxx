@@ -418,6 +418,7 @@ FASTRUN void loop() {
       break;
 
     case DSB_MODE:
+      //if(t41.RadioState != FREQ_CAL_STATE)
       t41.RadioState = RECEIVE_STATE;
       break;
 
@@ -563,6 +564,7 @@ FASTRUN void loop() {
       break;
 
     case FREQ_CAL_STATE:
+      UpdateLiveDisplayAreas();
       if(CalibrateFrequency(false)) {
         CalibrationExit();
       }

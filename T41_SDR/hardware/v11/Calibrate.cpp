@@ -1,5 +1,7 @@
 // v11 specific calibration file
 
+#if 0
+
 #include <SPI.h>
 #include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
 #include <si5351.h> // https://github.com/tmr4/Si5351_T41
@@ -1354,12 +1356,12 @@ FLASHMEM bool ProcessPwrMenu() {
       ShowBPF();
       if(bpfIndex == 1) {
         // bypass BPF
-        GPAB_state = BPF_BAND_BYPASS;
+        BPF_GPAB_state = BPF_BAND_BYPASS;
       } else {
         // set BPF to 40m band
-        GPAB_state = BPF_BAND_40M;
+        BPF_GPAB_state = BPF_BAND_40M;
       }
-      //mcpBPF.writeGPIOAB(GPAB_state);
+      //mcpBPF.writeGPIOAB(BPF_GPAB_state);
       break;
 
     case BEARING: // 17
@@ -2361,3 +2363,5 @@ FLASHMEM void SetFreqCal(long calFreqShift) {
   si5351.output_enable(SI5351_CLK1, 1);
 
 }
+
+#endif
