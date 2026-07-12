@@ -430,9 +430,6 @@ FASTRUN void loop() {
         t41.RadioState = RECEIVE_STATE;
       }
       break;
-
-    case CAL_MODE:
-      break;
   }
 
   // 3. configure radio for current state
@@ -482,6 +479,7 @@ FASTRUN void loop() {
         YieldToProcess();
         break;
       }
+      if(t41.CalState == FREQ_CAL_STATE) CalibrateFrequency(false);
       break;
 
     case SSB_TRANSMIT_STATE:
@@ -561,13 +559,6 @@ FASTRUN void loop() {
       // the remaining buffer will be played next time it's connected
       //CWPause(25); // 28ms plays on restart
       CWPause(50); // 5ms plays on restart, but it's the same w/ higher delay, first transmit doesn't have this
-      break;
-
-    case FREQ_CAL_STATE:
-      UpdateLiveDisplayAreas();
-      if(CalibrateFrequency(false)) {
-        CalibrationExit();
-      }
       break;
 
     default:

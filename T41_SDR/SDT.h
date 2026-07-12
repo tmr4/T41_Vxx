@@ -28,13 +28,15 @@ typedef __uint8_t uint8_t;
 #define CW_TRANSMIT_PADDLE_STATE    5
 #define CW_TRANSMIT_KEYER_STATE     6
 #define DATA_TRANSMIT_STATE         7
-// Calibration
-#define FREQ_CAL_STATE              8
-#define RXIQ_CAL_STATE              9
-#define TXIQ_CAL_STATE             10
-#define TWOTONE_CAL_STATE          11
-#define CWPWR_CAL_STATE            12
-#define SSBPWR_CAL_STATE           13
+
+// Calibration State
+#define NOT_CAL_STATE               0
+#define FREQ_CAL_STATE              1
+#define RXIQ_CAL_STATE              2
+#define TXIQ_CAL_STATE              3
+#define TWOTONE_CAL_STATE           4
+#define CWPWR_CAL_STATE             5
+#define SSBPWR_CAL_STATE            6
 
 #define CALIBRATE_TRANSMIT_STATE   14
 #define CALIBRATE_TWOTONE_STATE    15
@@ -50,7 +52,8 @@ typedef __uint8_t uint8_t;
 #define CW_MODE                   1 // USB, LSB
 #define DSB_MODE                  2 // AM, SAM, FM (narrow band FM)
 #define DATA_MODE                 3 // FT8 (external), FT8 (internal), FT8 (wav for testing)
-#define CAL_MODE                  4 // Freq, RX IQ, TX IQ, Two Tone, CW Pwr, SSB Pwr
+
+//#define CAL_MODE                  4 // Freq, RX IQ, TX IQ, Two Tone, CW Pwr, SSB Pwr
 
 // demodulation modes
 // SSB/CW

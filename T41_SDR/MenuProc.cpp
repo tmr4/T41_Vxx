@@ -317,7 +317,7 @@ FLASHMEM void MicOptions() {
   Present the calibration options available and return the selection
 *****/
 FLASHMEM void CalibrationOptions() {
-  // Calibrate { "Freq", "RX IQ", "TX IQ", "Two Tone", "CW Pwr", "SSB Pwr", "Cancel" },
+  // Calibrate { "Freq", "RX IQ", "TX IQ", "Two Tone", "CW Pwr", "SSB Pwr", "Exit", "Cancel" },
 
   if(secondaryMenuIndex == 6) {
     CalibrationExit();

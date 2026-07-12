@@ -277,8 +277,14 @@ PROGMEM const InfoBoxItem ft8InfoBox[FT8_IB_NUM_ITEMS] = {
   loadInfoBoxItem       // Teensy Load
 };
 
-#define CAL_IB_NUM_ITEMS 4
+#define CAL_IB_NUM_ITEMS 10
 PROGMEM const InfoBoxItem calInfoBox[CAL_IB_NUM_ITEMS] = {
+  volInfoBoxItem,       // Vol
+  agcInfoBoxItem,       // AGC
+  ctInfoBoxItem,        // CT Inc
+  ftInfoBoxItem,        // FT Inc
+  zoomInfoBoxItem,      // Zoom
+  nfInfoBoxItem,        // Noise Floor
   stackInfoBoxItem,     // Stack
   heapInfoBoxItem,      // Heap
   tempInfoBoxItem,      // Teensy Temp
@@ -369,12 +375,27 @@ void UpdateInfoBoxItem(int index) {
   }
 }
 
-// *** assumes blank region ***
 void ShowVersion() {
+  int xOffset = TIME_X + 18 * tft.getFontWidth();
   tft.setFontScale((enum RA8875tsize) 0);
-  tft.setCursor(TIME_X + 18 * tft.getFontWidth(), TIME_Y);
+  tft.fillRect(xOffset, TIME_Y, YPIXELS-xOffset-2, tft.getFontHeight(), RA8875_BLACK);
+  tft.setCursor(xOffset, TIME_Y);
   tft.setTextColor(YELLOW);
-  tft.print(VERSION);
+  switch(t41.CalState) {
+    case FREQ_CAL_STATE:
+      tft.print("Freq Cal");
+      break;
+
+    case RXIQ_CAL_STATE:
+      break;
+
+    case TXIQ_CAL_STATE:
+      break;
+
+    default:
+      tft.print(VERSION);
+      break;
+  }
 }
 
 /*****

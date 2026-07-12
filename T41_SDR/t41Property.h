@@ -24,6 +24,7 @@ public:
     calibration. As such, RadioState shouldn't be assigned a value directly outside those areas.
   */
   Property<int> RadioState{RECONFIGURE_STATE};
+  Property<int> CalState{NOT_CAL_STATE};
 
   Property<int> DisplayState{0}; // DISPLAY_T41
 
@@ -109,6 +110,8 @@ public:
 
   int equalizerRx[EQUALIZER_CELL_COUNT] = { 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
   int equalizerTx[EQUALIZER_CELL_COUNT] = {0, 0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0};   // Provide equalizer optimized for SSB voice based on Neville's tests.  KF5N November 2, 2023
+
+  int GetMaxFreqIncIndex() { return maxFreqIncIndex - 1; }
 
   protected:
 

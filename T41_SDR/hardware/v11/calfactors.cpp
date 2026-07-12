@@ -6,8 +6,8 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-//int freqCorrectionFactor = 0;
-int freqCorrectionFactor = 18140;
+int freqCorrectionFactor = 0;
+//int freqCorrectionFactor = 18140;
 //int freqCorrectionFactor = 1200;
 
 //float powerOutCW[NUMBER_OF_BANDS] = { 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02 };

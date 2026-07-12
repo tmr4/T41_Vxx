@@ -141,7 +141,6 @@ FLASHMEM void ExecuteButtonPress(int val) {
 
     case SET_MODE:  // 8
       // change to the next mode: SSB -> CW -> DSB -> DATA -> SSB
-      // *** can't change to CAL_MODE with SET_MODE button, but once there DEMODULATION button changes cal modes ***
       ButtonMode();
       break;
 

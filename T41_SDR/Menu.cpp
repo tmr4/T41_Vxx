@@ -148,7 +148,7 @@ FLASHMEM void MenuBarSelect() {
         functionPtr[mainMenuIndex]();
 
         // wrap up menu unless we're still getting a value
-        if(!getMenuValueActive  && !getMenuOptionActive) {
+        if(!getMenuValueActive && !getMenuOptionActive) {
           EraseMenus();
           menuStatus = NO_MENUS_ACTIVE;
         }

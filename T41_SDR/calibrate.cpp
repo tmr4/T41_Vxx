@@ -11,6 +11,7 @@
 #include "Display.h"
 #include "Process.h"
 #include "Tune.h"
+#include "t41Property.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -22,7 +23,7 @@ int calibrateItem = -1;
 int userRadioState, userRadioMode, userDemodMode, userDisplayState;
 int userActiveBand, userTxPower;
 int userCenterFreq, userNCOFreq, userFilterHiCut, userFilterLoCut;
-int userFreqSpecScale, userSpectrumZoom, userAudioVolume;
+int userFreqSpecScale, userSpectrumZoom, userCenterTuneIndex, userAudioVolume;
 float userIQAmpFactor, userIQPhaseFactor;
 
 
@@ -62,6 +63,7 @@ FLASHMEM void SaveRadioState() {
 
   userFreqSpecScale = t41.FreqSpecScale;
   userSpectrumZoom = t41.SpectrumZoom;
+  userCenterTuneIndex = t41.CenterTuneIndex;
   userAudioVolume = t41.AudioVolume;
 }
 
@@ -90,6 +92,7 @@ FLASHMEM void RestoreRadioState() {
 
   t41.FreqSpecScale = userFreqSpecScale;
   t41.SpectrumZoom = userSpectrumZoom;
+  t41.CenterTuneIndex = userCenterTuneIndex;
   volSetting = userAudioVolume;
 
   // slowly raise volume during calibration to avoid artifacts
@@ -108,6 +111,7 @@ FLASHMEM void RestoreRadioState() {
   *** TODO: validate this covers all state variables for all calibration types ***
  *****/
 FLASHMEM void CalibrationExit() {
+  t41.CalState = NOT_CAL_STATE;
 
   ClearScreen();
   RestoreRadioState();
@@ -136,23 +140,18 @@ FLASHMEM void CalibrationExit() {
  *****/
 FLASHMEM void CalibrationInit(int calType) {
   SaveRadioState();
-  //ChangeMode(CAL_MODE);
-
-  //ClearScreen();
   //t41.DisplayState = DISPLAY_CALIBRATION;
-  //SetInfoBoxWindow(3);
 
   switch(calType) {
     case 0:  // Freq
-      t41.RadioState = FREQ_CAL_STATE;
-      ChangeMode(CAL_MODE, DEMOD_SAM);
-      //ChangeMode(DSB_MODE, DEMOD_SAM);
-#ifdef USE_BPF_BOARD
-      SetBPFBand(-1);
-#endif
-      t41.ResetFreq(5000000);
-      SetupBandFreq(t41.CenterFreq);
+      t41.CalState = FREQ_CAL_STATE;
+      ChangeMode(DSB_MODE, DEMOD_SAM);
+      // force state change
+      ChangeBand(-1, false);
+      ChangeBand(1, false);
+      t41.CenterTuneIndex = t41.GetMaxFreqIncIndex();
       CalibrateFrequency(true);
+      SetInfoBoxWindow(3);
       break;
 
     case 1:  // RX IQ
@@ -187,11 +186,12 @@ FLASHMEM void CalibrationInit(int calType) {
  *****/
 FLASHMEM bool CalibrateFrequency(bool startFlag) {
   const int freqAutoLowSet = 500;
-  const int freqAutoIncrementSet = 100;
   bool completeFlag = false;
 
   static Linear2DRegression *corrFacReg;
+  static int freqAutoIncrementSet = 100;
   static int freqCalFactorStart = 0;
+  static int count = 0;
   static int autoCount = 0;
   //static int autoCalOffset = 0;
   static int correctionFactor = freqCorrectionFactor;
@@ -221,7 +221,8 @@ FLASHMEM bool CalibrateFrequency(bool startFlag) {
       // update correction factor regression and display
       corrFacReg->addPoint(GetSAMFreqError(), freqCorrectionFactor);
       correctionFactor = corrFacReg->calculate(0);
-      Serial.printf("SAM Error: %d, New factor: %d\n", (int)(GetSAMFreqError()*10.0), freqCorrectionFactor);
+      //Serial.printf("SAM Error: %d, New factor: %d\n", (int)(GetSAMFreqError()*10.0), freqCorrectionFactor);
+      Serial.printf("SAM Error: %d, New factor: %d\n", (int)(GetSAMFreqError()), freqCorrectionFactor);
 
       autoCount++; // increment auto plot counter
       freqCorrectionFactor = freqCalFactorStart - freqAutoLowSet + autoCount * freqAutoIncrementSet;
@@ -233,13 +234,20 @@ FLASHMEM bool CalibrateFrequency(bool startFlag) {
       last = millis();
     }
 
+    //if(autoCount >= 11) {
     if(autoCount >= 11) {
-      // auto mode complete, clean up
-      delete corrFacReg;
-
+      corrFacReg->reset();
+      freqAutoIncrementSet = freqAutoIncrementSet / 2;
       freqCorrectionFactor = correctionFactor;
       Serial.printf("\nNew factor: %d\n", freqCorrectionFactor);
-      completeFlag = true;
+      autoCount = 0;
+      count++;
+      if(count > 5) {
+        // auto mode complete, clean up
+        delete corrFacReg;
+        completeFlag = true;
+        CalibrationExit();
+      }
     }
   }
 

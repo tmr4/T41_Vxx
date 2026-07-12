@@ -947,7 +947,6 @@ FLASHMEM void ShowOperatingStats() {
       break;
 
     case DSB_MODE:
-    case CAL_MODE:
       tft.print("DSB");
       break;
 

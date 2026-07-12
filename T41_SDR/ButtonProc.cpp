@@ -29,8 +29,9 @@ bool nfmBWFilterActive = false; // false - audio filters active, true - NFM BW d
 
 int bandNoiseFloor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 
+// {VFO A, VFO B, WWV}
 //int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7048000, 7030000 }, { 14048000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };
-int lastFrequencies[NUMBER_OF_BANDS][2] = { { 3548000, 3560000 }, { 7074000, 7030000 }, { 14074000, 14100000 }, { 18116000, 18110000 }, { 21048000, 21150000 }, { 24937000, 24930000 }, { 28048000, 28200000 } };
+int lastFrequencies[NUMBER_OF_BANDS][3] = { { 3548000, 3560000, 2500000 }, { 7074000, 7030000, 5000000 }, { 14074000, 14100000, 10000000 }, { 18116000, 18110000, 15000000 }, { 21048000, 21150000, 20000000 }, { 24937000, 24930000, 25000000 }, { 28048000, 28200000, 25000000 } };
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -65,8 +66,13 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
   if(vfo == VFO_SPLIT) {
     DoSplitVFO();
   } else {
-    lastFrequencies[from][vfo] = t41.ActiveFreq();
-    t41.CenterFreq.Update(lastFrequencies[t41.ActiveBand][vfo]);
+    if(t41.CalState == FREQ_CAL_STATE) {
+      // use WWV frequencies
+      t41.CenterFreq.Update(lastFrequencies[t41.ActiveBand][2]);
+    } else {
+      lastFrequencies[from][vfo] = t41.ActiveFreq();
+      t41.CenterFreq.Update(lastFrequencies[t41.ActiveBand][vfo]);
+    }
   }
   t41.NCOFreq.Update(0);
 
@@ -176,9 +182,6 @@ FLASHMEM int ValidateDemodMode(int demod) {
         demod = DEMOD_FT8;
       }
       break;
-
-    case CAL_MODE:
-      break;
   }
 
   return demod;
@@ -215,10 +218,6 @@ FLASHMEM void ChangeDemodMode(int demod, bool notify /* = true */) {
       ChangeMode(DATA_MODE, mode, notify);
       break;
 
-    case CAL_MODE:
-      t41.DemodMode = mode;
-      break;
-
     default:
       break;
   }
@@ -252,7 +251,7 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
   }
 
   // ignore invalid modes
-  if((mode < SSB_MODE) || (mode > CAL_MODE)) {
+  if((mode < SSB_MODE) || (mode > DATA_MODE)) {
     return; // nothing to do
   }
 
@@ -368,9 +367,6 @@ FLASHMEM void ChangeMode(int mode, int demod /* = -1 */, bool notify /* = true *
           //  *** TODO: psk31 doesn't work right now, problem processing signal in ProcessReceiverData with new yield process ***
           //setupPSK31();
           //t41.DemodMode = DEMOD_PSK31;
-          break;
-
-        case CAL_MODE:
           break;
 
         default:
