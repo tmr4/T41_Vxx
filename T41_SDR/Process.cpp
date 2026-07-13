@@ -651,7 +651,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
     case DEMOD_SAM:
       AMDecodeSAM();
-      if(t41.DisplayState == DISPLAY_T41) ShowSAMError(); // *** TODO: consider best place for this ***
       break;
 
     case DEMOD_PSK31_WAV:
@@ -990,16 +989,12 @@ void FreqShift2() {
   //  currentFreqA = centerFreq + NCOFreq;
   //}
 
-  if(t41.RadioMode == SSB_MODE || t41.RadioMode == DATA_MODE) {
-    sideToneShift = 0;
-  } else {
-    if(t41.RadioMode == CW_MODE ) {
-      if(t41.DemodMode == 1) {
-        sideToneShift = CWFreqShift;
-      } else {
-        if(t41.DemodMode == 0) {
-          sideToneShift = -CWFreqShift;
-        }
+  if(t41.RadioMode == CW_MODE ) {
+    if(t41.DemodMode == 1) {
+      sideToneShift = CWFreqShift;
+    } else {
+      if(t41.DemodMode == 0) {
+        sideToneShift = -CWFreqShift;
       }
     }
   }

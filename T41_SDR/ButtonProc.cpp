@@ -58,7 +58,7 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
     t41.ActiveBand.Update(change);
   }
 
-  // *** data demolation mode is unchanged across band changes ***
+  // *** DSB and data demodulation modes are unchanged across band changes ***
   if((t41.RadioMode == SSB_MODE) || (t41.RadioMode == CW_MODE)) {
     t41.DemodMode = ValidateDemodMode(-1);
   }

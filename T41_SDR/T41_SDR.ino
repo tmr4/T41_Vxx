@@ -465,6 +465,7 @@ FASTRUN void loop() {
       switch(t41.DisplayState) {
         case DISPLAY_T41:
           UpdateLiveDisplayAreas();
+          if(t41.DemodMode == DEMOD_SAM) ShowSAMError(); // *** TODO: consider best place for this; corrupts waterfall if in AMDecodeSAM or ProcessReceiverData (just setting font scale [that frequently?] is enough) ***
           break;
 
         case DISPLAY_T41_FT8_DECODE:

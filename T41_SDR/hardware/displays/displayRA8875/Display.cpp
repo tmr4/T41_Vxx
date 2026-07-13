@@ -702,8 +702,7 @@ FASTRUN void UpdateLiveDisplayAreas() {
            and displays the bandwidth bar indicating demodulation bandwidth
 *****/
 FLASHMEM void ShowBandwidthBarValues() {
-  char buff[10];
-  int posLeft, posRight;
+  int posLeft, posRight, len;
   int loColor = RA8875_LIGHT_GREY;
   int hiColor = RA8875_LIGHT_GREY;
   float loValue = (float)t41.FilterLoCut * 0.001;
@@ -713,8 +712,8 @@ FLASHMEM void ShowBandwidthBarValues() {
   tft.writeTo(L2); // switch to layer 2
 
   tft.setFontScale((enum RA8875tsize)0);
-  posLeft = centerLine - tft.getFontWidth() * 9 - 10;
-  posRight = centerLine - 10; // MyDrawFloat provides some padding I guess is intended to erase old value
+  posLeft = centerLine - tft.getFontWidth() * 9 - 10; // right justified to center line
+  posRight = centerLine + 10;
 
   // erase old values (needed when mode changes, could just do it there)
   tft.fillRect(posLeft, FILTER_PARAMETERS_Y, 200, tft.getFontHeight(), RA8875_BLACK);
@@ -750,7 +749,7 @@ FLASHMEM void ShowBandwidthBarValues() {
         hiColor = RA8875_GREEN;
       }
       hiValue = (float)(nfmFilterBW / 1000.0f);
-      posRight = centerLine - tft.getFontWidth() * 5 - 4;
+      posRight = centerLine - tft.getFontWidth() * 4;
       break;
 
     case DEMOD_AM:
@@ -766,14 +765,20 @@ FLASHMEM void ShowBandwidthBarValues() {
       break;
   }
 
+  len = loValue < 0 ? 7 : 6;
+  posLeft = centerLine - tft.getFontWidth() * len - 10; // right justified to center line
+
+  // *** TODO: can switch to tft.print for the float with proper centering ***
   if(t41.DemodMode != DEMOD_NFM) {
     tft.setTextColor(loColor);
-    MyDrawFloat(loValue, 1, posLeft, FILTER_PARAMETERS_Y, buff);
+    tft.setCursor(posLeft, FILTER_PARAMETERS_Y);
+    tft.print(loValue, 1);
     tft.print("kHz");
   }
 
   tft.setTextColor(hiColor);
-  MyDrawFloat(hiValue, 1, posRight, FILTER_PARAMETERS_Y, buff);
+  tft.setCursor(posRight, FILTER_PARAMETERS_Y);
+  tft.print(hiValue, 1);
   tft.print("kHz");
 
   tft.writeTo(L1); // return to layer 1
@@ -1040,8 +1045,6 @@ void ShowSAMError() {
   tft.setFontScale( (enum RA8875tsize) 0);
   tft.fillRect(OPERATION_STATS_MD + 29, OPERATION_STATS_T, tft.getFontWidth() * 7, tft.getFontHeight(), RA8875_BLUE);
   tft.setCursor(OPERATION_STATS_MD + 29, OPERATION_STATS_T);
-  //tft.print(0.20000012146 * offset, 1);
-  //tft.print(0.2 * offset, 1); // covert to Hz
   tft.print(GetSAMFreqError(), 1); // covert to Hz
 }
 
@@ -1087,7 +1090,6 @@ const float pixels_per_s = 12;
   Purpose: Display dBm
 *****/
 FASTRUN void DrawSmeterBar() {
-  char buff[10];
   int16_t smeterPad;
   float32_t dbm;
 
@@ -1129,7 +1131,9 @@ FASTRUN void DrawSmeterBar() {
 
   tft.fillRect(SMETER_CONTAINER_X + 185, SMETER_BAR_Y, 80, tft.getFontHeight(), RA8875_BLACK);  // The dB figure at end of S
 
-  MyDrawFloat(dbm, 1, SMETER_CONTAINER_X + 184, SMETER_BAR_Y, buff);
+  tft.setCursor(SMETER_CONTAINER_X + 184, SMETER_BAR_Y);
+  if(dbm > -100) tft.print(" "); // right justify
+  tft.print(dbm, 1);
   tft.setTextColor(RA8875_GREEN);
   tft.print("dBm");
 
@@ -1146,20 +1150,23 @@ FASTRUN void DrawSmeterBar() {
     int decimals      the number of decimal places
     int x             the x coordinate for display
     int y                 y          "
+
+    *** TODO: RA8875 can print floats, filter bar values need justified though ***
 *****/
-FLASHMEM void MyDrawFloat(float val, int decimals, int x, int y, char *buff) {
-  MyDrawFloatP(val, decimals, x, y, buff, FLOAT_PRECISION);
+/*
+FLASHMEM void DrawFloat(float val, int decimals, int x, int y, char *buff) {
+  DrawFloatP(val, decimals, x, y, buff, FLOAT_PRECISION);
 }
 
-FLASHMEM void MyDrawFloatP(float val, int decimals, int x, int y, char *buff, int width) {
-  dtostrf(val, width, decimals, buff);  // Use 8 as that is the max prevision on a float
+FLASHMEM void DrawFloatP(float val, int decimals, int x, int y, char *buff, int width) {
+  dtostrf(val, width, decimals, buff); // right justified
 
   tft.fillRect(x, y, width * tft.getFontWidth(), 15, RA8875_BLACK);
   tft.setCursor(x, y);
 
   tft.print(buff);
 }
-
+*/
 /*****
   Purpose: This function redraws the entire display screen
 *****/

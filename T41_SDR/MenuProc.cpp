@@ -73,7 +73,7 @@ FLASHMEM void CWOptions() {
       //SetSideToneVolume();
       // GetMenuValue(minValue, maxValue, startValue, increment, prompt, valueOffset)
       GetMenuValue(0, 100, (int*)&t41.SidetoneVolume.value, 1, "Volume:", 200, &SetSideToneVolumeSetup, &SetSideToneVolumeValue, &SetSideToneVolumeFollowup);
-  break;
+      break;
 
     case 5:                // Transmit relay hold delay
       //SetTransmitDelay();

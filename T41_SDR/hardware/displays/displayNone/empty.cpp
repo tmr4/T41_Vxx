@@ -72,9 +72,6 @@ void ShowDecodedCW(char*) {}
 
 void UpdateLiveDisplayAreas() {}
 
-void MyDrawFloat(float val, int decimals, int x, int y, char *buff) {}
-void MyDrawFloatP(float val, int decimals, int x, int y, char *buff, int width) {}
-
 // info box
 void UpdateInfoBox() {}
 void UpdateInfoBoxItem(int) {}

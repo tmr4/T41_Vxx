@@ -9,7 +9,9 @@
 #include "..\..\AudioConfig.h"
 #include "..\..\Button.h"
 #include "..\..\ButtonProc.h"
+#include "..\..\calibrate.h"
 #include "..\..\CWProcessing.h"
+#include "..\..\Demod.h"
 #include "Display.h"
 #include "..\..\Display.h"
 #include "..\..\DSP_Fn.h"
@@ -29,6 +31,7 @@
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+// general info box item followup routines
 void IBDecoderFollowup(int row, int col);
 void IBCompressionFollowup(int row, int col);
 void IBTuneIncFollowup(int row, int col);
@@ -45,6 +48,9 @@ void IBHeapFollowup(int row, int col);
 void IBRFGainFollowup(int row, int col);
 void IBAGCFollowup(int row, int col);
 void IBZoomFollowup(int row, int col);
+
+// calibration followup routines
+void IBFreqCalFollowup(int row, int col);
 
 void ClearInfoBox();
 void ClearInfoBoxRow(int row);
@@ -143,7 +149,8 @@ int infoBoxItemIndex[IB_NUM_ITEMS] = {
 
 //                                                                                                                            font    # chars
 //                                             index            label          options      option                            size    to erase  flag  col            row,           follow-up function
-PROGMEM const InfoBoxItem volInfoBoxItem   = { T41_ITEM_VOL,    "Vol:",        NULL,        (int*)&t41.AudioVolume.value,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }; // Vol
+//PROGMEM const InfoBoxItem volInfoBoxItem   = { T41_ITEM_VOL,    "Vol:",        NULL,        (int*)&t41.AudioVolume.value,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    &IBVolFollowup         }; // Vol
+PROGMEM const InfoBoxItem volInfoBoxItem   = { T41_ITEM_VOL,    "Vol:",        NULL,        (int*)&t41.AudioVolume.value,      1,        3,      0,   IB_COL_1_X,    IB_ROW_1_Y,    NULL                   }; // Vol
 PROGMEM const InfoBoxItem agcInfoBoxItem   = { T41_ITEM_AGC,    "AGC",         agcOpts,     (int*)&t41.AGCMode.value,          1,        3,      1,   IB_COL_2L_X,   IB_ROW_1_Y,    &IBAGCFollowup         }; // AGC
 PROGMEM const InfoBoxItem ctInfoBoxItem    = { T41_ITEM_TUNE,   "CT Inc:",     tuneValues,  (int*)&t41.CenterTuneIndex.value,  0,        7,      0,   IB_COL_1_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }; // CT Inc
 PROGMEM const InfoBoxItem ftInfoBoxItem    = { T41_ITEM_FINE,   "FT Inc:",     ftValues,    (int*)&t41.FineTuneIndex.value,    0,        3,      0,   IB_COL_2_X,    IB_ROW_3_Y,    &IBTuneIncFollowup     }; // FT Inc
@@ -184,6 +191,9 @@ PROGMEM const InfoBoxItem tempInfoBoxItem   = { T41_ITEM_TEMP, "Temp:",       NU
 
 // Load should be in column 1
 PROGMEM const InfoBoxItem loadInfoBoxItem   = { T41_ITEM_LOAD, "Load:",       NULL,        NULL,                        0,        8,      1,   IB_COL_1_X,    IB_ROW_14_Y,   &IBLoadFollowup        };  // Teensy Load
+
+// calibration items
+PROGMEM const InfoBoxItem freqCalItem   = { -6, "Factor:", NULL, &freqCorrectionFactor, 0, 11, 1, IB_COL_1_X, IB_ROW_6_Y, &IBFreqCalFollowup};  //
 
 PROGMEM const InfoBoxItem infoBox[IB_NUM_ITEMS] = {
   volInfoBoxItem,       // Vol
@@ -277,7 +287,7 @@ PROGMEM const InfoBoxItem ft8InfoBox[FT8_IB_NUM_ITEMS] = {
   loadInfoBoxItem       // Teensy Load
 };
 
-#define CAL_IB_NUM_ITEMS 10
+#define CAL_IB_NUM_ITEMS 11
 PROGMEM const InfoBoxItem calInfoBox[CAL_IB_NUM_ITEMS] = {
   volInfoBoxItem,       // Vol
   agcInfoBoxItem,       // AGC
@@ -285,6 +295,7 @@ PROGMEM const InfoBoxItem calInfoBox[CAL_IB_NUM_ITEMS] = {
   ftInfoBoxItem,        // FT Inc
   zoomInfoBoxItem,      // Zoom
   nfInfoBoxItem,        // Noise Floor
+  freqCalItem,          // freqCorrectionFactor
   stackInfoBoxItem,     // Stack
   heapInfoBoxItem,      // Heap
   tempInfoBoxItem,      // Teensy Temp
@@ -339,14 +350,20 @@ void SetInfoBoxWindow(int window) {
   Update the specified information box item
 
   Parameter list:
-    int index   index of the info box item to update
+    int index: T41_ITEMS index of the info box item to update or
+               if negative, staight index into activeInfoBox
 *****/
 void UpdateInfoBoxItem(int index) {
   int item, label_x, xOffset, yOffset;
 
-  if(index >= IB_NUM_ITEMS || index < 0) return;
-  item = infoBoxItemIndex[index];
-  if(item == -1) return;
+  if(index >= IB_NUM_ITEMS) return;
+  if(index < 0) {
+    // calibration item
+    item = -index;
+  } else {
+    item = infoBoxItemIndex[index];
+    if(item == -1) return;
+  }
 
   xOffset = activeInfoBox[item].col;
   yOffset = activeInfoBox[item].row;
@@ -357,6 +374,7 @@ void UpdateInfoBoxItem(int index) {
   tft.setCursor(label_x, yOffset);
   tft.print(activeInfoBox[item].label);
 
+  tft.setCursor(xOffset, yOffset);
   if(activeInfoBox[item].options != NULL) {
     if((activeInfoBox[item].highlightFlag > 0) && (*activeInfoBox[item].option == 0)) {
       tft.setTextColor(RA8875_WHITE);
@@ -366,8 +384,14 @@ void UpdateInfoBoxItem(int index) {
       tft.setTextColor(RA8875_GREEN);
     }
 
-    tft.setCursor(xOffset, yOffset);
     tft.print(activeInfoBox[item].options[*activeInfoBox[item].option]);
+  } else if(activeInfoBox[item].option != NULL) {
+    if((activeInfoBox[item].highlightFlag > 0)) {
+      tft.setTextColor(RA8875_WHITE);
+    } else {
+      tft.setTextColor(RA8875_GREEN);
+    }
+    tft.print(*activeInfoBox[item].option);
   }
 
   if(activeInfoBox[item].followFnPtr != NULL) {
@@ -563,11 +587,11 @@ void IBEQFollowup(int row, int col) {
     int row, col  Row and column of info box item
 *****/
 void IBTempFollowup(int row, int col) {
-  char buff[10];
 
   tft.setFontScale((enum RA8875tsize)0);
   tft.setTextColor(RA8875_GREEN);
-  MyDrawFloatP(TGetTemp(), 0, col, row, buff, 2);
+  tft.setCursor(col, row);
+  tft.print(TGetTemp(), 0);
   tft.drawCircle(col + 22, row + 5, 3, RA8875_GREEN);
 }
 
@@ -578,7 +602,6 @@ void IBTempFollowup(int row, int col) {
     int row, col  Row and column of info box item
 *****/
 void IBLoadFollowup(int row, int col) {
-  char buff[10];
   float value = 0.0;
   int valueColor = RA8875_GREEN;
   static bool showFPS = false; // alternate between load % and fps
@@ -615,7 +638,8 @@ void IBLoadFollowup(int row, int col) {
   }
 
   tft.setTextColor(valueColor);
-  MyDrawFloatP(value, digits, col, row, buff, 2);
+  tft.setCursor(col, row);
+  tft.print(value, digits);
   if(showFPS) {
     tft.print(" fps");
   } else {
@@ -1198,4 +1222,17 @@ void UpdateClock() {
   if(ms_500.check() == 1) {
     DisplayClock();
   }
+}
+
+// calibration items
+void IBFreqCalFollowup(int row, int col) {
+  int label_x, y;
+
+  label_x = col - 5 - 4 * tft.getFontWidth();
+  y = row + 20;
+  tft.setCursor(label_x, y);
+  tft.print("SAM:");
+  tft.fillRect(col, y, 6 * tft.getFontWidth(), 15, RA8875_BLACK);
+  tft.setCursor(col, y);
+  tft.print(GetSAMFreqError(), 1);
 }
