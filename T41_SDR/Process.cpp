@@ -50,7 +50,13 @@ float32_t biquad_lowpass1_coeffs[5] = { 0, 0, 0, 0, 0 };
 
 float32_t audioMaxSquaredAve = 0.01; // this will blow up dBm if 0
 
-float32_t audioSpectBuffer[1024]; // This can't be DMAMEM.  It will break the S-Meter. *** TODO: probably because it needs to be aligned ***
+// v49.2k note: This can't be DMAMEM.  It will break the S-Meter.
+// this was probably because it needed to be aligned, but below works fine for me
+// (4k more to heap) perhaps because it's aligned by default in my version
+// *** TODO: test need for alignment and incorporate if needed ***
+// *** TODO: this is inefficient as it's only used to pass data to the audio spectrum
+//           draw routine and only a small portion is used.  Rework to eliminate waste.
+float32_t DMAMEM audioSpectBuffer[1024];
 
 uint8_t NB_on = 0; // noise blanker: 0 - off, 1 - on
 
