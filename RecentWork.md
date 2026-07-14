@@ -2,6 +2,16 @@
 
 ## Ongoing Work
 
+### Unifying the Calibration Code
+
+I did some work automating the T41 calibration code a year ago. That code was hardware specific. I've never been happy with it because it breaks my unified code approach. First, very similar code exists for separate hardware versions. That's not a huge deal since most of it is in flash memory. But it increases the code base to keep updated. Second, the code relies on a specific display model and there is a lot of it for each hardware version.  All of this must be modified if another display model is used. That wouldn't be a fun project.
+
+I like the calibration routines I came up with back then but it is impractical maintaining separate hardware versions with the changes I've made to the core code. I'm moving the calibration code to the core model with hardware specific code only as needed. I also intend to move away from display dependent routines. We'll see how that works out.
+
+My new routines will be mostly automatic. Manual calibration, while interesting, isn't practical. I probably won't update those old routines to work with my new core code.
+
+Lastly, I've done away with using the EEPROM. I started this to avoid the problem of testing alternative T41 software and the requirement to erase the EEPROM for a clean install. I've always hardcoded my desired operating parameters and calibration factors because of this and that's the direction I'm taking going forward. This might not work for people testing my software, but I haven't found it to be a problem.
+
 ### T41 Remote with WIFI
 
 I've been experimenting with creating a WiFi connection between the T41 and a remote unit.  My early tests show that this is probably possible but will require special attention and maybe a custom board.
