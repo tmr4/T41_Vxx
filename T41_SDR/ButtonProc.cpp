@@ -4,6 +4,7 @@
 
 #include "Button.h"
 #include "ButtonProc.h"
+#include "calibrate.h"
 #include "CWProcessing.h"
 #include "Display.h"
 #include "Encoders.h"
@@ -102,6 +103,11 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
   SetupBandFreq(t41.CenterFreq);
 
   PostChangeBandHardware();
+
+  if(t41.CalState == FREQ_CAL_STATE) {
+    // reset calibration
+    CalibrateFrequency(true);
+  }
 }
 
 

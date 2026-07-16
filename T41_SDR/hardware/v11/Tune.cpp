@@ -26,7 +26,8 @@ FLASHMEM void InitSI5351() {
 }
 
 void SetSI5351FreqCorFactor(int factor) {
-  si5351.init(SI5351_CRYSTAL_LOAD_10PF, Si_5351_crystal, factor);
+  si5351.set_correction(factor, SI5351_PLL_INPUT_XO);
+  si5351.pll_reset(SI5351_PLLB);
   SetFreq(t41.CenterFreq);
 }
 
@@ -62,7 +63,7 @@ void SetFreq(int freq, bool reset) {
   //  The receive LO frequency is not dependent on mode or sideband.  CW frequency shift is done in DSP code.
   Clk2SetFreq = ((t41.CenterFreq + t41.IntermediateFreq) * SI5351_FREQ_MULT) * MASTER_CLK_MULT;
 
-  if(t41.RadioState == RECEIVE_STATE || t41.RadioState == FREQ_CAL_STATE) {   //  Receive state
+  if(t41.RadioState == RECEIVE_STATE) {   //  Receive state
     si5351.set_freq(Clk2SetFreq, SI5351_CLK2);
     si5351.output_enable(SI5351_CLK1, 0);  // CLK1 (transmit) off during receive to prevent birdies
     si5351.output_enable(SI5351_CLK2, 1);

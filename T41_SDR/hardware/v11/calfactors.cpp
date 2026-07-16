@@ -6,9 +6,9 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-int freqCorrectionFactor = 0;
-//int freqCorrectionFactor = 18140;
-//int freqCorrectionFactor = 1200;
+//int freqCorrectionFactor = 0;
+int freqCorrectionFactor = 17933; // dev/v0.04 w/ AD3 at 5MHz (measured frequency is 4.99993MHz), factor varies between tests: 18274
+//int freqCorrectionFactor = 1200; // original v49.2k WWV factor
 
 //float powerOutCW[NUMBER_OF_BANDS] = { 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02 };
 //float powerOutSSB[NUMBER_OF_BANDS] = { 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03 };

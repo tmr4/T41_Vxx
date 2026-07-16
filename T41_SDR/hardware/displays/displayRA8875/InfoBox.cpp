@@ -287,7 +287,7 @@ PROGMEM const InfoBoxItem ft8InfoBox[FT8_IB_NUM_ITEMS] = {
   loadInfoBoxItem       // Teensy Load
 };
 
-#define CAL_IB_NUM_ITEMS 11
+#define CAL_IB_NUM_ITEMS 10
 PROGMEM const InfoBoxItem calInfoBox[CAL_IB_NUM_ITEMS] = {
   volInfoBoxItem,       // Vol
   agcInfoBoxItem,       // AGC
@@ -295,7 +295,7 @@ PROGMEM const InfoBoxItem calInfoBox[CAL_IB_NUM_ITEMS] = {
   ftInfoBoxItem,        // FT Inc
   zoomInfoBoxItem,      // Zoom
   nfInfoBoxItem,        // Noise Floor
-  freqCalItem,          // freqCorrectionFactor
+  //freqCalItem,          // freqCorrectionFactor
   stackInfoBoxItem,     // Stack
   heapInfoBoxItem,      // Heap
   tempInfoBoxItem,      // Teensy Temp

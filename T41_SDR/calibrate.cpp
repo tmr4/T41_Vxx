@@ -177,77 +177,79 @@ FLASHMEM void CalibrationInit(int calType) {
 // Calibration Routines
 //-------------------------------------------------------------------------------------------------------------
 
-//Linear2DRegression corrFacReg;
+EXTMEM Linear2DRegression corrFacReg;
 /*****
   Determine frequency correction factor for SI5351
 
-  Set up prior to IQ calibrations.
-
-  *** TODO: validate Linear2DRegression doesn't fragment memory with the way it's used here ***
+  *** can exit early but must let process complete to change global correction factor ***
  *****/
-FLASHMEM bool CalibrateFrequency(bool startFlag) {
-  bool completeFlag = false;
+FLASHMEM void CalibrateFrequency(bool reset /* = false */) {
+  int correctionFactor = 0;
 
-  static Linear2DRegression *corrFacReg;
-  static int freqAutoIncrementSet = 100;
+  static bool startFlag = true;
+  static int freqAutoIncrementSet = 0;
+  static int freqCalFactor = 0;
   static int freqCalFactorStart = 0;
   static int count = 0;
   static int autoCount = 0;
-  static int correctionFactor = freqCorrectionFactor;
-  static long last = 0;
+  static long last = millis();
 
-  if(startFlag) {
-    // start auto frequency calibration
-    Serial.printf("Performing Frequency Calibration\nCurrent factor: %d\n.", freqCorrectionFactor);
-
-    corrFacReg = new Linear2DRegression();
-    corrFacReg->reset();
-
-    // set first auto calc point
-    freqCalFactorStart = freqCorrectionFactor;
-    autoCount = 0;
+  if(reset) {
+    freqCalFactor = 0;
+    SetSI5351FreqCorFactor(freqCalFactor);
+    startFlag = true;
     count = 0;
-    freqAutoIncrementSet = 100;
-
-    freqCorrectionFactor = freqCalFactorStart + freqAutoIncrementSet * (autoCount - 5);
-    SetSI5351FreqCorFactor(freqCorrectionFactor);
     last = millis();
-  } else {
-    // update frequency error every 5 seconds
-    if(millis() - last >= 5000) {
-      // update correction factor regression and display
-      corrFacReg->addPoint(GetSAMFreqError(), freqCorrectionFactor);
-      correctionFactor = corrFacReg->calculate(0);
-      //Serial.printf("SAM Error: %d, New factor: %d\n", (int)(GetSAMFreqError()*10.0), freqCorrectionFactor);
-      Serial.printf("SAM Error: %d, New factor: %d\n", (int)(GetSAMFreqError()), freqCorrectionFactor);
-      UpdateInfoBoxItem(-6);
-      autoCount++; // increment auto plot counter
-      freqCorrectionFactor = freqCalFactorStart + freqAutoIncrementSet * (autoCount - 5);
+    return;
+  }
 
-      SetSI5351FreqCorFactor(freqCorrectionFactor);
+  // allow frequency to stabilize between calibration steps
+  if(millis() - last >= 5000) {
+    if(startFlag) {
+      // start auto frequency calibration
+      Serial.printf("\nPerforming Frequency Calibration\nCurrent factor: %d\n", freqCalFactor);
+      Serial.println("Factor\tError\tNew factor");
 
-      //Serial.print(".");
-      last = millis();
-    }
+      corrFacReg.reset();
 
-    //if(autoCount >= 11) {
-    if(autoCount >= 11) {
-      corrFacReg->reset();
-      freqAutoIncrementSet = freqAutoIncrementSet / 2;
-      freqCorrectionFactor = correctionFactor;
-      Serial.printf("\nNew factor: %d\n", freqCorrectionFactor);
+      // set first auto calc point
+      freqCalFactorStart = freqCalFactor -(int)(GetSAMFreqError() * 100.0); // parts per billion
       autoCount = 0;
-      count++;
-      if(count > 5) {
-        // auto mode complete, clean up
-        delete corrFacReg;
-        completeFlag = true;
-        CalibrationExit();
+      freqAutoIncrementSet = 4000 / (1 << count);
+
+      freqCalFactor = freqCalFactorStart + freqAutoIncrementSet * (autoCount - 5);
+      SetSI5351FreqCorFactor(freqCalFactor);
+      last = millis();
+      startFlag = false;
+    } else {
+      // update correction factor regression and display
+      corrFacReg.addPoint(GetSAMFreqError(), freqCalFactor);
+      correctionFactor = corrFacReg.calculate(0);
+      Serial.printf("%d\t%d\t%d\n", freqCalFactor, (int)(GetSAMFreqError()), correctionFactor);
+      //UpdateInfoBoxItem(-6);
+      autoCount++; // increment auto plot counter
+      freqCalFactor = freqCalFactorStart + freqAutoIncrementSet * (autoCount - 5);
+
+      SetSI5351FreqCorFactor(freqCalFactor);
+      last = millis();
+
+      if(autoCount >= 11) {
+        SetSI5351FreqCorFactor(correctionFactor);
+
+        Serial.printf("\nNew factor: %d\n", correctionFactor);
+        freqCalFactor = correctionFactor;
+        startFlag = true;
+
+        count++;
+        if(count > 5) {
+          // auto mode complete, clean up
+          count = 0;
+          freqCorrectionFactor = correctionFactor; // change global factor
+          CalibrationExit();
+        }
       }
     }
   }
-
-  return completeFlag;
 }
 
 /*****

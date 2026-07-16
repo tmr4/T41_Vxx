@@ -480,7 +480,7 @@ FASTRUN void loop() {
         YieldToProcess();
         break;
       }
-      if(t41.CalState == FREQ_CAL_STATE) CalibrateFrequency(false);
+      if(t41.CalState == FREQ_CAL_STATE) CalibrateFrequency();
       break;
 
     case SSB_TRANSMIT_STATE:
