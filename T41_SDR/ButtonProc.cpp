@@ -104,9 +104,9 @@ FLASHMEM void ChangeBand(int change, bool notify /* = true */) {
 
   PostChangeBandHardware();
 
-  if(t41.CalState == FREQ_CAL_STATE) {
+  if(t41.CalState != NOT_CAL_STATE) {
     // reset calibration
-    CalibrateFrequency(true);
+    CalibrationReset();
   }
 }
 

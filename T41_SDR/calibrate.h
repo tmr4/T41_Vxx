@@ -28,5 +28,5 @@ extern float CWPowerEqnCalFactor[];
 
 void CalibrationInit(int calType);
 void CalibrationExit();
-
-void CalibrateFrequency(bool reset = false);
+void CalibrationLoop();
+void CalibrationReset();

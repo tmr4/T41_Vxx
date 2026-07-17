@@ -27,3 +27,4 @@ void DoSplitVFO();
 
 // *** hardware specific ***
 void SetFreq(int freq, bool reset = false);
+void SetFreqCal(long calFreqShift);

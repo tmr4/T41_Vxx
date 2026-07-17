@@ -19,3 +19,4 @@ void SetSI5351FreqCorFactor(int factor) {}
 void SetFreq(int freq, bool reset) {
   if(reset) return;
 }
+FLASHMEM void SetFreqCal(long calFreqShift) {}

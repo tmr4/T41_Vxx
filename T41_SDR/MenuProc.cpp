@@ -319,7 +319,7 @@ FLASHMEM void MicOptions() {
 FLASHMEM void CalibrationOptions() {
   // Calibrate { "Freq", "RX IQ", "TX IQ", "Two Tone", "CW Pwr", "SSB Pwr", "Exit", "Cancel" },
 
-  if(secondaryMenuIndex == 6) {
+  if(secondaryMenuIndex == 7) {
     CalibrationExit();
   } else {
     CalibrationInit(secondaryMenuIndex);
