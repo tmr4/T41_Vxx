@@ -82,6 +82,8 @@ extern arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Deci
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
 
+void PrepareExciterIQDataCal(int mode);
+
 float VolumeToAmplification(int volume);
 void FreqShift1(int blockSize);
 void FreqShift2();
@@ -879,6 +881,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   elapsed_micros_idx_t++;
 
   RESETPROFILEPIN(PROFILER_PROCESS_RX);
+
+  if(t41.CalState == RXIQ_CAL_STATE) PrepareExciterIQDataCal(1);
 
   return freqSpecUpdatedThisLoop ? 2 : 1;
 }

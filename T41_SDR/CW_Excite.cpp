@@ -49,12 +49,15 @@ void KeyRingOn() {
 }
 
 /*****
-  Purpose: Create and play I and Q sample for CW signal
-           This creates a 10ms, 750 Hz sample at 192 kHz sample rate to the Teensy Audio Adapter line-out to
-           the exciter board.  Function must be called again within that time for a continuous signal.  Prior to call
-           Q_out_L_Ex, Q_out_R_Ex and Q_out_L (for sidetone) must be properly routed.  Sidetone signal adjusted for a gain of 1
-           at a volume of 30.  Signal level is controlled by powerOutCW[t41.ActiveBand] and volumeLog[t41.SidetoneVolume] / 0.000100.
-           This gives a reasonable volume with power level of 1-20 W.  This should be done prior to calling this function or CreateCWSignal.
+  Create and play I and Q sample for CW signal
+    This creates a 10ms, 750 Hz sample at 192 kHz sample rate to the Teensy Audio Adapter line-out to
+    the exciter board.  Function must be called again within that time for a continuous signal.  Prior to call
+    Q_out_L_Ex, Q_out_R_Ex and Q_out_L (for sidetone) must be properly routed.  Sidetone signal adjusted for a gain of 1
+    at a volume of 30.  Signal level is controlled by powerOutCW[t41.ActiveBand] and volumeLog[t41.SidetoneVolume] / 0.000100.
+    This gives a reasonable volume with power level of 1-20 W.  This should be done prior to calling this function or CreateCWSignal.
+
+    K9HZ 20W PA has a nominal input of 1mW at 50 ohms (or 224mVrms)
+    *** TODO: set scaling so have unity power factor at 1W ***
 
   Parameter list:
     int state       turn signal ON or OFF
@@ -215,12 +218,18 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
   Q_out_R_Ex.setBehaviour(AudioPlayQueue::ORIGINAL);
   Q_out_L_Ex.play(q15_buffer_LTemp, 2048);
   Q_out_R_Ex.play(q15_buffer_RTemp, 2048);
-  Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
-  Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
+  //Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
+  //Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
 
   // play sidetone
   // *** TODO: this needs scaled ***
-  //Q_out_L.play(q15_buffer_LTemp, 2048);
+  //for(int i = 0; i < 2048; i++) {
+  //  q15_buffer_LTemp[i] = q15_buffer_LTemp[i] / 10;
+  //  //if(q15_buffer_LTemp[i] != 0) Serial.println(q15_buffer_LTemp[i]);
+  //}
+  Q_out_L.play(q15_buffer_LTemp, 2048);
+  Q_out_L_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
+  Q_out_R_Ex.setBehaviour(AudioPlayQueue::NON_STALLING);
 
   if(state == ON && ramp) {
     while(cwAtomTimer < timeAdjust) {

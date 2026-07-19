@@ -764,6 +764,10 @@ FLASHMEM void ShowBandwidthBarValues() {
       hiColor = RA8875_GREEN;
       break;
   }
+  if(t41.CalState != NOT_CAL_STATE) {
+    loColor = RA8875_GREEN;
+    hiColor = RA8875_GREEN;
+  }
 
   len = loValue < 0 ? 7 : 6;
   posLeft = centerLine - tft.getFontWidth() * len - 10; // right justified to center line

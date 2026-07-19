@@ -7,8 +7,8 @@
 //-------------------------------------------------------------------------------------------------------------
 
 //int freqCorrectionFactor = 0;
-int freqCorrectionFactor = 17933; // dev/v0.04 w/ AD3 at 5MHz (measured frequency is 4.99993MHz), factor varies between tests: 18274
-//int freqCorrectionFactor = 1200; // original v49.2k WWV factor
+//int freqCorrectionFactor = 17933; // dev/v0.04 w/ AD3 at 5MHz (measured frequency is 4.99993MHz), factor varies between tests: 18274
+int freqCorrectionFactor = 1200; // original v49.2k WWV factor
 
 //float powerOutCW[NUMBER_OF_BANDS] = { 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02 };
 //float powerOutSSB[NUMBER_OF_BANDS] = { 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03 };
@@ -38,13 +38,13 @@ float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 //float IQAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  0.988,  0.988, 1.009, 1.030, 1.065, 1.092,  1.000 };
 //float IQPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.027, 0.059, 0.035, 0.080, 0.122,  0.000 };
 
-//float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
-//float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
+float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] = { 1, 1, 1, 1, 1, 1, 1 };
+float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { 0, 0, 0, 0, 0, 0, 0 };
 
 // all band transmit auto calibration performed on 8/18/2025 (*** 10m band skipped ***)
 //                                                   80m     40m     20m     17m     15m     12m    10m
-float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  1.010,  1.003,  0.965,  0.930,  0.900,  0.880, 1.000 };
-float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.010, -0.027, -0.055, -0.100, -0.090, 0.000 };
+//float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  1.010,  1.003,  0.965,  0.930,  0.900,  0.880, 1.000 };
+//float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.010, -0.027, -0.055, -0.100, -0.090, 0.000 };
 //float IQXAmpCorrectionFactor[NUMBER_OF_BANDS] =   {  1.010,  1.010,  0.965,  0.930,  0.900,  0.880, 1.000 };
 //float IQXPhaseCorrectionFactor[NUMBER_OF_BANDS] = { -0.010, -0.006, -0.027, -0.055, -0.100, -0.090, 0.000 };
 

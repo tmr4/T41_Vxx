@@ -102,6 +102,7 @@ FLASHMEM void SetBPFBand(int currentBand) {
       break;
   }
   mcpBPF.writeGPIOAB(BPF_GPAB_state);
+  //Serial.println(mcpBPF.readGPIOAB());
 }
 
 #endif

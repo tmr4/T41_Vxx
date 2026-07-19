@@ -10,9 +10,11 @@
 #include "Demod.h"
 #include "Display.h"
 #include "Exciter.h"
+#include "Filter.h"
 #include "Process.h"
 #include "Tune.h"
 #include "t41Property.h"
+#include "Utility.h"
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
@@ -76,6 +78,8 @@ void AutoCal();
 void StabilizeSignal(unsigned long ms);
 void DrawIQGainPlot();
 void UpdateIQDisplay(bool autoFlag = false);
+
+void PrepareExciterIQDataCal(int mode);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -156,6 +160,7 @@ exit calibration mode
 FLASHMEM void CalibrationExit() {
   t41.CalState = NOT_CAL_STATE;
   calibrationType = -1;
+  digitalWrite(RXTX, LOW);  // Turn off the transmitter.
 
   ClearScreen();
   RestoreRadioState();
@@ -168,7 +173,7 @@ FLASHMEM void CalibrationExit() {
   // reset frequency spectrum buffers
   //InitFFTArrays();
 
-  digitalWrite(RXTX, LOW);  // Turn off the transmitter.
+  CalcAudioFilters();
 
   //t41.DisplayState = DISPLAY_T41;
 
@@ -191,6 +196,8 @@ FLASHMEM void CalibrationExit() {
  *****/
 //FLASHMEM void CalibrationSetup(int calType, int rState, int aState) {
 FLASHMEM void CalibrationSetup(int calType) {
+  SetInfoBoxWindow(3);
+
   switch(calType) {
     case 0:  // Freq
       t41.CalState = FREQ_CAL_STATE;
@@ -200,10 +207,26 @@ FLASHMEM void CalibrationSetup(int calType) {
       ChangeMode(DSB_MODE, DEMOD_SAM);
       t41.CenterTuneIndex = t41.GetMaxFreqIncIndex();
       CalibrateFrequency(true);
-      SetInfoBoxWindow(3);
       break;
 
     case 1:  // Course RX/TX IQ
+      t41.CalState = RXIQ_CAL_STATE;
+      CalcAudioFilters();
+      SetFreqCal(0);
+      ConfigAudioState(CALIBRATE_TRANSMIT_STATE);
+      for(int i = 0; i < 256; i++) {
+        // used in calibration
+        float theta = i * 2.0 * PI * 3000.0 / 24000.0;
+        cosBuffer3[i] = cos(theta);
+        sinBuffer3[i] = sin(theta);
+        //cosBuffer3[i] = 0.0;
+        //sinBuffer3[i] = 0.0;
+      }
+      t41.FilterLoCut = -4000;
+      t41.FilterHiCut = 4000;
+      t41.SpectrumZoom = 3;
+      digitalWrite(RXTX, HIGH);  // Turn on transmitter.
+      IQXAmpCorrectionFactor[t41.ActiveBand] = -10;
       break;
 
     case 2:  // RX IQ
@@ -249,12 +272,28 @@ FLASHMEM void CalibrationInit(int calType) {
 }
 
 FLASHMEM void CalibrationLoop() {
+  static long last = millis();
+
   switch(calibrationType) {
     case 0:  // Freq
       CalibrateFrequency();
       break;
 
     case 1:  // Course RX/TX IQ
+      //PrepareExciterIQDataCal(1);
+      //userIQAmpFactor   = IQAmpCorrectionFactor[t41.ActiveBand];
+      //userIQPhaseFactor = IQPhaseCorrectionFactor[t41.ActiveBand];
+      //userIQAmpFactor   = IQXAmpCorrectionFactor[t41.ActiveBand];
+      //userIQPhaseFactor = IQXPhaseCorrectionFactor[t41.ActiveBand];
+
+      if(millis() - last >= 5000) {
+        //IQAmpCorrectionFactor[t41.ActiveBand] += 0;
+        //IQPhaseCorrectionFactor[t41.ActiveBand] += 0;
+        IQXAmpCorrectionFactor[t41.ActiveBand] += 0.2;
+        //IQXPhaseCorrectionFactor[t41.ActiveBand] += 0;
+        Serial.println((int)(IQXAmpCorrectionFactor[t41.ActiveBand]*10.0));
+        last = millis();
+      }
       break;
 
     case 2:  // RX IQ
@@ -397,16 +436,33 @@ FLASHMEM void PrepareExciterIQDataCal(int mode) {
   // apply any mode specific processing
   switch(mode) {
     case 0:
-      // Two-tone signal generation - uses Hilbert transfor to generate IQ signals
+      // Two-tone signal generation - uses Hilbert transform to generate IQ signals
       break;
 
     case 1: // receive/transmit calibration
-      //arm_scale_f32(sinBuffer3, 0.5, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer3, 0.5, audioBufferR_EX, 256);
+      // scaling below 5.0 gives noisy signal, better to attenuate
+      //arm_scale_f32(sinBuffer3, 25.0, audioBufferR_EX, 256); // 0.68Vpp
+      //arm_scale_f32(cosBuffer3, 25.0, audioBufferL_EX, 256);
+
+      //arm_scale_f32(sinBuffer3, 10.0, audioBufferR_EX, 256); // 0.28Vpp 0.093Vrms
+      //arm_scale_f32(cosBuffer3, 10.0, audioBufferL_EX, 256);
+      //arm_scale_f32(sinBuffer3, 10.0, audioBufferL_EX, 256); // 0.28Vpp 0.093Vrms
+      //arm_scale_f32(cosBuffer3, 10.0, audioBufferR_EX, 256);
+
+      //arm_scale_f32(sinBuffer3, 5.0, audioBufferR_EX, 256); // 0.15Vpp 0.047Vrms
+      //arm_scale_f32(cosBuffer3, 5.0, audioBufferL_EX, 256);
+
+      //arm_scale_f32(sinBuffer3, 1.0, audioBufferL_EX, 256); // 6.9mVrms at Exciter output, 3mVrms at output of BPF (1.3mVrms w/ 10dB attenuator)
+      //arm_scale_f32(cosBuffer3, 1.0, audioBufferR_EX, 256);
+      //arm_scale_f32(sinBuffer3, 1.0, audioBufferR_EX, 256); // 6.9mVrms at Exciter output, 3mVrms at output of BPF (1.3mVrms w/ 10dB attenuator)
+      //arm_scale_f32(cosBuffer3, 1.0, audioBufferL_EX, 256);
+
+      arm_scale_f32(sinBuffer3, 0.5, audioBufferL_EX, 256); // 0.03Vpp (0.02Vpp filtered)
+      arm_scale_f32(cosBuffer3, 0.5, audioBufferR_EX, 256);
       //arm_scale_f32(sinBuffer3, 0.05, audioBufferL_EX, 256);
       //arm_scale_f32(cosBuffer3, 0.05, audioBufferR_EX, 256);
-      arm_scale_f32(sinBuffer3, 0.01, audioBufferL_EX, 256);
-      arm_scale_f32(cosBuffer3, 0.01, audioBufferR_EX, 256);
+      //arm_scale_f32(sinBuffer3, 0.01, audioBufferR_EX, 256); // noise
+      //arm_scale_f32(cosBuffer3, 0.01, audioBufferL_EX, 256);
       //arm_scale_f32(sinBuffer3, 0.005, audioBufferL_EX, 256);
       //arm_scale_f32(cosBuffer3, 0.005, audioBufferR_EX, 256);
       //arm_scale_f32(sinBuffer3, 0.001, audioBufferL_EX, 256);
@@ -428,7 +484,10 @@ FLASHMEM void PrepareExciterIQDataCal(int mode) {
       //arm_scale_f32(sinBuffer3, 0.005, audioBufferR_EX, 256);
       //arm_scale_f32(cosBuffer3, 1.005, audioBufferL_EX, 256);
       //arm_scale_f32(sinBuffer3, 1.005, audioBufferR_EX, 256);
-
+      //Serial.println("here");
+      //for(int i = 0; i < 256; i++) {
+      //  Serial.println(audioBufferR_EX[i]);
+      //}
       PlayExciterIQData();
       break;
 

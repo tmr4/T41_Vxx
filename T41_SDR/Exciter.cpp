@@ -9,6 +9,8 @@
 #include "Menu.h"
 #include "Utility.h"
 
+#include "debug.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -35,6 +37,9 @@ extern AudioInputUSB usbIn;
 void PlayExciterIQData() {
   int16_t *sp_L, *sp_R;
   int blocks = t41.DemodMode == DEMOD_FT8 ? 2 : 16;
+  float pwr = 0.0
+
+  SETPROFILEPIN(PROFILER_OTHER);
 
   // adjust IQ signal amplitude and phase
   // *** TODO: v66-9 has t41.CurrentBandA, why? ***
@@ -63,14 +68,23 @@ void PlayExciterIQData() {
 
     // 192kHz effective sample rate here
 
-    // scale to compensate for losses during interpolation
-    //arm_scale_f32(audioBufferL_EX, 8.0, audioBufferL_EX, blocks * 128);
-    //arm_scale_f32(audioBufferR_EX, 8.0, audioBufferR_EX, blocks * 128);
-    float pwr = pow(10, log10((float)t41.TxPower * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
+    if(t41.CalState != NOT_CAL_STATE) {
+      // w/ 30dB attenuator and 4kHz audio filter
+      // QSE -> BPF in -> BPF out -> LPF TX in -> Atn -> -30dB -> RX in -> 4kHz audio filter
+      // 8x scaler gives distorted S9+20
+      // 0.01x
+      arm_scale_f32(audioBufferL_EX, 0.01, audioBufferL_EX, blocks * 128);
+      arm_scale_f32(audioBufferR_EX, 0.01, audioBufferR_EX, blocks * 128);
+    } else {
+      // scale to compensate for losses during interpolation
+      //arm_scale_f32(audioBufferL_EX, 8.0, audioBufferL_EX, blocks * 128);
+      //arm_scale_f32(audioBufferR_EX, 8.0, audioBufferR_EX, blocks * 128);
+      pwr = pow(10, log10((float)t41.TxPower * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
 
-    // *** currently pwr cal for FT8 internal ***
-    arm_scale_f32(audioBufferL_EX, pwr / 32.168 / 2.0, audioBufferL_EX, blocks * 128);
-    arm_scale_f32(audioBufferR_EX, pwr / 32.168 / 2.0, audioBufferR_EX, blocks * 128);
+      // *** currently pwr cal for FT8 internal ***
+      arm_scale_f32(audioBufferL_EX, pwr / 32.168 / 2.0, audioBufferL_EX, blocks * 128);
+      arm_scale_f32(audioBufferR_EX, pwr / 32.168 / 2.0, audioBufferR_EX, blocks * 128);
+    }
   } else {
     // measurements at dummy load tap which is -30dB with WSJT-X pwr level at -45dB
     // 2x scaler gives -6.6dbm
@@ -78,13 +92,14 @@ void PlayExciterIQData() {
     // 12x scaler gives 8.1dbm
     // scale to 1W = 30dBm, scaller = 4.0 * 1.0965
     // scale to 5W = 36.99dBm, scaller = 4.0 * 2.4519
-    float pwr = pow(10, log10((float)t41.TxPower * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
+    pwr = pow(10, log10((float)t41.TxPower * 1000.0) / 2.0) / 31.62 * (4.0 * 1.0965);
     arm_scale_f32(audioBufferL_EX, pwr, audioBufferL_EX, 256);
     arm_scale_f32(audioBufferR_EX, pwr, audioBufferR_EX, 256);
   }
 
   // convert to integer values and output
   for(int  i = 0; i < blocks; i++) {
+    // *** TODO: examine ORIGINAL vs NON_STALLING here ***
     sp_L = Q_out_L_Ex.getBuffer();
     sp_R = Q_out_R_Ex.getBuffer();
     arm_float_to_q15(&audioBufferL_EX[128 * i], sp_L, 128);
@@ -93,6 +108,14 @@ void PlayExciterIQData() {
     Q_out_R_Ex.playBuffer();
   }
 
+  //if(t41.CalState != NOT_CAL_STATE) {
+  //  q15_t q15_buffer_LTemp[2048];
+  //  arm_float_to_q15(audioBufferL_EX, q15_buffer_LTemp, 2048);
+  //  Q_out_L.setBehaviour(AudioPlayQueue::ORIGINAL);
+  //  Q_out_L.play(q15_buffer_LTemp, 2048);
+  //  Q_out_L.setBehaviour(AudioPlayQueue::NON_STALLING);
+  //}
+
   // pause while this plays to prevent churn
   // *** TODO: find right pause interval ***
   //CWPause(10); // audio memory usage increases with this
@@ -100,6 +123,8 @@ void PlayExciterIQData() {
     CWPause(5); // audio memory usage doesn't increase with this
     //CWPause(10);
   }
+
+  RESETPROFILEPIN(PROFILER_OTHER);
 }
 
 void PrepareExciterIQData() {

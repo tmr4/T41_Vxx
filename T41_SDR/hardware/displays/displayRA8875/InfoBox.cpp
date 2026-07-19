@@ -400,8 +400,8 @@ void UpdateInfoBoxItem(int index) {
 }
 
 void ShowVersion() {
-  int xOffset = TIME_X + 18 * tft.getFontWidth();
   tft.setFontScale((enum RA8875tsize) 0);
+  int xOffset = TIME_X + 18 * tft.getFontWidth();
   tft.fillRect(xOffset, TIME_Y, YPIXELS-xOffset-2, tft.getFontHeight(), RA8875_BLACK);
   tft.setCursor(xOffset, TIME_Y);
   tft.setTextColor(YELLOW);

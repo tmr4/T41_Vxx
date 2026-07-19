@@ -34,7 +34,7 @@
   *** see Connection Option Summary below for more detail ***
 */
 #define WSJT_USB_CAT_AUDIO  false
-#define USB_ENABLED         false
+#define USB_ENABLED         true
 #define CAT_ONLY            false // not yet active
 
 #define PROFILER_ACTIVE     false
@@ -50,7 +50,7 @@
 
 // set to true for mouse/keyboard support
 // uses about 44k of stack
-#define HOST_KEYBOARD_MOUSE_SUPPORT false
+#define HOST_KEYBOARD_MOUSE_SUPPORT true
 
 //#define USE_BUFFERED_FT8_WAV // buffered wav file used for internal FT8 testing
 
