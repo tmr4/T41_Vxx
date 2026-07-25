@@ -3,6 +3,9 @@
 
 #include "Display.h"
 #include "MenuProc.h"
+#include "Process.h"
+
+#include "debug.h"
 
 // consolidates calls to various display functions to update various portions of the T41 display
 
@@ -162,4 +165,18 @@ FLASHMEM void UpdateDisplayZoom() {
     // no screen updates at all
     break;
   }
+}
+
+FASTRUN void UpdateLiveDisplayAreas() {
+  YieldToProcess(true);
+  SETPROFILEPIN(PROFILER_DRAW);
+  DrawFreqSpectrum();
+  RESETPROFILEPIN(PROFILER_DRAW);
+  if(t41.CalState == NOT_CAL_STATE) {
+    DrawWaterfall();
+    SETPROFILEPIN(PROFILER_DRAW);
+    DrawAudioSpectrum();
+    RESETPROFILEPIN(PROFILER_DRAW);
+  }
+  DrawSmeterBar();
 }

@@ -154,19 +154,6 @@ FLASHMEM void GenSineToneBuffers(int numCycles) {
   }*/
 
 /*****
-  Purpose: Correct Phase angle between I andQ channels*****/
-void IQPhaseCorrection(float32_t *I_buffer, float32_t *Q_buffer, float32_t factor, uint32_t blocksize) {
-  float32_t temp_buffer[blocksize];
-  if(factor < 0.0) {                                                             // mix a bit of I into Q
-    arm_scale_f32(I_buffer, factor, temp_buffer, blocksize);
-    arm_add_f32(Q_buffer, temp_buffer, Q_buffer, blocksize);
-  } else {                                                      // mix a bit of Q into I
-    arm_scale_f32(Q_buffer, factor, temp_buffer, blocksize);
-    arm_add_f32(I_buffer, temp_buffer, I_buffer, blocksize);
-  }
-}
-
-/*****
   Purpose: Calculate sinc function
 *****/
 float MSinc(int m, float fc) {

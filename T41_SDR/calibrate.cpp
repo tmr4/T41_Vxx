@@ -16,6 +16,8 @@
 #include "t41Property.h"
 #include "Utility.h"
 
+#include "debug.h"
+
 //-------------------------------------------------------------------------------------------------------------
 // Data
 //-------------------------------------------------------------------------------------------------------------
@@ -49,8 +51,6 @@ float32_t cosBuffer3[256];
 
 bool transmitCal; // calibration mode: true=transmit, false=receive
 
-int fftBins = 5;  // the number of FFT bins to examine on either side of binCenter for the signal peak
-
 int signalStrengthSource = 2; // signal strength source: 0 = manual user entry, 1 = external via CAT SM command, 2 = internal loopback
 float minSignalStrength;
 float signalStrength;
@@ -62,6 +62,7 @@ static int iqIndex = 0;
 static int typeIndex = 0; // 0: course, 1: full
 static int speedIndex = 0; // 0: slow, 1: med, 2: fast
 
+int fftBins = 5;  // the number of FFT bins to examine on either side of binCenter for the signal peak
 
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
@@ -211,6 +212,8 @@ FLASHMEM void CalibrationSetup(int calType) {
 
     case 1:  // Course RX/TX IQ
       t41.CalState = RXIQ_CAL_STATE;
+      //t41.FilterLoCut = -4000;
+      t41.FilterHiCut = 4000;
       CalcAudioFilters();
       SetFreqCal(0);
       ConfigAudioState(CALIBRATE_TRANSMIT_STATE);
@@ -222,11 +225,9 @@ FLASHMEM void CalibrationSetup(int calType) {
         //cosBuffer3[i] = 0.0;
         //sinBuffer3[i] = 0.0;
       }
-      t41.FilterLoCut = -4000;
-      t41.FilterHiCut = 4000;
+      t41.AudioVolume = 5;
       t41.SpectrumZoom = 3;
       digitalWrite(RXTX, HIGH);  // Turn on transmitter.
-      IQXAmpCorrectionFactor[t41.ActiveBand] = -10;
       break;
 
     case 2:  // RX IQ
@@ -271,29 +272,197 @@ FLASHMEM void CalibrationInit(int calType) {
   CalibrationSetup(calType);
 }
 
-FLASHMEM void CalibrationLoop() {
-  static long last = millis();
+float gain_coarse_max = GAIN_COARSE_MAX;
+float gain_coarse_min = GAIN_COARSE_MIN;
+float phase_coarse_max = PHASE_COARSE_MAX;
+float phase_coarse_min = PHASE_COARSE_MIN;
+int gain_steps = GAIN_STEPS;
+int phase_steps = PHASE_STEPS;
+int gain_fine_steps = GAIN_FINE_STEPS;
+int phase_fine_steps = PHASE_FINE_STEPS;
 
+void CourseIQCal() {
+  char msg[60], f1[10], f2[10];
+  //int gainStepsCoarseN = (int)((gain_coarse_max - gain_coarse_min) / 0.01 / 2);
+  //int phaseStepsCoarseN = (int)((phase_coarse_max - phase_coarse_min) / 0.01 / 2);
+  int binCenter[2] = {0, 0}; // center FFT bin of [desired, undesired] signal
+  float adjAmplitude = 0;
+  float refAmplitude = 0;
+  uint32_t index_of_max;
+  int stablize = 500;
+
+  static int count = 0;
+  static int steps = 5;
+  static int step = 1; // 1: course, 2: normal, 3: fine
+  static int factor = 0;
+  static int incr = 0;
+  static float max = 0;
+  static float maxmin = 0;
+  static float min = 1000.0;
+  static int loops = 0;
+  static int nochange = 0;
+
+  static float bestAmp = 1.0, bestPhase = 0.0;
+
+  TOGGLEPROFILEPIN(PROFILER_DECODE_FT8);
+
+  //PrepareExciterIQDataCal(1);
+  //userIQAmpFactor   = IQAmpCorrectionFactor[t41.ActiveBand];
+  //userIQPhaseFactor = IQPhaseCorrectionFactor[t41.ActiveBand];
+  //userIQAmpFactor   = IQXAmpCorrectionFactor[t41.ActiveBand];
+  //userIQPhaseFactor = IQXPhaseCorrectionFactor[t41.ActiveBand];
+
+  // initialize
+  if(count == 0 && factor == 0 && step == 1) {
+    //IQXAmpCorrectionFactor[t41.ActiveBand] = GAIN_COARSE_MIN;
+    //IQXAmpCorrectionFactor[t41.ActiveBand] = 1.0 - (1.0 / steps / (float)(1 << incr));
+    IQXAmpCorrectionFactor[t41.ActiveBand] = 1.0;
+    IQXPhaseCorrectionFactor[t41.ActiveBand] = 0.0;
+  }
+
+  //  All calibration modes use a 3kHz test signal and 0Hz calibration frequency shift.  *** this is different than the official software ***
+  //  The center bins for the reference and adjacent signals can be calculated as follows:
+  //    Transmit:
+  //      Calibration is done at the 8x zoom scale giving a FFT bin size of 192kHz/8/512 = 46.88Hz/bin.  The 3kHz test signal is located at
+  //      3000/46.88 = 64 bins left and right of the center bin (256) depending on the demodulation mode.
+  if(1) {
+    // transmit calibration, 8x zoom
+    if(t41.DemodMode == DEMOD_LSB) {
+      binCenter[0] = 256-64;
+      binCenter[1] = 256+64;
+    }
+    if(t41.DemodMode == DEMOD_USB) {
+      binCenter[1] = 256-64;
+      binCenter[0] = 256+64;
+    }
+  } else {
+    // receive calibration, 1x zoom
+    if(t41.DemodMode == DEMOD_LSB) {
+      binCenter[0] = 256-128-8;
+      binCenter[1] = 256+128+8;
+    }
+    if(t41.DemodMode == DEMOD_USB) {
+      binCenter[0] = 256-128+8;
+      binCenter[1] = 256+128-8;
+    }
+  }
+
+  //for(int i = 0; i < SPECTRUM_RES; i++) {
+  //  sig[i] = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
+  //}
+
+  // give a second to stabilize
+  if(loops > stablize) {
+    // calculate adjacent sideband signal strength relative to reference sideband
+    arm_max_f32(&freqSpecBuf[(binCenter[0] - fftBins)], fftBins * 2, &refAmplitude, &index_of_max);
+    arm_max_f32(&freqSpecBuf[(binCenter[1] - fftBins)], fftBins * 2, &adjAmplitude, &index_of_max);
+    //dtostrf(refAmplitude, 5, 3, f1);
+    //dtostrf(adjAmplitude, 5, 3, f2);
+    //sprintf(msg, "ref: %.6s adj: %.6s", f1, f2);
+    //Serial.println(msg);
+    //arm_max_f32(freqSpecBuf, 250, &refAmplitude, &index_of_max);
+    //Serial.println((int)(refAmplitude * 1000.0));
+    //Serial.println(index_of_max);
+    //arm_max_f32(&freqSpecBuf[256], 80, &adjAmplitude, &index_of_max);
+    //Serial.println((int)(adjAmplitude * 1000.0));
+    //Serial.println(index_of_max);
+    //dtostrf(refAmplitude, 5, 3, f1);
+    //dtostrf(adjAmplitude, 5, 3, f2);
+    //sprintf(msg, "ref: %.6s adj: %.6s", f1, f2);
+    //Serial.println(msg);
+
+    // instantaneous reference sideband signal strength relative to adjacent sideband
+    signalStrength = 20 * (log10f_fast(refAmplitude / adjAmplitude));
+    //if(signalStrength > 0)
+    {
+      if(signalStrength > max) max = signalStrength;
+      if(signalStrength < min) min = signalStrength;
+    }
+  }
+
+  if(loops > stablize * 2) {
+    count++;
+    if(count > steps) {
+      Serial.println();
+
+      count = 0;
+      factor++;
+      if(factor > 1) {
+        factor = 0;
+        step++;
+        incr++; // small step size
+        steps += 5;
+        nochange = 0;
+        //IQXPhaseCorrectionFactor[t41.ActiveBand] = bestPhase;
+        //IQXAmpCorrectionFactor[t41.ActiveBand] = bestAmp - (1.0 / steps / (float)(1 << incr));
+        IQXPhaseCorrectionFactor[t41.ActiveBand] = 0.0;
+        IQXAmpCorrectionFactor[t41.ActiveBand] = 1.0 - (1.0 / steps / (float)(1 << incr));
+        Serial.println(step);
+      } else {
+        //IQXPhaseCorrectionFactor[t41.ActiveBand] = bestPhase - (1.0 / steps / (float)(1 << incr));
+        //IQXAmpCorrectionFactor[t41.ActiveBand] = bestAmp;
+        IQXPhaseCorrectionFactor[t41.ActiveBand] = 0.0 - (1.0 / steps / (float)(1 << incr));
+        IQXAmpCorrectionFactor[t41.ActiveBand] = 1.0;
+      }
+      if(step > 4) {
+        // start over
+        steps = 5;
+        step = 0;
+        factor = 0;
+        incr = 0;
+        nochange = 0;
+      }
+
+      maxmin = 0.0;
+    } else {
+      if(min > maxmin) {
+        if(factor == 0) {
+          bestAmp = IQXAmpCorrectionFactor[t41.ActiveBand];
+        } else {
+          bestPhase = IQXPhaseCorrectionFactor[t41.ActiveBand];
+        }
+        maxmin = min;
+      } else {
+        nochange++;
+      }
+      dtostrf(IQXAmpCorrectionFactor[t41.ActiveBand], 5, 3, f1);
+      dtostrf(IQXPhaseCorrectionFactor[t41.ActiveBand], 6, 3, f2);
+      sprintf(msg, "Gain: %.6s Phase: %.6s Sig: %d Max: %d Min: %d MaxMin: %d", f1, f2, (int)signalStrength, (int)max, (int)min, (int)maxmin);
+      TOGGLEPROFILEPIN(PROFILER_PROCESS_FRAME);
+      Serial.println(msg);
+
+      if(factor == 0) {
+        IQXAmpCorrectionFactor[t41.ActiveBand] += 1.0 / steps / 2.0 / (float)(1 << incr);
+      } else {
+        IQXPhaseCorrectionFactor[t41.ActiveBand] += 1.0 / steps / 2.0 / (float)(1 << incr);
+      }
+
+      if(nochange > 10) {
+        count = steps;
+        nochange = 0;
+      }
+    }
+
+    loops = 0;
+    signalStrength = 0;
+    max = 0.0;
+    min = 1000.0;
+  }
+
+  loops++;
+}
+
+FLASHMEM void CalibrationLoop() {
   switch(calibrationType) {
     case 0:  // Freq
       CalibrateFrequency();
       break;
 
     case 1:  // Course RX/TX IQ
-      //PrepareExciterIQDataCal(1);
-      //userIQAmpFactor   = IQAmpCorrectionFactor[t41.ActiveBand];
-      //userIQPhaseFactor = IQPhaseCorrectionFactor[t41.ActiveBand];
-      //userIQAmpFactor   = IQXAmpCorrectionFactor[t41.ActiveBand];
-      //userIQPhaseFactor = IQXPhaseCorrectionFactor[t41.ActiveBand];
-
-      if(millis() - last >= 5000) {
-        //IQAmpCorrectionFactor[t41.ActiveBand] += 0;
-        //IQPhaseCorrectionFactor[t41.ActiveBand] += 0;
-        IQXAmpCorrectionFactor[t41.ActiveBand] += 0.2;
-        //IQXPhaseCorrectionFactor[t41.ActiveBand] += 0;
-        Serial.println((int)(IQXAmpCorrectionFactor[t41.ActiveBand]*10.0));
-        last = millis();
-      }
+      // *** this works best here when called from CheckReceiverData for a one-for-one RX/TX ***
+      PrepareExciterIQDataCal(1);
+      //IQXAmpCorrectionFactor[t41.ActiveBand] = 0.8;
+      CourseIQCal();
       break;
 
     case 2:  // RX IQ
@@ -440,55 +609,23 @@ FLASHMEM void PrepareExciterIQDataCal(int mode) {
       break;
 
     case 1: // receive/transmit calibration
-      // scaling below 5.0 gives noisy signal, better to attenuate
-      //arm_scale_f32(sinBuffer3, 25.0, audioBufferR_EX, 256); // 0.68Vpp
-      //arm_scale_f32(cosBuffer3, 25.0, audioBufferL_EX, 256);
+      //arm_scale_f32(cosBuffer3, IQ_CAL_SIG_STRENGTH, audioBufferL_EX, 256);
+      //arm_scale_f32(sinBuffer3, IQ_CAL_SIG_STRENGTH, audioBufferR_EX, 256);
+      //arm_scale_f32(cosBuffer3, 0.5, audioBufferL_EX, 256);
+      //arm_scale_f32(sinBuffer3, 0.5, audioBufferR_EX, 256);
 
-      //arm_scale_f32(sinBuffer3, 10.0, audioBufferR_EX, 256); // 0.28Vpp 0.093Vrms
-      //arm_scale_f32(cosBuffer3, 10.0, audioBufferL_EX, 256);
-      //arm_scale_f32(sinBuffer3, 10.0, audioBufferL_EX, 256); // 0.28Vpp 0.093Vrms
-      //arm_scale_f32(cosBuffer3, 10.0, audioBufferR_EX, 256);
-
-      //arm_scale_f32(sinBuffer3, 5.0, audioBufferR_EX, 256); // 0.15Vpp 0.047Vrms
-      //arm_scale_f32(cosBuffer3, 5.0, audioBufferL_EX, 256);
-
-      //arm_scale_f32(sinBuffer3, 1.0, audioBufferL_EX, 256); // 6.9mVrms at Exciter output, 3mVrms at output of BPF (1.3mVrms w/ 10dB attenuator)
-      //arm_scale_f32(cosBuffer3, 1.0, audioBufferR_EX, 256);
-      //arm_scale_f32(sinBuffer3, 1.0, audioBufferR_EX, 256); // 6.9mVrms at Exciter output, 3mVrms at output of BPF (1.3mVrms w/ 10dB attenuator)
-      //arm_scale_f32(cosBuffer3, 1.0, audioBufferL_EX, 256);
-
-      arm_scale_f32(sinBuffer3, 0.5, audioBufferL_EX, 256); // 0.03Vpp (0.02Vpp filtered)
-      arm_scale_f32(cosBuffer3, 0.5, audioBufferR_EX, 256);
-      //arm_scale_f32(sinBuffer3, 0.05, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer3, 0.05, audioBufferR_EX, 256);
-      //arm_scale_f32(sinBuffer3, 0.01, audioBufferR_EX, 256); // noise
-      //arm_scale_f32(cosBuffer3, 0.01, audioBufferL_EX, 256);
-      //arm_scale_f32(sinBuffer3, 0.005, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer3, 0.005, audioBufferR_EX, 256);
-      //arm_scale_f32(sinBuffer3, 0.001, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer3, 0.001, audioBufferR_EX, 256);
-
-      // use same scaling factor as for CW
-      // *** TODO: why use a different buffer and scaling factor? compare CW vs SSB exciter chain ***
-      // scaled to give 1W output when CWPowerCalibrationFactor = 1.0
-      // output pwr measured with AD3 (Exp dB ave weight 100 for 500 samples) on -30dB tap of 20W dummy load
-      //arm_scale_f32(sinBuffer2, 0.03385, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer2, 0.03385, audioBufferR_EX, 256);
-
-
-      //arm_scale_f32(sinBuffer3, 0.2, audioBufferL_EX, 256);
-      //arm_scale_f32(cosBuffer3, 0.2, audioBufferR_EX, 256);
-
-
-      //arm_scale_f32(cosBuffer3, 0.005, audioBufferL_EX, 256);
-      //arm_scale_f32(sinBuffer3, 0.005, audioBufferR_EX, 256);
-      //arm_scale_f32(cosBuffer3, 1.005, audioBufferL_EX, 256);
-      //arm_scale_f32(sinBuffer3, 1.005, audioBufferR_EX, 256);
-      //Serial.println("here");
       //for(int i = 0; i < 256; i++) {
-      //  Serial.println(audioBufferR_EX[i]);
+      //  Serial.println(audioBufferL_EX[i]);
       //}
-      PlayExciterIQData();
+      //PlayExciterIQData();
+
+      //arm_scale_f32(cosBuffer3, 0.0, audioBufferL_EX, 256);
+      //arm_scale_f32(sinBuffer3, IQ_CAL_SIG_STRENGTH, audioBufferR_EX, 256);
+
+      arm_scale_f32(cosBuffer3, IQ_CAL_SIG_STRENGTH, audioBufferL_EX, 256);
+      //arm_scale_f32(sinBuffer3, IQ_CAL_SIG_STRENGTH, audioBufferL_EX, 256);
+      arm_scale_f32(sinBuffer3, 0.0, audioBufferR_EX, 256);
+      PrepareExciterIQData();
       break;
 
     // Passthrough
@@ -1019,15 +1156,6 @@ FLASHMEM bool TuneCalParameter(int indexStart, int indexEnd, float increment, fl
   UpdateCalDisplayData();
   return result;
 }
-
-float gain_coarse_max = GAIN_COARSE_MAX;
-float gain_coarse_min = GAIN_COARSE_MIN;
-float phase_coarse_max = PHASE_COARSE_MAX;
-float phase_coarse_min = PHASE_COARSE_MIN;
-int gain_steps = GAIN_STEPS;
-int phase_steps = PHASE_STEPS;
-int gain_fine_steps = GAIN_FINE_STEPS;
-int phase_fine_steps = PHASE_FINE_STEPS;
 
 FLASHMEM bool AutoTune(float *amp, float *phase) {
   int gainStepsCoarseN = (int)((gain_coarse_max - gain_coarse_min) / 0.01 / 2);

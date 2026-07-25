@@ -280,15 +280,11 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   elapsedMicros usec = 0;
 
-  // get audio samples from the audio buffers and convert them to float
-  // read I and Q blocks into buffers (128 samples each)
+  // transfer IQ samples to audio buffers and convert them to float (> -1.0 to < 1.0)
+  // left buffer represents in-phase, I, sample and right buffer represents quadrature, Q, sample
   for(int i = 0; i < blocks; i++) {
-    /**********************************************************************************
-        Using arm_Math library, convert to float one buffer_size.
-        Float_buffer samples are now standardized from > -1.0 to < 1.0
-    **********************************************************************************/
-    arm_q15_to_float(Q_in_R.readBuffer(), &audioBufferL[128 * i], 128);
-    arm_q15_to_float(Q_in_L.readBuffer(), &audioBufferR[128 * i], 128);
+    arm_q15_to_float(Q_in_L.readBuffer(), &audioBufferL[128 * i], 128);
+    arm_q15_to_float(Q_in_R.readBuffer(), &audioBufferR[128 * i], 128);
 
     Q_in_L.freeBuffer();
     Q_in_R.freeBuffer();
@@ -300,12 +296,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, blocks * 128);
   arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, blocks * 128);
 
-  /**********************************************************************************
-      Remove DC offset to reduce centeral spike.  First read the Mean value of
-      left and right channels.  Then fill L and R correction arrays with those Means
-      and subtract the Means from the float L and R buffer data arrays.  Again use Arm_Math functions
-      to manipulate the arrays.  Arrays are all 2048 long
-  **********************************************************************************/
+  // preprocess signals
+  // *** TODO: investigate DC bias removal algorithm and it's application to FT8 ***
   switch(t41.DemodMode) {
     //case DEMOD_FT8:
     //  break;
@@ -315,9 +307,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       break;
   }
 
-  /**********************************************************************************
-      Scale the data buffers by the rfGain value defined in bands[t41.ActiveBand] structure
-  **********************************************************************************/
+  // apply RF gain
   arm_scale_f32(audioBufferL, bands[t41.ActiveBand].rfGain, audioBufferL, blocks * 128);
   arm_scale_f32(audioBufferR, bands[t41.ActiveBand].rfGain, audioBufferR, blocks * 128);
 
@@ -339,23 +329,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     t41.DroppedBlock = 1;
   }
 
-  /**********************************************************************************
-    IQ amplitude and phase correction.  For this scaled down version the I an Q channels are
-    equalized and phase corrected manually. This is done by applying a correction, which is the difference, to
-    the L channel only.  The phase is corrected in the IQPhaseCorrection() function.
-
-    IQ amplitude and phase correction
-  ***********************************************************************************************/
-
-  // Manual IQ amplitude correction
-  if(t41.DemodMode == DEMOD_LSB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM || t41.DemodMode == DEMOD_NFM) {
-    arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, blocks * 128);
-    IQPhaseCorrection(audioBufferL, audioBufferR, -IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
-  //} else if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_AM || t41.DemodMode == DEMOD_SAM || t41.DemodMode == DEMOD_FT8) {
-  } else {
-    arm_scale_f32(audioBufferL, -IQAmpCorrectionFactor[t41.ActiveBand], audioBufferL, blocks * 128);
-    IQPhaseCorrection(audioBufferL, audioBufferR, IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
-  }
+  // apply IQ amplitude and phase correction for RX op amp differences
+  // *** this does not perform sideband selection, that occurs when applying audioFIRFilterMask ***
+  // *** TODO: examine whether specific factors are needed for USB/FT8 or if a simple negation is sufficient ***
+  ApplyIQCorrectionFactors(audioBufferL, audioBufferR, IQAmpCorrectionFactor[t41.ActiveBand], IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
 
   /**********************************************************************************
       Perform a 256 point FFT for the spectrum display on the basis of the first 256 complex values
@@ -440,6 +417,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition.
   *************************************************************************************************/
   FreqShift2();
+
+  if(t41.CalState != NOT_CAL_STATE) return freqSpecUpdatedThisLoop ? 2 : 1;
 
   YieldToEthernet();
 
@@ -584,7 +563,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       // apply automatic gain control
       // AGC acts upon on the audio data in audioIFFT
       // *** TODO: evaluate effectiveness and proper placement of this AGC function ***
-      AGC();
+      if(t41.CalState == NOT_CAL_STATE) AGC();
       break;
   }
 
@@ -654,7 +633,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       // apply automatic gain control
       // AGC acts upon on the audio data in audioIFFT
       // *** TODO: evaluate effectiveness and proper placement of this AGC function ***
-      AGC();
+      if(t41.CalState == NOT_CAL_STATE) AGC();
       break;
 
     case DEMOD_SAM:
@@ -882,8 +861,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   RESETPROFILEPIN(PROFILER_PROCESS_RX);
 
-  if(t41.CalState == RXIQ_CAL_STATE) PrepareExciterIQDataCal(1);
-
   return freqSpecUpdatedThisLoop ? 2 : 1;
 }
 
@@ -901,40 +878,42 @@ float VolumeToAmplification(int volume) {
 }
 
 /*****
-  Purpose:
-        Frequency translation by Fs/4 without multiplication from Lyons (2011): chapter 13.1.2 page 646
-        together with the savings of not having to shift/rotate the audioFFT, this saves
-        about 1% of processor use
+  Shift audio signals to baseband
 
-        This is for +Fs/4 [moves receive frequency to the left in the spectrum display]
-           audioBufferL contains I = real values
-           audioBufferR contains Q = imaginary values
-           xnew(0) =  xreal(0) + jximag(0)
-               leave first value (DC component) as it is!
-           xnew(1) =  - ximag(1) + jxreal(1)
+    Frequency translation by Fs/4 without multiplication from Lyons (2011): chapter 13.1.2 page 646
+    together with the savings of not having to shift/rotate the audioFFT
+
+    Function set for +Fs/4 shift which shift signals toward baseband
+        audioBufferL contains I = real values
+        audioBufferR contains Q = imaginary values
+        xnew(0) =  xreal(0) + jximag(0)
+            leave first value (DC component) as it is!
+        xnew(1) =  - ximag(1) + jxreal(1)
            ...
 
-      Backward shift:
-      This is for -Fs/4 [moves receive frequency to the right in the spectrumdisplay]
-      // shift backward Fs/4
-      xreal = audioBufferL[i + 1];
-      ximag = audioBufferR[i + 1];
-      audioBufferL[i + 1] = ximag; // xnew(1) = ximag(1) - jxreal(1)
-      audioBufferR[i + 1] = -xreal;
-      xreal = audioBufferL[i + 2];
-      ximag = audioBufferR[i + 2];
-      audioBufferL[i + 2] = -xreal; // xnew(2) = -xreal(2) - jximag(2)
-      audioBufferR[i + 2] = -ximag;
-      xreal = audioBufferL[i + 3];
-      ximag = audioBufferR[i + 3];
-      audioBufferL[i + 3] = -ximag; // xnew(3) = -ximag(3) + jxreal(3)
-      audioBufferR[i + 3] = xreal;
+    *** if a freq is shifted beyond the nyquist freq it causes a -freq image ***
+
+    Shift away from baseband:
+    Code is for -Fs/4
+    // shift down Fs/4
+    xreal = audioBufferL[i + 1];
+    ximag = audioBufferR[i + 1];
+    audioBufferL[i + 1] = ximag; // xnew(1) = ximag(1) - jxreal(1)
+    audioBufferR[i + 1] = -xreal;
+    xreal = audioBufferL[i + 2];
+    ximag = audioBufferR[i + 2];
+    audioBufferL[i + 2] = -xreal; // xnew(2) = -xreal(2) - jximag(2)
+    audioBufferR[i + 2] = -ximag;
+    xreal = audioBufferL[i + 3];
+    ximag = audioBufferR[i + 3];
+    audioBufferL[i + 3] = -ximag; // xnew(3) = -ximag(3) + jxreal(3)
+    audioBufferR[i + 3] = xreal;
 *****/
 void FreqShift1(int blockSize) {
   float32_t xreal, ximag;
 
   for(int i = 0; i < blockSize; i += 4) {
-    // shift forward Fs/4
+    // shift up Fs/4
     xreal = audioBufferL[i + 1];
     ximag = audioBufferR[i + 1];
     audioBufferL[i + 1] = -ximag; // xnew(1) = -ximag(1) + jxreal(1)
@@ -957,7 +936,8 @@ void FreqShift1(int blockSize) {
 }
 
 /*****
-  Purpose: Shift Receive frequency by an arbitray amount
+  Shift Receive frequency by an arbitray amount
+
     Notes:  Routine includes checks to ensure the frequency selection stays within the bounds of the
     displayed spectrum
     Also included a variable frequency step, depending on how fast the encoder id turned.  Step varies from 50Hz/step to 10KHz/step
@@ -1049,7 +1029,7 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
   int factor = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
 
-  if (sample_no > SPECTRUM_RES) {
+  if(sample_no > SPECTRUM_RES) {
     sample_no = SPECTRUM_RES;
   }
 
@@ -1089,55 +1069,46 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
       zoom_sample_ptr = 0;
     }
   }
-  //***************
-  // adjust lowpass filter coefficient, so that
-  // "spectrum display smoothness" is the same across the different sample rates
-  // and the same across different magnify modes . . .
-  LPFcoeff = 0.7;
 
-  //if(LPFcoeff > 1.0) {
-  //  LPFcoeff = 1.0;
-  //}
-  //if(LPFcoeff < 0.001) {
-  //  LPFcoeff = 0.001;
-  //}
-
-  onem_LPFcoeff = 1.0 - LPFcoeff;
-
-  // perform complex FFT
-  // calculation is performed in-place the audioFFT [re, im, re, im, re, im . . .]
+  // calculate frequency spectrum
   arm_cfft_f32(S, freqFFT, 0, 1);
-
   for(int i = 0; i < SPECTRUM_RES / 2; i++) {
     freqSpecBuf[i + SPECTRUM_RES / 2] = (freqFFT[i * 2] * freqFFT[i * 2] + freqFFT[i * 2 + 1] * freqFFT[i * 2 + 1]); // Last half of spectrum
     freqSpecBuf[i] = (freqFFT[(i + SPECTRUM_RES / 2) * 2] * freqFFT[(i + SPECTRUM_RES / 2)  * 2] + freqFFT[(i + SPECTRUM_RES / 2)  * 2 + 1] * freqFFT[(i + SPECTRUM_RES / 2)  * 2 + 1]);
   }
 
   if(updateSpectrumData) {
-    // apply low pass filter and scale the magnitude values and convert to int for spectrum display
     // apply spectrum AGC
     //int16_t min = 0;
     //int16_t max = 0;
     //int16_t data[SPECTRUM_RES];
 
-    for(int i = 0; i < SPECTRUM_RES; i++) {
-      freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
-      prevFreqSpecBuf[i] = freqSpecBuf[i];
+    //if(t41.CalState == NOT_CAL_STATE)
+    {
+      // apply low pass filter to smooth spectrum (helps most w/ noise floor)
+      LPFcoeff = 0.7;
+      onem_LPFcoeff = 1.0 - LPFcoeff;
 
-      //if(controlDataFlag) {
-      //  // *** TODO: reconsider transfers to PC control app ***
-      //  // hardwire for 10dB scale, 20 pixel offset, 20 dBScale
-      //  int16_t pixelnew = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
-//
-      //  // *** control app data no longer has current noise floor as that is display dependent ***
-      //  data[i] = pixelnew;
-      //  if(data[i] < min) {
-      //    min = data[i];
-      //  }
-      //  if(data[i] > max) {
-      //    max = data[i];
-      //  }
-      //}
+      // *** change of zoom should zero prevFreqSpecBuf ***
+      for(int i = 0; i < SPECTRUM_RES; i++) {
+        freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
+        prevFreqSpecBuf[i] = freqSpecBuf[i];
+
+        //if(controlDataFlag) {
+        //  // *** TODO: reconsider transfers to PC control app ***
+        //  // hardwire for 10dB scale, 20 pixel offset, 20 dBScale
+        //  int16_t pixelnew = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
+        //
+        //  // *** control app data no longer has current noise floor as that is display dependent ***
+        //  data[i] = pixelnew;
+        //  if(data[i] < min) {
+        //    min = data[i];
+        //  }
+        //  if(data[i] > max) {
+        //    max = data[i];
+        //  }
+        //}
+      }
     }
 
     // set up specData for frequency spectrum command if applicable
@@ -1164,41 +1135,31 @@ void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData) {
 }
 
 /*****
-  Purpose: Calcculate zoom magnification when Spectrum Zoom = 1
+  Calcculate frequency spectrum with 1x zoom (SpectrumZoom = 0)
+
+  *** updateSpectrumData is assumed true ***
 *****/
-// *** updateSpectrumData is assumed true ***
 FLASHMEM void Calc1xFreqSpec() {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
-  float32_t spec_help = 0.0;
-  float32_t LPFcoeff = 0.7;
 
-  if(LPFcoeff > 1.0) {
-    LPFcoeff = 1.0;
-  }
-
-  for(int i = 0; i < SPECTRUM_RES; i++) { // interleave real and imaginary input values [real, imag, real, imag . . .]
-    freqFFT[i * 2] =      audioBufferL[i] * (0.5 - 0.5 * cos(6.28 * i / SPECTRUM_RES)); //Hanning
+  // interleave real and imaginary input values [real, imag, real, imag . . .]
+  // apply Hanning window
+  for(int i = 0; i < SPECTRUM_RES; i++) {
+    freqFFT[i * 2] = audioBufferL[i] * (0.5 - 0.5 * cos(6.28 * i / SPECTRUM_RES));
     freqFFT[i * 2 + 1] =  audioBufferR[i] * (0.5 - 0.5 * cos(6.28 * i / SPECTRUM_RES));
   }
   // perform complex FFT
-  // calculation is performed in-place the audioFFT [re, im, re, im, re, im . . .]
   arm_cfft_f32(S, freqFFT, 0, 1);
 
-  // calculate magnitudes and put into freqSpecBuf
-  // we do not need to calculate magnitudes with square roots, it would seem to be sufficient to
-  // calculate mag = I*I + Q*Q, because we are doing a log10-transformation later anyway
-  // and simultaneously put them into the right order
-  // 38.50%, saves 0.05% of processor power and 1kbyte RAM ;-)
-
+  // prepare frequency spectrum
+  // calculate bin magnitude (I*I + Q*Q) and properly sequence + and - FFT bins
+  // (swap positions of negative freq in second half of FFT with positive freq in first half of FFT)
   for(int i = 0; i < SPECTRUM_RES/2; i++) {
-      freqSpecBuf[i + SPECTRUM_RES/2] = (freqFFT[i * 2] * freqFFT[i * 2] + freqFFT[i * 2 + 1] * freqFFT[i * 2 + 1]);
-      freqSpecBuf[i]                  = (freqFFT[(i + SPECTRUM_RES/2) * 2] * freqFFT[(i + SPECTRUM_RES/2)  * 2] + freqFFT[(i + SPECTRUM_RES/2)  * 2 + 1] * freqFFT[(i + SPECTRUM_RES/2)  * 2 + 1]);
-    }
-
-  // apply low pass filter and scale the magnitude values and convert to int for spectrum display
-  for(int x = 0; x < SPECTRUM_RES; x++) {
-    spec_help = LPFcoeff * freqSpecBuf[x] + (1.0 - LPFcoeff) * prevFreqSpecBuf[x];
-    prevFreqSpecBuf[x] = spec_help;
+    freqSpecBuf[i + SPECTRUM_RES/2] = (freqFFT[i * 2] * freqFFT[i * 2] + freqFFT[i * 2 + 1] * freqFFT[i * 2 + 1]);
+    freqSpecBuf[i]                  = (freqFFT[(i + SPECTRUM_RES/2) * 2] * freqFFT[(i + SPECTRUM_RES/2)  * 2] + freqFFT[(i + SPECTRUM_RES/2)  * 2 + 1] * freqFFT[(i + SPECTRUM_RES/2)  * 2 + 1]);
+    // no swap version
+    //freqSpecBuf[i] = (freqFFT[i * 2] * freqFFT[i * 2] + freqFFT[i * 2 + 1] * freqFFT[i * 2 + 1]);
+    //freqSpecBuf[i + SPECTRUM_RES/2]                  = (freqFFT[(i + SPECTRUM_RES/2) * 2] * freqFFT[(i + SPECTRUM_RES/2)  * 2] + freqFFT[(i + SPECTRUM_RES/2)  * 2 + 1] * freqFFT[(i + SPECTRUM_RES/2)  * 2 + 1]);
   }
 }
 
@@ -1332,6 +1293,7 @@ void EtherStats() {
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static unsigned long lastControl = 0;
   unsigned long start = millis();
+  unsigned long cal = millis();
   bool done = false;
 
   //EtherStats();
@@ -1375,6 +1337,12 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
   if(millis() - lastControl > 10) {
     ProcessControls();
     lastControl = millis();
+  }
+  if(t41.CalState == RXIQ_CAL_STATE) {
+    if(millis() - cal > 8) {
+      //PrepareExciterIQDataCal(1);
+      cal = millis();
+    }
   }
   //RESETPROFILEPIN(PROFILER_OTHER);
 }

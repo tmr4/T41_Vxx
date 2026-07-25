@@ -584,3 +584,33 @@ void AGC() {
     audioIFFT[512 + 2 * i + 1] = out_sample[1] * mult;
   }
 }
+
+/*****
+  Apply I and Q amplitude and phase correction factors
+
+  *** this is not used to select sideband ***
+
+*****/
+void ApplyIQCorrectionFactors(float32_t* bufI, float32_t* bufQ, float32_t amp, float32_t phase, uint32_t bufSize) {
+  float32_t temp_buffer[bufSize];
+
+  // apply amplitude correction
+  //arm_scale_f32(bufI, amp, bufI, bufSize);
+  arm_scale_f32(bufI, -amp, bufI, bufSize);
+
+  // apply phase correction
+  if(phase < 0.0) { // mix a bit of I into Q
+    arm_scale_f32(bufI, phase, temp_buffer, bufSize);
+    arm_add_f32(bufQ, temp_buffer, bufQ, bufSize);
+  } else { // mix a bit of Q into I
+    arm_scale_f32(bufQ, phase, temp_buffer, bufSize);
+    arm_add_f32(bufI, temp_buffer, bufI, bufSize);
+  }
+}
+
+void SelectSideBand(float32_t *buf, uint32_t bufSize) {
+  // *** all T41 data modes are currently USB ***
+  if(t41.DemodMode == DEMOD_USB || t41.RadioMode == DATA_MODE) {
+    arm_scale_f32(buf, -1.0, buf, bufSize);
+  }
+}

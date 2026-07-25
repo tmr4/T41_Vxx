@@ -89,6 +89,7 @@ void ShowTransmitReceiveStatus();
 void DrawSmeterBar();
 void DrawAudioSpectContainer();
 void DrawAudioSpectrum();
+void DrawWaterfall();
 void DrawCWFilter();
 void DrawAudioFilterLines();
 void DrawCWDecoderLines(int);

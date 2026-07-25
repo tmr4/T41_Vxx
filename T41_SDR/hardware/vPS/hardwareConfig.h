@@ -42,7 +42,8 @@
 #define PROFILER_ACTIVE     true
 #define CAT_SPY             false           // set to true to examine CAT communication traffic in waterfall area
 
-#define MASTER_CLK_MULT 4ULL // FOURSQRP QSD frontend requires 4x clock
+#define MASTER_CLK_MULT 4ULL  // FOURSQRP QSD frontend requires 4x clock
+#define QSD_IQ_REVERSED false
 
 // pick one of the following display configurations
 //#define DISPLAY_LANDSCAPE
@@ -92,6 +93,11 @@
 // set to true for mouse/keyboard support
 // uses about 44k of stack
 #define HOST_KEYBOARD_MOUSE_SUPPORT false
+
+// different calibration scaling needed w/ different hardware
+// on vPS, scalling below gives 2V signal at 2nd audio adapter line-in and S9 signal
+//#define IQ_CAL_SIG_STRENGTH 500.0
+#define IQ_CAL_SIG_STRENGTH 250.0
 
 /*
   Connection Option Summary:

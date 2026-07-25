@@ -2,6 +2,7 @@
 #include "SDT.h"
 #include "AudioConfig.h"
 #include "calibrate.h"
+#include "DSP_Fn.h"
 #include "Exciter.h"
 #include "FIR.h"
 #include "keyer.h"
@@ -108,19 +109,10 @@ void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, floa
   //arm_scale_f32(sinBuffer2, 0.05368 / CWPowerCalibrationFactor[1], audioBufferL_EX, 256);
   //arm_scale_f32(cosBuffer2, 0.05368 / CWPowerCalibrationFactor[1], audioBufferR_EX, 256);
 
-  /**********************************************************************************
-      Additional scaling, if nesessary to compensate for down-stream gain variations
-   **********************************************************************************/
-/*
-  // adjust IQ signal amplitude and phase
-  if(t41.DemodMode == DEMOD_LSB) {
-    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
-  } else if(t41.DemodMode == DEMOD_USB) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand] * 2.0, 256);
-  }
-*/
+  // correct IQ amplitude and phase for QSE op amp differences and select sideband
+  ApplyIQCorrectionFactors(audioBufferL_EX, audioBufferR_EX, IQXAmpCorrectionFactor[t41.ActiveBand], IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
+  SelectSideBand(audioBufferR_EX, 256);
+
   // ramp signal if requested
   if(ramp) {
     // adjust start or end 10 ms block for a variable time and a 5 ms raised cosine ramp

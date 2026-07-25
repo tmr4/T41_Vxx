@@ -31,7 +31,6 @@ extern "C" {
 //-------------------------------------------------------------------------------------------------------------
 
 void GenSineToneBuffers(int numCycles);
-void IQPhaseCorrection(float32_t *I_buffer, float32_t *Q_buffer, float32_t factor, uint32_t blocksize);
 float MSinc(int m, float fc);
 float32_t Izero(float32_t x);
 float32_t log10f_fast(float32_t X);

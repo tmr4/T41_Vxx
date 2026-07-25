@@ -41,6 +41,7 @@
 #define CAT_SPY             false           // set to true to examine CAT communication traffic in waterfall area
 
 #define MASTER_CLK_MULT 4ULL // FOURSQRP QSD frontend requires 4x clock
+#define QSD_IQ_REVERSED true // FOURSQRP QSD board has I and Q signals swapped, set to true to route IQ signals properly
 
 // pick one of the following display configurations
 #define DISPLAY_LANDSCAPE
@@ -57,6 +58,13 @@
 #define USE_BPF_BOARD
 
 //#define T41_REMOTE_DISPLAY
+
+// different calibration scaling needed w/ different hardware
+// on v11, scaling below 5.0 gives noisy signal, better to attenuate
+// below assumes v11 w/ 10dB attenuator gives ~S9 signal w/ 4k audio filter
+// 6.9mVrms at Exciter output, 3mVrms at output of BPF (1.3mVrms w/ 10dB attenuator)
+//#define IQ_CAL_SIG_STRENGTH 5.0
+#define IQ_CAL_SIG_STRENGTH 0.5
 
 /*
   Connection Option Summary:

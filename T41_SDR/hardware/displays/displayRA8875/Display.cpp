@@ -685,18 +685,6 @@ FASTRUN void DrawAudioSpectrum() {
   }
 }
 
-FASTRUN void UpdateLiveDisplayAreas() {
-  YieldToProcess(true);
-  SETPROFILEPIN(PROFILER_DRAW);
-  DrawFreqSpectrum();
-  RESETPROFILEPIN(PROFILER_DRAW);
-  DrawWaterfall();
-  SETPROFILEPIN(PROFILER_DRAW);
-  DrawAudioSpectrum();
-  RESETPROFILEPIN(PROFILER_DRAW);
-  DrawSmeterBar();
-}
-
 /*****
   Purpose: this routine prints the frequency bars under the spectrum display
            and displays the bandwidth bar indicating demodulation bandwidth

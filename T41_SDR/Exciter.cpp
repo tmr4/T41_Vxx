@@ -2,6 +2,7 @@
 #include "SDT.h"
 #include "AudioConfig.h"
 #include "calibrate.h"
+#include "DSP_Fn.h"
 #include "Exciter.h"
 #include "Filter.h"
 #include "FIR.h"
@@ -27,32 +28,25 @@ extern AudioInputUSB usbIn;
 /*****
   Purpose: Creates I and Q signals from single channel
 
-    0.  Called with audioBufferL_EX filled with 256 bytes at 24kHz sample rate
-    1.  Copy the L channel to the R channel
-    2.  Process the R and L through Hilbert transformers - L 0deg phase shift and R 90 deg ph shift
-          - This create the I (L) and Q(R) channels
-    3.  Interpolate 8x (upsample and filter) the data stream to 192KHz sample rate
-    4.  Output the data stream thruogh the DACs at 192KHz
+    0.  Called with audioBufferL_EX and audioBufferR_EX filled with 256 bytes at 24kHz sample rate
+    1.  Apply TX IQ amplitude and phase correction factors
+    2.  Select sideband
+    2.  Interpolate 8x (upsample and filter) the data stream to 192KHz sample rate
+    3.  Scale output signals
+    4.  Output the data stream thruogh the PCM1505 DAC at 192KHz
 *****/
 void PlayExciterIQData() {
   int16_t *sp_L, *sp_R;
   int blocks = t41.DemodMode == DEMOD_FT8 ? 2 : 16;
-  float pwr = 0.0
+  float pwr = 0.0;
 
   SETPROFILEPIN(PROFILER_OTHER);
 
-  // adjust IQ signal amplitude and phase
-  // *** TODO: v66-9 has t41.CurrentBandA, why? ***
-  if(t41.DemodMode == DEMOD_LSB) {
-    arm_scale_f32(audioBufferL_EX, IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
-  } else if(t41.DemodMode == DEMOD_USB || t41.DemodMode == DEMOD_FT8_INTERNAL) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand] * 2.0, 256);
-  } else if(t41.DemodMode == DEMOD_FT8) {
-    arm_scale_f32(audioBufferL_EX, -IQXAmpCorrectionFactor[t41.ActiveBand], audioBufferL_EX, 256);
-    IQPhaseCorrection(audioBufferL_EX, audioBufferR_EX, IQXPhaseCorrectionFactor[t41.ActiveBand] * 2.0, 256);
-  }
+  // correct IQ amplitude and phase for QSE op amp differences and select sideband
+  // *** this does not perform sideband selection, that occurs in PrepareExciterIQData or other signal prep ***
+  // *** TODO: examine whether specific factors are needed for USB/FT8 or if a simple negation is sufficient ***
+  ApplyIQCorrectionFactors(audioBufferL_EX, audioBufferR_EX, IQXAmpCorrectionFactor[t41.ActiveBand], IQXPhaseCorrectionFactor[t41.ActiveBand], 256);
+  SelectSideBand(audioBufferR_EX, 256);
 
   if(t41.DemodMode != DEMOD_FT8) {
     // return to 192kHz, interpolate by a factor of 8, once again in two steps to preserve the spectrum order
@@ -119,7 +113,7 @@ void PlayExciterIQData() {
   // pause while this plays to prevent churn
   // *** TODO: find right pause interval ***
   //CWPause(10); // audio memory usage increases with this
-  if(t41.DemodMode != DEMOD_FT8) {
+  if(t41.DemodMode != DEMOD_FT8 && t41.CalState != RXIQ_CAL_STATE) {
     CWPause(5); // audio memory usage doesn't increase with this
     //CWPause(10);
   }
@@ -127,6 +121,14 @@ void PlayExciterIQData() {
   RESETPROFILEPIN(PROFILER_OTHER);
 }
 
+/*****
+  Create I and Q signals from single channel
+
+    0.  Called with audioBufferL_EX filled with 256 bytes at 24kHz sample rate
+    1.  Copy the L channel to the R channel
+    2.  Process through Hilbert filters
+    3.  Calls PlayExciterIQData
+*****/
 void PrepareExciterIQData() {
   // *** we're at 24kHz sample rate here ***
 

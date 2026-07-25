@@ -480,7 +480,6 @@ FASTRUN void loop() {
         YieldToProcess();
         break;
       }
-      if(t41.CalState != NOT_CAL_STATE) CalibrationLoop();
       break;
 
     case SSB_TRANSMIT_STATE:

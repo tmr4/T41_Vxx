@@ -486,8 +486,18 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     pc_Q_out_R_Ex.connect(Q_out_R_Ex, 0, i2s_quadOut, 1);
 
     // RX input on I2S channels 3, 4 (pin 6)
+    /**********************************************************************************
+      v11 QSD board has I and Q signals swapped, they are swapped here to compensate
+      see: https://www.reddit.com/r/T41_EP/comments/1v1wgla/a_long_old_mystery_solved_at_least_partially/
+      *** TODO: investigate this more for other hardware versions ***
+    **********************************************************************************/
+#if QSD_IQ_REVERSED
+    pc_Q_in_L.connect(i2s_quadIn, 3, Q_in_L, 0);
+    pc_Q_in_R.connect(i2s_quadIn, 2, Q_in_R, 0);
+#else
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
+#endif
 
     // RX output and sidetone on I2S channel 3(left)
     // I2S on pin 32 (also headphone and line out w/ 2nd audio adapter)
