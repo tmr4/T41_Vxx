@@ -2,6 +2,16 @@
 
 ## Ongoing Work
 
+### Updated Frequency Spectrum Calculation Routines
+
+I took a break from unifying the calibration code to clean up the frequency spectrum calculation routines. The core of that code dates back to the Convolution SDR and was a mess.  The code was probably good for the wide range of spectrum magnifications available in the CSDR, but wasn't efficient for the limited ones used in the T41. It was also poorly documented. Many times when I made a change to the routines I broke the spectrum and would have to go back and relearn what was going on.
+
+The CSDR code did a lot of copying between and within buffers at all zoom levels above 1x. That wasn't efficient. All that was needed on the T41 was to buffer the IQ data at the 8x and 16x zoom levels. Below that, the FFT array and frequency spectrum could be calculated directly. Here is a display image at 16x zoom.
+
+![16x zoom](https://github.com/tmr4/T41_Vxx/blob/main/images/T41_16x_Zoom.jpg)
+
+I suppose the best result of this work is algorithm clarity. While the routines are more efficient, the loop time savings are much smaller than the time for a sufficient IQ data to arrive to process (10-40ms depending on zoom level) and the time to render one display frame (~100ms).
+
 ### Unifying the Calibration Code
 
 I did some work automating the T41 calibration code a year ago. That code was hardware specific. I've never been happy with it because it breaks my unified code approach. First, very similar code exists for separate hardware versions. That's not a huge deal since most of it is in flash memory. But it increases the code base to keep updated. Second, the code relies on a specific display model and there is a lot of it for each hardware version.  All of this must be modified if another display model is used. That wouldn't be a fun project.
