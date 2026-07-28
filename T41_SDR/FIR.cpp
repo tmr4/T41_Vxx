@@ -99,8 +99,6 @@ float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q2_state[12 + 2048 - 1];
 float32_t DMAMEM Fir_Zoom_FFT_Decimate1_coeffs[12];
 float32_t DMAMEM Fir_Zoom_FFT_Decimate2_coeffs[12];
 
-extern int zoom_sample_ptr;
-
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -374,8 +372,6 @@ FLASHMEM void ZoomFFTFilterUpdate(int sampleRate) {
 
   // 2nd decimation stage
   CalcFIRCoeffs(Fir_Zoom_FFT_Decimate2_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate / factor1);
-
-  zoom_sample_ptr = 0;
 }
 
 FLASHMEM void InitZoomFFTFilter(int sampleRate, uint32_t blockSize /* = 2048 */) {

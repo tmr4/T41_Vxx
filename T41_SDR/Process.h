@@ -10,12 +10,11 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
-//extern float32_t /*DMAMEM*/ audioFFT[1024];
 extern float32_t /*DMAMEM*/ audioFFT[];
 extern float32_t /*DMAMEM*/ audioIFFT[];
 
-extern float32_t /*DMAMEM*/ freqSpecBuf[1024];
-extern float32_t /*DMAMEM*/ prevFreqSpecBuf[1024];
+extern float32_t /*DMAMEM*/ freqSpecBuf[];
+extern float32_t /*DMAMEM*/ prevFreqSpecBuf[];
 
 extern float32_t biquad_lowpass1_coeffs[];
 
@@ -34,7 +33,7 @@ void InitAMDemodBiquadFilter(int sampleRate);
 int ProcessReceiverData(bool updateSpectrumData = false);
 void ProcessControls();
 
-void CalcZoomFreqSpec(uint32_t blockSize, bool updateSpectrumData);
+void CalcFreqSpecBuffered(uint32_t blockSize, bool updateSpectrumData);
 
 void YieldToProcess(bool updateSpectrum = false);
 void YieldForProcess(int ms);
