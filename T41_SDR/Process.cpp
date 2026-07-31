@@ -1019,6 +1019,8 @@ void FreqShift2() {
    4x         2          11     2       2x      2x      1           512
 
 *****/
+#define USE_NEW_FIR true
+
 bool CalcFreqSpecBuffered(uint32_t blockSize) {
   bool spectrumReady = false;
   float32_t multiplier;
@@ -1027,12 +1029,19 @@ bool CalcFreqSpecBuffered(uint32_t blockSize) {
   float32_t* ptrI = x_buffer;
   float32_t* ptrQ = y_buffer;
   int samples = blockSize / (1 << t41.SpectrumZoom);
+#if USE_NEW_FIR
+  int zoom[5] = {1, 2, 2, 4, 4};
+  int factor = zoom[t41.SpectrumZoom];
+#else
   int factor = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
+#endif
 
   static float32_t bufI[SPECTRUM_RES];
   static float32_t bufQ[SPECTRUM_RES];
   static int passes = 0;
   static int lastZoom = 1; // 2x - default zoom level
+
+  SETPROFILEPIN(PROFILER_OTHER);
 
   // limit samples at lower resolutions
   if(samples > SPECTRUM_RES) samples = SPECTRUM_RES;
@@ -1049,6 +1058,7 @@ bool CalcFreqSpecBuffered(uint32_t blockSize) {
   } else {
     multiplier = (float32_t)t41.SpectrumZoom;
   }
+  multiplier = 1.0f;
 
   // decimation 1
   arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I1, audioBufferL, x_buffer, blockSize);
@@ -1074,6 +1084,8 @@ bool CalcFreqSpecBuffered(uint32_t blockSize) {
     spectrumReady = true;
     passes = 0;
   }
+
+  RESETPROFILEPIN(PROFILER_OTHER);
 
   return spectrumReady;
 }

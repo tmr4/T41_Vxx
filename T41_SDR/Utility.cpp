@@ -154,39 +154,6 @@ FLASHMEM void GenSineToneBuffers(int numCycles) {
   }*/
 
 /*****
-  Purpose: Calculate sinc function
-*****/
-float MSinc(int m, float fc) {
-  float x = m * HALF_PI;
-  if(m == 0)
-    return 1.0f;
-  else
-    return sinf(x * fc) / (fc * x);
-}
-
-/*****
-  Purpose: Izero
-*****/
-float32_t Izero(float32_t x) {
-  float32_t x2          = x / 2.0;
-  float32_t summe       = 1.0;
-  float32_t ds          = 1.0;
-  float32_t di          = 1.0;
-  float32_t errorlimit  = 1e-9;
-  float32_t tmp;
-
-  do
-  {
-    tmp = x2 / di;
-    tmp *= tmp;
-    ds *= tmp;
-    summe += ds;
-    di += 1.0;
-  } while(ds >= errorlimit * summe);
-  return summe;
-}
-
-/*****
   Purpose:    Fast algorithm for log10
               This is a fast approximation to log2()
               Y = C[0]*F*F*F + C[1]*F*F + C[2]*F + C[3] + E;

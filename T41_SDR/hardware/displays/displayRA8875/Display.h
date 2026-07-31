@@ -48,7 +48,8 @@
 #define SPECTRUM_TOP_Y        SPEC_BOX_T + 1            // Start of spectrum plot space
 #define SPECTRUM_BOTTOM       SPECTRUM_TOP_Y + SPECTRUM_HEIGHT - 1
 
-#define SPECTRUM_NOISE_FLOOR  (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT - 23)
+//#define SPECTRUM_NOISE_FLOOR  (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT - 23)
+#define SPECTRUM_NOISE_FLOOR  (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT - 50) // for use with new frequency spectrum routines
 #define SPEC_BOX_LABELS       (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT + 5)
 
 #define FILTER_PARAMETERS_X   5 //(XPIXELS * 0.22)
