@@ -74,6 +74,8 @@ float32_t DMAMEM freqSpecBuf[SPECTRUM_RES] __attribute__((aligned(4)));
 
 extern arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
 
+extern int zoomDecFactors[];
+
 //-------------------------------------------------------------------------------------------------------------
 // Forwards
 //-------------------------------------------------------------------------------------------------------------
@@ -1019,8 +1021,6 @@ void FreqShift2() {
    4x         2          11     2       2x      2x      1           512
 
 *****/
-#define USE_NEW_FIR true
-
 bool CalcFreqSpecBuffered(uint32_t blockSize) {
   bool spectrumReady = false;
   float32_t multiplier;
@@ -1029,17 +1029,16 @@ bool CalcFreqSpecBuffered(uint32_t blockSize) {
   float32_t* ptrI = x_buffer;
   float32_t* ptrQ = y_buffer;
   int samples = blockSize / (1 << t41.SpectrumZoom);
-#if USE_NEW_FIR
-  int zoom[5] = {1, 2, 2, 4, 4};
-  int factor = zoom[t41.SpectrumZoom];
-#else
-  int factor = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
-#endif
+  int factor = zoomDecFactors[t41.SpectrumZoom];
 
   static float32_t bufI[SPECTRUM_RES];
   static float32_t bufQ[SPECTRUM_RES];
   static int passes = 0;
   static int lastZoom = 1; // 2x - default zoom level
+
+  // *** TODO: shouldn't be here for 1x zoom but sometimes are on vPS, likely
+  //           due to bouncy switch matrix, investigate ***
+  if(t41.SpectrumZoom == 0) return spectrumReady;
 
   SETPROFILEPIN(PROFILER_OTHER);
 

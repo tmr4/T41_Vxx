@@ -17,7 +17,7 @@ Minimum hardware assumes a T41 main board or equivalent so that RX signal can be
 // Display.h
 
 // radio specific display calibration factors
-#define FREQSPEC_OFFSET_10DB  80.0
+#define FREQSPEC_OFFSET_10DB  107.0
 
 //------------
 // Encoders.h

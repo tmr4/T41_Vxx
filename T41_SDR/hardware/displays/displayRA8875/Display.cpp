@@ -505,7 +505,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     // but right shift of a negative number is implimentation specific
     // and I want to keep the negative numbers here
     if(t41.LiveNoiseFloor == 1) {
-      int specPlotY = SPECTRUM_NOISE_FLOOR + 20 - yPlot; // actual spectrum value at current noise floor
+      int specPlotY = SPECTRUM_NOISE_FLOOR - yPlot; // actual spectrum value at current noise floor
       int bin = specPlotY / 5;                    // divide by 5 to get histogram bin
 
       // hLo and hHi capture spectrum at or outside the spectrum display extremes
@@ -565,7 +565,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     #endif
 
     // create data for waterfall
-    wfGradIndex = -yPlot + SPECTRUM_NOISE_FLOOR - 17;  // Nudged waterfall towards black
+    wfGradIndex = -yPlot + SPECTRUM_NOISE_FLOOR - 35;  // Nudged waterfall towards black
     if(wfGradIndex < 0) wfGradIndex = 0;
     if(wfGradIndex > 116) wfGradIndex = 116; // *** above is out of range of gradient ***
     waterfall[x1] = gradient[wfGradIndex];  // Try to put pixel values in middle of gradient array

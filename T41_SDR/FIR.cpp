@@ -93,97 +93,49 @@ float32_t DMAMEM FIR_Coef_Q[256 + 1];
 
 arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
 
-// original CSDR taps
-//#define ZOOM_TAPS_1 12
-//#define ZOOM_TAPS_2 12
+/*
+  Zoom filter testing
+    * USB test signals (kHz): 2x:1, 4x:25, 8x:37, 16x:43
+    * all tap combinations had USB edge signal splatter at 2x which continued to an extent until signal reached mid_USB
+    * large taps, like 100, increase signal spread w/o flattening the spectrum or improving edge signal attenuation
+    * An extra environmental signal (not an alias of the test signal) shows up on my PS test bed at some zoom levels and may disappear or move with different taps
 
-#define USE_NEW_FIR true
+  CalcFreqSpecBuffered timing (all times measured at 2x):
+    Taps     ms
+    13      0.78
+    25      1.00
+    31      1.12
+    63      1.77
+   127      3.05
 
-//#define ZOOM_TAPS_1 12
-//#define ZOOM_TAPS_2 12
-#define ZOOM_TAPS_1 13
-#define ZOOM_TAPS_2 13
-//#define ZOOM_TAPS_1 31
-//#define ZOOM_TAPS_2 31
-//#define ZOOM_TAPS_1 32
-//#define ZOOM_TAPS_2 32
-//#define ZOOM_TAPS_1 47
-//#define ZOOM_TAPS_2 31
+  Some analysis of the old and new filter coefficient routines at: https://www.reddit.com/r/T41_EP/comments/1v9wo0d/frequency_spectrum_zoom_calculation_revisited/
 
-// all times measured at 2x
-// USB test signals (kHz): 2x:1, 4x:25, 8x:37, 16x:43
-// all tap combinations had USB edge signal splatter at 2x which continued to an extent until signal reached mid_USB
-// large taps, like 100, just increase signal spread w/o flattening the spectrum or improving edge signal attenuation
-// odd/even taps didn't make a difference, contrary to AI analysis of filter coefficient routine
-// An extra environmental signal (not an alias of the test signal) shows up on my PS test bed at some zoom levels and may disappear or move with different taps
-//#define ZOOM_TAPS_1  8
-//#define ZOOM_TAPS_2 12
-//#define ZOOM_TAPS_1 12 // CalcFreqSpecBuffered: 0.68ms, slightly more edge noise than 32/10
-//#define ZOOM_TAPS_2 8
-//#define ZOOM_TAPS_1 12 // CalcFreqSpecBuffered: 0.76ms, some aliasing with signals at spectrum edges
-//#define ZOOM_TAPS_2 12
-//#define ZOOM_TAPS_1 13 // CalcFreqSpecBuffered: 0.78ms
-//#define ZOOM_TAPS_2 13
-//#define ZOOM_TAPS_1 22 // CalcFreqSpecBuffered: 0.95ms
-//#define ZOOM_TAPS_2 22
-//#define ZOOM_TAPS_1 24 // CalcFreqSpecBuffered: 0.99ms
-//#define ZOOM_TAPS_2 24
-//#define ZOOM_TAPS_1 25 // CalcFreqSpecBuffered: 1.0ms
-//#define ZOOM_TAPS_2 25
-//#define ZOOM_TAPS_1 26 // CalcFreqSpecBuffered: 1.02ms
-//#define ZOOM_TAPS_2 26
-//#define ZOOM_TAPS_1 31 // CalcFreqSpecBuffered: 1.12ms
-//#define ZOOM_TAPS_2 31
-//#define ZOOM_TAPS_1 32 // CalcFreqSpecBuffered: 1.13ms
-//#define ZOOM_TAPS_2 32
-//#define ZOOM_TAPS_1 33
-//#define ZOOM_TAPS_2 33
-//#define ZOOM_TAPS_1 63 // CalcFreqSpecBuffered: 1.77ms
-//#define ZOOM_TAPS_2 63
-//#define ZOOM_TAPS_1 127 // CalcFreqSpecBuffered: 3.05ms
-//#define ZOOM_TAPS_2 127
+  Generally, increasing taps reduced spectrum aliasing and signal fall off toward the edges of the spectrum as expected.
+  Interesting a moderate increase in taps doesn't increase overall loop time.
 
-//#define ZOOM_TAPS_1 100 // CalcFreqSpecBuffered: 3.50ms
-//#define ZOOM_TAPS_2 100
-//#define ZOOM_TAPS_1 101 // spectrum the same as 100 taps (so no difference w/ odd taps)
-//#define ZOOM_TAPS_2 101
-//#define ZOOM_TAPS_1  32 // CalcFreqSpecBuffered: 1.8ms
-//#define ZOOM_TAPS_2 100
-//#define ZOOM_TAPS_1 32 // CalcFreqSpecBuffered: 0.88ms, less spread on edge signals than w/ 100 taps
-//#define ZOOM_TAPS_2 10
-//#define ZOOM_TAPS_1 10 // slightly higher edge noise floor
-//#define ZOOM_TAPS_2 32
-//#define ZOOM_TAPS_1 10 // more edge signal spread than 32/10 at 16x (also an additional environmental signal present)
-//#define ZOOM_TAPS_2 100
+  Limited testing didn't indicate much difference with differing ZOOM_TAPS_1 and ZOOM_TAPS_2 taps
+  *** TODO: examine a split in filter taps between decimation stages more closely ***
+*/
+int zoomDecFactors[5] = {1, 2, 2, 4, 4};
 
-// 16x testing w/ 43kHz test signal (USB 1kHz below top of spectrum)
-// 4x USB test signal aliased in LSB at all zoom levels at 16/8 and 32/16 taps
-//#define ZOOM_TAPS_1  8 // spectrum looks fine, but extra environmental signal at far end of low spectrum (not a signal alias)
-//#define ZOOM_TAPS_2  4
-//#define ZOOM_TAPS_1 16 // CalcFreqSpecBuffered: 0.73ms, extra signal with 8/4 is gone
-//#define ZOOM_TAPS_2 8
-//#define ZOOM_TAPS_1 32 // CalcFreqSpecBuffered: 0.73ms, slightly less midband signal attenuation and more alias attenuation
-//#define ZOOM_TAPS_2 16
-//#define ZOOM_TAPS_1 128 // no improvement over 16/8
-//#define ZOOM_TAPS_2 64
-//#define ZOOM_TAPS_1 127 // no improvement over 16/8
-//#define ZOOM_TAPS_2 63
+#define ZOOM_TAPS_1 63
+#define ZOOM_TAPS_2 63
 
 // size = numTaps + blockSize - 1
-//float32_t DMAMEM Fir_Zoom_FFT_Decimate_I1_state[ZOOM_TAPS_1 + 2048 - 1] __attribute__((aligned(4)));
-//float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q1_state[ZOOM_TAPS_1 + 2048 - 1] __attribute__((aligned(4)));
-//float32_t DMAMEM Fir_Zoom_FFT_Decimate_I2_state[ZOOM_TAPS_2 + 1024 - 1] __attribute__((aligned(4)));
-//float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q2_state[ZOOM_TAPS_2 + 1024 - 1] __attribute__((aligned(4)));
-//float32_t DMAMEM Fir_Zoom_FFT_Decimate1_coeffs[ZOOM_TAPS_1] __attribute__((aligned(4)));
-//float32_t DMAMEM Fir_Zoom_FFT_Decimate2_coeffs[ZOOM_TAPS_2] __attribute__((aligned(4)));
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_I1_state[ZOOM_TAPS_1 + 2048 - 1] __attribute__((aligned(4)));
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q1_state[ZOOM_TAPS_1 + 2048 - 1] __attribute__((aligned(4)));
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_I2_state[ZOOM_TAPS_2 + 1024 - 1] __attribute__((aligned(4)));
+float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q2_state[ZOOM_TAPS_2 + 1024 - 1] __attribute__((aligned(4)));
+float32_t DMAMEM Fir_Zoom_FFT_Decimate1_coeffs[ZOOM_TAPS_1] __attribute__((aligned(4)));
+float32_t DMAMEM Fir_Zoom_FFT_Decimate2_coeffs[ZOOM_TAPS_2] __attribute__((aligned(4)));
 
-#define ZOOM_TAPS 127
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_I1_state[ZOOM_TAPS + 2048 - 1] __attribute__((aligned(4)));
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q1_state[ZOOM_TAPS + 2048 - 1] __attribute__((aligned(4)));
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_I2_state[ZOOM_TAPS + 1024 - 1] __attribute__((aligned(4)));
-float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q2_state[ZOOM_TAPS + 1024 - 1] __attribute__((aligned(4)));
-float32_t DMAMEM Fir_Zoom_FFT_Decimate1_coeffs[ZOOM_TAPS] __attribute__((aligned(4)));
-float32_t DMAMEM Fir_Zoom_FFT_Decimate2_coeffs[ZOOM_TAPS] __attribute__((aligned(4)));
+//#define ZOOM_TAPS 127
+//float32_t DMAMEM Fir_Zoom_FFT_Decimate_I1_state[ZOOM_TAPS + 2048 - 1] __attribute__((aligned(4)));
+//float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q1_state[ZOOM_TAPS + 2048 - 1] __attribute__((aligned(4)));
+//float32_t DMAMEM Fir_Zoom_FFT_Decimate_I2_state[ZOOM_TAPS + 1024 - 1] __attribute__((aligned(4)));
+//float32_t DMAMEM Fir_Zoom_FFT_Decimate_Q2_state[ZOOM_TAPS + 1024 - 1] __attribute__((aligned(4)));
+//float32_t DMAMEM Fir_Zoom_FFT_Decimate1_coeffs[ZOOM_TAPS] __attribute__((aligned(4)));
+//float32_t DMAMEM Fir_Zoom_FFT_Decimate2_coeffs[ZOOM_TAPS] __attribute__((aligned(4)));
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -310,6 +262,9 @@ float32_t Izero(float32_t x) {
 
 #include <cmath>
 
+// *** this function dates to the Teensy Convolution SDR and is poorly documented and possibly used incorrectly in the T41 code ***
+// *** this has been replace with CalcZoomFIRCoeffs for frequency spectrum zoom filters ***
+// *** TODO: examine/replace other uses of this function ***
 /*****
   Purpose: calc_FIR_coeffs
     // pointer to coefficients variable, no. of coefficients to calculate, frequency where it happens, stopband attenuation in dB,
@@ -317,8 +272,8 @@ float32_t Izero(float32_t x) {
 
   Parameter list:
     float * coeffs_I
-    int numCoeffs
-    float32_t fc
+    int numCoeffs     *** not that this is really a mix of filter order and number of coefficients. You'll get numCoeffs but for a numCoeffs oder filter (e.g., numCoeffs=12 gives the first 12 coefficients for a 12th order filter)
+    float32_t fc      *** this is actually the half band cutoff frequency for LP filters. It's multiplied by 2 below. ***
     float32_t Astop
     int type
     float dfc
@@ -542,105 +497,28 @@ void CalcZoomFIRCoeffs(float *coeffs, int numTaps, float fc, float Astop, float 
   }
 }
 
-/*
-examine required taps:
-
-Using Kaiser's exact formula for 90 dB attenuation (\(A = 90\)), the required tap count for any stage is:\(\text{numTaps}\approx \frac{90-7.95}{14.36\cdot \Delta f}+1=\frac{5.7138}{\Delta f}+1\)(where \(\Delta f\) is the normalized transition width relative to that stage's input sample rate).
-*/
 void ZoomFilterUpdate(int sampleRate) {
-  //int factor1 = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
-  int zoom[5] = {1, 2, 2, 4, 4};
-  int factor1 = zoom[t41.SpectrumZoom];
+  int factor1 = zoomDecFactors[t41.SpectrumZoom];
   int factor2 = (1 << t41.SpectrumZoom) / factor1;
   float32_t fc1 = sampleRate / factor1;
   float32_t fc2 = fc1 / factor2;
-  //int taps1[5] = {31, 31, 31, 63, 27}; // for 60dB stop band attenuation
-  //int taps2[5] = {31, 31, 31, 31, 31};
-  //int taps1[5] = {31, 31, 31, 63, 43}; // for 90dB stop band attenuation
-  //int taps2[5] = {31, 31, 31, 31, 51};
-
-  //int taps1[5] = {127, 127, 127, 127, 127}; // wide signal spectrum
-  //int taps2[5] = {127, 127, 127, 127, 127};
-  //int taps1[5] = {63, 63, 63, 63, 63};
-  //int taps2[5] = {63, 63, 63, 63, 63};
-  int taps1[5] = {47, 47, 47, 47, 47};
-  int taps2[5] = {47, 47, 47, 47, 47};
-  //int taps1[5] = {31, 31, 31, 31, 31};
-  //int taps2[5] = {31, 31, 31, 31, 31};
-  //int taps1[5] = {13, 13, 13, 13, 13}; // for dB stop band attenuation
-  //int taps2[5] = {13, 13, 13, 13, 13};
-  //int taps1[5] = {12, 12, 12, 12, 12}; // for dB stop band attenuation
-  //int taps2[5] = {12, 12, 12, 12, 12};
-  //float astop = 60.0;
-  float astop = 90.0;
-
-  Serial.printf("fc1: %d\tfc2: %d\n", (int)fc1, (int)fc2);
-
-  // frequency spectrum zoom decimation filters
-  // estimate number of filter taps required based on filter specs
-  // m_NumTaps = (Astop - 8.0) / (2.285*K_2PI*(normFstop - normFpass) ) + 1;
-  // (60-8) / (2.285*2*3.14*(*2)) + 1 =
-  // 1st decimation stage
-  CalcZoomFIRCoeffs(Fir_Zoom_FFT_Decimate1_coeffs, taps1[t41.SpectrumZoom], fc1, astop, (float32_t)sampleRate);
-
-  // 2nd decimation stage
-  CalcZoomFIRCoeffs(Fir_Zoom_FFT_Decimate2_coeffs, taps2[t41.SpectrumZoom], fc2, astop, (float32_t)sampleRate / factor1);
-}
-
-/*****
-  Purpose: change IIR and decimation filters for altered frequency spectrum badwidth.
-*****/
-FLASHMEM void ZoomFFTFilterUpdate(int sampleRate) {
-  float32_t Fstop_Zoom = 0.5 * sampleRate / (1 << t41.SpectrumZoom);
-  int factor1 = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
-
-  Serial.printf("fc1: %d\tfc2: %d\n", (int)Fstop_Zoom, (int)Fstop_Zoom);
+  float astop = 60.0;
+  //float astop = 90.0;
 
   // 1st decimation stage
-  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate1_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate);
+  CalcZoomFIRCoeffs(Fir_Zoom_FFT_Decimate1_coeffs, ZOOM_TAPS_1, fc1, astop, (float32_t)sampleRate);
 
   // 2nd decimation stage
-  CalcFIRCoeffs(Fir_Zoom_FFT_Decimate2_coeffs, 12, Fstop_Zoom, 60, 0, 0.0, (float32_t)sampleRate / factor1);
+  CalcZoomFIRCoeffs(Fir_Zoom_FFT_Decimate2_coeffs, ZOOM_TAPS_2, fc2, astop, (float32_t)sampleRate / factor1);
 }
 
 FLASHMEM void InitZoomFFTFilter(int sampleRate, uint32_t blockSize /* = 2048 */) {
-#if USE_NEW_FIR
-  int zoom[5] = {1, 2, 2, 4, 4};
-  int factor1 = zoom[t41.SpectrumZoom];
+  int factor1 = zoomDecFactors[t41.SpectrumZoom];
   int factor2 = (1 << t41.SpectrumZoom) / factor1;
-  //int taps1[5] = {31, 31, 31, 63, 27}; // for 60dB stop band attenuation
-  //int taps2[5] = {31, 31, 31, 31, 31};
-  //int taps1[5] = {31, 31, 31, 63, 43}; // for 90dB stop band attenuation
-  //int taps2[5] = {31, 31, 31, 31, 51};
 
-  //int taps1[5] = {127, 127, 127, 127, 127};
-  //int taps2[5] = {127, 127, 127, 127, 127};
-  //int taps1[5] = {63, 63, 63, 63, 63};
-  //int taps2[5] = {63, 63, 63, 63, 63};
-  //int taps1[5] = {63, 63, 63, 63, 63};
-  //int taps2[5] = {63, 63, 63, 63, 63};
-  int taps1[5] = {47, 47, 47, 47, 47};
-  int taps2[5] = {47, 47, 47, 47, 47};
-  //int taps1[5] = {31, 31, 31, 31, 31};
-  //int taps2[5] = {31, 31, 31, 31, 31};
-  //int taps1[5] = {13, 13, 13, 13, 13};
-  //int taps2[5] = {13, 13, 13, 13, 13};
+  if(t41.SpectrumZoom == 0) return; // nothing to do for 1x zoom
 
-  // *** for testing alternate filter coefficients ***
   ZoomFilterUpdate(sampleRate);
-
-  // 1st decimation stage
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I1, taps1[t41.SpectrumZoom], factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_I1_state, blockSize);
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q1, taps1[t41.SpectrumZoom], factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_Q1_state, blockSize);
-
-  // 2nd decimation stage
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I2, taps2[t41.SpectrumZoom], factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_I2_state, blockSize / factor1);
-  arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q2, taps2[t41.SpectrumZoom], factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_Q2_state, blockSize / factor1);
-#else
-  int factor1 = t41.SpectrumZoom < 3 ? 2 : (1 << t41.SpectrumZoom) / 2;
-  int factor2 = t41.SpectrumZoom < 2 ? 1 : 2;
-
-  ZoomFFTFilterUpdate(sampleRate);
 
   // 1st decimation stage
   arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I1, ZOOM_TAPS_1, factor1, Fir_Zoom_FFT_Decimate1_coeffs, Fir_Zoom_FFT_Decimate_I1_state, blockSize);
@@ -649,13 +527,12 @@ FLASHMEM void InitZoomFFTFilter(int sampleRate, uint32_t blockSize /* = 2048 */)
   // 2nd decimation stage
   arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_I2, ZOOM_TAPS_2, factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_I2_state, blockSize / factor1);
   arm_fir_decimate_init_f32(&Fir_Zoom_FFT_Decimate_Q2, ZOOM_TAPS_2, factor2, Fir_Zoom_FFT_Decimate2_coeffs, Fir_Zoom_FFT_Decimate_Q2_state, blockSize / factor1);
-#endif
 
-  Serial.print("i\tc1\tc2\n");
-  if(ZOOM_TAPS_1 == ZOOM_TAPS_2) {
-    for(int i = 0; i < ZOOM_TAPS_1; i++) {
-      Serial.printf("%d\t%d\t%d\n", i, (int)(Fir_Zoom_FFT_Decimate1_coeffs[i]*1000000.0), (int)(Fir_Zoom_FFT_Decimate2_coeffs[i]*1000000.0));
-    }
-  }
-  Serial.println();
+  //Serial.print("i\tc1\tc2\n");
+  //if(ZOOM_TAPS_1 == ZOOM_TAPS_2) {
+  //  for(int i = 0; i < ZOOM_TAPS_1; i++) {
+  //    Serial.printf("%d\t%d\t%d\n", i, (int)(Fir_Zoom_FFT_Decimate1_coeffs[i]*1000000.0), (int)(Fir_Zoom_FFT_Decimate2_coeffs[i]*1000000.0));
+  //  }
+  //}
+  //Serial.println();
 }
