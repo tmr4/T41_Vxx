@@ -14,9 +14,9 @@ extern arm_fir_decimate_instance_f32 FIR_dec2_Q;
 extern arm_fir_decimate_instance_f32 FIR_dec3; // internal FT8 decode
 
 extern arm_fir_interpolate_instance_f32 FIR_int1_I;
-extern arm_fir_interpolate_instance_f32 FIR_int1_Q;
+//extern arm_fir_interpolate_instance_f32 FIR_int1_Q;
 extern arm_fir_interpolate_instance_f32 FIR_int2_I;
-extern arm_fir_interpolate_instance_f32 FIR_int2_Q;
+//extern arm_fir_interpolate_instance_f32 FIR_int2_Q;
 
 extern arm_fir_decimate_instance_f32 FIR_dec1_EX_I;
 extern arm_fir_decimate_instance_f32 FIR_dec1_EX_Q;
@@ -63,7 +63,7 @@ extern float32_t /* DMAMEM */ FIR_int2_coeffs[32];
 void InitFIRFilters(int sampleRate);
 void InitHilbertFilters();
 
-void CalcFIRCoeffs(float *coeffs_I, int numCoeffs, float32_t fc, float32_t Astop, int type, float dfc, float Fsamprate);
+void CalcZoomFIRCoeffs(float *coeffs_I, int numCoeffs, float32_t fc, float32_t Astop, float Fsamprate);
 void CalcCplxFIRCoeffs(float *coeffs_I, float *coeffs_Q, int numCoeffs, float32_t fLoCut, float32_t fHiCut, float sampleRate);
 
 void InitZoomFFTFilter(int sampleRate, uint32_t blockSize = 2048);

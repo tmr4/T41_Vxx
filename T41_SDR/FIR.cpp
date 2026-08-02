@@ -16,16 +16,20 @@
 uint8_t FIR_filter_window = 1; // 1 - 4-term Blackman-Harris, 2 - sine, 3 - cosine, 4 - Hann, other - Blackman-Nuttall
 
 // receiver decimation/interpolation state and instance arrays
-float32_t DMAMEM FIR_dec1_I_state[2074]; // numtaps+blocksize-1 = 27+2048-1 = 2074
-float32_t DMAMEM FIR_dec1_Q_state[2074];
-float32_t DMAMEM FIR_dec2_I_state[544]; // numtaps+blocksize-1 = 33+512-1 = 544
-float32_t DMAMEM FIR_dec2_Q_state[544];
+//float32_t DMAMEM FIR_dec1_I_state[2074]; // numtaps+blocksize-1 = 27+2048-1 = 2074
+//float32_t DMAMEM FIR_dec1_Q_state[2074];
+float32_t DMAMEM FIR_dec1_I_state[2150]; // numtaps+blocksize-1 = 103+2048-1 = 2074
+float32_t DMAMEM FIR_dec1_Q_state[2150];
+//float32_t DMAMEM FIR_dec2_I_state[544]; // numtaps+blocksize-1 = 33+512-1 = 544
+//float32_t DMAMEM FIR_dec2_Q_state[544];
+float32_t DMAMEM FIR_dec2_I_state[634]; // numtaps+blocksize-1 = 33+512-1 = 544
+float32_t DMAMEM FIR_dec2_Q_state[634];
 float32_t DMAMEM FIR_dec3_state[544]; // numtaps+blocksize-1 = 33+512-1 = 544
 
 float32_t DMAMEM FIR_int1_I_state[279]; // (numTaps/L)+blockSize-1 = 48/2+256-1 = 279
-float32_t DMAMEM FIR_int1_Q_state[279];
+//float32_t DMAMEM FIR_int1_Q_state[279];
 float32_t DMAMEM FIR_int2_I_state[519]; // (numTaps/L)+blockSize-1 = 32/4+512-1 = 519
-float32_t DMAMEM FIR_int2_Q_state[519];
+//float32_t DMAMEM FIR_int2_Q_state[519];
 
 arm_fir_decimate_instance_f32 FIR_dec1_I;
 arm_fir_decimate_instance_f32 FIR_dec1_Q;
@@ -34,9 +38,9 @@ arm_fir_decimate_instance_f32 FIR_dec2_Q;
 arm_fir_decimate_instance_f32 FIR_dec3;
 
 arm_fir_interpolate_instance_f32 FIR_int1_I;
-arm_fir_interpolate_instance_f32 FIR_int1_Q;
+//arm_fir_interpolate_instance_f32 FIR_int1_Q;
 arm_fir_interpolate_instance_f32 FIR_int2_I;
-arm_fir_interpolate_instance_f32 FIR_int2_Q;
+//arm_fir_interpolate_instance_f32 FIR_int2_Q;
 
 float32_t DMAMEM FIR_dec1_coeffs[27];
 float32_t DMAMEM FIR_dec2_coeffs[33];
@@ -100,7 +104,7 @@ arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1
     * large taps, like 100, increase signal spread w/o flattening the spectrum or improving edge signal attenuation
     * An extra environmental signal (not an alias of the test signal) shows up on my PS test bed at some zoom levels and may disappear or move with different taps
 
-  CalcFreqSpecBuffered timing (all times measured at 2x):
+  CalcFreqSpecBuffered timing (all times measured at 2x and stopband attenuation of 60dB):
     Taps     ms
     13      0.78
     25      1.00
@@ -118,8 +122,14 @@ arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1
 */
 int zoomDecFactors[5] = {1, 2, 2, 4, 4};
 
-#define ZOOM_TAPS_1 63
-#define ZOOM_TAPS_2 63
+//#define ZOOM_TAPS_1 131 // significant spread of test signal (~30kHz at noise floor) though noise floor artifacts are gone
+//#define ZOOM_TAPS_2 131
+#define ZOOM_TAPS_1 63  // gives a nice tight test signal (~8kHz at noise floor (-114dBm) w/ 3k audio filter see: https://www.reddit.com/r/T41_EP/comments/1v9wo0d/frequency_spectrum_zoom_calculation_revisited/)
+#define ZOOM_TAPS_2 63  // (width at noise floor is about 2k with 6k audio filter) small artifacts well below noise floor
+//#define ZOOM_TAPS_1 31  // larger artifacts, still well below noise floor
+//#define ZOOM_TAPS_2 31
+//#define ZOOM_TAPS_1 13
+//#define ZOOM_TAPS_2 13
 
 // size = numTaps + blockSize - 1
 float32_t DMAMEM Fir_Zoom_FFT_Decimate_I1_state[ZOOM_TAPS_1 + 2048 - 1] __attribute__((aligned(4)));
@@ -176,30 +186,52 @@ FLASHMEM void InitFIRFilters(int sampleRate) {
       const uint16_t n_dec2_taps = (1 + (uint16_t)(90.0 / (22.0 * (n_fstop2 - n_fpass2))));
 
       gives: n_dec1_taps = 27, n_dec2_taps = 33 (see decFilterTaps.xlsx in D:\Projects\Radio\Projects\T41_v12)
+
+      Process loop time (ms) with dec1/dec2 taps (~transition band Hz):
+      27/33    1.74   (40k/8k)
+      103/33   2.14   (10k/8k)
+      103/123  2.36   (10k/2k)
   ****************************************************************************************/
   // Decimation filter 1, M1 = 4
-  CalcFIRCoeffs(FIR_dec1_coeffs, 27, 9000.0, 90.0, 0, 0.0, sampleRate);
+  CalcZoomFIRCoeffs(FIR_dec1_coeffs, 27, 9000.0, 90.0, sampleRate);
   arm_fir_decimate_init_f32(&FIR_dec1_I, 27, 4.0, FIR_dec1_coeffs, FIR_dec1_I_state, 2048);
   arm_fir_decimate_init_f32(&FIR_dec1_Q, 27, 4.0, FIR_dec1_coeffs, FIR_dec1_Q_state, 2048);
+  //CalcZoomFIRCoeffs(FIR_dec1_coeffs, 103, 9000.0, 90.0, sampleRate);
+  //arm_fir_decimate_init_f32(&FIR_dec1_I, 103, 4.0, FIR_dec1_coeffs, FIR_dec1_I_state, 2048);
+  //arm_fir_decimate_init_f32(&FIR_dec1_Q, 103, 4.0, FIR_dec1_coeffs, FIR_dec1_Q_state, 2048);
+
+  //for(int i = 0; i < 27; i++) {
+  //  Serial.printf("%d\t%d\n", i, (int)(FIR_dec1_coeffs[i]*1000000.0));
+  //}
+  //Serial.println();
 
   // Decimation filter 2, M2 = 2
-  CalcFIRCoeffs(FIR_dec2_coeffs, 33, 9000.0, 90.0, 0, 0.0, sampleRate / 4.0);
+  CalcZoomFIRCoeffs(FIR_dec2_coeffs, 33, 9000.0, 90.0, sampleRate / 4.0);
   arm_fir_decimate_init_f32(&FIR_dec2_I, 33, 2, FIR_dec2_coeffs, FIR_dec2_I_state, 512);
   arm_fir_decimate_init_f32(&FIR_dec2_Q, 33, 2, FIR_dec2_coeffs, FIR_dec2_Q_state, 512);
+  //CalcZoomFIRCoeffs(FIR_dec2_coeffs, 123, 6000.0, 90.0, sampleRate / 4.0);
+  //arm_fir_decimate_init_f32(&FIR_dec2_I, 123, 2, FIR_dec2_coeffs, FIR_dec2_I_state, 512);
+  //arm_fir_decimate_init_f32(&FIR_dec2_Q, 123, 2, FIR_dec2_coeffs, FIR_dec2_Q_state, 512);
+
+  for(int i = 0; i < 33; i++) {
+    Serial.printf("%d\t%d\n", i, (int)(FIR_dec2_coeffs[i]*1000000.0));
+  }
+  Serial.println();
 
   // Decimation filter 3, M2 = 4 (from 48kps to 12kps)
-  CalcFIRCoeffs(FIR_dec3_coeffs, 50, 4000.0, 90.0, 0, 0.0, sampleRate / 4.0);
+  // for use with DEMOD_FT8_INTERNAL
+  CalcZoomFIRCoeffs(FIR_dec3_coeffs, 50, 4000.0, 90.0, sampleRate / 4.0);
   arm_fir_decimate_init_f32(&FIR_dec3, 50, 4, FIR_dec3_coeffs, FIR_dec3_state, 512);
 
   // Interpolation filter 1, L1 = 2
-  CalcFIRCoeffs(FIR_int1_coeffs, 48, 9000.0, 90.0, 0, 0.0, sampleRate / 4.0);
+  CalcZoomFIRCoeffs(FIR_int1_coeffs, 48, 9000.0, 90.0, sampleRate / 4.0);
   arm_fir_interpolate_init_f32(&FIR_int1_I, 2, 48, FIR_int1_coeffs, FIR_int1_I_state, 256);
-  arm_fir_interpolate_init_f32(&FIR_int1_Q, 2, 48, FIR_int1_coeffs, FIR_int1_Q_state, 256);
+  //arm_fir_interpolate_init_f32(&FIR_int1_Q, 2, 48, FIR_int1_coeffs, FIR_int1_Q_state, 256);
 
   // Interpolation filter 2, L2 = 4
-  CalcFIRCoeffs(FIR_int2_coeffs, 32, 9000.0, 90.0, 0, 0.0, sampleRate);
+  CalcZoomFIRCoeffs(FIR_int2_coeffs, 32, 9000.0, 90.0, sampleRate);
   arm_fir_interpolate_init_f32(&FIR_int2_I, 4.0, 32, FIR_int2_coeffs, FIR_int2_I_state, 512);
-  arm_fir_interpolate_init_f32(&FIR_int2_Q, 4.0, 32, FIR_int2_coeffs, FIR_int2_Q_state, 512);
+  //arm_fir_interpolate_init_f32(&FIR_int2_Q, 4.0, 32, FIR_int2_coeffs, FIR_int2_Q_state, 512);
 
   // excite decimate/interpolate filter initialization
   arm_fir_decimate_init_f32(&FIR_dec1_EX_I, 48, 4, coeffs192K_10K_LPF_FIR, FIR_dec1_EX_I_state, 2048); // 192k -> 48k
@@ -229,127 +261,6 @@ FLASHMEM void InitFIRFilters(int sampleRate) {
 
   // set audio, decimate and interpolate filters based on current band filter cutoffs
   SetupDemodFilterBW();
-}
-
-// Calculate sinc function
-float MSinc(int m, float fc) {
-  float x = m * HALF_PI;
-  if(m == 0)
-    return 1.0f;
-  else
-    return sinf(x * fc) / (fc * x);
-}
-
-// calculate zero order modified bessel function of the first kind
-float32_t Izero(float32_t x) {
-  float32_t x2          = x / 2.0;
-  float32_t summe       = 1.0;
-  float32_t ds          = 1.0;
-  float32_t di          = 1.0;
-  float32_t errorlimit  = 1e-9;
-  float32_t tmp;
-
-  do
-  {
-    tmp = x2 / di;
-    tmp *= tmp;
-    ds *= tmp;
-    summe += ds;
-    di += 1.0;
-  } while(ds >= errorlimit * summe);
-  return summe;
-}
-
-#include <cmath>
-
-// *** this function dates to the Teensy Convolution SDR and is poorly documented and possibly used incorrectly in the T41 code ***
-// *** this has been replace with CalcZoomFIRCoeffs for frequency spectrum zoom filters ***
-// *** TODO: examine/replace other uses of this function ***
-/*****
-  Purpose: calc_FIR_coeffs
-    // pointer to coefficients variable, no. of coefficients to calculate, frequency where it happens, stopband attenuation in dB,
-    // filter type, half-filter bandwidth (only for bandpass and notch)
-
-  Parameter list:
-    float * coeffs_I
-    int numCoeffs     *** not that this is really a mix of filter order and number of coefficients. You'll get numCoeffs but for a numCoeffs oder filter (e.g., numCoeffs=12 gives the first 12 coefficients for a 12th order filter)
-    float32_t fc      *** this is actually the half band cutoff frequency for LP filters. It's multiplied by 2 below. ***
-    float32_t Astop
-    int type
-    float dfc
-    float Fsamprate
-*****/
-FLASHMEM void CalcFIRCoeffs(float *coeffs_I, int numCoeffs, float32_t fc, float32_t Astop, int type, float dfc, float Fsamprate) {
-  // modified by WMXZ and DD4WH after
-  // Wheatley, M. (2011): CuteSDR Technical Manual. www.metronix.com, pages 118 - 120, FIR with Kaiser-Bessel Window
-  // assess required number of coefficients by
-  //     numCoeffs = (Astop - 8.0) / (2.285 * TWO_PI * normFtrans);
-  // selecting high-pass, numCoeffs is forced to an even number for better frequency response
-
-  int nc    = numCoeffs;
-  float32_t Beta;
-  float32_t izb;
-  float fcf = fc;
-  float x, w;
-  fc        = fc / Fsamprate;
-  dfc       = dfc / Fsamprate;
-
-  // calculate Kaiser-Bessel window shape factor beta from stop-band attenuation
-  if(Astop < 20.96) {
-    Beta = 0.0;
-  } else {
-    if(Astop >= 50.0) {
-      Beta = 0.1102 * (Astop - 8.71);
-    } else {
-      Beta = 0.5842 * powf((Astop - 20.96), 0.4) + 0.07886 * (Astop - 20.96);
-    }
-  }
-  memset(coeffs_I, 0.0, numCoeffs * sizeof(float));    //zero entire buffer, important for variables from DMAMEM
-
-  izb = Izero(Beta);
-  if(type == 0) { // low pass filter
-    fcf = fc * 2.0;
-    nc  =  numCoeffs;
-  } else if(type == 1) { // high-pass filter
-    fcf = -fc;
-    nc  =  2 * (numCoeffs / 2);
-  } else if((type == 2) || (type == 3)) { // band-pass filter
-    fcf = dfc;
-    nc  =  2 * (numCoeffs / 2); // maybe not needed
-  } else if(type == 4) { // Hilbert transform
-    nc  =  2 * (numCoeffs / 2);
-    // clear coefficients
-    for(int ii = 0; ii < 2 * (nc - 1); ii++) {
-      coeffs_I[ii] = 0;
-    }
-    coeffs_I[nc] = 1;                                   // set real delay
-    for(int ii = 1; ii < (nc + 1); ii += 2) {          // set imaginary Hilbert coefficients
-      if(2 * ii == nc)
-        continue;
-      x = (float)(2 * ii - nc) / (float)nc;
-      w = Izero(Beta * sqrtf(1.0f - x * x)) / izb; // Kaiser window
-      coeffs_I[2 * ii + 1] = 1.0f / (HALF_PI * (float)(ii - nc / 2)) * w ;
-    }
-    return;
-  }
-
-  for(int ii = - nc, jj = 0; ii < nc; ii += 2, jj++) {
-    x = (float)ii / (float)nc;
-    w = Izero(Beta * sqrtf(1.0f - x * x)) / izb; // Kaiser window
-    coeffs_I[jj] = fcf * MSinc(ii, fcf) * w;
-  }
-
-  if(type == 1) {
-    coeffs_I[nc / 2] += 1;
-  } else if(type == 2) {
-    for(int jj = 0; jj < nc + 1; jj++)
-      coeffs_I[jj] *= 2.0f * cosf(HALF_PI * (2 * jj - nc) * fc);
-  } else if(type == 3) {
-    for(int jj = 0; jj < nc + 1; jj++)
-      coeffs_I[jj] *= -2.0f * cosf(HALF_PI * (2 * jj - nc) * fc);
-    coeffs_I[nc / 2] += 1;
-  }
-
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -433,7 +344,7 @@ FLASHMEM void CalcCplxFIRCoeffs(float * coeffs_I, float * coeffs_Q, int numCoeff
 }
 
 /*
-  Calculate zoom FIR LPF coefficients using a Kaisered windowed Sinc impulse function with
+  Calculate zoom FIR LPF coefficients using a Kaiser-Bessel windowed Sinc impulse function
 
   Sinc function https://en.wikipedia.org/wiki/Sinc_function
     filter design: https://www.analog.com/media/en/technical-documentation/dsp-book/dsp_book_Ch16.pdf
@@ -448,12 +359,12 @@ FLASHMEM void CalcCplxFIRCoeffs(float * coeffs_I, float * coeffs_Q, int numCoeff
 
   Bessel function: https://en.wikipedia.org/wiki/Bessel_function
 
- * @brief Generates standard Kaiser-Bessel Windowed LPF coefficients for arm_fir_decimate_f32.
- * @param coeffs       Pointer to target float array (Size must equal 'numTaps')
- * @param numTaps      Length of the filter (Should be an ODD number, e.g., 63, 127)
- * @param fc           Desired LPF cutoff frequency in real Hz (from the matrix above)
- * @param Astop        Stopband attenuation in dB (e.g., 70.0f to 80.0f)
- * @param sampleRate   Base operational sample rate (192000.0f)
+  Parameters:
+    coeffs       Pointer to coefficient array of size numTaps
+    numTaps      Length of the filter
+    fc           LPF cutoff frequency in Hz
+    Astop        Stopband attenuation in dB
+    sampleRate   Filter sample rate
 */
 void CalcZoomFIRCoeffs(float *coeffs, int numTaps, float fc, float Astop, float sampleRate) {
   float fcn = fc / sampleRate; // normalized cutoff frequency
@@ -478,13 +389,13 @@ void CalcZoomFIRCoeffs(float *coeffs, int numTaps, float fc, float Astop, float 
     if(n == N / 2) {
       sinc = 1.0; // x = 0
     } else {
-      sinc = sinf(PI * x) / (PI * x);
+      sinc = sinf(2.0 * PI * x) / (2.0 * PI * x);
     }
 
     // Kaiser-Bessel window
     float y = 2.0f * n / N - 1.0f;
     float w = std::cyl_bessel_i(0.0, beta * sqrtf(1.0f - (y * y))) / std::cyl_bessel_i(0.0, beta);
-    //float w = fcn; // sinc impulse function
+    //float w = 2.0 * fcn; // sinc impulse function
 
     // filter coefficients
     coeffs[n] = w * sinc;
@@ -497,13 +408,32 @@ void CalcZoomFIRCoeffs(float *coeffs, int numTaps, float fc, float Astop, float 
   }
 }
 
+/*
+  Zoom filter design:
+
+    Sample Rate: 192k
+  Zoom    SpectrumZoom   BW   factor  dec 1   dec 2   passes  samples added per pass
+   2x         1          96     2       2x      1x      1           512
+   4x         2          48     2       2x      2x      1           512
+   8x         3          24     4       4x      2x      2           256
+  16x         4          12     8       8x      2x      4           128
+
+  *** The frequency response for these can be visualized at: http://fiiir.com/ ***
+      Filter type: Low pass (windowed-sinc FIR)
+    Sample rate: 192000
+    Cutoff freq: 48000
+    Tran BW:     11500
+    Stop atten:  60
+    Window:      Kaiser
+
+*/
 void ZoomFilterUpdate(int sampleRate) {
   int factor1 = zoomDecFactors[t41.SpectrumZoom];
   int factor2 = (1 << t41.SpectrumZoom) / factor1;
-  float32_t fc1 = sampleRate / factor1;
+  float32_t fc1 = sampleRate / factor1 / 2.0;
   float32_t fc2 = fc1 / factor2;
-  float astop = 60.0;
-  //float astop = 90.0;
+  //float astop = 60.0;
+  float astop = 90.0;
 
   // 1st decimation stage
   CalcZoomFIRCoeffs(Fir_Zoom_FFT_Decimate1_coeffs, ZOOM_TAPS_1, fc1, astop, (float32_t)sampleRate);

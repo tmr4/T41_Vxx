@@ -154,6 +154,11 @@ Connections are most efficient when made from an earlier object (in the order th
 back to an earlier object can be made, but they add a 1-block delay and consume more memory to implement that delay.
 */
 
+#define INJECT_RX_TEST_SIGNAL true
+#include "testSinWave.h"
+AudioTestSine rxTestI;
+AudioTestSine rxTestQ;
+
 // Audio inputs
 // I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
 // See https://www.pjrc.com/teensy/gui/?info=AudioInputI2SQuad
@@ -491,12 +496,26 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
       see: https://www.reddit.com/r/T41_EP/comments/1v1wgla/a_long_old_mystery_solved_at_least_partially/
       *** TODO: investigate this more for other hardware versions ***
     **********************************************************************************/
+#if INJECT_RX_TEST_SIGNAL
+    AudioNoInterrupts();
+    rxTestI.frequency(49000.0);
+    rxTestQ.frequency(49000.0);
+    rxTestI.amplitude(0.005);
+    rxTestQ.amplitude(0.005);
+    rxTestI.phase(90.0);
+    rxTestQ.phase(0.0);
+
+    pc_Q_in_L.connect(rxTestI, 0, Q_in_L, 0);
+    pc_Q_in_R.connect(rxTestQ, 0, Q_in_R, 0);
+    AudioInterrupts();
+#else
 #if QSD_IQ_REVERSED
     pc_Q_in_L.connect(i2s_quadIn, 3, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 2, Q_in_R, 0);
 #else
     pc_Q_in_L.connect(i2s_quadIn, 2, Q_in_L, 0);
     pc_Q_in_R.connect(i2s_quadIn, 3, Q_in_R, 0);
+#endif
 #endif
 
     // RX output and sidetone on I2S channel 3(left)
