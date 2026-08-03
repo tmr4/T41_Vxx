@@ -30,19 +30,16 @@
 #include <AudioStream.h> // github.com/PaulStoffregen/cores/blob/master/teensy4/AudioStream.h
 #include <arm_math.h>    // github.com/PaulStoffregen/cores/blob/master/teensy4/arm_math.h
 
-// TODO: investigate making a high resolution sine wave
-// using Taylor series expansion.
-// http://www.musicdsp.org/showone.php?id=13
-
-class AudioTestSine : public AudioStream
-{
+class AudioTestSine : public AudioStream {
 public:
 	AudioTestSine() : AudioStream(0, NULL), magnitude(16384) {}
+
 	void frequency(float freq) {
 		if (freq < 0.0f) freq = 0.0;
 		else if (freq > 192000.0/2.0f) freq = 192000.0/2.0f;
 		phase_increment = freq * (4294967296.0f / 192000.0);
 	}
+
 	void phase(float angle) {
 		if (angle < 0.0f) angle = 0.0f;
 		else if (angle > 360.0f) {
@@ -51,12 +48,15 @@ public:
 		}
 		phase_accumulator = angle * (float)(4294967296.0 / 360.0);
 	}
+
 	void amplitude(float n) {
 		if (n < 0.0f) n = 0;
 		else if (n > 1.0f) n = 1.0f;
 		magnitude = n * 65536.0f;
 	}
+
 	virtual void update(void);
+
 private:
 	uint32_t phase_accumulator;
 	uint32_t phase_increment;

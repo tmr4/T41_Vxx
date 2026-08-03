@@ -2,6 +2,16 @@
 
 ## Ongoing Work
 
+### New Test Signal Class
+
+I've gotten about a far as I can push my signal generator for this filter testing. Generating signals in the 1-5mV range gives a strong signal on my T41 test bench, but the signals are noisy. Normally I don't mind as the noise level is about what I see with my workbench antenna. But this isn't idea for filter testing.
+
+I'd like to have something more controllable when testing the T41 DSP filters. For that I modified the Teensy Audio Library sine waveform class to work at 192kHz. With that I can generate IQ signals internal to the T41 and inject them directly into the RX input. Here an early version:
+
+![Test Signal](https://github.com/tmr4/T41_Vxx/blob/main/images/T41_Test_Signal.jpg)
+
+It's a nice clean signal. This should work for the internally generated calibration signals as well. The advantage is that all you have to do is connect the objects to your normal audio framework and the Teensy Audio library takes care of the rest. Prior to this I had to call a signal generating routine periodically to keep the input primed.
+
 ### Updated Frequency Spectrum Calculation Routines
 
 I took a break from unifying the calibration code to clean up the frequency spectrum calculation routines. The core of that code dates back to the Convolution SDR and was a mess.  The code was probably good for the wide range of spectrum magnifications available in the CSDR, but wasn't efficient for the limited ones used in the T41. It was also poorly documented. Many times when I made a change to the routines I broke the spectrum and would have to go back and relearn what was going on.
@@ -11,6 +21,8 @@ The CSDR code did a lot of copying between and within buffers at all zoom levels
 ![16x zoom](https://github.com/tmr4/T41_Vxx/blob/main/images/T41_16x_Zoom.jpg)
 
 I suppose the best result of this work is algorithm clarity. While the routines are more efficient, the loop time savings are much smaller than the time for a sufficient IQ data to arrive to process (10-40ms depending on zoom level) and the time to render one display frame (~100ms).
+
+I've found that zoom filters with 63 taps is a good trade-off between filter and T41 performance. The base of the signal spreads out at the noise flow as taps increase above this level.
 
 ### Unifying the Calibration Code
 

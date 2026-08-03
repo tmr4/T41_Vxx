@@ -383,14 +383,16 @@ FASTRUN void loop() {
   }
 #endif
 
-  ProcessControls(); // *** needed for any processes that skips YieldToProcess ***
-
   // check for UI button press and process accordingly
   valPin = ReadSelectedPushButton();
   if(valPin != BOGUS_PIN_READ) {
     pushButtonSwitchIndex = ProcessButtonPress(valPin);
     ExecuteButtonPress(pushButtonSwitchIndex);
   }
+
+  // *** needed for any processes that skips YieldToProcess and
+  //     to poll any UI interactions/properties changed above   ***
+  ProcessControls();
 
   // 2. state detection
   switch(t41.RadioMode) {
