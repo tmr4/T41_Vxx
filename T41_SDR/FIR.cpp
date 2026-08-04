@@ -122,7 +122,7 @@ arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1
 */
 int zoomDecFactors[5] = {1, 2, 2, 4, 4};
 
-//#define ZOOM_TAPS_1 131 // significant spread of test signal (~30kHz at noise floor) though noise floor artifacts are gone
+//#define ZOOM_TAPS_1 131 // significant spread of test signal (~30kHz at 10dB spectrum noise floor) though noise floor artifacts are gone
 //#define ZOOM_TAPS_2 131
 #define ZOOM_TAPS_1 63  // gives a nice tight test signal (~8kHz at noise floor (-114dBm) w/ 3k audio filter see: https://www.reddit.com/r/T41_EP/comments/1v9wo0d/frequency_spectrum_zoom_calculation_revisited/)
 #define ZOOM_TAPS_2 63  // (width at noise floor is about 2k with 6k audio filter) small artifacts well below noise floor
@@ -434,6 +434,7 @@ void ZoomFilterUpdate(int sampleRate) {
   float32_t fc2 = fc1 / factor2;
   //float astop = 60.0;
   float astop = 90.0;
+  //float astop = 80.0;
 
   // 1st decimation stage
   CalcZoomFIRCoeffs(Fir_Zoom_FFT_Decimate1_coeffs, ZOOM_TAPS_1, fc1, astop, (float32_t)sampleRate);

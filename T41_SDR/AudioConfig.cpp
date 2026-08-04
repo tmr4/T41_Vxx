@@ -155,9 +155,8 @@ back to an earlier object can be made, but they add a 1-block delay and consume 
 */
 
 #define INJECT_RX_TEST_SIGNAL true
-#include "testSinWave.h"
-AudioTestSine rxTestI;
-AudioTestSine rxTestQ;
+#include "testSignal.h"
+AudioQuadratureSignals testQuadSignals;
 
 // Audio inputs
 // I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
@@ -498,15 +497,17 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     **********************************************************************************/
 #if INJECT_RX_TEST_SIGNAL
     AudioNoInterrupts();
-    rxTestI.frequency(49000.0);
-    rxTestQ.frequency(49000.0);
-    rxTestI.amplitude(0.005);
-    rxTestQ.amplitude(0.005);
-    rxTestI.phase(90.0);
-    rxTestQ.phase(0.0);
+    testQuadSignals.amplitude(0.1077217); // -30dBm
+    //testQuadSignals.amplitude(0.027058); // S9+30dB
+    //testQuadSignals.amplitude(0.0085565); // S9+20dB
+    //testQuadSignals.amplitude(0.005); // S9+15db signal, clean
+    //testQuadSignals.amplitude(0.000889); // S9 signal
+    //testQuadSignals.amplitude(0.0004456); // S8
+    //testQuadSignals.amplitude(0.000062943); // S5
+    //testQuadSignals.amplitude(1.0/65536.0);
 
-    pc_Q_in_L.connect(rxTestI, 0, Q_in_L, 0);
-    pc_Q_in_R.connect(rxTestQ, 0, Q_in_R, 0);
+    pc_Q_in_L.connect(testQuadSignals.GetI(), 0, Q_in_L, 0);
+    pc_Q_in_R.connect(testQuadSignals.GetQ(), 0, Q_in_R, 0);
     AudioInterrupts();
 #else
 #if QSD_IQ_REVERSED

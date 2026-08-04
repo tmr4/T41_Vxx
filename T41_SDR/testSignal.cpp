@@ -27,7 +27,7 @@
 // modified from synth_sine.cpp
 
 #include <Arduino.h>
-#include "testSinWave.h"
+#include "testSignal.h"
 #include "utility/dspinst.h"
 
 #include "SDT.h"
@@ -38,7 +38,7 @@ extern "C" {
 extern const int16_t AudioWaveformSine[257];
 }
 
-void AudioTestSine::update(void) {
+void AudioSignal::update(void) {
 	audio_block_t *block;
 	uint32_t i, ph, inc, index, scale;
 	int32_t val1, val2;
@@ -56,8 +56,8 @@ void AudioTestSine::update(void) {
         scale = (ph >> 8) & 0xFFFF;
         val2 *= scale;
         val1 *= 0x10000 - scale;
-        //block->data[i] = multiply_32x32_rshift32(val1 + val2, magnitude);
-        block->data[i] = (((val1 + val2) >> 16) * magnitude) >> 16;
+        block->data[i] = multiply_32x32_rshift32(val1 + val2, magnitude);
+        //block->data[i] = (((val1 + val2) >> 16) * magnitude) >> 16;
         //Serial.println((((val1 + val2) >> 16) * magnitude) >> 16);
         ph += inc;
       }
