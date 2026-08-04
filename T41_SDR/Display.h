@@ -96,6 +96,8 @@ void DrawCWDecoderLines(int);
 void ShowDecodedCW(char*);
 void UpdateLiveDisplayAreas();
 
+void DrawSpectrumLine(int y);
+
 // info box
 void SetInfoBoxWindow(int window);
 void UpdateInfoBox();

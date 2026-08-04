@@ -154,9 +154,13 @@ Connections are most efficient when made from an earlier object (in the order th
 back to an earlier object can be made, but they add a 1-block delay and consume more memory to implement that delay.
 */
 
-//#define INJECT_RX_TEST_SIGNAL true
+#if INJECT_RX_TEST_SIGNAL
 #include "testSignal.h"
 AudioQuadratureSignals testQuadSignals;
+//AudioQuadratureSweep testQuadSignals(1, 96000, 30);
+//IntervalTimer sweepTimer;
+//void SweepTimerISR() { testQuadSignals.IncSignalFreq(); }
+#endif
 
 // Audio inputs
 // I2S quad input: ch 1&2 on pin 8, ch 3&4 on pin 6
@@ -499,12 +503,15 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     AudioNoInterrupts();
     //testQuadSignals.amplitude(0.1077217); // -30dBm
     //testQuadSignals.amplitude(0.027058); // S9+30dB
-    //testQuadSignals.amplitude(0.0085565); // S9+20dB
+    testQuadSignals.amplitude(0.0085565); // S9+20dB
     //testQuadSignals.amplitude(0.005); // S9+15db signal, clean
-    testQuadSignals.amplitude(0.000889); // S9 signal
-    //testQuadSignals.amplitude(0.0004456); // S8
+    //testQuadSignals.amplitude(0.00095258); // S9 signal
+    //testQuadSignals.amplitude(0.0004666); // S8
     //testQuadSignals.amplitude(0.000062943); // S5
     //testQuadSignals.amplitude(1.0/65536.0);
+    //sweepTimer.begin(SweepTimerISR, 1000000);
+    //testQuadSignals.DrawSweepLine(41);
+    //sweepTimer.begin(SweepTimerISR, 1000); // increment signals every 1ms
 
     pc_Q_in_L.connect(testQuadSignals.GetI(), 0, Q_in_L, 0);
     pc_Q_in_R.connect(testQuadSignals.GetQ(), 0, Q_in_R, 0);

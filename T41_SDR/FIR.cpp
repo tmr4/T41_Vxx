@@ -16,20 +16,15 @@
 uint8_t FIR_filter_window = 1; // 1 - 4-term Blackman-Harris, 2 - sine, 3 - cosine, 4 - Hann, other - Blackman-Nuttall
 
 // receiver decimation/interpolation state and instance arrays
-//float32_t DMAMEM FIR_dec1_I_state[2074]; // numtaps+blocksize-1 = 27+2048-1 = 2074
-//float32_t DMAMEM FIR_dec1_Q_state[2074];
-float32_t DMAMEM FIR_dec1_I_state[2150]; // numtaps+blocksize-1 = 103+2048-1 = 2074
-float32_t DMAMEM FIR_dec1_Q_state[2150];
-//float32_t DMAMEM FIR_dec2_I_state[544]; // numtaps+blocksize-1 = 33+512-1 = 544
-//float32_t DMAMEM FIR_dec2_Q_state[544];
-float32_t DMAMEM FIR_dec2_I_state[634]; // numtaps+blocksize-1 = 33+512-1 = 544
-float32_t DMAMEM FIR_dec2_Q_state[634];
+float32_t DMAMEM FIR_dec1_I_state[2074]; // numtaps+blocksize-1 = 27+2048-1 = 2074
+float32_t DMAMEM FIR_dec1_Q_state[2074];
+float32_t DMAMEM FIR_dec2_I_state[544]; // numtaps+blocksize-1 = 33+512-1 = 544
+float32_t DMAMEM FIR_dec2_Q_state[544];
+
 float32_t DMAMEM FIR_dec3_state[544]; // numtaps+blocksize-1 = 33+512-1 = 544
 
 float32_t DMAMEM FIR_int1_I_state[279]; // (numTaps/L)+blockSize-1 = 48/2+256-1 = 279
-//float32_t DMAMEM FIR_int1_Q_state[279];
 float32_t DMAMEM FIR_int2_I_state[519]; // (numTaps/L)+blockSize-1 = 32/4+512-1 = 519
-//float32_t DMAMEM FIR_int2_Q_state[519];
 
 arm_fir_decimate_instance_f32 FIR_dec1_I;
 arm_fir_decimate_instance_f32 FIR_dec1_Q;
@@ -38,12 +33,11 @@ arm_fir_decimate_instance_f32 FIR_dec2_Q;
 arm_fir_decimate_instance_f32 FIR_dec3;
 
 arm_fir_interpolate_instance_f32 FIR_int1_I;
-//arm_fir_interpolate_instance_f32 FIR_int1_Q;
 arm_fir_interpolate_instance_f32 FIR_int2_I;
-//arm_fir_interpolate_instance_f32 FIR_int2_Q;
 
 float32_t DMAMEM FIR_dec1_coeffs[27];
 float32_t DMAMEM FIR_dec2_coeffs[33];
+
 float32_t DMAMEM FIR_dec3_coeffs[33];
 float32_t DMAMEM FIR_dec3_2_coeffs[33];
 float32_t DMAMEM FIR_int1_coeffs[48];
@@ -196,9 +190,6 @@ FLASHMEM void InitFIRFilters(int sampleRate) {
   CalcZoomFIRCoeffs(FIR_dec1_coeffs, 27, 9000.0, 90.0, sampleRate);
   arm_fir_decimate_init_f32(&FIR_dec1_I, 27, 4.0, FIR_dec1_coeffs, FIR_dec1_I_state, 2048);
   arm_fir_decimate_init_f32(&FIR_dec1_Q, 27, 4.0, FIR_dec1_coeffs, FIR_dec1_Q_state, 2048);
-  //CalcZoomFIRCoeffs(FIR_dec1_coeffs, 103, 9000.0, 90.0, sampleRate);
-  //arm_fir_decimate_init_f32(&FIR_dec1_I, 103, 4.0, FIR_dec1_coeffs, FIR_dec1_I_state, 2048);
-  //arm_fir_decimate_init_f32(&FIR_dec1_Q, 103, 4.0, FIR_dec1_coeffs, FIR_dec1_Q_state, 2048);
 
   //for(int i = 0; i < 27; i++) {
   //  Serial.printf("%d\t%d\n", i, (int)(FIR_dec1_coeffs[i]*1000000.0));
@@ -209,14 +200,11 @@ FLASHMEM void InitFIRFilters(int sampleRate) {
   CalcZoomFIRCoeffs(FIR_dec2_coeffs, 33, 9000.0, 90.0, sampleRate / 4.0);
   arm_fir_decimate_init_f32(&FIR_dec2_I, 33, 2, FIR_dec2_coeffs, FIR_dec2_I_state, 512);
   arm_fir_decimate_init_f32(&FIR_dec2_Q, 33, 2, FIR_dec2_coeffs, FIR_dec2_Q_state, 512);
-  //CalcZoomFIRCoeffs(FIR_dec2_coeffs, 123, 6000.0, 90.0, sampleRate / 4.0);
-  //arm_fir_decimate_init_f32(&FIR_dec2_I, 123, 2, FIR_dec2_coeffs, FIR_dec2_I_state, 512);
-  //arm_fir_decimate_init_f32(&FIR_dec2_Q, 123, 2, FIR_dec2_coeffs, FIR_dec2_Q_state, 512);
 
-  for(int i = 0; i < 33; i++) {
-    Serial.printf("%d\t%d\n", i, (int)(FIR_dec2_coeffs[i]*1000000.0));
-  }
-  Serial.println();
+  //for(int i = 0; i < 33; i++) {
+  //  Serial.printf("%d\t%d\n", i, (int)(FIR_dec2_coeffs[i]*1000000.0));
+  //}
+  //Serial.println();
 
   // Decimation filter 3, M2 = 4 (from 48kps to 12kps)
   // for use with DEMOD_FT8_INTERNAL

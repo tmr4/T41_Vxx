@@ -50,11 +50,11 @@ extern arm_fir_instance_f32 FIR_CW_DecodeR;
 extern float32_t FIR_Coef_I[256 + 1];
 extern float32_t FIR_Coef_Q[256 + 1];
 
-extern float32_t /* DMAMEM */ FIR_dec1_coeffs[27];
-extern float32_t /* DMAMEM */ FIR_dec2_coeffs[33];
-extern float32_t /* DMAMEM */ FIR_dec3_coeffs[33];
-extern float32_t /* DMAMEM */ FIR_int1_coeffs[48];
-extern float32_t /* DMAMEM */ FIR_int2_coeffs[32];
+extern float32_t /* DMAMEM */ FIR_dec1_coeffs[];
+extern float32_t /* DMAMEM */ FIR_dec2_coeffs[];
+extern float32_t /* DMAMEM */ FIR_dec3_coeffs[];
+extern float32_t /* DMAMEM */ FIR_int1_coeffs[];
+extern float32_t /* DMAMEM */ FIR_int2_coeffs[];
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

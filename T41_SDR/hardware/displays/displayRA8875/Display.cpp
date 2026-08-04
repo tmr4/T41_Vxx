@@ -309,6 +309,12 @@ FLASHMEM void InitDisplay() {
   }
 }
 
+void DrawSpectrumLine(int y) {
+  tft.writeTo(L2);
+  tft.drawFastHLine(SPECTRUM_LEFT_X, SPECTRUM_TOP_Y + y, SPECTRUM_RES, RA8875_GREEN);
+  tft.writeTo(L1);
+}
+
 int GetDisplayWidth() {
   return XPIXELS;
 }

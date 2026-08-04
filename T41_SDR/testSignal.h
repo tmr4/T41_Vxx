@@ -31,25 +31,33 @@
 #include <arm_math.h>    // github.com/PaulStoffregen/cores/blob/master/teensy4/arm_math.h
 #include <Audio.h>
 
+#include "Display.h"
+
 /*
   AudioSignal
     Creates sine wave of set frequency, phase and amplitude
 
-  *** the audio library works with 16-bit integers which limits signal resolution ***
+  *** The audio library works with 16-bit integers which limits signal resolution.    ***
+  *** The T41 works within a signal strength range that is a fraction of what the     ***
+  *** audio library can produce. Harmonics increase at these low levels though these  ***
+  *** are normally below the 10dB noise floor at about -120dBm. The signal spreads at ***
+  *** the noise floor as the amplitude increases. The S9 signal is best for testing.  ***
 
-  Amplitude   Signal Strength     Position**
-      n            dBm               dB
-  0.1077217        -30
+  Signals useful for T41 testing:
+
+  Amplitude   Signal Strength     Position*  Spread**
+      n            dBm               dB         Hz
   0.0270585        -43 (S9+30db)
-  0.0085565        -53 (S9+20db)     60***
-  0.0008890        -73 (S9)          50
-  0.0004456        -79 (S8)
-  0.000062943      -97 (S5)          25
-  1/65536*         -105              15
+  0.0085565        -53 (S9+20db)     70***      48
+  0.00095258       -73 (S9)          50          8
+  0.0004666        -79 (S8)          45          5
+  0.000062943      -97 (S5)          25          1
+  1/65536****      -105 (S3-S4)      15          1
 
-  *   minimum signal level
-  **  above bottom of 10dB noise floor (~-120dBm)
-  *** top of 10dB spectrum
+  *    above bottom of 10dB noise floor (-120dBm)
+  **   at noise floor
+  ***  top of 10dB spectrum
+  **** minimum signal level
 
   *** AudioNoInterrupts() should be used with multiple signals to guarantee all new settings take effect at the same time ***
 */
@@ -108,7 +116,7 @@ public:
     // default to 1kHz LSB S9 signal
     phase();
     frequency(49000.0);
-    amplitude(0.000889);
+    amplitude(0.00095258);
   }
 
 	void frequency(float freq) {
@@ -136,11 +144,30 @@ public:
   AudioSignal& GetI() { return I;}
   AudioSignal& GetQ() { return Q;}
 
-protected:
-	//uint32_t phase_accumulator;
-	//uint32_t phase_increment;
-	//int32_t magnitude;
-
 private:
   AudioSignal I, Q;
+};
+
+// sweep frequency start/end in Hz
+// sweep duration in seconds
+class AudioQuadratureSweep : public AudioQuadratureSignals {
+public:
+  AudioQuadratureSweep(float s, float e, float duration) : start(s), end(e) {
+    increment = (end - start) / duration / 1000.0;
+    freq = start;
+    frequency(freq);
+  }
+
+  void IncSignalFreq() {
+    freq += increment;
+    if(freq > end) freq = start;
+    frequency(freq);
+  }
+
+  void DrawSweepLine(int y) {
+    DrawSpectrumLine(y);
+  }
+
+protected:
+  float start, end, freq, increment;
 };
