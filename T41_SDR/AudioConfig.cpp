@@ -154,7 +154,7 @@ Connections are most efficient when made from an earlier object (in the order th
 back to an earlier object can be made, but they add a 1-block delay and consume more memory to implement that delay.
 */
 
-#define INJECT_RX_TEST_SIGNAL true
+//#define INJECT_RX_TEST_SIGNAL true
 #include "testSignal.h"
 AudioQuadratureSignals testQuadSignals;
 
@@ -497,11 +497,11 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     **********************************************************************************/
 #if INJECT_RX_TEST_SIGNAL
     AudioNoInterrupts();
-    testQuadSignals.amplitude(0.1077217); // -30dBm
+    //testQuadSignals.amplitude(0.1077217); // -30dBm
     //testQuadSignals.amplitude(0.027058); // S9+30dB
     //testQuadSignals.amplitude(0.0085565); // S9+20dB
     //testQuadSignals.amplitude(0.005); // S9+15db signal, clean
-    //testQuadSignals.amplitude(0.000889); // S9 signal
+    testQuadSignals.amplitude(0.000889); // S9 signal
     //testQuadSignals.amplitude(0.0004456); // S8
     //testQuadSignals.amplitude(0.000062943); // S5
     //testQuadSignals.amplitude(1.0/65536.0);

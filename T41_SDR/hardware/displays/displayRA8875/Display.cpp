@@ -139,47 +139,24 @@ int16_t spectrum_x = 10;
 
 uint16_t waterfall[WATERFALL_W];
 
-const uint16_t gradient[150] = {
-  // low-spectrum (52 steps)
-  // 31 elements of Black (RA8875_BLACK)
-  // (maintains a large, steady noise baseline)
-  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-  0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-  0x0000,
-  // 6 elements of Dark Blue
-  0x000A, 0x000A, 0x000A, 0x000A, 0x000A, 0x000A,
-  // 9 elements of Medium Blue
-  0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0015, 0x0015, 0x0015, 0x0015,
-  // 6 elements of Blue (RA8875_BLUE)
-  0x001F, 0x001F, 0x001F, 0x001F, 0x001F, 0x001F,
-
-  // mid-spectrum (48 steps)
-  // 6 elements of Dark Cyan
-  0x025F, 0x025F, 0x025F, 0x025F, 0x025F, 0x025F,
-  // 8 elements of Medium Cyan
-  0x04DF, 0x04DF, 0x04DF, 0x04DF, 0x04DF, 0x04DF, 0x04DF, 0x04DF,
-  // 4 elements of Cyan (RA8875_CYAN)
-  0x07FF, 0x07FF, 0x07FF, 0x07FF, //0x07FF, 0x07FF,
-  // 15 elements of Cyan Green
-  0x07EA, 0x07EA, 0x07EA, 0x07EA, 0x07EA, 0x07EA, 0x07EA, 0x07EA, 0x07EA, 0x07EA,
-  0x07EA, 0x07EA, 0x07EA, 0x07EA, 0x07EA,
-  // 15 elements of Green (RA8875_GREEN)
-  0x07E0, 0x07E0, 0x07E0, 0x07E0, 0x07E0, 0x07E0, 0x07E0, 0x07E0, 0x07E0, 0x07E0,
-  0x07E0, 0x07E0, 0x07E0, 0x07E0, 0x07E0,
-
-  // high-spectrum (40 steps)
-  // 10 elements of Yellow (RA8875_YELLOW)
-  0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0,
-  // 20 elements of Dark Orange
-  0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00,
-  0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00, 0xFA00,
-  // 10 elements of Light Orange
-  0xF180, 0xF180, 0xF180, 0xF180, 0xF180, 0xF180, 0xF180, 0xF180, 0xF180, 0xF180,
-
-  // top-spectrum (10 steps)
-  // 10 elements of Red (RA8875_RED)
-  0xF800, 0xF800, 0xF800, 0xF800, 0xF800, 0xF800, 0xF800, 0xF800, 0xF800, 0xF800,
+uint16_t wfGradient[SPECTRUM_HEIGHT];
+struct GradientStep {
+  uint16_t color;
+  uint8_t steps;
+};
+const GradientStep gradientSteps[] = {
+  {RA8875_BLACK, 30},
+  {0x000A, 10}, // Dark Blue
+  {RA8875_BLUE, 10},
+  {0x025F, 7}, // Dark Cyan
+  {0x04DF, 7}, // Medium Cyan
+  {RA8875_CYAN, 6},
+  {0x07EA, 15}, // Cyan Green
+  {RA8875_GREEN, 15},
+  {RA8875_YELLOW, 10},
+  {0xFA00, 20}, // Orange
+  {0xF180, 10}, // Red Orange
+  {RA8875_RED, 10},
 };
 
 // FT8 waterfall gradient
@@ -276,6 +253,20 @@ void catSpy(const char* cmd, int type) {
 }
 #endif
 
+FLASHMEM uint16_t GetGradientColor(uint8_t step) {
+  uint16_t color = RA8875_RED;
+  uint8_t steps = 0;
+
+  for(int i = 0; i < 12; i++) {
+    steps += gradientSteps[i].steps;
+    if(step < steps) {
+      color = gradientSteps[i].color;
+      break;
+    }
+  }
+  return color;
+}
+
 FLASHMEM void InitDisplay() {
   // set up display
   pinMode(TFT_MOSI, OUTPUT);
@@ -311,6 +302,11 @@ FLASHMEM void InitDisplay() {
 #if CAT_SPY
   SetWaterfallHeight(3 * WATERFALL_H / 4);
 #endif
+
+  // prepare waterfall gradient
+  for(uint8_t i = 0; i < SPECTRUM_HEIGHT; i++) {
+    wfGradient[i] = GetGradientColor(i);
+  }
 }
 
 int GetDisplayWidth() {
@@ -518,14 +514,14 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   }
 
   // Draw the frequency spectrums, gather data for waterfall
-  yPlot = SPECTRUM_NOISE_FLOOR - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[0])) - currentNF;
-  for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
+  yPlot = SPECTRUM_BOTTOM - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[0])) - currentNF;
+  for(int i = 0; i < SPECTRUM_RES - 1; i++) {
     bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
 
     // *** TODO: evaluate noise floor default setting for new v12 hardware ***
     // *** TODO: some calibration routines need an adjustment because there is no noise floor adjustment ***
 
-    y1Plot = SPECTRUM_NOISE_FLOOR - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1])) - currentNF;
+    y1Plot = SPECTRUM_BOTTOM - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[i + 1])) - currentNF;
 
     // create rough spectrum histogram if auto noise floor is active
     // the frequency spectrum is 150 pixels high, let's create
@@ -534,7 +530,7 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     // but right shift of a negative number is implimentation specific
     // and I want to keep the negative numbers here
     if(t41.LiveNoiseFloor == 1) {
-      int specPlotY = SPECTRUM_NOISE_FLOOR - yPlot; // actual spectrum value at current noise floor
+      int specPlotY = SPECTRUM_BOTTOM - yPlot; // actual spectrum value at current noise floor
       int bin = specPlotY / 5;                    // divide by 5 to get histogram bin
 
       // hLo and hHi capture spectrum at or outside the spectrum display extremes
@@ -548,16 +544,15 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
     }
 
     // clear erase flag if we don't need to erase anything
-    if((yOldPlot[x1] == SPECTRUM_BOTTOM) && (yOldPlot[x1 + 1] == SPECTRUM_BOTTOM)) {
+    if((yOldPlot[i] == SPECTRUM_BOTTOM) && (yOldPlot[i + 1] == SPECTRUM_BOTTOM)) {
       eraseSpec = false;
-    }
-    if((yOldPlot[x1] == SPECTRUM_TOP_Y) && (yOldPlot[x1 + 1] == SPECTRUM_TOP_Y)) {
+    } else if((yOldPlot[i] == SPECTRUM_TOP_Y) && (yOldPlot[i + 1] == SPECTRUM_TOP_Y)) {
       eraseSpec = false;
     }
 
     // erase the old spectrum if needed
     if(eraseSpec && (t41.DisplayState == DISPLAY_T41)) {
-      tft.drawLine(SPECTRUM_LEFT_X + x1, yOldPlot[x1 + 1], SPECTRUM_LEFT_X + x1, yOldPlot[x1], RA8875_BLACK);
+      tft.drawLine(SPECTRUM_LEFT_X + i, yOldPlot[i + 1], SPECTRUM_LEFT_X + i, yOldPlot[i], RA8875_BLACK);
     }
 
     // prevent drawing spectrum outside of the spectrum area
@@ -581,23 +576,22 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
 
     // draw the new spectrum if needed
     if(drawSpec && (t41.DisplayState == DISPLAY_T41)) {
-      tft.drawLine(SPECTRUM_LEFT_X + x1, y1Plot, SPECTRUM_LEFT_X + x1, yPlot, RA8875_YELLOW);
+      tft.drawLine(SPECTRUM_LEFT_X + i, y1Plot, SPECTRUM_LEFT_X + i, yPlot, RA8875_YELLOW);
     }
 
     // save plot value to erase spectrum next loop
-    yOldPlot[x1] = yPlot;
+    yOldPlot[i] = yPlot;
 
     #ifdef T41_REMOTE_DISPLAY
     if(connected) {
-      freqData[x1] = yPlot;
+      freqData[i] = yPlot;
     }
     #endif
 
     // create data for waterfall
-    wfGradIndex = SPECTRUM_NOISE_FLOOR - yPlot;
-    if(wfGradIndex < 0) wfGradIndex = 0;
-    if(wfGradIndex >= 150) wfGradIndex = 149;
-    waterfall[x1] = gradient[wfGradIndex];
+    wfGradIndex = SPECTRUM_BOTTOM - yPlot;
+    //wfGradIndex = map(i,0,SPECTRUM_RES - 1,0,SPECTRUM_HEIGHT-1); // uncomment for waterfall gradient testing
+    waterfall[i] = wfGradient[wfGradIndex];
 
     YieldToProcess();
     yPlot = y1Plot;

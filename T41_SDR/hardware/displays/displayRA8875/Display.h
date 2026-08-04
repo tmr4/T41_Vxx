@@ -44,11 +44,11 @@
 #define SPEC_BOX_W            SPECTRUM_RES + 2
 #define SPEC_BOX_H            SPECTRUM_HEIGHT + 2
 
-#define SPECTRUM_LEFT_X       SPEC_BOX_L + 1            // Used to plot left edge of spectrum display
-#define SPECTRUM_TOP_Y        SPEC_BOX_T + 1            // Start of spectrum plot space
+// bounds of frequency spectrum plot within spectrum box
+#define SPECTRUM_LEFT_X       SPEC_BOX_L + 1
+#define SPECTRUM_TOP_Y        SPEC_BOX_T + 1
 #define SPECTRUM_BOTTOM       SPECTRUM_TOP_Y + SPECTRUM_HEIGHT - 1
 
-#define SPECTRUM_NOISE_FLOOR  (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT) // for use with new frequency spectrum routines
 #define SPEC_BOX_LABELS       (SPECTRUM_TOP_Y + SPECTRUM_HEIGHT + 5)
 
 #define FILTER_PARAMETERS_X   5 //(XPIXELS * 0.22)
@@ -103,16 +103,16 @@
 
 // commented out colors are predefined
 #define  BLACK                    0x0000      /*   0,   0,   0 */
+#define  BLUE                     0x001F      /*   0,   0, 255 */
 //#define  RA8875_BLUE              0x000F      /*   0,   0, 128 */
 #define  DARK_GREEN               0x03E0      /*   0, 128,   0 */
-#define  DARKCYAN                 0x03EF      /*   0, 128, 128 */
+#define  DARKCYAN                 0x03EF      /*   0, 128, 128 */ // more gray than cyan 0x25f better
 #define  MAROON                   0x7800      /* 128,   0,   0 */
 #define  PURPLE                   0x780F      /* 128,   0, 128 */
 #define  OLIVE                    0x7BE0      /* 128, 128,   0 */
 //#define  RA8875_LIGHT_GREY        0xC618      /* 192, 192, 192 */
 #define  DARK_RED                 tft.Color565(64,0,0)
 #define  DARKGREY                 0x7BEF      /* 128, 128, 128 */
-#define  BLUE                     0x001F      /*   0,   0, 255 */
 //#define  RA8875_GREEN             0x07E0      /*   0, 255,   0 */
 #define  CYAN                     0x07FF      /*   0, 255, 255 */
 #define  RED                      0xF800      /* 255,   0,   0 */
