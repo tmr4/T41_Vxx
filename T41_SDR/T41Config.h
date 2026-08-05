@@ -18,7 +18,15 @@
 
 //#define DEBUG_SW // debug switch matrix false presses
 
-#define INJECT_RX_TEST_SIGNAL false
+// test signals
+// injects 1kHz LSB test quadrature signals to RX input
+// active in all receive states
+#define INJECT_RX_TEST_SIGNALS true
+#define RX_TEST_SIGNAL_STRENGTH 9 // S-meter strength (see testSignal.h)
+
+// injects 1kHz test signal at microphone input
+// active with PTT and in transmit states (call PrepareMicExciterData to process)
+#define INJECT_MIC_TEST_SIGNAL true
 
 //-------------------------------------------------------------------------------------------------------------
 // Data

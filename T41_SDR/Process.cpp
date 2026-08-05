@@ -1128,7 +1128,7 @@ FLASHMEM void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /*
   if(t41.SpectrumZoom != lastZoom) {
     lastZoom = t41.SpectrumZoom;
     CLEAR_VAR(prevFreqSpecBuf);
-  } else if(!INJECT_RX_TEST_SIGNAL) {
+  } else if(!INJECT_RX_TEST_SIGNALS) {
     //if(t41.CalState == NOT_CAL_STATE)
     {
       // apply low pass filter to smooth spectrum (helps most w/ noise floor)

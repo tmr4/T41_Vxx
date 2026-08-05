@@ -70,3 +70,19 @@ void AudioSignal::update(void) {
 
 	phase_accumulator += phase_increment * AUDIO_BLOCK_SAMPLES;
 }
+
+// s <=9 gives Ss down to minimum possible (between S3-4)
+// s >= 10 gives S9+s(dB)
+// *** setting above S9+30 gives minimum signal to protect equipment ***
+void AudioSignal::setSignalStrength(uint8_t s) {
+  float amp = 1.0 / 65536.0; // min signal strength
+
+  if(s <= 30) {
+    if(s >= 10) {
+      amp = 0.00095258 * pow(10.0, s / 20.0);
+    } else {
+      amp = 0.00095258 * pow(10.0, ((float)s - 9.0) * 6.0 / 20.0);
+    }
+  }
+  amplitude(amp);
+}

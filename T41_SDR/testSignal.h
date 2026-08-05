@@ -1,3 +1,5 @@
+#pragma once
+
 /* Audio Library for Teensy 3.X
  * Copyright (c) 2014, Paul Stoffregen, paul@pjrc.com
  *
@@ -45,14 +47,14 @@
 
   Signals useful for T41 testing:
 
-  Amplitude   Signal Strength     Position*  Spread**
-      n            dBm               dB         Hz
-  0.0270585        -43 (S9+30db)
-  0.0085565        -53 (S9+20db)     70***      48
-  0.00095258       -73 (S9)          50          8
-  0.0004666        -79 (S8)          45          5
-  0.000062943      -97 (S5)          25          1
-  1/65536****      -105 (S3-S4)      15          1
+  Amplitude   Signal Strength     Position*  Spread**   setSignalStrength
+      n            dBm               dB         Hz          parameter
+  0.0270585        -43 (S9+30db)                                30
+  0.0085565        -53 (S9+20db)     70***      48              20
+  0.00095258       -73 (S9)          50          8               9
+  0.0004666        -79 (S8)          45          5               8
+  0.000062943      -97 (S5)          25          1               5
+  1/65536****      -105 (S3-S4)      15          1               0
 
   *    above bottom of 10dB noise floor (-120dBm)
   **   at noise floor
@@ -63,7 +65,12 @@
 */
 class AudioSignal : public AudioStream {
 public:
-	AudioSignal() : AudioStream(0, NULL), magnitude(16384) {}
+	AudioSignal() : AudioStream(0, NULL) {
+    // set default 1kHz signal
+    frequency(1000);
+    phase(0);
+    amplitude(0.5);
+  }
 
   // set the signal frequency (0 to 96000)
 	void frequency(float freq) {
@@ -101,6 +108,8 @@ public:
     }
 		magnitude = n * 65536.0f;
 	}
+
+  void setSignalStrength(uint8_t s);
 
 	virtual void update(void);
 
@@ -140,6 +149,13 @@ public:
     Q.amplitude(n);
     AudioInterrupts();
 	}
+
+  void setSignalStrength(uint8_t s) {
+    AudioNoInterrupts();
+    I.setSignalStrength(s);
+    Q.setSignalStrength(s);
+    AudioInterrupts();
+  }
 
   AudioSignal& GetI() { return I;}
   AudioSignal& GetQ() { return Q;}

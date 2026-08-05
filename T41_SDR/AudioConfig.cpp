@@ -154,12 +154,17 @@ Connections are most efficient when made from an earlier object (in the order th
 back to an earlier object can be made, but they add a 1-block delay and consume more memory to implement that delay.
 */
 
-#if INJECT_RX_TEST_SIGNAL
+#if INJECT_RX_TEST_SIGNALS
 #include "testSignal.h"
 AudioQuadratureSignals testQuadSignals;
 //AudioQuadratureSweep testQuadSignals(1, 96000, 30);
 //IntervalTimer sweepTimer;
 //void SweepTimerISR() { testQuadSignals.IncSignalFreq(); }
+#endif
+
+#if INJECT_MIC_TEST_SIGNAL
+#include "testSignal.h"
+AudioSignal testSignal;
 #endif
 
 // Audio inputs
@@ -249,7 +254,6 @@ AudioConnection_F32 patchCord4(int2Float2, 0, comp2, 0);
 AudioConnection_F32 patchCord5(comp1, 0, float2Int1, 0);
 AudioConnection_F32 patchCord6(comp2, 0, float2Int2, 0);
 AudioConnection patchCord7(float2Int1, 0, Q_in_L_Ex, 0);
-AudioConnection patchCord8(float2Int2, 0, Q_in_R_Ex, 0);
 #endif
 
 // *** TODO: consider adding a volume control ***
@@ -485,9 +489,13 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     audioControl_2.volume(0.5);
 
     // establish audio connections
+#if INJECT_MIC_TEST_SIGNAL
+    testSignal.amplitude(1.0); // gives 1kHz, 70mV quadrature signal at audio adapter #1 line out on PS
+    pc_Q_in_L_Ex.connect(testSignal, 0, Q_in_L_Ex, 0);
+#else
     // input from microphone on I2S channel 1 (pin 8)
     pc_Q_in_L_Ex.connect(i2s_quadIn, 0, Q_in_L_Ex, 0);
-    //pc_Q_in_R_Ex.connect(i2s_quadIn, 1, Q_in_R_Ex, 0);
+#endif
 
     // output to exciter I/Q on I2S channel 1, 2 (pin 7)
     pc_Q_out_L_Ex.connect(Q_out_L_Ex, 0, i2s_quadOut, 0);
@@ -499,17 +507,9 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
       see: https://www.reddit.com/r/T41_EP/comments/1v1wgla/a_long_old_mystery_solved_at_least_partially/
       *** TODO: investigate this more for other hardware versions ***
     **********************************************************************************/
-#if INJECT_RX_TEST_SIGNAL
-    AudioNoInterrupts();
-    //testQuadSignals.amplitude(0.1077217); // -30dBm
-    //testQuadSignals.amplitude(0.027058); // S9+30dB
-    testQuadSignals.amplitude(0.0085565); // S9+20dB
-    //testQuadSignals.amplitude(0.005); // S9+15db signal, clean
-    //testQuadSignals.amplitude(0.00095258); // S9 signal
-    //testQuadSignals.amplitude(0.0004666); // S8
-    //testQuadSignals.amplitude(0.000062943); // S5
-    //testQuadSignals.amplitude(1.0/65536.0);
-    //sweepTimer.begin(SweepTimerISR, 1000000);
+#if INJECT_RX_TEST_SIGNALS
+    testQuadSignals.setSignalStrength(RX_TEST_SIGNAL_STRENGTH);
+
     //testQuadSignals.DrawSweepLine(41);
     //sweepTimer.begin(SweepTimerISR, 1000); // increment signals every 1ms
 
@@ -590,11 +590,8 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
 inline void Q_in_Ex_Stop() {
   Q_in_L_Ex.end();
-  //Q_in_R_Ex.end();
   pc_Q_in_L_Ex.disconnect();
-  //pc_Q_in_R_Ex.disconnect();
   Q_in_L_Ex.clear();
-  //Q_in_R_Ex.clear();
 }
 
 inline void Q_in_Stop() {
@@ -617,9 +614,7 @@ inline void Q_out_Stop() {
 
 inline void Q_in_Ex_Start() {
   pc_Q_in_L_Ex.connect();
-  //pc_Q_in_R_Ex.connect();
   Q_in_L_Ex.begin();
-  //Q_in_R_Ex.begin();
 }
 
 inline void Q_in_Start() {
