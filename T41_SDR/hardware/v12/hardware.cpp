@@ -273,7 +273,7 @@ float CalcSignalStrength() {
   //const float32_t cons = -92.0;
 
   // prevent NAN dBm
-  if(audioMaxSquaredAve > 0.0) {
+  if(audioPowerAve > 0.0) {
     // dbm_calibration set to -22 above; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
     // attenuator is 0 and could be set in a future HW revision; rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10
 
@@ -283,10 +283,10 @@ float CalcSignalStrength() {
     //  dbm_calibration = 24 good for S1
     // dbm_calibration set to 31; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
     // rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10; t41.RFGain is initialized to 0
-    //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + slope * log10f_fast(audioMaxSquaredAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
-    //dbm = 24.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
-    //dbm = 32.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
-    dbm = 38.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioMaxSquaredAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + slope * log10f_fast(audioPowerAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    //dbm = 24.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioPowerAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    //dbm = 32.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioPowerAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    dbm = 38.0 + bands[t41.ActiveBand].gainCorrection + 10.0 * log10f_fast(audioPowerAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
 
     //if(std::isnan(dbm)) {
     //  dbm = -133.0;
@@ -296,9 +296,9 @@ float CalcSignalStrength() {
     // adjust dBm for input RF attenuator and PSA-8+ amplifier
     dbm = dbm + ((float32_t)currentRF_InAtten) / 2.0 - 31.0;
   } else {
-    // reset audioMaxSquaredAve to a small value
-    // with default parameters and audioMaxSquaredAve = 1.778e-6, dBm = -131
-    audioMaxSquaredAve = 0.0;
+    // reset audioPowerAve to a small value
+    // with default parameters and audioPowerAve = 1.778e-6, dBm = -131
+    audioPowerAve = 0.0;
     //Serial.println("dBm is NAN");
   }
 

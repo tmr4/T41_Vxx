@@ -21,7 +21,7 @@ extern float32_t biquad_lowpass1_coeffs[];
 extern uint8_t ANR_notchOn;
 
 extern float32_t audioSpectBuffer[]; // This can't be DMAMEM.  It will break the S-Meter.
-extern float32_t audioMaxSquaredAve;
+extern float32_t audioPowerAve;
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

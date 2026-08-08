@@ -39,8 +39,9 @@ extern ConnectManager connectManager;
 extern CatControl catControl;
 extern CatControl wsjtControl;
 
-// *** TODO: this is display dependent, but also fundamental to much of how the DSP process works ***
+// *** TODO: these are display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
+#define AUDIO_SPEC_RES        256 // 270 pixels are available
 
 bool FFTupdated;
 
@@ -48,7 +49,7 @@ arm_biquad_casd_df1_inst_f32 biquad_lowpass1;
 float32_t biquad_lowpass1_state[4];
 float32_t biquad_lowpass1_coeffs[5] = { 0, 0, 0, 0, 0 };
 
-float32_t audioMaxSquaredAve = 0.01; // this will blow up dBm if 0
+float32_t audioPowerAve = 0.01; // this will blow up dBm if 0
 
 // v49.2k note: This can't be DMAMEM.  It will break the S-Meter.
 // this was probably because it needed to be aligned, but below works fine for me
@@ -56,7 +57,21 @@ float32_t audioMaxSquaredAve = 0.01; // this will blow up dBm if 0
 // *** TODO: test need for alignment and incorporate if needed ***
 // *** TODO: this is inefficient as it's only used to pass data to the audio spectrum
 //           draw routine and only a small portion is used.  Rework to eliminate waste.
-float32_t DMAMEM audioSpectBuffer[1024];
+//           AUDIO_SPEC_RES (currently 270) is sufficient
+/*
+Memory Usage on Teensy 4.1:
+  FLASH: code:276148, data:95176, headers:8572   free for files:7746568
+   RAM1: variables:128288, code:223560, padding:5816   free for local variables:166624
+   RAM2: variables:316416  free for malloc/new:207872
+ EXTRAM: variables:1200384
+
+  FLASH: code:276100, data:95176, headers:8620   free for files:7746568
+   RAM1: variables:128288, code:223512, padding:5864   free for local variables:166624
+   RAM2: variables:313344  free for malloc/new:210944
+ EXTRAM: variables:1200384
+
+*/
+float32_t DMAMEM audioSpectBuffer[AUDIO_SPEC_RES];
 
 uint8_t NB_on = 0; // noise blanker: 0 - off, 1 - on
 
@@ -121,9 +136,10 @@ FLASHMEM void InitAMDemodBiquadFilter(int sampleRate) {
   biquad_lowpass1.pState = biquad_lowpass1_state;  // set pointer to the state variables
 }
 
+// audio dsp for NFM
 void CalcAudioMax() {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
-  float32_t audioMaxSquared;
+  float32_t audioPowerMax;
   uint32_t audioMaxIndex;
   // *** TODO: 10k here, would be better to just allocated it when in NFM mode! ***
   static float32_t audioNFM[1024], audioNFMi[1024], prevNFMAudioBuffer_L[256], prevNFMAudioBuffer_R[256];
@@ -153,20 +169,21 @@ void CalcAudioMax() {
   // filter mask calculated in setup of filter mask coefficients: audioFIRFilterMask[]
   arm_cmplx_mult_cmplx_f32(audioNFM, audioFIRFilterMask, audioNFMi, 512);
 
+  // *** TODO: this needs cleaned up consistent with AudioDSP below ***
   for(int k = 0; k < 1024; k++) {
     audioNFMBuffer[1023 - k] = (audioNFMi[k] * audioNFMi[k]);
   }
 
-  arm_max_f32(audioNFMBuffer, 1024, &audioMaxSquared, &audioMaxIndex);  // Max value of squared bin magnitued in audio
-  audioMaxSquaredAve = .5 * audioMaxSquared + .5 * audioMaxSquaredAve;  // running averaged values
+  arm_max_f32(audioNFMBuffer, 1024, &audioPowerMax, &audioMaxIndex);  // Max value of squared bin magnitued in audio
+  audioPowerAve = .5 * audioPowerMax + .5 * audioPowerAve;  // running averaged values
 }
 
+// apply filter mask to audio spectrum
+// prepare audio spectrum when updateSpectrumData is true
 // imComp: FFT has an imaginary component (default: true)
-// reset:  reset FFT
 void AudioDSP(bool updateSpectrumData, bool imComp = true) {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
-  float32_t audioMaxSquared;
-  uint32_t audioMaxIndex;
+  float32_t audioPowerMax;
 
   // Prepare the audio signal buffers
   // fill buffer with last events audio samples
@@ -188,21 +205,39 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
   // transform audio signal to the frequency domain
   arm_cfft_f32(S, audioFFT, 0, 1);
 
+  // *** TODO: investigate taking the signal strength measurement here vs after the audio filter is applied ***
+
   // apply high and low audio cutoffs with FFT filter mask
   // filter mask calculated in setup of filter mask coefficients: audioFIRFilterMask[]
   arm_cmplx_mult_cmplx_f32(audioFFT, audioFIRFilterMask, audioIFFT, 512);
 
   // process audio frequency spectrum if requested
-  if(updateSpectrumData) {
-    for(int k = 0; k < 1024; k++) {
-      audioSpectBuffer[1023 - k] = (audioIFFT[k] * audioIFFT[k]);
+  // DEMOD_NFM spectrum calculated separately in CalcAudioMax above
+  if(updateSpectrumData && t41.DemodMode != DEMOD_NFM) {
+    float audioPower;
+    audioPowerMax = 0.0;
+
+    // *** TODO: the calcs here don't consider reactive power! ***
+    // *** TODO: we don't need to process the entire array as audio spectrum is truncated by audio filters
+    //      see note for declaration of audioSpectBuffer, but that requires the selection of sideband here
+    //      rather than in DrawAudioSpectrum. Better just to calculate power here and use that in DrawAudioSpectrum.
+    //      Could save 3k or more. ***
+    // we're at 24kHz here (-12kHz to +12kHz)
+    // FFT is 1024 or 512 - and 512 + frequencies with real/imaginary values interleaved
+    // +freq are in lower half of FFT, -freq are in upper half of FFT (in reverse order)
+    //  power = real^2 + imag^2
+    for(int k = 0; k < AUDIO_SPEC_RES; k++) {
+      int i = t41.DemodMode == DEMOD_LSB ? 1022 - (k << 1) : k << 1;
+
+      // *** could avoid the imaginary mult by checking imComp, but this code is cleaner ***
+      audioPower = (audioIFFT[i] * audioIFFT[i]) + (audioIFFT[i + 1] * audioIFFT[i + 1]);
+      audioSpectBuffer[k] = audioPower;
+      if(audioPower > audioPowerMax) {
+        audioPowerMax = audioPower;
+      }
     }
 
-    if(t41.DemodMode != DEMOD_NFM)
-    {
-      arm_max_f32(audioSpectBuffer, 1024, &audioMaxSquared, &audioMaxIndex);  // Max value of squared bin magnitued in audio
-      audioMaxSquaredAve = .5 * audioMaxSquared + .5 * audioMaxSquaredAve;  // running averaged values
-    }
+    audioPowerAve = .5 * audioPowerMax + .5 * audioPowerAve;  // running averaged values
 
     // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
     // this was added May 5, 2025 when adding frequency calibration
@@ -602,7 +637,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       //arm_biquad_cascade_df1_f32(&biquad_lowpass1, audioBufferL, audioBufferR, 256);
       //deemphasis_nfm_ff(audioBufferR, audioBufferL, 256, sampleRate / 8.0);
 
-      // process audio for demodulated NFM and FT8 wave file
+      // process audio for demodulated NFM
       AudioDSP(freqSpecUpdatedThisLoop, false); // no imaginary component for these
 
       // apply automatic gain control

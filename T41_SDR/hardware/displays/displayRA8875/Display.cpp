@@ -682,11 +682,12 @@ FASTRUN void DrawAudioSpectrum() {
       }
 
       // *** TODO: impliment auto level for audio spectrum ***
-      if(t41.DemodMode == DEMOD_LSB) {
-        audioYPixel = AUDIO_SPEC_SHIFT + map(15 * log10f((audioSpectBuffer[i] + audioSpectBuffer[i + 1] + audioSpectBuffer[i + 2]) / 3), 0, 100, 0, AUDIO_SPEC_H);
-      } else {
-        audioYPixel = AUDIO_SPEC_SHIFT + map(15 * log10f((audioSpectBuffer[1021 - i] + audioSpectBuffer[1022 - i] + audioSpectBuffer[1023 - i]) / 3), 0, 100, 0, AUDIO_SPEC_H);
-      }
+      //if(t41.DemodMode == DEMOD_LSB) {
+      //  audioYPixel = AUDIO_SPEC_SHIFT + map(15 * log10f((audioSpectBuffer[i] + audioSpectBuffer[i + 1] + audioSpectBuffer[i + 2]) / 3), 0, 100, 0, AUDIO_SPEC_H);
+      //} else {
+      //  audioYPixel = AUDIO_SPEC_SHIFT + map(15 * log10f((audioSpectBuffer[1021 - i] + audioSpectBuffer[1022 - i] + audioSpectBuffer[1023 - i]) / 3), 0, 100, 0, AUDIO_SPEC_H);
+      //}
+      audioYPixel = AUDIO_SPEC_SHIFT + map(20.0 * log10f(audioSpectBuffer[i/2]), 0, 100, 0, AUDIO_SPEC_H);
 
       // draw current audio spectrum line at this position
       if(audioYPixel > 0) {
@@ -1130,7 +1131,7 @@ FASTRUN void DrawSmeterBar() {
     Serial.print("dbm: "); Serial.println(dbm);
     Serial.print("dbm_calibration: "); Serial.println(dbm_calibration);
     Serial.print("gainCorrection: "); Serial.println(bands[t41.ActiveBand].gainCorrection);
-    Serial.print("audioMaxSquaredAve: "); Serial.println(audioMaxSquaredAve);
+    Serial.print("audioPowerAve: "); Serial.println(audioPowerAve);
     Serial.print("rfGain: "); Serial.println(bands[t41.ActiveBand].rfGain);
     Serial.print("t41.RFGain: "); Serial.println(t41.RFGain);
     Serial.print("currentRF_InAtten: "); Serial.println(currentRF_InAtten);
