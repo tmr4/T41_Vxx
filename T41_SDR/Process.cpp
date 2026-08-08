@@ -41,7 +41,7 @@ extern CatControl wsjtControl;
 
 // *** TODO: these are display dependent, but also fundamental to much of how the DSP process works ***
 #define SPECTRUM_RES          512
-#define AUDIO_SPEC_RES        256 // 270 pixels are available
+#define AUDIO_SPEC_RES_FFT    256 // 270 pixels are available w/ RA8875 display
 
 bool FFTupdated;
 
@@ -55,10 +55,9 @@ float32_t audioPowerAve = 0.01; // this will blow up dBm if 0
 // this was probably because it needed to be aligned, but below works fine for me
 // (4k more to heap) perhaps because it's aligned by default in my version
 // *** TODO: test need for alignment and incorporate if needed ***
-// *** TODO: this is inefficient as it's only used to pass data to the audio spectrum
-//           draw routine and only a small portion is used.  Rework to eliminate waste.
-//           AUDIO_SPEC_RES (currently 270) is sufficient
 /*
+3k memory savings with audioSpectBuffer at 256 vs 1024 and updated audio spectrum routine:
+
 Memory Usage on Teensy 4.1:
   FLASH: code:276148, data:95176, headers:8572   free for files:7746568
    RAM1: variables:128288, code:223560, padding:5816   free for local variables:166624
@@ -69,9 +68,8 @@ Memory Usage on Teensy 4.1:
    RAM1: variables:128288, code:223512, padding:5864   free for local variables:166624
    RAM2: variables:313344  free for malloc/new:210944
  EXTRAM: variables:1200384
-
 */
-float32_t DMAMEM audioSpectBuffer[AUDIO_SPEC_RES];
+float32_t DMAMEM audioSpectBuffer[AUDIO_SPEC_RES_FFT];
 
 uint8_t NB_on = 0; // noise blanker: 0 - off, 1 - on
 
@@ -217,16 +215,11 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
     float audioPower;
     audioPowerMax = 0.0;
 
-    // *** TODO: the calcs here don't consider reactive power! ***
-    // *** TODO: we don't need to process the entire array as audio spectrum is truncated by audio filters
-    //      see note for declaration of audioSpectBuffer, but that requires the selection of sideband here
-    //      rather than in DrawAudioSpectrum. Better just to calculate power here and use that in DrawAudioSpectrum.
-    //      Could save 3k or more. ***
     // we're at 24kHz here (-12kHz to +12kHz)
     // FFT is 1024 or 512 - and 512 + frequencies with real/imaginary values interleaved
     // +freq are in lower half of FFT, -freq are in upper half of FFT (in reverse order)
     //  power = real^2 + imag^2
-    for(int k = 0; k < AUDIO_SPEC_RES; k++) {
+    for(int k = 0; k < AUDIO_SPEC_RES_FFT; k++) {
       int i = t41.DemodMode == DEMOD_LSB ? 1022 - (k << 1) : k << 1;
 
       // *** could avoid the imaginary mult by checking imComp, but this code is cleaner ***
@@ -237,7 +230,7 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
       }
     }
 
-    audioPowerAve = .5 * audioPowerMax + .5 * audioPowerAve;  // running averaged values
+    audioPowerAve = .5 * audioPowerMax + .5 * audioPowerAve;  // running average value
 
     // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
     // this was added May 5, 2025 when adding frequency calibration

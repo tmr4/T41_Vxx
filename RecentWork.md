@@ -2,6 +2,26 @@
 
 ## Ongoing Work
 
+### Updated Audio Spectrum Calculation Routine
+
+I always thought the spread of the base of the audio spectrum, even with a clean, single tone test signal was the result of the limitation of my test equipment and my noisy test environment. The noise floor with these tests was about the same as with my bench antenna, so I didn't question it.
+
+That changed when I added the internal test signal. Those had a noise floor significantly lower, below the frequency spectrum window, and yet I didn't see a difference in the audio spectrum. I looked at the code.
+
+My audio spectrum code pretty much dates back to STDVer049.2k, the version released for the 4SQRP kit. The code (1) applies the audio filter while calculating the FFT and (2) converts the FFT bin magnitude to an audio spectrum pixel value. The conversion wasn't a standard power formula though and it mixed the real and imaginary components interleaved in the complex FFT array. I'm guessing this was done to simplify the calculation and provide some averaging at the same time.
+
+Without documentation though, leaves some doubt about the intent. The calculation shortcut isn't really necessary give that the proper calculation is very fast compared to the slow display. Not only that, the proper calculation also produces a cleaner audio spectrum, even with my noisy test setup.
+
+Here is the cleaner audio spectrum with an internal S9 test signal:
+
+![Cleaner Audio Spectrum](https://github.com/tmr4/T41_Vxx/blob/main/images/T41_audio_spec.jpg)
+
+The old code gave this spectrum:
+
+![Audio Spectrum with old code](https://github.com/tmr4/T41_Vxx/blob/main/images/T41_old_audio_spec.jpg)
+
+Note that the difference in the frequency spectrum is just a result of a momentary noise floor artifact that doesn't affect the audio spectrum
+
 ### New Test Signal Class
 
 I've gotten about a far as I can push my signal generator for this filter testing. Generating signals in the 1-5mV range gives a strong signal on my T41 test bench, but the signals are noisy. Normally I don't mind as the noise level is about what I see with my workbench antenna. But this isn't idea for filter testing.

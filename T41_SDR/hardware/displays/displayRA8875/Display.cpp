@@ -663,9 +663,9 @@ FASTRUN void DrawWaterfall() {
 }
 
 /*****
-  Purpose: Update audio spectrum
-            This is is a long running process.  It yields periodically to allow normal
-            radio operations to continue.
+  Update audio spectrum
+    This is is a long running process.  It yields periodically to allow normal
+    radio operations to continue.
 *****/
 FASTRUN void DrawAudioSpectrum() {
   int audioYPixel;
@@ -682,11 +682,10 @@ FASTRUN void DrawAudioSpectrum() {
       }
 
       // *** TODO: impliment auto level for audio spectrum ***
-      //if(t41.DemodMode == DEMOD_LSB) {
-      //  audioYPixel = AUDIO_SPEC_SHIFT + map(15 * log10f((audioSpectBuffer[i] + audioSpectBuffer[i + 1] + audioSpectBuffer[i + 2]) / 3), 0, 100, 0, AUDIO_SPEC_H);
-      //} else {
-      //  audioYPixel = AUDIO_SPEC_SHIFT + map(15 * log10f((audioSpectBuffer[1021 - i] + audioSpectBuffer[1022 - i] + audioSpectBuffer[1023 - i]) / 3), 0, 100, 0, AUDIO_SPEC_H);
-      //}
+      // audioSpectBuffer has 46.875Hz bin size (12kHz / 256)
+      // display audio spectrum has 23.148Hz bin size (6250Hz / 270) *** TODO: at 192kHz, verify for FT8 ***
+      // index adjustment into audioSpectBuffer = 46.875/23.148 = ~2
+      // (at i=269 we're still well within the audioSpectBuffer bounds)
       audioYPixel = AUDIO_SPEC_SHIFT + map(20.0 * log10f(audioSpectBuffer[i/2]), 0, 100, 0, AUDIO_SPEC_H);
 
       // draw current audio spectrum line at this position
