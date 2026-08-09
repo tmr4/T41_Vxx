@@ -90,6 +90,7 @@ void RemoveDCBias() {
   arm_biquad_cascade_df2T_f32(&s1_Receive2, audioBufferR, audioBufferR, 2048);
 }
 
+// calculate signal strength from averaged audio raw power maximum, adjusting for various hardware/software gains
 float CalcSignalStrength() {
   float32_t dbm = -131.0;
   //float32_t dbm_calibration = 22.0;
@@ -99,22 +100,23 @@ float CalcSignalStrength() {
   //const int attenuator = 0;
 
   // prevent NAN dBm
-  if(audioPowerAve > 0.0) {
+  if(audioPowerAve > 0.0f) {
     // dbm_calibration set to 25; gainCorrection is a value between -2 and +6 to compensate the frequency dependant pre-Amp gain
     // attenuator is 0 and could be set in a future HW revision; rfGain is initialized to 1 in the bands[] init in SDT.ino; cons=-92; slope=10
     //  t41.RFGain is initialized to 0
     /*
+      *** this is less of a concern now with a proper power calc, but investigate more ***
       dbm varies with audio filter bandwidth. consider adding a filter correction factor, something like:
         // Based on S-meter with S9 input: -65dBm at 3kHz and -79dBm at 500Hz.
         float32_t filterOffset = 6.0f - (14.0f * (currentBW - 500.0f) / 2500.0f);
     */
     //dbm = dbm_calibration + bands[t41.ActiveBand].gainCorrection + (float32_t)attenuator + slope * log10f_fast(audioPowerAve) + cons - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
-    dbm = 29.0 + bands[t41.ActiveBand].gainCorrection + 0.0 + 10.0 * log10f_fast(audioPowerAve) + (-92.0) - (float32_t)bands[t41.ActiveBand].rfGain * 1.5 - t41.RFGain;
+    // FFT correction = -20*log(1024)=-60.2
+    dbm = -60.2f + bands[t41.ActiveBand].gainCorrection + 0.0f + 10.0f * log10f_fast(audioPowerAve) - (float32_t)bands[t41.ActiveBand].rfGain - t41.RFGain;
   } else {
-
     // reset audioPowerAve to a small value
     // with default parameters and audioPowerAve = 1.778e-6, dBm = -131
-    audioPowerAve = 0.0;
+    audioPowerAve = 0.01f;
     //Serial.println("dBm is NAN");
   }
 

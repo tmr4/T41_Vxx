@@ -16,7 +16,8 @@ extern int calNFAdjust;
 // Display.h
 
 // radio specific display calibration factors
-#define FREQSPEC_OFFSET_10DB  132.0
+// frequency spectrum vertical scale is 70dB with 10dB scale
+#define FREQSPEC_OFFSET_10DB  142.0
 
 //------------
 // Encoders.h
@@ -152,6 +153,7 @@ extern Rotary fineTuneEncoder;
 // Process.cpp
 
 // radio specific display calibration factors
+// audio spectrum vertical scale is 60dB
 #define AUDIO_SPEC_SHIFT     105.0
 #define AUDIO_SPEC_SHIFT_NFM 105.0
 #define VOL_FACTOR            20.0
@@ -163,13 +165,20 @@ extern Rotary fineTuneEncoder;
 // hardware/band specific signal strength adjustment
 // these were set with AD3 signal generator at S9 (1mW signal attenuated -73dB)
 // TODO: signal strength varies by demod mode as noted; consider refinement ***
-#define GAIN_CORRECTION_80M -4.0
-#define GAIN_CORRECTION_40M  1.0  // gives -71 on USB
-#define GAIN_CORRECTION_20M -3.0
-#define GAIN_CORRECTION_17M -3.0
-#define GAIN_CORRECTION_15M -1.0
-#define GAIN_CORRECTION_12M -1.0
-#define GAIN_CORRECTION_10M -1.0
+//#define GAIN_CORRECTION_80M -4.0
+//#define GAIN_CORRECTION_40M  1.0  // gives -71 on USB
+//#define GAIN_CORRECTION_20M -3.0
+//#define GAIN_CORRECTION_17M -3.0
+//#define GAIN_CORRECTION_15M -1.0
+//#define GAIN_CORRECTION_12M -1.0
+//#define GAIN_CORRECTION_10M -1.0
+#define GAIN_CORRECTION_80M 0.0
+#define GAIN_CORRECTION_40M 0.0
+#define GAIN_CORRECTION_20M 0.0
+#define GAIN_CORRECTION_17M 0.0
+#define GAIN_CORRECTION_15M 0.0
+#define GAIN_CORRECTION_12M 0.0
+#define GAIN_CORRECTION_10M 0.0
 
 //-------------------------------------------------------------------------------------------------------------
 // Code

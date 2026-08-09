@@ -43,18 +43,29 @@
   *** The T41 works within a signal strength range that is a fraction of what the     ***
   *** audio library can produce. Harmonics increase at these low levels though these  ***
   *** are normally below the 10dB noise floor at about -120dBm. The signal spreads at ***
-  *** the noise floor as the amplitude increases. The S9 signal is best for testing.  ***
+  *** the noise floor as the amplitude increases.                                     ***
+
+  The S9+20 signal w/ -30dB RFGain is best for testing, giving clean signal w/ low noise.
+
+  Signal resolution below S7 is limited where variation of signal amplitude settles to a
+  fixed signal strength setting for that range of signal amplitude. Rough breakpoints are
+  shown in the table below for the lower power settings.
 
   Signals useful for T41 testing:
 
-  Amplitude   Signal Strength     Position*  Spread**   setSignalStrength
-      n            dBm               dB         Hz          parameter
-  0.0270585        -43 (S9+30db)                                30
-  0.0085565        -53 (S9+20db)     70***      48              20
-  0.00095258       -73 (S9)          50          8               9
-  0.0004666        -79 (S8)          45          5               8
-  0.000062943      -97 (S5)          25          1               5
-  1/65536****      -105 (S3-S4)      15          1               0
+  Amplitude         Signal Strength (dBm)              Position*  Spread**   setSignalStrength
+      n            setting        measured                dB         Hz          parameter
+  0.017361        -43 (S9+30db)     -42.9                                            30
+  0.00549         -53 (S9+20db)     -52.9                 70***      48+             20
+  0.0017361       -63 (S9+10dB)     -62.9                 60         25+             10
+  0.000549        -73 (S9)          -73.1                 50          8               9
+  0.00027515      -79 (S8)          -79.3                 45          5               8
+  0.0001379       -85 (S7)          -84.8
+  0.00008         -91 (S6)          -89.8
+  0.000075                          -93.1
+  0.00005                           -94.0
+  0.00004                          -101.9
+  1/65536****                      -101.9                 15          1               0
 
   *    above bottom of 10dB noise floor (-120dBm)
   **   at noise floor
@@ -125,7 +136,7 @@ public:
     // default to 1kHz LSB S9 signal
     phase();
     frequency(49000.0);
-    amplitude(0.00095258);
+    amplitude(0.000549f);
   }
 
 	void frequency(float freq) {

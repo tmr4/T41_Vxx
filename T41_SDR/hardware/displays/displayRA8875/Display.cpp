@@ -117,8 +117,8 @@ typedef struct {
   float32_t   offsetIncrement;
 } dispSc;
 
-dispSc displayScale[] =
-{
+// *** TODO: revisit dBScale adjustments ***
+dispSc displayScale[] = {
   //                     not used                             not used
   // dbText    dBScale   pixelsPerDB   baseOffset             offsetIncrement
   { "20 dB/",  10.0,     2,             24.0,                   1.00 },
@@ -681,12 +681,14 @@ FASTRUN void DrawAudioSpectrum() {
         tft.drawFastVLine(AUDIO_SPEC_L + i, AUDIO_SPEC_BOTTOM - yOldAudioPlot[i], yOldAudioPlot[i], RA8875_BLACK);
       }
 
-      // *** TODO: impliment auto level for audio spectrum ***
-      // audioSpectBuffer has 46.875Hz bin size (12kHz / 256)
+      // map audio power spectral density to the display
+      // audioPSD has 46.875Hz bin size (12kHz / 256)
       // display audio spectrum has 23.148Hz bin size (6250Hz / 270) *** TODO: at 192kHz, verify for FT8 ***
-      // index adjustment into audioSpectBuffer = 46.875/23.148 = ~2
-      // (at i=269 we're still well within the audioSpectBuffer bounds)
-      audioYPixel = AUDIO_SPEC_SHIFT + map(20.0 * log10f(audioSpectBuffer[i/2]), 0, 100, 0, AUDIO_SPEC_H);
+      // index adjustment into audioPSD = 46.875/23.148 = ~2
+      // (at i=269 we're still well within the audioPSD bounds)
+      // Audio spectrum scale=60dB (~S2 at bottom to S9+20 at top w/o RF gain)
+      // *** TODO: impliment auto level for audio spectrum or consider variable scale vs fix 60dB used here ***
+      audioYPixel = AUDIO_SPEC_SHIFT + map(10.0f * log10f(audioPSD[i/2]), 0, 60, 0, AUDIO_SPEC_H);
 
       // draw current audio spectrum line at this position
       if(audioYPixel > 0) {

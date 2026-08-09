@@ -57,7 +57,6 @@ void AudioSignal::update(void) {
         val2 *= scale;
         val1 *= 0x10000 - scale;
         block->data[i] = multiply_32x32_rshift32(val1 + val2, magnitude);
-        //block->data[i] = (((val1 + val2) >> 16) * magnitude) >> 16;
         //Serial.println((((val1 + val2) >> 16) * magnitude) >> 16);
         ph += inc;
       }
@@ -74,14 +73,21 @@ void AudioSignal::update(void) {
 // s <=9 gives Ss down to minimum possible (between S3-4)
 // s >= 10 gives S9+s(dB)
 // *** setting above S9+30 gives minimum signal to protect equipment ***
+/*
+  only good down to about S7
+  settings below S7 are less accurate with limited resolution due to limitation of int16 signals
+  even settings above this have limited resolution, for example S9 measurement is either -73.1
+  or -72.9 regardless how finely tuned the scaler
+
+*/
 void AudioSignal::setSignalStrength(uint8_t s) {
   float amp = 1.0 / 65536.0; // min signal strength
 
   if(s <= 30) {
     if(s >= 10) {
-      amp = 0.00095258 * pow(10.0, s / 20.0);
+      amp = 0.000549f * pow(10.0, s / 20.0);
     } else {
-      amp = 0.00095258 * pow(10.0, ((float)s - 9.0) * 6.0 / 20.0);
+      amp = 0.000549f * pow(10.0, ((float)s - 9.0) * 6.0 / 20.0); // -73.1
     }
   }
   amplitude(amp);

@@ -86,11 +86,11 @@ typedef struct {
   long fBandHigh;   // Upper band edge
   const char* name; // name of band
   int demod;        // standard SSB/CW demodulation mode
-  int fHiCut;
-  int fLoCut;
-  int rfGain;
+  int fHiCut;       // audio filter high cutoff, Hz (these are + values, software will adjust for sideband as appropriate)
+  int fLoCut;       // audio filter low cutoff, Hz
+  int rfGain;       // band specific gain, dB
   long calFreq; // receive IQ calibration frequency, set to 0 to skip calibration of a specific band
-  float32_t gainCorrection; // is hardware dependent and has to be calibrated ONCE and hardcoded in the band table
+  float32_t gainCorrection; // dB, is hardware dependent and has to be calibrated ONCE and hardcoded in the band table
   int agcThresh;
 } band;
 */
@@ -101,13 +101,13 @@ band bands[NUMBER_OF_BANDS] = {
 //  freq      band low   band hi   name    standard     low  high   Gain  calFreq      gain                    AGC
 //                                         demodulation  filter                       correct
 //  freq      fBandLow   fBandHigh name    demod      fLoCut fHiCut rfGain             gainCorrection
-    3700000,  3500000,   4000000,  "80M",  DEMOD_LSB,   200, 3000,  1,    3750000,     GAIN_CORRECTION_80M,    20,
-    7150000,  7000000,   7300000,  "40M",  DEMOD_LSB,   200, 3000,  1,    7150000,     GAIN_CORRECTION_40M,    20,
-    14200000, 14000000, 14350000,  "20M",  DEMOD_USB,   200, 3000,  1,    14175000,    GAIN_CORRECTION_20M,    20,
-    18100000, 18068000, 18168000,  "17M",  DEMOD_USB,   200, 3000,  1,    18118000,    GAIN_CORRECTION_17M,    20,
-    21200000, 21000000, 21450000,  "15M",  DEMOD_USB,   200, 3000,  1,    21225000,    GAIN_CORRECTION_15M,    20,
-    24920000, 24890000, 24990000,  "12M",  DEMOD_USB,   200, 3000,  1,    24940000,    GAIN_CORRECTION_12M,    20,
-    28350000, 28000000, 29700000,  "10M",  DEMOD_USB,   200, 3000,  1,           0,    GAIN_CORRECTION_10M,    20  // auto calibration not performed on this band
+    3700000,  3500000,   4000000,  "80M",  DEMOD_LSB,   200, 3000,  0,    3750000,     GAIN_CORRECTION_80M,    20,
+    7150000,  7000000,   7300000,  "40M",  DEMOD_LSB,   200, 3000,  0,    7150000,     GAIN_CORRECTION_40M,    20,
+    14200000, 14000000, 14350000,  "20M",  DEMOD_USB,   200, 3000,  0,    14175000,    GAIN_CORRECTION_20M,    20,
+    18100000, 18068000, 18168000,  "17M",  DEMOD_USB,   200, 3000,  0,    18118000,    GAIN_CORRECTION_17M,    20,
+    21200000, 21000000, 21450000,  "15M",  DEMOD_USB,   200, 3000,  0,    21225000,    GAIN_CORRECTION_15M,    20,
+    24920000, 24890000, 24990000,  "12M",  DEMOD_USB,   200, 3000,  0,    24940000,    GAIN_CORRECTION_12M,    20,
+    28350000, 28000000, 29700000,  "10M",  DEMOD_USB,   200, 3000,  0,           0,    GAIN_CORRECTION_10M,    20  // auto calibration not performed on this band
 };
 
 int oldCenterFreq;

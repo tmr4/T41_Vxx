@@ -56,7 +56,7 @@ float32_t audioPowerAve = 0.01; // this will blow up dBm if 0
 // (4k more to heap) perhaps because it's aligned by default in my version
 // *** TODO: test need for alignment and incorporate if needed ***
 /*
-3k memory savings with audioSpectBuffer at 256 vs 1024 and updated audio spectrum routine:
+3k memory savings with audioPSD at 256 vs 1024 and updated audio spectrum routine:
 
 Memory Usage on Teensy 4.1:
   FLASH: code:276148, data:95176, headers:8572   free for files:7746568
@@ -69,7 +69,7 @@ Memory Usage on Teensy 4.1:
    RAM2: variables:313344  free for malloc/new:210944
  EXTRAM: variables:1200384
 */
-float32_t DMAMEM audioSpectBuffer[AUDIO_SPEC_RES_FFT];
+float32_t DMAMEM audioPSD[AUDIO_SPEC_RES_FFT];
 
 uint8_t NB_on = 0; // noise blanker: 0 - off, 1 - on
 
@@ -215,16 +215,17 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
     float audioPower;
     audioPowerMax = 0.0;
 
+    // calculate audio spectrum and S-meter inputs
     // we're at 24kHz here (-12kHz to +12kHz)
-    // FFT is 1024 or 512 - and 512 + frequencies with real/imaginary values interleaved
+    // FFT is 1024 or 512 +/- frequencies with the real/imaginary values interleaved
     // +freq are in lower half of FFT, -freq are in upper half of FFT (in reverse order)
-    //  power = real^2 + imag^2
+    // audio bin power = real^2 + imag^2 (normalization is applied later if needed)
     for(int k = 0; k < AUDIO_SPEC_RES_FFT; k++) {
       int i = t41.DemodMode == DEMOD_LSB ? 1022 - (k << 1) : k << 1;
 
       // *** could avoid the imaginary mult by checking imComp, but this code is cleaner ***
       audioPower = (audioIFFT[i] * audioIFFT[i]) + (audioIFFT[i + 1] * audioIFFT[i + 1]);
-      audioSpectBuffer[k] = audioPower;
+      audioPSD[k] = audioPower;
       if(audioPower > audioPowerMax) {
         audioPowerMax = audioPower;
       }
@@ -312,8 +313,9 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   }
 
   // *** TODO: consider if this is needed for FT8 ***
-  // set RF gain for all bands
-  rfGainValue = pow(10, (float)t41.RFGain / 20);
+  // apply band specific and all band gain
+  rfGainValue = pow(10, (float)t41.RFGain / 20.0);
+  rfGainValue *= pow(10, (float)bands[t41.ActiveBand].rfGain / 20.0);
   arm_scale_f32(audioBufferL, rfGainValue, audioBufferL, blocks * 128);
   arm_scale_f32(audioBufferR, rfGainValue, audioBufferR, blocks * 128);
 
@@ -327,10 +329,6 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
       RemoveDCBias();
       break;
   }
-
-  // apply RF gain
-  arm_scale_f32(audioBufferL, bands[t41.ActiveBand].rfGain, audioBufferL, blocks * 128);
-  arm_scale_f32(audioBufferR, bands[t41.ActiveBand].rfGain, audioBufferR, blocks * 128);
 
   /**********************************************************************************
     Clear Buffers
