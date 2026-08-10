@@ -108,16 +108,16 @@ w/o DMAMEM:
    RAM2: variables:312608  free for malloc/new:211680
  EXTRAM: variables:480384
 */
-float32_t /*DMAMEM*/ audioPSD[AUDIO_SPEC_RES_FFT] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ audioFFT[1024] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ audioIFFT[1024 + 1] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ prevAudioBuffer_L[256] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ prevAudioBuffer_R[256] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ freqPSD[SPECTRUM_RES] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ lastFreqPSD[SPECTRUM_RES] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ freqFFT[SPECTRUM_RES * 2] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ prevNFMAudioBuffer_L[256] __attribute__((aligned(4)));
-float32_t /*DMAMEM*/ prevNFMAudioBuffer_R[256] __attribute__((aligned(4)));
+float32_t DMAMEM audioPSD[AUDIO_SPEC_RES_FFT] __attribute__((aligned(4)));
+float32_t DMAMEM audioFFT[1024] __attribute__((aligned(4)));
+float32_t DMAMEM audioIFFT[1024 + 1] __attribute__((aligned(4)));
+float32_t DMAMEM prevAudioBuffer_L[256] __attribute__((aligned(4)));
+float32_t DMAMEM prevAudioBuffer_R[256] __attribute__((aligned(4)));
+float32_t DMAMEM freqPSD[SPECTRUM_RES] __attribute__((aligned(4)));
+float32_t DMAMEM lastFreqPSD[SPECTRUM_RES] __attribute__((aligned(4)));
+float32_t DMAMEM freqFFT[SPECTRUM_RES * 2] __attribute__((aligned(4)));
+float32_t DMAMEM prevNFMAudioBuffer_L[256] __attribute__((aligned(4)));
+float32_t DMAMEM prevNFMAudioBuffer_R[256] __attribute__((aligned(4)));
 
 extern arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
 
