@@ -13,8 +13,8 @@
 extern float32_t /*DMAMEM*/ audioFFT[];
 extern float32_t /*DMAMEM*/ audioIFFT[];
 
-extern float32_t /*DMAMEM*/ freqSpecBuf[];
-extern float32_t /*DMAMEM*/ prevFreqSpecBuf[];
+extern float32_t /*DMAMEM*/ freqPSD[];
+extern float32_t /*DMAMEM*/ lastFreqPSD[];
 
 extern float32_t biquad_lowpass1_coeffs[];
 

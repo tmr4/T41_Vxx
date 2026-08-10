@@ -54,7 +54,7 @@
   Signals useful for T41 testing:
 
   Amplitude         Signal Strength (dBm)              Position*  Spread**   setSignalStrength
-      n            setting        measured                dB         Hz          parameter
+      n            setting        measured (vPS)          dB         Hz          parameter
   0.017361        -43 (S9+30db)     -42.9                                            30
   0.00549         -53 (S9+20db)     -52.9                 70***      48+             20
   0.0017361       -63 (S9+10dB)     -62.9                 60         25+             10
@@ -71,6 +71,9 @@
   **   at noise floor
   ***  top of 10dB spectrum
   **** minimum signal level
+
+  *** S9+20dB test signal on v11 measured at -55.7dBm ***
+  *** TODO: examine hardware specific test signal calibration factors ***
 
   *** AudioNoInterrupts() should be used with multiple signals to guarantee all new settings take effect at the same time ***
 */

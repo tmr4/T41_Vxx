@@ -348,22 +348,22 @@ void CourseIQCal() {
   }
 
   //for(int i = 0; i < SPECTRUM_RES; i++) {
-  //  sig[i] = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqSpecBuf[i]));
+  //  sig[i] = FREQSPEC_OFFSET_10DB + 20 + (20 * log10f_fast(freqPSD[i]));
   //}
 
   // give a second to stabilize
   if(loops > stablize) {
     // calculate adjacent sideband signal strength relative to reference sideband
-    arm_max_f32(&freqSpecBuf[(binCenter[0] - fftBins)], fftBins * 2, &refAmplitude, &index_of_max);
-    arm_max_f32(&freqSpecBuf[(binCenter[1] - fftBins)], fftBins * 2, &adjAmplitude, &index_of_max);
+    arm_max_f32(&freqPSD[(binCenter[0] - fftBins)], fftBins * 2, &refAmplitude, &index_of_max);
+    arm_max_f32(&freqPSD[(binCenter[1] - fftBins)], fftBins * 2, &adjAmplitude, &index_of_max);
     //dtostrf(refAmplitude, 5, 3, f1);
     //dtostrf(adjAmplitude, 5, 3, f2);
     //sprintf(msg, "ref: %.6s adj: %.6s", f1, f2);
     //Serial.println(msg);
-    //arm_max_f32(freqSpecBuf, 250, &refAmplitude, &index_of_max);
+    //arm_max_f32(freqPSD, 250, &refAmplitude, &index_of_max);
     //Serial.println((int)(refAmplitude * 1000.0));
     //Serial.println(index_of_max);
-    //arm_max_f32(&freqSpecBuf[256], 80, &adjAmplitude, &index_of_max);
+    //arm_max_f32(&freqPSD[256], 80, &adjAmplitude, &index_of_max);
     //Serial.println((int)(adjAmplitude * 1000.0));
     //Serial.println(index_of_max);
     //dtostrf(refAmplitude, 5, 3, f1);

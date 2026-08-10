@@ -190,6 +190,11 @@ FLASHMEM void SoftReset() {
   ResetTuning();
   ShowFrequency(true);
   CalcAudioFilters();
+
+#if INJECT_RX_TEST_SIGNALS
+  t41.RFGain = -30;
+  t41.AGCMode = 0;
+#endif
 }
 
 // *** for testing ***

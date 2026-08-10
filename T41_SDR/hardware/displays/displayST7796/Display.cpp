@@ -202,13 +202,13 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   }
 
   // Draw the frequency spectrums, gather data for waterfall
-  yPlot = SPECTRUM_NOISE_FLOOR - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[0])) - currentNF;
+  yPlot = SPECTRUM_NOISE_FLOOR - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqPSD[0])) - currentNF;
   for(int x1 = 0; x1 < SPECTRUM_RES - 1; x1++) {
     bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
 
     TOGGLEPROFILEPIN(PROFILER_DRAW);
 
-    y1Plot = SPECTRUM_NOISE_FLOOR - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[x1 + 1])) - currentNF;
+    y1Plot = SPECTRUM_NOISE_FLOOR - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqPSD[x1 + 1])) - currentNF;
 
     // create rough spectrum histogram if auto noise floor is active
     // the frequency spectrum is 150 pixels high, let's create

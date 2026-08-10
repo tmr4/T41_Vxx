@@ -520,14 +520,14 @@ FASTRUN void DrawFreqSpectrum(bool newSpectrumFlag /* = false */) {
   }
 
   // Draw the frequency spectrums, gather data for waterfall
-  yPlot = SPECTRUM_BOTTOM - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[0])) - currentNF;
+  yPlot = SPECTRUM_BOTTOM - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqPSD[0])) - currentNF;
   for(int i = 0; i < SPECTRUM_RES - 1; i++) {
     bool drawSpec = true, eraseSpec = true, inBoxLow = true, inBoxHigh = true;
 
     // *** TODO: evaluate noise floor default setting for new v12 hardware ***
     // *** TODO: some calibration routines need an adjustment because there is no noise floor adjustment ***
 
-    y1Plot = SPECTRUM_BOTTOM - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqSpecBuf[i + 1])) - currentNF;
+    y1Plot = SPECTRUM_BOTTOM - (int16_t)(displayScale[t41.FreqSpecScale].baseOffset + displayScale[t41.FreqSpecScale].dBScale * log10f_fast(freqPSD[i + 1])) - currentNF;
 
     // create rough spectrum histogram if auto noise floor is active
     // the frequency spectrum is 150 pixels high, let's create

@@ -299,7 +299,7 @@ FLASHMEM void CalibratePost(int calType) {
       // reset frequency spectrum buffers
       SET_VAR(pixelnew, SPECTRUM_BOTTOM);
       SET_VAR(pixelold, SPECTRUM_BOTTOM);
-      //CLEAR_VAR(prevFreqSpecBuf);
+      //CLEAR_VAR(lastFreqPSD);
       InitFFTArrays();
       newSpectrumFlag = 0;
       break;

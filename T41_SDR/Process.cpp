@@ -69,21 +69,55 @@ Memory Usage on Teensy 4.1:
    RAM2: variables:313344  free for malloc/new:210944
  EXTRAM: variables:1200384
 */
-float32_t DMAMEM audioPSD[AUDIO_SPEC_RES_FFT];
+
+#define USE_LOG10FAST
 
 uint8_t NB_on = 0; // noise blanker: 0 - off, 1 - on
 
 char atom, currentAtom;
 uint8_t ANR_notchOn = 0;
 
-float32_t DMAMEM audioFFT[1024] __attribute__((aligned(4)));
-float32_t DMAMEM audioIFFT[1024 + 1];
-float32_t DMAMEM prevAudioBuffer_L[256];
-float32_t DMAMEM prevAudioBuffer_R[256];
+// placement in DMAMEM gives balanced usage of RAM1 and RAM2 but could have very slightly improved performance in RAM1
+// *** mouse/keyboard support though require ~44k of RAM1 ***
+// *** TODO: reconsider DMAMEM placement when RAM1 usage is finalized ***
+/*
+Memory Usage on Teensy 4.1 vPS w/o mouse/keyboard support:
+w/ DMAMEM: 42.9ms loop time w/ S9+20 test signal
+  FLASH: code:276132, data:95176, headers:8588   free for files:7746568
+   RAM1: variables:111904, code:223464, padding:5912   free for local variables:183008
+   RAM2: variables:321536  free for malloc/new:202752
+ EXTRAM: variables:1200384
 
-#define USE_LOG10FAST
+w/o DMAMEM: 42.5ms loop time w/ S9+20 test signal
+  FLASH: code:276140, data:95176, headers:8580   free for files:7746568
+   RAM1: variables:133408, code:223464, padding:5912   free for local variables:161504
+   RAM2: variables:300032  free for malloc/new:224256
+ EXTRAM: variables:1200384
 
-float32_t DMAMEM freqSpecBuf[SPECTRUM_RES] __attribute__((aligned(4)));
+Memory Usage on Teensy 4.1 v11 w/ mouse/keyboard support:
+
+w/ DMAMEM:
+  FLASH: code:298796, data:96288, headers:8364   free for files:7723016
+   RAM1: variables:126592, code:245496, padding:16648   free for local variables:135552
+   RAM2: variables:334112  free for malloc/new:190176
+ EXTRAM: variables:480384
+
+w/o DMAMEM:
+  FLASH: code:298804, data:96288, headers:8356   free for files:7723016
+   RAM1: variables:148096, code:245496, padding:16648   free for local variables:114048
+   RAM2: variables:312608  free for malloc/new:211680
+ EXTRAM: variables:480384
+*/
+float32_t /*DMAMEM*/ audioPSD[AUDIO_SPEC_RES_FFT] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ audioFFT[1024] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ audioIFFT[1024 + 1] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ prevAudioBuffer_L[256] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ prevAudioBuffer_R[256] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ freqPSD[SPECTRUM_RES] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ lastFreqPSD[SPECTRUM_RES] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ freqFFT[SPECTRUM_RES * 2] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ prevNFMAudioBuffer_L[256] __attribute__((aligned(4)));
+float32_t /*DMAMEM*/ prevNFMAudioBuffer_R[256] __attribute__((aligned(4)));
 
 extern arm_fir_decimate_instance_f32 Fir_Zoom_FFT_Decimate_I1, Fir_Zoom_FFT_Decimate_Q1, Fir_Zoom_FFT_Decimate_I2, Fir_Zoom_FFT_Decimate_Q2;
 
@@ -109,6 +143,10 @@ FLASHMEM void InitFFTArrays() {
   CLEAR_VAR(audioFFT);
   CLEAR_VAR(prevAudioBuffer_L);
   CLEAR_VAR(prevAudioBuffer_R);
+  CLEAR_VAR(freqFFT);
+  CLEAR_VAR(lastFreqPSD);
+  CLEAR_VAR(prevNFMAudioBuffer_L);
+  CLEAR_VAR(prevNFMAudioBuffer_R);
 }
 
 FLASHMEM void InitAMDemodBiquadFilter(int sampleRate) {
@@ -134,20 +172,16 @@ FLASHMEM void InitAMDemodBiquadFilter(int sampleRate) {
   biquad_lowpass1.pState = biquad_lowpass1_state;  // set pointer to the state variables
 }
 
-// audio dsp for NFM
-void CalcAudioMax() {
+// calculate NFM signal strength
+void CalcSignalStrengthNFM() {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
-  float32_t audioPowerMax;
-  uint32_t audioMaxIndex;
-  // *** TODO: 10k here, would be better to just allocated it when in NFM mode! ***
-  static float32_t audioNFM[1024], audioNFMi[1024], prevNFMAudioBuffer_L[256], prevNFMAudioBuffer_R[256];
-  float32_t audioNFMBuffer[1024];
+  float32_t audioPowerMax = 0.0;
 
   // Prepare the audio signal buffers
   // fill buffer with last events audio samples
   for(int i = 0; i < 256; i++) {
-    audioNFM[i * 2] = prevNFMAudioBuffer_L[i]; // real
-    audioNFM[i * 2 + 1] = prevNFMAudioBuffer_R[i]; // imaginary
+    audioFFT[i * 2] = prevNFMAudioBuffer_L[i]; // real
+    audioFFT[i * 2 + 1] = prevNFMAudioBuffer_R[i]; // imaginary
   }
 
   for(int i = 0; i < 256; i++) {
@@ -156,28 +190,31 @@ void CalcAudioMax() {
     prevNFMAudioBuffer_R[i] = audioBufferR[i];
 
     // fill recent audio samples into audioFFT (left channel: re, right channel: im)
-    audioNFM[512 + i * 2] = audioBufferL[i]; // real
-    audioNFM[512 + i * 2 + 1] = audioBufferR[i]; // imaginary
+    audioFFT[512 + i * 2] = audioBufferL[i]; // real
+    audioFFT[512 + i * 2 + 1] = audioBufferR[i]; // imaginary
   }
 
   // transform audio signal to the frequency domain
-  arm_cfft_f32(S, audioNFM, 0, 1);
+  arm_cfft_f32(S, audioFFT, 0, 1);
 
   // apply high and low audio cutoffs with FFT filter mask
   // filter mask calculated in setup of filter mask coefficients: audioFIRFilterMask[]
-  arm_cmplx_mult_cmplx_f32(audioNFM, audioFIRFilterMask, audioNFMi, 512);
+  arm_cmplx_mult_cmplx_f32(audioFFT, audioFIRFilterMask, audioIFFT, 512);
 
-  // *** TODO: this needs cleaned up consistent with AudioDSP below ***
-  for(int k = 0; k < 1024; k++) {
-    audioNFMBuffer[1023 - k] = (audioNFMi[k] * audioNFMi[k]);
+  for(int i = 0; i < 1024; i++) {
+    float audioPower;
+
+    audioPower = (audioIFFT[i] * audioIFFT[i]) + (audioIFFT[i + 1] * audioIFFT[i + 1]);
+    if(audioPower > audioPowerMax) {
+      audioPowerMax = audioPower;
+    }
   }
 
-  arm_max_f32(audioNFMBuffer, 1024, &audioPowerMax, &audioMaxIndex);  // Max value of squared bin magnitued in audio
   audioPowerAve = .5 * audioPowerMax + .5 * audioPowerAve;  // running averaged values
 }
 
 // apply filter mask to audio spectrum
-// prepare audio spectrum when updateSpectrumData is true
+// calculate audio power spectral density when updateSpectrumData is true
 // imComp: FFT has an imaginary component (default: true)
 void AudioDSP(bool updateSpectrumData, bool imComp = true) {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
@@ -210,8 +247,8 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
   arm_cmplx_mult_cmplx_f32(audioFFT, audioFIRFilterMask, audioIFFT, 512);
 
   // process audio frequency spectrum if requested
-  // DEMOD_NFM spectrum calculated separately in CalcAudioMax above
-  if(updateSpectrumData && t41.DemodMode != DEMOD_NFM) {
+  // *** TODO: there is some duplication with DEMOD_NFM signal strength calculation in CalcSignalStrengthNFM above ***
+  if(updateSpectrumData) {
     float audioPower;
     audioPowerMax = 0.0;
 
@@ -231,7 +268,10 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
       }
     }
 
-    audioPowerAve = .5 * audioPowerMax + .5 * audioPowerAve;  // running average value
+    // DEMOD_NFM signal strength already calculated above before demodulation
+    if(t41.DemodMode != DEMOD_NFM) {
+      audioPowerAve = .5 * audioPowerMax + .5 * audioPowerAve;  // running average value
+    }
 
     // *** TODO: this is from v12 - reconcile calibration calls within Process.cpp ***
     // this was added May 5, 2025 when adding frequency calibration
@@ -532,7 +572,10 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // apply audio filter cutoffs and calculate audio spectrum data
   switch(t41.DemodMode) {
     case DEMOD_NFM:
-      CalcAudioMax();
+      // calculate NFM signal strength before demodulation
+      // *** this adds processing time and memory usage ***
+      // *** TODO: could just adjust demodulated signal strength ***
+      CalcSignalStrengthNFM();
 
       // Prepare the audio signal buffers
       // fill recent audio samples into audioFFT (left channel: re, right channel: im)
@@ -630,6 +673,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
       // process audio for demodulated NFM
       AudioDSP(freqSpecUpdatedThisLoop, false); // no imaginary component for these
+      //AudioDSP(false, false); // no imaginary component for these
 
       // apply automatic gain control
       // AGC acts upon on the audio data in audioIFFT
@@ -1116,15 +1160,13 @@ bool CalcFreqSpecBuffered(uint32_t blockSize) {
 }
 
 /*****
-  Calcculate frequency spectrum
+  Calcculate frequency power spectral density
 
   *** FFT size fixed at 512 ***
 *****/
 FLASHMEM void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /* = 1.0 */) {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
-  static float32_t freqFFT[SPECTRUM_RES * 2]; // keep off stack
-  static float32_t prevFreqSpecBuf[SPECTRUM_RES] = {0.0};
-  static int lastZoom = 1; // 2x - default zoom level
+  static int lastZoom = 1; // 2x, default zoom
   float32_t* dst = freqFFT;
   float32_t LPFcoeff, onem_LPFcoeff;
 
@@ -1141,19 +1183,17 @@ FLASHMEM void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /*
   arm_cfft_f32(S, freqFFT, 0, 1);
 
   // calculate frequency spectrum
-  // calculate bin magnitude (I*I + Q*Q) and properly sequence + and - FFT bins
+  // calculate frequency bin power (I*I + Q*Q, normalization not needed for display plot)
+  // properly sequence + and - FFT bins
   // (swap positions of negative freq in second half of FFT with positive freq in first half of FFT)
   for(int i = 0; i < SPECTRUM_RES / 2; i++) {
-    freqSpecBuf[i + SPECTRUM_RES / 2] = (freqFFT[i * 2] * freqFFT[i * 2] + freqFFT[i * 2 + 1] * freqFFT[i * 2 + 1]);
-    freqSpecBuf[i] = (freqFFT[(i + SPECTRUM_RES / 2) * 2] * freqFFT[(i + SPECTRUM_RES / 2)  * 2] + freqFFT[(i + SPECTRUM_RES / 2)  * 2 + 1] * freqFFT[(i + SPECTRUM_RES / 2)  * 2 + 1]);
-    // no swap version for testing
-    //freqSpecBuf[i] = (freqFFT[i * 2] * freqFFT[i * 2] + freqFFT[i * 2 + 1] * freqFFT[i * 2 + 1]);
-    //freqSpecBuf[i + SPECTRUM_RES/2]                  = (freqFFT[(i + SPECTRUM_RES/2) * 2] * freqFFT[(i + SPECTRUM_RES/2)  * 2] + freqFFT[(i + SPECTRUM_RES/2)  * 2 + 1] * freqFFT[(i + SPECTRUM_RES/2)  * 2 + 1]);
+    freqPSD[i + SPECTRUM_RES / 2] = (freqFFT[i * 2] * freqFFT[i * 2] + freqFFT[i * 2 + 1] * freqFFT[i * 2 + 1]);
+    freqPSD[i] = (freqFFT[(i + SPECTRUM_RES / 2) * 2] * freqFFT[(i + SPECTRUM_RES / 2)  * 2] + freqFFT[(i + SPECTRUM_RES / 2)  * 2 + 1] * freqFFT[(i + SPECTRUM_RES / 2)  * 2 + 1]);
   }
 
   if(t41.SpectrumZoom != lastZoom) {
     lastZoom = t41.SpectrumZoom;
-    CLEAR_VAR(prevFreqSpecBuf);
+    CLEAR_VAR(lastFreqPSD);
   } else if(!INJECT_RX_TEST_SIGNALS) {
     //if(t41.CalState == NOT_CAL_STATE)
     {
@@ -1162,8 +1202,8 @@ FLASHMEM void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /*
       onem_LPFcoeff = 1.0 - LPFcoeff;
 
       for(int i = 0; i < SPECTRUM_RES; i++) {
-        freqSpecBuf[i] = LPFcoeff * freqSpecBuf[i] + onem_LPFcoeff * prevFreqSpecBuf[i];
-        prevFreqSpecBuf[i] = freqSpecBuf[i];
+        freqPSD[i] = LPFcoeff * freqPSD[i] + onem_LPFcoeff * lastFreqPSD[i];
+        lastFreqPSD[i] = freqPSD[i];
       }
     }
   }
