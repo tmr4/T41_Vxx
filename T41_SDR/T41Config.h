@@ -21,12 +21,13 @@
 // test signals
 // injects 1kHz LSB test quadrature signals to RX input
 // active in all receive states
-#define INJECT_RX_TEST_SIGNALS true
+//#define INJECT_RX_TEST_SIGNALS true
+#define INJECT_RX_TEST_SIGNALS false
 #define RX_TEST_SIGNAL_STRENGTH 20 // S-meter strength (only good down to about S7, see testSignal.h)
 
 // injects 1kHz test signal at microphone input
 // active with PTT and in transmit states (call PrepareMicExciterData to process)
-#define INJECT_MIC_TEST_SIGNAL true
+#define INJECT_MIC_TEST_SIGNAL false
 
 //-------------------------------------------------------------------------------------------------------------
 // Data

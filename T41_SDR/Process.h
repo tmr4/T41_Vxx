@@ -23,6 +23,7 @@ extern uint8_t ANR_notchOn;
 extern float32_t audioPSD[];
 extern float32_t audioPowerAve;
 
+extern bool bufferDataCheck;
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -44,13 +45,11 @@ inline int __attribute__((always_inline)) GetBlocks() {
 }
 
 inline int __attribute__((always_inline)) CheckReceiverData(bool updateSpectrumData = false) {
-  //int blocks = GetBlocks();
-  // *** TODO: we could streamline this further, there should always be the same number of blocks in the left and right channels.
-  //if((Q_in_L.available() >= blocks) && (Q_in_R.available() >= blocks)) {
+  // just check left channel as there should always be the same number of blocks in the left and right channels
   if(Q_in_L.available() >= GetBlocks()) {
     if(t41.CalState != NOT_CAL_STATE) CalibrationLoop();
     return ProcessReceiverData(updateSpectrumData);
   }
 
-  return 0;
+  return 0; // insufficient IQ data to process
 }

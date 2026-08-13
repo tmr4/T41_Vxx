@@ -86,8 +86,8 @@ typedef struct {
   long fBandHigh;   // Upper band edge
   const char* name; // name of band
   int demod;        // standard SSB/CW demodulation mode
-  int fHiCut;       // audio filter high cutoff, Hz (these are + values, software will adjust for sideband as appropriate)
   int fLoCut;       // audio filter low cutoff, Hz
+  int fHiCut;       // audio filter high cutoff, Hz (these are + values, software will adjust for sideband as appropriate)
   int rfGain;       // band specific gain, dB
   long calFreq; // receive IQ calibration frequency, set to 0 to skip calibration of a specific band
   float32_t gainCorrection; // dB, is hardware dependent and has to be calibrated ONCE and hardcoded in the band table

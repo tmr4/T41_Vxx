@@ -44,6 +44,7 @@ extern CatControl wsjtControl;
 #define AUDIO_SPEC_RES_FFT    256 // 270 pixels are available w/ RA8875 display
 
 bool FFTupdated;
+bool bufferDataCheck = false;
 
 arm_biquad_casd_df1_inst_f32 biquad_lowpass1;
 float32_t biquad_lowpass1_state[4];
@@ -134,6 +135,7 @@ void FreqShift1(int blockSize);
 void FreqShift2();
 bool CalcFreqSpecBuffered(uint32_t blockSize);
 void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier = 1.0);
+void BufferFreqSpecData(uint32_t blockSize);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -296,9 +298,10 @@ void AudioDSP(bool updateSpectrumData, bool imComp = true) {
                                false (default): skips these calculations
 
    Return value:
-      0: false: not enough data to process
-      1: input stream was processed
-      2: spectrums updates
+      0: insufficient IQ data to process (this value is actually returned by CheckReceiverData)
+      1: freq and audio spectrum input data updated
+      2: IQ data processed
+      3: additional passes required to gather sufficient IQ data for zoom level
 
     *** Call only when the required number of blocks are available or use CheckReceiverData,
         an inline function that check for this condition.  This eliminate the function call
@@ -428,16 +431,22 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   /**********************************************************************************
       Spectrum zoom displays a magnified display of the data around the translated
-      receive frequency.  It uses the shifted spectrum, so the center "hump" around DC is
-      shifted by Fs/4.  Buffering and processing is done in the CalcFreqSpecBuffered function.
+      receive frequency.  It uses the shifted spectrum, so the center "hump" around
+      DC is shifted by Fs/4.  Buffering and spectrum processing is done in
+      CalcFreqSpecBuffered. Some prebuffering is done in BufferFreqSpecData.
   **********************************************************************************/
   // Kick off frequency spectrum FFT routine only once for each audio process loop
-  if(t41.SpectrumZoom != 0 && updateSpectrumData) {
-    // flag if frequency spectrum updated or more passes required
-    if(CalcFreqSpecBuffered(blocks * 128)) {
-      freqSpecUpdatedThisLoop = true;
-    } else {
-      anotherPassRequired = true;
+  if(t41.SpectrumZoom != 0) {
+    if(bufferDataCheck) {
+      BufferFreqSpecData(blocks * 128);
+    }
+    if(updateSpectrumData) {
+      // flag if frequency spectrum updated or more passes required
+      if(CalcFreqSpecBuffered(blocks * 128)) {
+        freqSpecUpdatedThisLoop = true;
+      } else {
+        anotherPassRequired = true;
+      }
     }
   }
 
@@ -907,7 +916,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   RESETPROFILEPIN(PROFILER_PROCESS_RX);
 
   if(anotherPassRequired) return 3;
-  else return freqSpecUpdatedThisLoop ? 2 : 1;
+  else return freqSpecUpdatedThisLoop ? 1 : 2;
 }
 
 /*****
@@ -1057,6 +1066,45 @@ void FreqShift2() {
   }
 }
 
+// bufIQ serves as both an intermediate and a final buffer for passing decimated IQ data to CalcFreqSpec
+/*
+         IQ data      decimation 2 write
+        Size after        I          Q
+  Zoom  Dec1  Dec2   from  to    from  to
+   2x   1024  1024     0  1023    512 1535
+   4x   1024   512     0   511    512 1023
+   8x    512   256     0
+  16x    256   128     0
+*/
+float32_t bufIQ[1024 + SPECTRUM_RES];
+
+// buffer data in 8x and 16x zoom modes
+void BufferFreqSpecData(uint32_t blockSize) {
+  float32_t x_buffer[blockSize / 2];
+  float32_t y_buffer[blockSize / 2];
+  float32_t* ptrI = bufIQ;
+  float32_t* ptrQ = &bufIQ[SPECTRUM_RES];
+  int factor = zoomDecFactors[t41.SpectrumZoom];
+  int samples = blockSize / (1 << t41.SpectrumZoom);
+
+  // decimation 1
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I1, audioBufferL, x_buffer, blockSize);
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q1, audioBufferR, y_buffer, blockSize);
+
+  // decimation 2
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I2, x_buffer, ptrI, blockSize / factor);
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q2, y_buffer, ptrQ, blockSize / factor);
+
+  // limit samples at lower resolutions
+  if(samples > SPECTRUM_RES) samples = SPECTRUM_RES;
+
+  if(0) {
+    // multiple passes required, buffer IQ data
+    //arm_copy_f32(x_buffer, &bufI[passes * samples], samples);
+    //arm_copy_f32(y_buffer, &bufQ[passes * samples], samples);
+  }
+}
+
 /*****
   Calculate frequency spectrum
 
@@ -1094,32 +1142,30 @@ void FreqShift2() {
 bool CalcFreqSpecBuffered(uint32_t blockSize) {
   bool spectrumReady = false;
   float32_t multiplier;
-  float32_t x_buffer[blockSize / 2];
-  float32_t y_buffer[blockSize / 2];
-  float32_t* ptrI = x_buffer;
-  float32_t* ptrQ = y_buffer;
-  int samples = blockSize / (1 << t41.SpectrumZoom);
-  int factor = zoomDecFactors[t41.SpectrumZoom];
 
-  static float32_t bufI[SPECTRUM_RES];
-  static float32_t bufQ[SPECTRUM_RES];
   static int passes = 0;
   static int lastZoom = 1; // 2x - default zoom level
 
-  // *** TODO: shouldn't be here for 1x zoom but sometimes are on vPS, likely
-  //           due to bouncy switch matrix, investigate ***
+  // *** shouldn't be here for 1x zoom but can be if SpectrumZoom
+  //     is changed and we arrive here before the change is polled
+  //     in ProcessControls ***
   if(t41.SpectrumZoom == 0) return spectrumReady;
 
   SETPROFILEPIN(PROFILER_OTHER);
-
-  // limit samples at lower resolutions
-  if(samples > SPECTRUM_RES) samples = SPECTRUM_RES;
 
   // reset if zoom level has changed
   if(t41.SpectrumZoom != lastZoom) {
     lastZoom = t41.SpectrumZoom;
     passes = 0;
   }
+
+  // do we have enough data?
+  // at high zoom, multiple, consecutive passes are required to get sufficient
+  // data to produce a high resolution frequency spectrum
+  int requiredPasses = t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4);
+  if(passes < requiredPasses) {
+  }
+  BufferFreqSpecData(blockSize);
 
   // set data multiplier according to zoom to maintain consistent spectrum level
   if(t41.SpectrumZoom > 3) { // SPECTRUM_ZOOM_8
@@ -1129,27 +1175,8 @@ bool CalcFreqSpecBuffered(uint32_t blockSize) {
   }
   multiplier = 1.0f;
 
-  // decimation 1
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I1, audioBufferL, x_buffer, blockSize);
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q1, audioBufferR, y_buffer, blockSize);
-
-  // decimation 2
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I2, x_buffer, x_buffer, blockSize / factor);
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q2, y_buffer, y_buffer, blockSize / factor);
-
-  // do we have enough data?
-  // at high zoom, multiple, consecutive passes are required to get sufficient
-  // data to produce a high resolution frequency spectrum
-  int requiredPasses = t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4);
-  if(passes < requiredPasses) {
-    // multiple passes required, buffer IQ data
-    arm_copy_f32(x_buffer, &bufI[passes * samples], samples);
-    arm_copy_f32(y_buffer, &bufQ[passes * samples], samples);
-    ptrI = bufI;
-    ptrQ = bufQ;
-  }
   if(++passes >= requiredPasses) {
-    CalcFreqSpec(ptrI, ptrQ, multiplier);
+    CalcFreqSpec(bufIQ, &bufIQ[SPECTRUM_RES], multiplier);
     spectrumReady = true;
     passes = 0;
   }
@@ -1182,7 +1209,7 @@ FLASHMEM void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /*
   // perform complex FFT
   arm_cfft_f32(S, freqFFT, 0, 1);
 
-  // calculate frequency spectrum
+  // calculate frequency spectrum input
   // calculate frequency bin power (I*I + Q*Q, normalization not needed for display plot)
   // properly sequence + and - FFT bins
   // (swap positions of negative freq in second half of FFT with positive freq in first half of FFT)
@@ -1336,6 +1363,8 @@ void EtherStats() {
   }
 }
 
+// Call this function periodically to yield to RX audio and UI processing
+// updateSpectrum: true=prepare spectrum data to be rendered that loop
 void YieldToProcess(bool updateSpectrum /* = false */) {
   static unsigned long lastControl = 0;
   unsigned long start = millis();
@@ -1356,36 +1385,32 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
          at set intervals leads to data loss and/or freezes. ***/
     YieldToEthernet();
 
-    if(updateSpectrum) {
-      /* We go through here at the beginning of each loop to prepare
-         spectrum data to be rendered that loop. We'll go through one
-         extra time at 8x zoom and three extra times at 16x zoom to
-         buffer sufficient data for the frequency spectrum
-      */
-
-      // break after frequency spectrum updated
-      int result = CheckReceiverData(true);
-      if(result == 2) {
+    switch(CheckReceiverData(updateSpectrum)) {
+      case 0: // insufficient IQ data to process
+        // continue yielding if updateSpectrum is true
+        if(!updateSpectrum) done = true;
+        break;
+      case 1: // spectrum data updated
         done = true;
-      } else if(result == 3) {
+        break;
+      case 2: // IQ data processed
+        // yield again tocheck if more IQ data is available
+        // we process IQ data while sufficient data exists
+        // this allows the process to catch up after longer tasks
+        // such as the waterfall update
+        // failing to do this can result in poor audio.
+      case 3: // additional passes required
+        // one extra pass at 8x zoom and three extra passes at 16x zoom
+        // to buffer sufficient IQ data for the frequency spectrum
         start = millis(); // restart no data timer
-      }
-      // break if no data in 10ms
-      // this keeps the T41 from getting stuck here during testing
-      // when updateSpectrum is true but there is no data to process
-      if(millis() - start > 10) {
-        done = true;
-      }
-    } else {
-      // *** we go through here often ***
+        break;
+    }
 
-      // process IQ data while sufficient data exists
-      // This allows the process to catch up after longer tasks
-      // such as the waterfall update. Failing to do this can
-      // result in poor audio.
-
-      // break when insufficient IQ data is available
-      if(CheckReceiverData() == 0) done = true;
+    // break if no data in 10ms
+    // this keeps the T41 from getting stuck here during testing
+    // when updateSpectrum is true but there is no data to process
+    if(millis() - start > 10) {
+      done = true;
     }
 
     // process controls every 10ms
@@ -1395,11 +1420,6 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
     }
   } while(!done);
 
-  // process controls every 10ms
-  //if(millis() - lastControl > 10) {
-  //  ProcessControls();
-  //  lastControl = millis();
-  //}
   if(t41.CalState == RXIQ_CAL_STATE) {
     if(millis() - cal > 8) {
       //PrepareExciterIQDataCal(1);

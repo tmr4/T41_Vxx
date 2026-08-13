@@ -168,14 +168,17 @@ FLASHMEM void UpdateDisplayZoom() {
 }
 
 FASTRUN void UpdateLiveDisplayAreas() {
-  YieldToProcess(true);
+  //YieldToProcess(true);
   SETPROFILEPIN(PROFILER_DRAW);
   DrawFreqSpectrum();
   RESETPROFILEPIN(PROFILER_DRAW);
   if(t41.CalState == NOT_CAL_STATE) {
-    DrawWaterfall();
-    SETPROFILEPIN(PROFILER_DRAW);
     DrawAudioSpectrum();
+    SETPROFILEPIN(PROFILER_DRAW);
+    // waterfall is drawn last because it takes 10ms, use
+    // that to prepare the spectrum data for next loop
+    // (call to CheckReceiverData occurs in RA8875::_waitBusy)
+    DrawWaterfall();
     RESETPROFILEPIN(PROFILER_DRAW);
   }
   DrawSmeterBar();

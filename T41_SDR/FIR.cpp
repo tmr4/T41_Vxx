@@ -332,6 +332,42 @@ FLASHMEM void CalcCplxFIRCoeffs(float * coeffs_I, float * coeffs_Q, int numCoeff
 }
 
 /*
+  Modified Bessel Function of the First Kind, Order Zero (I0)
+  https://en.wikipedia.org/wiki/Bessel_function
+
+          inf
+  I0(x) = sum ((x/2)^(2k)) / (k!)^2 = 1 + x^2/4 + x^4/64 + x^6/2304
+          k=0
+  or w/ recurrence formula:
+          inf
+  I0(x) = sum Tk  where T0 = 1 and Tk = Tk-1 * (x/2k)^2
+          k=0
+
+  *** using std::cyl_bessel_i caused corruption in the bands[] array, bands[0].fHiCut changed from 3000 to 1
+      at the w calculation line in CalcZoomFIRCoeffs (get same with double w) ***
+
+  *** This function is ok for x <= ~10 for precision and convergence
+      (Beta in CalcZoomFIRCoeffs is ~10 for Astop=100) ***
+  *** If x exceeds this function should clamp input to ensure convergence ***
+*/
+float Bessel_I0(float x) {
+  float sum = 1.0f; // the first series term = 1
+  float x2 = x * x * 0.25f;
+  float k = 1.0f;
+  float term = 1.0f;
+  float errorlimit = 1e-7f; // relative error threshold for 32-bit floating-point precision
+
+  do {
+    // term(k) = term(k-1) * x2 / k^2
+    term *= x2 / (k * k);
+    sum += term;
+    k += 1.0f;
+  } while (term >= errorlimit * sum);
+
+  return sum;
+}
+
+/*
   Calculate zoom FIR LPF coefficients using a Kaiser-Bessel windowed Sinc impulse function
 
   Sinc function https://en.wikipedia.org/wiki/Sinc_function
@@ -345,8 +381,6 @@ FLASHMEM void CalcCplxFIRCoeffs(float * coeffs_I, float * coeffs_Q, int numCoeff
     or https://www-elec.inaoep.mx/~jmram/pds09/oppenheim.pdf pg 474, eqn 7.62
     passband ripple: 10^(-Astop/20)
 
-  Bessel function: https://en.wikipedia.org/wiki/Bessel_function
-
   Parameters:
     coeffs       Pointer to coefficient array of size numTaps
     numTaps      Length of the filter
@@ -358,9 +392,9 @@ void CalcZoomFIRCoeffs(float *coeffs, int numTaps, float fc, float Astop, float 
   float fcn = fc / sampleRate; // normalized cutoff frequency
   int N = numTaps - 1;
   float sum = 0.0f;
+  float beta, beta_b;
 
   // Kaiser window beta
-  float beta;
   if(Astop < 21.0f) {
     beta = 0.0f;
   } else if(Astop >= 50.0f) {
@@ -369,11 +403,14 @@ void CalcZoomFIRCoeffs(float *coeffs, int numTaps, float fc, float Astop, float 
     beta = 0.5842f * powf((Astop - 21.0f), 0.4f) + 0.07886f * (Astop - 21.0f);
   }
 
+  beta_b = Bessel_I0(beta);
+
   // calculate FIR filter coefficients
   for(int n = 0; n < numTaps; n++) {
     // Sinc
-    float sinc;
-    float x = fcn * (n - N / 2.0f); // time shifted index
+    float x, y, w, sinc;
+
+    x = fcn * (n - N / 2.0f); // time shifted index
     if(n == N / 2) {
       sinc = 1.0; // x = 0
     } else {
@@ -381,9 +418,9 @@ void CalcZoomFIRCoeffs(float *coeffs, int numTaps, float fc, float Astop, float 
     }
 
     // Kaiser-Bessel window
-    float y = 2.0f * n / N - 1.0f;
-    float w = std::cyl_bessel_i(0.0, beta * sqrtf(1.0f - (y * y))) / std::cyl_bessel_i(0.0, beta);
-    //float w = 2.0 * fcn; // sinc impulse function
+    y = 2.0f * n / N - 1.0f;
+    w = Bessel_I0(beta * sqrtf(1.0f - (y * y))) / beta_b;
+    //w = 2.0 * fcn; // sinc impulse function
 
     // filter coefficients
     coeffs[n] = w * sinc;

@@ -420,12 +420,18 @@ FLASHMEM void SetupDemodFilterBW() {
     case DEMOD_LSB:
     case DEMOD_NFM:
     case DEMOD_PSK31:
-    case DEMOD_FT8:
     case DEMOD_PSK31_WAV:
-    case DEMOD_FT8_INTERNAL:
-    case DEMOD_FT8_WAV:
       t41.FilterLoCut = bands[t41.ActiveBand].fLoCut;
       t41.FilterHiCut = bands[t41.ActiveBand].fHiCut;
+      //Serial.println(t41.FilterHiCut);
+      break;
+
+    // default FT8 to 4k filter
+    case DEMOD_FT8:
+    case DEMOD_FT8_INTERNAL:
+    case DEMOD_FT8_WAV:
+      t41.FilterLoCut = 200;
+      t41.FilterHiCut = 4000;
       break;
 
     case DEMOD_AM:
