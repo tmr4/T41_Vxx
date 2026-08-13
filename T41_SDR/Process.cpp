@@ -439,6 +439,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   if(t41.SpectrumZoom != 0) {
     if(bufferDataCheck) {
       BufferFreqSpecData(blocks * 128);
+      bufferDataCheck = false;
     }
     if(updateSpectrumData) {
       // flag if frequency spectrum updated or more passes required
@@ -1249,104 +1250,111 @@ FLASHMEM void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /*
   *** called by YieldToProcess every ~10ms and less frequently by the main loop ***
 *****/
 // *** TODO: consider what controls are proper in various radio and display states and if to control them here ***
+unsigned long lastProcessControls = 0;
 FASTRUN void ProcessControls() {
   bool updateDisplay = false;
   bool updateInfoBox = false;
 
-  switch(t41.DisplayState) {
-    case DISPLAY_T41:
-    case DISPLAY_T41_FT8_DECODE:
-      updateDisplay = true;
-      updateInfoBox = true;
-      break;
+  // process controls every 10ms
+  // *** TODO: consider an override flag to force a more frequent processing ***
+  if(millis() - lastProcessControls > 10) {
+    switch(t41.DisplayState) {
+      case DISPLAY_T41:
+      case DISPLAY_T41_FT8_DECODE:
+        updateDisplay = true;
+        updateInfoBox = true;
+        break;
 
-    case DISPLAY_FULL_MENU:
-      updateInfoBox = true;
-      break;
+      case DISPLAY_FULL_MENU:
+        updateInfoBox = true;
+        break;
 
-    case DISPLAY_BEACON_MONITOR:
-    default:
-    // no screen updates at all
-      break;
-  }
-
-  // poll front pannel
-  // *** inline function to poll front panel, empty function if not used ***
-  PollFrontPanel();
-
-  // handle USB Host
-#if HOST_KEYBOARD_MOUSE_SUPPORT
-  static unsigned long last_usb_read = 0;
-  unsigned long now = millis();
-
-  // poll USB Host at about every 8ms (125 Hz)
-  if (now - last_usb_read > 8) {
-    USBManager::getHost().Task();
-    MouseLoop();
-    last_usb_read = now;
-  }
-#endif
-
-  // Handle tuning changes
-  ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
-
-  // update filters if changed
-  // *** TODO: examine if we can skip this comparison ***
-  if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
-    ProcessFilterEncoder();
-  }
-
-  if(resetTuningFlag) {
-    // *** DrawBandwidthBar relies on resetTuningFlag being set prior to the ResetTuning call ***
-    resetTuningFlag = false;
-    ResetTuning();
-  }
-
-  // handle any live menu items
-  if(getMenuValueActive) {
-    if(getMenuSelected) {
-      ptrMenuFollowup();
-
-      // wrap up menu
-      getMenuSelected = false;
-      getMenuValueActive = false;
-      ptrMenuLoop = NULL;
-      ptrMenuFollowup = NULL;
-
-      EraseMenus();
-      menuStatus = NO_MENUS_ACTIVE;
-    } else {
-      GetMenuValueLoop();
+      case DISPLAY_BEACON_MONITOR:
+      default:
+      // no screen updates at all
+        break;
     }
-  }
-  if(getMenuOptionActive) {
-    if(getMenuSelected) {
-      ptrMenuFollowup();
 
-      // wrap up menu
-      getMenuSelected = false;
-      getMenuOptionActive = false;
-      ptrMenuLoop = NULL;
-      ptrMenuFollowup = NULL;
+    // poll front pannel
+    // *** inline function to poll front panel, empty function if not used ***
+    PollFrontPanel();
 
-      EraseMenus();
-      menuStatus = NO_MENUS_ACTIVE;
-    } else {
-      GetMenuOptionLoop();
+    // handle USB Host
+  #if HOST_KEYBOARD_MOUSE_SUPPORT
+    static unsigned long last_usb_read = 0;
+    unsigned long now = millis();
+
+    // poll USB Host at about every 8ms (125 Hz)
+    if (now - last_usb_read > 8) {
+      USBManager::getHost().Task();
+      MouseLoop();
+      last_usb_read = now;
     }
+  #endif
+
+    // Handle tuning changes
+    ProcessCenterTuneEncoder(READ_CENTERTUNE_ENCODER);
+
+    // update filters if changed
+    // *** TODO: examine if we can skip this comparison ***
+    if(posFilterEncoder != lastFilterEncoder || filter_pos_BW != last_filter_pos_BW) {
+      ProcessFilterEncoder();
+    }
+
+    if(resetTuningFlag) {
+      // *** DrawBandwidthBar relies on resetTuningFlag being set prior to the ResetTuning call ***
+      resetTuningFlag = false;
+      ResetTuning();
+    }
+
+    // handle any live menu items
+    if(getMenuValueActive) {
+      if(getMenuSelected) {
+        ptrMenuFollowup();
+
+        // wrap up menu
+        getMenuSelected = false;
+        getMenuValueActive = false;
+        ptrMenuLoop = NULL;
+        ptrMenuFollowup = NULL;
+
+        EraseMenus();
+        menuStatus = NO_MENUS_ACTIVE;
+      } else {
+        GetMenuValueLoop();
+      }
+    }
+    if(getMenuOptionActive) {
+      if(getMenuSelected) {
+        ptrMenuFollowup();
+
+        // wrap up menu
+        getMenuSelected = false;
+        getMenuOptionActive = false;
+        ptrMenuLoop = NULL;
+        ptrMenuFollowup = NULL;
+
+        EraseMenus();
+        menuStatus = NO_MENUS_ACTIVE;
+      } else {
+        GetMenuOptionLoop();
+      }
+    }
+
+    t41.Poll(updateDisplay);
+    t41.PollInfoBox(updateInfoBox);
+
+    UpdateClock();
+    UpdateMemTempLoad();
+
+    connectManager.update();
+    catControl.update();
+  #if WSJT_USB_CAT_AUDIO
+    wsjtControl.update();
+  #endif
+
+    lastProcessControls = millis();
   }
-
-  t41.Poll(updateDisplay);
-  t41.PollInfoBox(updateInfoBox);
-
-  UpdateClock();
-  UpdateMemTempLoad();
-
-  connectManager.update();
-  catControl.update();
-#if WSJT_USB_CAT_AUDIO
-  wsjtControl.update();
-#endif
 }
 
 #include <lwip/stats.h>
@@ -1366,7 +1374,6 @@ void EtherStats() {
 // Call this function periodically to yield to RX audio and UI processing
 // updateSpectrum: true=prepare spectrum data to be rendered that loop
 void YieldToProcess(bool updateSpectrum /* = false */) {
-  static unsigned long lastControl = 0;
   unsigned long start = millis();
   unsigned long cal = millis();
   bool done = false;
@@ -1375,8 +1382,6 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
 
   // loop waiting on sufficient IQ data to process
   do {
-    //TOGGLEPROFILEPIN(PROFILER_OTHER);
-
     // yield to ethernet traffic
     /*** Frequent calls here allow extra processing of Ethernet buffers.
          This creates some churn to the iqStream read/write methods but
@@ -1413,11 +1418,7 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
       done = true;
     }
 
-    // process controls every 10ms
-    if(millis() - lastControl > 10) {
-      ProcessControls();
-      lastControl = millis();
-    }
+    ProcessControls();
   } while(!done);
 
   if(t41.CalState == RXIQ_CAL_STATE) {
@@ -1426,7 +1427,6 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
       cal = millis();
     }
   }
-  //RESETPROFILEPIN(PROFILER_OTHER);
 }
 
 void YieldForProcess(int ms) {

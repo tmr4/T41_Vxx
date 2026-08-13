@@ -94,6 +94,7 @@ public:
 
   void update() {
     //LinkState state = linkState;
+    static bool connectedOnce = false;
 
     if(!enabled) return;
 
@@ -108,18 +109,29 @@ public:
     if(now - pollTimer >= POLL_INTERVAL) {
       pollTimer = now;
       switch(linkState) {
-        case LINK_DISCONNECTED:     handleDisconnected(); break;
-        case LINK_CHECK_CONNECTION: handleConnection();   break;
-        case LINK_CHECK_HEARTBEAT:  break;
-        case LINK_CONNECTED:        handleConnected();    break;
-        case LINK_LOST:             handleLinkLost();     break;
+        case LINK_DISCONNECTED:
+          handleDisconnected();
+          break;
+        case LINK_CHECK_CONNECTION:
+          handleConnection();
+          break;
+        case LINK_CHECK_HEARTBEAT:
+          break;
+        case LINK_CONNECTED:
+          handleConnected();
+          connectedOnce = true;
+          break;
+        case LINK_LOST:
+          handleLinkLost();
+          break;
       }
     }
 
     //if((role == DEVICE_ROLE_T41) && (state != linkState)) Serial.println(linkState);
 
     // *** a little pause here is needed sometimes to ensure reconnection ***
-    if(linkState != LINK_CONNECTED) delay(1);
+    // *** this causes a needless delay if we've never been connected before ***
+    if(connectedOnce && linkState != LINK_CONNECTED) delay(1);
   }
 
   ConnectBase* getActiveConnection() { return activeConnection; }
