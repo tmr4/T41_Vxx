@@ -99,6 +99,7 @@ FLASHMEM void RFPowerFollowup() {
 }
 
 FLASHMEM void RFGainFollowup() {
+  UpdateInfoBoxItem(T41_ITEM_RFGAIN);
 }
 
 /*****
