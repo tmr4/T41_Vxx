@@ -132,7 +132,7 @@ void PrepareExciterIQDataCal(int mode);
 
 float VolumeToAmplification(int volume);
 void FreqShift1(int blockSize);
-void FreqShift2();
+void FreqShift2f(int shift);
 bool CalcFreqSpecBuffered(uint32_t blockSize);
 void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier = 1.0);
 void BufferFreqSpecData(uint32_t blockSize);
@@ -453,21 +453,40 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   YieldToEthernet();
 
-  /*************************************************************************************************
-      freq_conv2()
+  SETPROFILEPIN(PROFILER_OTHER);
 
-      FREQUENCY CONVERSION USING A SOFTWARE QUADRATURE OSCILLATOR
-      Creates a new IF frequency to allow the tuning window to be moved anywhere in the current display.
-      THIS VERSION calculates the COS AND SIN WAVE on the fly - uses double precision float
+  // fine-tuning, shift frequency per NCOFreq
+  int sideToneShift = 0;
+  if(t41.RadioMode == CW_MODE ) {
+    if(t41.DemodMode == 1) {
+      sideToneShift = 750;
+    } else {
+      if(t41.DemodMode == 0) {
+        sideToneShift = -750;
+      }
+    }
+  }
 
-      MAJOR ADVANTAGE: frequency conversion can be done for any frequency !
-
-      large parts of the code taken from the mcHF code by Clint, KA7OEI, thank you!
-        see here for more info on quadrature oscillators:
-      Wheatley, M. (2011): CuteSDR Technical Manual Ver. 1.01. - http://sourceforge.net/projects/cutesdr/
-      Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition.
-  *************************************************************************************************/
-  FreqShift2();
+  FreqShift2f(t41.NCOFreq + sideToneShift);
+  //switch(doFreqShift1) {
+  //  case 2:
+  //    FreqShift2d(); // Method #3 doubles
+  //    break;
+  //  case 3:
+  //    FreqShift3(); // // Method #1 doubles
+  //    break;
+  //  case 4:
+  //    //FreqShift4(); // // Method #1 floats
+  //    //FreqShift4a(); // CMSIS DSP
+  //    FreqShift2f(); // Method #3 floats
+  //    break;
+  //  case 5:
+  //    FreqShift2f(t41.NCOFreq + sideToneShift); // Method #3 floats
+  //    //FreqShift5a(); // Method #3 floats
+  //    FreqShift5b(); // Method #3 floats
+  //    break;
+  //}
+  RESETPROFILEPIN(PROFILER_OTHER);
 
   if(t41.CalState != NOT_CAL_STATE) return freqSpecUpdatedThisLoop ? 2 : 1;
 
@@ -983,87 +1002,160 @@ void FreqShift1(int blockSize) {
     audioBufferL[i + 3] = ximag; // xnew(3) = ximag(3) - jxreal(3)
     audioBufferR[i + 3] = -xreal;
   }
-
-  // these will be used for fine tune adjustment in FreqShift2
-  for(int i = 0; i < blockSize; i ++) {
-    audioBufferL_EX[i] = audioBufferL[i];
-    audioBufferR_EX[i] = audioBufferR[i];
-  }
 }
 
 /*****
-  Shift Receive frequency by an arbitray amount
+  Shift receive frequency by an arbitray amount
 
-    Notes:  Routine includes checks to ensure the frequency selection stays within the bounds of the
-    displayed spectrum
-    Also included a variable frequency step, depending on how fast the encoder id turned.  Step varies from 50Hz/step to 10KHz/step
+  This allows fine-tuning within the passband
 
-    freq_conv2()
+  Uses software quadrature oscillator to shift frequency. See the following for methdology:
+    General quadrature oscillator theory: Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition, Chapter 8.8, 13.32.
 
-    FREQUENCY CONVERSION USING A SOFTWARE QUADRATURE OSCILLATOR (NCO)
+    Wheatley, M. (2011): CuteSDR Technical Manual Ver. 1.01. pg 22-25 - http://kiwisdr.com/docs/CuteSDR101.pdf
+    (CuteSDR project at: http://sourceforge.net/projects/cutesdr/ w/ supporting frequency translation code at:
+    https://sourceforge.net/p/cutesdr/code/HEAD/tree/branches/iw0hdv/cutesdr-se/dsp/downconvert.cpp)
 
-    THIS VERSION calculates the COS AND SIN WAVE on the fly AND IS SLOW
+  Method #3 from the CuteSDR manual is used.
+  Two forms are available: FreqShift2f uses floats, FreqShift2d uses doubles
+  The float version is roughly 4 times faster than the double version with no audio quality
+  degradation for the T41. Other uses may differ as the manual suggests the use of doubles.
 
-    MAJOR ADVANTAGE: frequency conversion can be done for any frequency !
+  The CuteSDR manual also discusses a less efficient method, Method #1. Two versions are
+  available: FreqShiftM1f for floats and FreqShiftM1d for doubles. These are significantly
+  slower than the Method #3 routines. More detail at: https://www.reddit.com/r/T41_EP/comments/1vs4p70/frequency_shifting_the_t41_rx_signal/
 
+  The original code notes the following but I could not verify it:
     large parts of the code taken from the mcHF code by Clint, KA7OEI, thank you!
-      see here for more info on quadrature oscillators:
-    Wheatley, M. (2011): CuteSDR Technical Manual Ver. 1.01. - http://sourceforge.net/projects/cutesdr/
-    Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition.
-    Requires 4 complex multiplies and two adds per data point within the time domain buffer.  Applied after the data
-    stream is sent to the Zoom FFT , but befor decimation.
+    Wheatley, M. (2011): CuteSDR Technical Manual Ver. 1.01. -
 *****/
-void FreqShift2() {
-  uint i;
-  int sideToneShift = 0;
-  int CWFreqShift = 750;
-  float32_t NCO_INC;
-  double OSC_COS;
-  double OSC_SIN;
-  static double Osc_Vect_Q = 1.0;
-  static double Osc_Vect_I = 0.0;
-  double Osc_Gain = 0.0;
-  double Osc_Q = 0.0;
-  double Osc_I = 0.0;
+void FreqShift2f(int shift) {
+  float theta, OSC_COS, OSC_SIN, iOsc, qOsc, gain, ip, qp;
+  static float iOsc1 = 0.0;
+  static float qOsc1 = 1.0;
 
-  // *** TODO: why is this here? ***
-  //if(fineTuneEncoderMove != 0L) {
-  //  if(NCOFreq > 40000L) {
-  //    NCOFreq = 40000L;
-  //  }
-  //
-  //  currentFreqA = centerFreq + NCOFreq;
-  //}
+  theta = 2.0f * PI * shift / t41.SampleRate;
 
-  if(t41.RadioMode == CW_MODE ) {
-    if(t41.DemodMode == 1) {
-      sideToneShift = CWFreqShift;
-    } else {
-      if(t41.DemodMode == 0) {
-        sideToneShift = -CWFreqShift;
-      }
+  // *** TODO: this really only needs to be calculated when NCOFreq changes, but the savings are tiny ***
+  OSC_COS = cosf(theta);
+  OSC_SIN = sinf(theta);
+
+  for(int i = 0; i < 2048; i++) {
+    // generate local oscillator with gain from last sample
+    iOsc = (iOsc1 * OSC_COS) - (qOsc1 * OSC_SIN);
+    qOsc = (qOsc1 * OSC_COS) + (iOsc1 * OSC_SIN);
+
+    // adjust oscilator gain to keep amplitude from changing due to round off errors
+    // 1.95 factor from CuteSDR algorithm
+    gain = 1.95 - ((qOsc1 * qOsc1) + (iOsc1 * iOsc1));
+    iOsc1 = gain * iOsc;
+    qOsc1 = gain * qOsc;
+
+    // allow in place translation
+    ip = audioBufferL[i];
+    qp = audioBufferR[i];
+
+    // rotate vectors by multiply I/Q data by e^(j*theta) while maintaining constant amplitude
+    // e^(jx) = cos(x) + jsin(x)
+    // *** TODO: still need work documenting this ***
+    audioBufferL[i] = (ip * qOsc) - (qp * iOsc);
+    audioBufferR[i] = (ip * iOsc) + (qp * qOsc);
+
+    // original code use an undocumented 1.1 factor (perhaps from mcHF)
+    // it doesn't help maintain signal amplitude so is really just an undocumented gain factor
+    // interestingly, this is slightly faster than above
+    //audioBufferL[i] = (ip * 1.1f * qOsc) - (qp * 1.1f * iOsc);
+    //audioBufferR[i] = (qp * 1.1f * qOsc) + (ip * 1.1f * iOsc);
+
+    // you'd think the following would be faster with that factor, but not on the Teensy 4.1 as it breaks some optimizations
+    //audioBufferL[i] = ((ip * qOsc) - (qp * iOsc)) * 1.1f;
+    //audioBufferR[i] = ((qp * qOsc) + (ip * iOsc)) * 1.1f;
+  }
+}
+
+void FreqShift2d(int shift) {
+  double theta, OSC_COS, OSC_SIN, iOsc, qOsc, gain, ip, qp;
+  double freqAdjFactor = 1.1;
+  static double iOsc1 = 0.0;
+  static double qOsc1 = 1.0;
+
+  theta = 2.0 * PI * shift / t41.SampleRate;
+
+  OSC_COS = cos(theta);
+  OSC_SIN = sin(theta);
+
+  for(int i = 0; i < 2048; i++) {
+    // generate local oscillator with gain from last sample
+    iOsc = (iOsc1 * OSC_COS) - (qOsc1 * OSC_SIN);
+    qOsc = (qOsc1 * OSC_COS) + (iOsc1 * OSC_SIN);
+
+    // adjust gain to keep amplitude from changing due to round off errors
+    gain = 1.95 - ((qOsc1 * qOsc1) + (iOsc1 * iOsc1));
+    iOsc1 = gain * iOsc;
+    qOsc1 = gain * qOsc;
+
+    // allow in place translation
+    ip = audioBufferL[i];
+    qp = audioBufferR[i];
+
+    // rotate vectors by multiply I/Q data by e^(j*theta) while maintaining constant amplitude
+    // e^(jx) = cos(x) + jsin(x)
+    audioBufferL[i] = (ip * freqAdjFactor * qOsc) - (qp * freqAdjFactor * iOsc);
+    audioBufferR[i] = (qp * freqAdjFactor * qOsc) + (ip * freqAdjFactor * iOsc);
+  }
+}
+
+void FreqShiftM1d() {
+  double NCO_INC, OSC_COS, OSC_SIN, ip, qp;
+  static double theta = 0.0;
+
+  // force a negative increment to mathematically account for High-Side Injection
+  NCO_INC = -2.0 * PI * t41.NCOFreq / t41.SampleRate;
+
+  for(int i = 0; i < 2048; i++) {
+    OSC_COS = cos(theta);
+    OSC_SIN = sin(theta);
+
+    ip = audioBufferL[i];
+    qp = audioBufferR[i];
+
+    audioBufferL[i] = (ip * OSC_COS) - (qp * OSC_SIN);
+    audioBufferR[i] = (qp * OSC_COS) + (ip * OSC_SIN);
+
+    theta += NCO_INC;
+    if(theta >= 2.0 * PI) {
+      theta -= 2.0 * PI;
+    } else if(theta < 0.0 * PI) {
+      theta += 2.0 * PI;
     }
   }
+}
 
-  NCO_INC = 2.0 * PI * (t41.NCOFreq + sideToneShift) / t41.SampleRate;
+void FreqShiftM1f() {
+  float NCO_INC, OSC_COS, OSC_SIN, ip, qp;
+  static float theta = 0.0;
 
-  OSC_COS = cos(NCO_INC);
-  OSC_SIN = sin(NCO_INC);
+  // force a negative increment to mathematically account for High-Side Injection
+  NCO_INC = -2.0f * PI * t41.NCOFreq / t41.SampleRate;
 
-  for(i = 0; i < 2048; i++) {
-    // generate local oscillator on-the-fly:  This takes a lot of processor time!
-    Osc_Q = (Osc_Vect_Q * OSC_COS) - (Osc_Vect_I * OSC_SIN);  // Q channel of oscillator
-    Osc_I = (Osc_Vect_I * OSC_COS) + (Osc_Vect_Q * OSC_SIN);  // I channel of oscillator
-    Osc_Gain = 1.95 - ((Osc_Vect_Q * Osc_Vect_Q) + (Osc_Vect_I * Osc_Vect_I));  // Amplitude control of oscillator
+  for(int i = 0; i < 2048; i++) {
+    OSC_COS = cosf(theta);
+    OSC_SIN = sinf(theta);
+    //OSC_COS = arm_cos_f32(theta);
+    //OSC_SIN = arm_sin_f32(theta);
 
-    // rotate vectors while maintaining constant oscillator amplitude
-    Osc_Vect_Q = Osc_Gain * Osc_Q;
-    Osc_Vect_I = Osc_Gain * Osc_I;
-    //
-    // do actual frequency conversion
-    float freqAdjFactor = 1.1;
-    audioBufferL[i] = (audioBufferL_EX[i] * freqAdjFactor * Osc_Q) + (audioBufferR_EX[i] * freqAdjFactor * Osc_I); // multiply I/Q data by sine/cosine data to do translation
-    audioBufferR[i] = (audioBufferR_EX[i] * freqAdjFactor * Osc_Q) - (audioBufferL_EX[i] * freqAdjFactor * Osc_I);
+    ip = audioBufferL[i];
+    qp = audioBufferR[i];
+
+    audioBufferL[i] = (ip * OSC_COS) - (qp * OSC_SIN);
+    audioBufferR[i] = (qp * OSC_COS) + (ip * OSC_SIN);
+
+    theta += NCO_INC;
+    if(theta >= 2.0f * PI) {
+      theta -= 2.0f * PI;
+    } else if(theta < 0.0f * PI) {
+      theta += 2.0f * PI;
+    }
   }
 }
 

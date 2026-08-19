@@ -43,7 +43,7 @@
 #define CAT_SPY             false           // set to true to examine CAT communication traffic in waterfall area
 
 #define MASTER_CLK_MULT 4ULL  // FOURSQRP QSD frontend requires 4x clock
-#define QSD_IQ_REVERSED false
+#define QSD_IQ_REVERSED false // set to true when testing input from v11 QSD
 
 // pick one of the following display configurations
 //#define DISPLAY_LANDSCAPE

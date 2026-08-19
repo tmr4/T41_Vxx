@@ -318,6 +318,11 @@ FLASHMEM void setup() {
   pinMode(PROFILER_OTHER, OUTPUT);
   digitalWrite(PROFILER_OTHER, LOW);
 #endif
+
+  // presets for some testing modes
+  t41.AudioVolume = 10;
+  t41.SpectrumZoom = 0;
+  t41.LiveNoiseFloor = 1;
 }
 
 #ifdef DEBUG

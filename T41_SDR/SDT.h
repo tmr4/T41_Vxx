@@ -14,6 +14,7 @@ typedef __uint8_t uint8_t;
 
 #include "src\hardwareConfig.h"
 #include "src\hardware.h"
+#include "pi.h" // ensure consistent float PI in T41 files
 
 //-------------------------------------------------------------------------------------------------------------
 // Data
