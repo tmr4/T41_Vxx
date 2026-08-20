@@ -162,6 +162,18 @@ AudioQuadratureSignals testQuadSignals;
 //void SweepTimerISR() { testQuadSignals.IncSignalFreq(); }
 #endif
 
+#if INJECT_TWOTONE_RX_TEST_SIGNALS
+#include "testSignal.h"
+AudioQuadratureSignals tone1;
+AudioQuadratureSignals tone2;
+AudioMixer4 mixerI;
+AudioMixer4 mixerQ;
+AudioConnection patchCord1(tone1.GetI(), 0, mixerI, 0);
+AudioConnection patchCord2(tone1.GetQ(), 0, mixerI, 1);
+AudioConnection patchCord3(tone2.GetI(), 0, mixerQ, 0);
+AudioConnection patchCord4(tone2.GetQ(), 0, mixerQ, 1);
+#endif
+
 #if INJECT_MIC_TEST_SIGNAL
 #include "testSignal.h"
 AudioSignal testSignal;
@@ -515,7 +527,15 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
 
     pc_Q_in_L.connect(testQuadSignals.GetI(), 0, Q_in_L, 0);
     pc_Q_in_R.connect(testQuadSignals.GetQ(), 0, Q_in_R, 0);
-    AudioInterrupts();
+    //AudioInterrupts();
+#elif INJECT_TWOTONE_RX_TEST_SIGNALS
+    tone1.frequency(48700); // 700Hz LSB
+    tone2.frequency(49900); // 1900Hz LSB
+    tone1.setSignalStrength(9); // S9
+    tone2.setSignalStrength(9);
+
+    pc_Q_in_L.connect(mixerI, 0, Q_in_L, 0);
+    pc_Q_in_R.connect(mixerQ, 0, Q_in_R, 0);
 #else
 #if QSD_IQ_REVERSED
     pc_Q_in_L.connect(i2s_quadIn, 3, Q_in_L, 0);

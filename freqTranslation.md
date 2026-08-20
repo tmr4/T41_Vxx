@@ -26,4 +26,6 @@ $$x'(n) = (I(n)y_{i}(n) - Q(n)y_{q}(n)) + j(I(n)y_{q}(n) + Q(n)y_{i}(n))$$
 
 ### Resolving Spectral Inversion from High-side Injection Use in T41
 
-We need to consider that with high-side injection, the local oscillator sits *above* the RF signal causing spectral inversion in the QSD. The signal has been up-converted to baseband in *FreqShift1* per Lyons 13.1.2 (page 591), with a note *"with the savings of not having to shift/rotate the FFT_buffer"*.
+With high-side injection, the local oscillator sits *above* the RF signal causing spectral inversion in the QSD (see https://www.rfcafe.com/references/electrical/spectral-inv.htm for some nice images of this).
+
+The signal has been up-converted to baseband in *FreqShift1* per Lyons 13.1.2 (page 591), with a note *"with the savings of not having to shift/rotate the FFT_buffer"*.
