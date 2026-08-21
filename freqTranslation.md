@@ -4,11 +4,11 @@ Reference: Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3r
 
 ### Quadrature Oscillator
 
-From Lyons 13.32:
+Equations 13-134 and 13-134' from Lyons 13.32:
 
-$$y_{i}(n) = y_{i}(n-1)\cos(\theta) - jy_{q}(n-1)\sin(\theta) \tag{13-134}$$
+$$y_{i}(n) = y_{i}(n-1)\cos(\theta) - jy_{q}(n-1)\sin(\theta)$$
 
-$$y_{q}(n) = y_{i}(n-1)\sin(\theta) + jy_{q}(n-1)\cos(\theta) \tag{13-134'}$$
+$$y_{q}(n) = y_{i}(n-1)\sin(\theta) + jy_{q}(n-1)\cos(\theta)$$
 
 ### Digitalized Signal
 

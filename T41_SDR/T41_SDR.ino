@@ -194,6 +194,7 @@ FLASHMEM void SoftReset() {
 #if INJECT_RX_TEST_SIGNALS
   t41.RFGain = -30;
   t41.AGCMode = 0;
+  t41.LiveNoiseFloor = 0;
 #endif
 }
 
@@ -322,7 +323,9 @@ FLASHMEM void setup() {
   // presets for some testing modes
   t41.AudioVolume = 10;
   t41.SpectrumZoom = 0;
+#if !INJECT_RX_TEST_SIGNALS
   t41.LiveNoiseFloor = 1;
+#endif
 }
 
 #ifdef DEBUG

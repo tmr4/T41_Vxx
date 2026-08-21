@@ -991,8 +991,9 @@ void FreqShift1(int blockSize) {
   Uses software quadrature oscillator to shift frequency. See the following for methdology:
     General quadrature oscillator theory: Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition, Chapters 8, 13.32.
 *****/
+//void FreqShift2f_new(int shift) {
 void FreqShift2f(int shift) {
-  float theta, cosTheta, sinTheta, yi, yq, In, Qn;
+  float theta, cosTheta, sinTheta, yi, yq, In, Qn, M2, gain;
   static float yi1 = 1.0; // see Lyons page 685
   static float yq1 = 0.0;
 
@@ -1021,6 +1022,15 @@ void FreqShift2f(int shift) {
     yi1 = yi;
     yq1 = yq;
   }
+
+  // adjust signal amplitude to correct for floating point roundoff errors
+  // first-order Taylor approximation: gain = 1 + 0.5 * (1 - magnitude^2)
+  // *** amplitude correction needed when shift <> 0 ***
+  // *** doing this once per call versus in the loop above appears sufficient
+  M2 = (yi1 * yi1) + (yq1 * yq1);
+  gain = 1.0f + 0.5f * (1.0f - M2);
+  yi1 *= gain;
+  yq1 *= gain;
 }
 
 void FreqShiftM1d() {
@@ -1074,6 +1084,43 @@ void FreqShiftM1f() {
     } else if(theta < 0.0f * PI) {
       theta += 2.0f * PI;
     }
+  }
+}
+
+//void FreqShift2f(int shift) {
+void FreqShift2f_old(int shift) {
+  uint i;
+  int sideToneShift = 0;
+  int CWFreqShift = 750;
+  double NCO_INC, OSC_COS, OSC_SIN, In, Qn;
+  static double Osc_Vect_Q = 1.0;
+  static double Osc_Vect_I = 0.0;
+  double Osc_Gain = 0.0;
+  double Osc_Q = 0.0;
+  double Osc_I = 0.0;
+
+  NCO_INC = 2.0 * PI * (t41.NCOFreq + sideToneShift) / t41.SampleRate;
+
+  OSC_COS = cos(NCO_INC);
+  OSC_SIN = sin(NCO_INC);
+
+  for(i = 0; i < 2048; i++) {
+    // generate local oscillator on-the-fly:  This takes a lot of processor time!
+    Osc_Q = (Osc_Vect_Q * OSC_COS) - (Osc_Vect_I * OSC_SIN);  // Q channel of oscillator
+    Osc_I = (Osc_Vect_I * OSC_COS) + (Osc_Vect_Q * OSC_SIN);  // I channel of oscillator
+    Osc_Gain = 1.95 - ((Osc_Vect_Q * Osc_Vect_Q) + (Osc_Vect_I * Osc_Vect_I));  // Amplitude control of oscillator
+
+    // rotate vectors while maintaining constant oscillator amplitude
+    Osc_Vect_Q = Osc_Gain * Osc_Q;
+    Osc_Vect_I = Osc_Gain * Osc_I;
+
+    In = audioBufferL[i];
+    Qn = audioBufferR[i];
+
+    // do actual frequency conversion
+    float freqAdjFactor = 1.1;
+    audioBufferL[i] = (In * freqAdjFactor * Osc_Q) + (Qn * freqAdjFactor * Osc_I); // multiply I/Q data by sine/cosine data to do translation
+    audioBufferR[i] = (Qn * freqAdjFactor * Osc_Q) - (In * freqAdjFactor * Osc_I);
   }
 }
 
