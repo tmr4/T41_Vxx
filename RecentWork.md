@@ -2,6 +2,49 @@
 
 ## Ongoing Work
 
+### RX DSP: Frequency Translation
+
+I set out to better understand and document the RX frequency translation routines in the T41 code.
+
+The T41 RX signal leaves the QSD board with the IQ signals shifted by the T41 intermediate frequency of 48kHz, which is one quarter the T41 sample rate of 192kHz. The T41 code has two routines that shift these signals before they are used in various DSP processes. These functions operate on the undecimated IQ signals and so need to be efficient to improve the T41 loop speed.
+
+The first frequency shift routine shifts the IQ input signals 48kHz to baseband undoing the IF shift in the RX QSD. The second frequency shift routine allows for fine-tuning in the passband avoiding having to change the T41 tuning frequency.
+
+The theory behind these shifts is the same, but the implementation is different as the fixed quarter sample rate shift in the first routine allows the process to be greatly simplified as all of the sine and cosine functions simplify to 0 and +/-1.
+
+The first frequency shift routine uses an algorithm from chapter 13 of “Understanding Digital Signal Processing” by Richard G. Lyons. The fixed quarter sample rate shift is done by simply rearranging the I and Q signals. The DSP book gives a brief description and a link ([Digital Signal Processing Tricks – Frequency Translation without multiplication](https://www.embedded.com/digital-signal-processing-tricks-frequency-translation-without-multiplication)) which is a reprint of the relevant portion of the Lyons chapter.
+
+This routine is called after the T41 frequency spectrum is calculated in 1x zoom mode, but before in 2x and above zoom modes. The code might be made a bit more efficient utilizing pointers, but the speed improvement wouldn't be great* and the code readability wouldn't be improved, especially as the code directly follows equation 13-3 in the reference.
+
+The code has an old Teensy Convolution SDR comment "This is for +Fs/4 \[moves receive frequency to the left in the spectrum display\]". I didn't find that helpful and it isn't relevant for the T41. More accurate is that the routine shifts the signals toward baseband as it's used in the T41.
+
+The second frequency shift routine shifts the input signal by the NCO frequency. The routine is briefly mentioned in the DSP book, but, at least in my version, isn't discussed in detail as far as I can tell. Luckily the code points to the CuteSDR Technical Manual, though the link provided is for the entire project.  I found a copy of the manual [here](http://kiwisdr.com/docs/CuteSDR101.pdf). We're interested in pages 22-25.
+
+The same translation method is used, but this time the sine and cosine functions don't simplify to 0 and +/-1.  Three methods are discussed to calculate the sine and cosine functions. The T41 uses Method #3, which uses a software quadrature oscillator that eliminates the need to calculate the sine and cosine functions for each point in the signals. This speeds up processing. Method #2 isn't applicable for the T41. Methods #1 does the translation by brute force, calculating the sine and cosine functions for each point in the signals. Of course, other methods are possible, for example the CMSIS DSP library functions.
+
+The legacy code uses Method #3 with doubles.  The manual notes that for Method #3 that "There does not seem to be any degradation in signal purity as long as double precision math is used." I decided to verify this for the T41 as well as contrast the performance of Method #3 and Method #1 on the Teensy 4.1. My findings are in the table below showing the routine calculation time with and without a fine-tuning offset:
+
+Frequency Shift #2 Calculation Time (microseconds)\*
+
+|Method #|3 (double)|3 (float)|1 (double)|1 (float)|1 (CMSIS)|
+|:-|:-|:-|:-|:-|:-|
+|NCO=0|380-402|104-126|482-522|372-389|607-630|
+|NCO<>0|380-422|104-126|1850-2200|840-1160|605-626|
+
+\* Note that some timing variability could be due to processing unrelated interrupts
+
+The audio quality appeared the same in all cases.
+
+A couple of interesting outcomes here:
+
+1. Method #3 with floats is roughly 4 to 6 times faster than the other methods with no fine-tuning offset. It improves loop time by about 3ms over the currently used Method #3 with doubles, assuming the function is called about 10 times per loop.
+2. The Method #1 calculation time increased substantially for non-zero NCOs. Obviously, the system sine and cosine functions return early when the input parameter is zero.
+3. When fine-tuning, the Method #1 calculation time is 9 to 18 times the Method #3 with floats time.
+4. The CMSIS DSP library sine and cosine functions were slower than the sinf/cosf functions with NCO equal to zero, but don't face a penalty when NCO is not zero.
+5. With Method #1, the calculation time may not return to the zero NCO value even though NCO was returned to zero. This is likely because theta should be reset with NCO.
+
+Method #3 with float performs the best on the Teensy 4.1. I didn't find the CuteSDR caution to use doubles applicable for the T41 use.
+
 ### Updated Audio Spectrum Calculation Routine
 
 I always thought the spread of the base of the audio spectrum, even with a clean, single tone test signal was the result of the limitation of my test equipment and my noisy test environment. The noise floor with these tests was about the same as with my bench antenna, so I didn't question it.
@@ -10,7 +53,7 @@ That changed when I added the internal test signal. Those had a noise floor sign
 
 My audio spectrum code pretty much dates back to STDVer049.2k, the version released for the 4SQRP kit. The code (1) applies the audio filter while calculating the FFT and (2) converts the FFT bin magnitude to an audio spectrum pixel value. The conversion wasn't a standard power formula though and it mixed the real and imaginary components interleaved in the complex FFT array. I'm guessing this was done to simplify the calculation and provide some averaging at the same time.
 
-Without documentation though, leaves some doubt about the intent. The calculation shortcut isn't really necessary give that the proper calculation is very fast compared to the slow display. Not only that, the proper calculation also produces a cleaner audio spectrum, even with my noisy test setup.
+Without documentation though, it leaves some doubt about the intent. The calculation shortcut isn't really necessary given that the proper calculation is very fast compared to the slow display. Not only that, the proper calculation also produces a cleaner audio spectrum, even with my noisy test setup.
 
 Here is the cleaner audio spectrum with an internal S9 test signal:
 
