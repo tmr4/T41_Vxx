@@ -10,7 +10,7 @@ $$y_{i}(n) = y_{i}(n-1)\cos(\theta) - jy_{q}(n-1)\sin(\theta)$$
 
 $$y_{q}(n) = y_{i}(n-1)\sin(\theta) + jy_{q}(n-1)\cos(\theta)$$
 
-### Digitalized Signal
+### Digitized Signal
 
 $$x(n) = I(n) + jQ(n)$$
 
@@ -18,7 +18,7 @@ $$x(n) = I(n) + jQ(n)$$
 
 $$x'(n) = (I(n) + jQ(n)) \cdot (y_{i}(n) + jy_{q}(n))$$
 
-$$x'(n) = (I(n)y_{i}(n) + jQ(n)y_{i}(n)) + (jI(n)y_{q}(n) + j^2Q(n)y_{q}(n))$$
+$$x'(n) = I(n)y_{i}(n) + jQ(n)y_{i}(n) + jI(n)y_{q}(n) + j^2Q(n)y_{q}(n)$$
 
 Simplifying we get:
 
@@ -26,6 +26,6 @@ $$x'(n) = (I(n)y_{i}(n) - Q(n)y_{q}(n)) + j(I(n)y_{q}(n) + Q(n)y_{i}(n))$$
 
 ### Resolving Spectral Inversion from High-side Injection Use in T41
 
-With high-side injection, the local oscillator sits *above* the RF signal causing spectral inversion in the QSD (see https://www.rfcafe.com/references/electrical/spectral-inv.htm for some nice images of this).
+With high-side injection, the local oscillator sits *above* the RF signal causing spectral inversion in the QSD (see https://www.rfcafe.com/references/electrical/spectral-inv.htm for some nice images of this). The fine-tuning frequency shift is negated to flip this inversion.
 
-The signal has been up-converted to baseband in *FreqShift1* per Lyons 13.1.2 (page 591), with a note *"with the savings of not having to shift/rotate the FFT_buffer"*.
+Math to follow!

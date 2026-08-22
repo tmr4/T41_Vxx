@@ -396,14 +396,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // *** TODO: examine whether specific factors are needed for USB/FT8 or if a simple negation is sufficient ***
   ApplyIQCorrectionFactors(audioBufferL, audioBufferR, IQAmpCorrectionFactor[t41.ActiveBand], IQPhaseCorrectionFactor[t41.ActiveBand], blocks * 128);
 
-  /**********************************************************************************
-      Perform a 256 point FFT for the spectrum display on the basis of the first 256 complex values
-      of the raw IQ input data this saves about 3% of processor power compared to calculating
-      the magnitudes and means of the 4096 point FFT for the display
-
-      Only go there from here, if magnification == 1
-  ***********************************************************************************************/
-
+  // calculate 1x frequency spectrum if selected
   if((t41.SpectrumZoom == 0) && updateSpectrumData) {
     CalcFreqSpec(audioBufferL, audioBufferR);
     freqSpecUpdatedThisLoop = true;
@@ -415,32 +408,19 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
     //}
   }
 
-  /**********************************************************************************
-      Frequency translation by Fs/4 without multiplication from Lyons (2011): chapter 13.1.2 page 646
-      together with the savings of not having to shift/rotate the audioFFT, this saves
-      about 1% of processor use
-
-      This is for +Fs/4 [moves receive frequency to the left in the spectrum display]
-        audioBufferL contains I = real values
-        audioBufferR contains Q = imaginary values
-        xnew(0) =  xreal(0) + jximag(0)
-            leave first value (DC component) as it is!
-        xnew(1) =  - ximag(1) + jxreal(1)
-  **********************************************************************************/
+  // shift frequency to baseband
+  // center "hump" around DC is shifted by Fs/4
   FreqShift1(blocks * 128);
 
-  /**********************************************************************************
-      Spectrum zoom displays a magnified display of the data around the translated
-      receive frequency.  It uses the shifted spectrum, so the center "hump" around
-      DC is shifted by Fs/4.  Buffering and spectrum processing is done in
-      CalcFreqSpecBuffered. Some prebuffering is done in BufferFreqSpecData.
-  **********************************************************************************/
-  // Kick off frequency spectrum FFT routine only once for each audio process loop
+  // calculate frequency spectrum for other zoom levels  It uses the shifted spectrum, so the
+  // buffering and spectrum processing is done in CalcFreqSpecBuffered
+  // some prebuffering is done in BufferFreqSpecData
   if(t41.SpectrumZoom != 0) {
     if(bufferDataCheck) {
       BufferFreqSpecData(blocks * 128);
       bufferDataCheck = false;
     }
+    // frequency spectrum FFT routine only performed once for each display frame update loop
     if(updateSpectrumData) {
       // flag if frequency spectrum updated or more passes required
       if(CalcFreqSpecBuffered(blocks * 128)) {
@@ -984,16 +964,18 @@ void FreqShift1(int blockSize) {
 }
 
 /*****
-  Shift receive frequency by an specified amount
+  Shift receive frequency by a specified amount
 
   This allows fine-tuning within the passband
 
-  Uses software quadrature oscillator to shift frequency. See the following for methdology:
-    General quadrature oscillator theory: Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition, Chapters 8, 13.32.
+  Uses software quadrature oscillator to shift frequency
+    Lyons, R.G. (2011): Understanding Digital Processing. – Pearson, 3rd edition
+      General quadrature theory: Chapter 8
+      Quadrature Oscillator: Chapter 13.32
 *****/
 //void FreqShift2f_new(int shift) {
 void FreqShift2f(int shift) {
-  float theta, cosTheta, sinTheta, yi, yq, In, Qn, M2, gain;
+  float theta, cosTheta, sinTheta, yi, yq, In, Qn, Gn;
   static float yi1 = 1.0; // see Lyons page 685
   static float yq1 = 0.0;
 
@@ -1014,7 +996,7 @@ void FreqShift2f(int shift) {
     Qn = audioBufferR[i];
 
     // complex multiply IQ data, x(n) = I(n) + jQ(n), by quadrature oscillator
-    // see:
+    // see: https://github.com/tmr4/T41_Vxx/blob/altFreqShift2/freqTranslation.md
     audioBufferL[i] = In * yi - Qn * yq;
     audioBufferR[i] = In * yq + Qn * yi;
 
@@ -1024,13 +1006,11 @@ void FreqShift2f(int shift) {
   }
 
   // adjust signal amplitude to correct for floating point roundoff errors
-  // first-order Taylor approximation: gain = 1 + 0.5 * (1 - magnitude^2)
   // *** amplitude correction needed when shift <> 0 ***
   // *** doing this once per call versus in the loop above appears sufficient
-  M2 = (yi1 * yi1) + (yq1 * yq1);
-  gain = 1.0f + 0.5f * (1.0f - M2);
-  yi1 *= gain;
-  yq1 *= gain;
+  Gn = 1.5f - (yi1 * yi1 + yq1 * yq1); // Lyons 13-140
+  yi1 *= Gn;
+  yq1 *= Gn;
 }
 
 void FreqShiftM1d() {
