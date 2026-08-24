@@ -71,6 +71,7 @@ FLASHMEM void T41Properties::SetPropertyDefaults() {
   int remoteStatus = REMOTE_NOT_CONNECTED;
 
   RadioState.Init(RECONFIGURE_STATE);
+  RxTxState.Init(RX_STATE);
 
   SampleRate.Init(192000.0);
   IntermediateFreq.Init(48000.0);

@@ -1,4 +1,4 @@
-#### The most recent features, [see recent work](https://github.com/tmr4/T41_Vxx/blob/main/RecentWork.md), in this branch work with hardware versions *v11*, *vPS* and *vAP*, my T41 and remote test beds.
+#### The most recent features, [see recent work](https://github.com/tmr4/T41_Vxx/blob/main/RecentWork.md), in this branch work with hardware versions *v11*, and my T41 and remote test beds, *vPS* and *vAP*. They won't be incorporated into hardware version *v12* until I get back to building it.
 
 # T41_Vxx
 

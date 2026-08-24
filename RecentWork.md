@@ -2,6 +2,18 @@
 
 ## Ongoing Work
 
+### Antenna Tuner Support
+
+I added support for the LDG antenna tuner Y-ACC-1 cable. This cable allows a supported antenna tuner to trigger TX on the T41 to start a tuning cycle.
+
+The Y-ACC-1 cable is a custom TRS crossover cable with the Tip of the tuner end connected to the Ring on the radio end. The Ring on the tuner end and the Tip on the radio end are not connected. The Sleeve on both ends is connected to ground.
+
+A simple pullup circuit is needed on the T41 side to support the tuner TX control. The Ring on the radio side is connected to a free Teensy pin (I used 33) with a pull-up to 3.3V (I used 10k ohm) and an RF bypass capacitor to ground (I used 100nF). Normally the tuner keeps its end of the connection in a high impedance state. A tunning cycle is started when the tuner *Tune* button is pressed (medium or long press for a memory or full tuning cycle respectively).
+
+When a tuning cycle is requested, the tuner pulls the connection to ground. When the tuner completes its tuning cycle it returns the connection to a high impedance state and the Teensy pin returns to 3.3V. If the tuner doesn't sense RF withing about 1 second after a tuning cycle is requested, it returns the connection to a high impedance state. Thus the T41 has to respond within that time. This is well within the longest T41 loop time, on my T41 at least.
+
+The software mod is simple.  The selected Teensy pin needs set up as a input. The Y-ACC-1 cable is about 3' long so I didn't use a Teensy internal pullup resistor. I added a new radio state to detect a low condition on the selected pin.  The pin is polled once per loop. When detected, the radio configures itself for CW transmission, sets a low power level and triggers the CW exciter. When the tuning cycle is complete, the CW exciter is turned off and the TX power setting is restored.
+
 ### RX DSP: Frequency Translation
 
 I set out to better understand and document the RX frequency translation routines in the T41 code.

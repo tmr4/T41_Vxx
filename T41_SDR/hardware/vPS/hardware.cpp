@@ -59,6 +59,8 @@ void FT8DoXmitCalibrate();
 
 void InitFrontPanel();
 
+void InitTuner();
+
 //-------------------------------------------------------------------------------------------------------------
 // Code
 //-------------------------------------------------------------------------------------------------------------
@@ -144,6 +146,8 @@ void InitHardware(int sampleRate) {
 #ifdef PROJECTSYSTEM_ENCODER_MCP
   InitFrontPanel();
 #endif
+
+  InitTuner();
 }
 
 void SoftResetHardware() {

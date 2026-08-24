@@ -42,7 +42,7 @@ extern int calNFAdjust;
 // free project system pins after assignments below:
 // *** unused T41 inputs assigned to pin 13 ***
 // *** unused T41 outputs assigned to pin 15 ***
-// Left side: (13),(15),17
+// Left side: (13),(15)
 // Right side: 28
 
 // *** Input Pins ***
@@ -108,6 +108,8 @@ extern int calNFAdjust;
 #define PROFILER_RX_TX       36
 #define PROFILER_DECODE_FT8       38
 #define PROFILER_OTHER       16
+
+#define LDG_AUTO_TUNER  17
 
 // other
 

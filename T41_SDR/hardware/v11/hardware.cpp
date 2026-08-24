@@ -2,8 +2,8 @@
 
 #include "..\SDT.h"
 
-#include <SPI.h>
-#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
+//#include <SPI.h>
+//#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
 
 #include "..\AudioConfig.h"
 #include "..\Button.h"
@@ -63,6 +63,8 @@ void RFGainFollowup();
 void FT8DoXmitCalibrate();
 
 void SetupBPF();
+
+void InitTuner();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -264,6 +266,8 @@ void InitHardware(int sampleRate) {
 #ifdef USE_BPF_BOARD
   SetupBPF();
 #endif
+
+  InitTuner();
 }
 
 void SoftResetHardware() {

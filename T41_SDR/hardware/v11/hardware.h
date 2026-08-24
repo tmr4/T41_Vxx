@@ -21,7 +21,7 @@ extern uint16_t BPF_GPAB_state;
 // down: 0,1,24-27
 
 // free v11 pins after assignments below:
-// up: 33,34,40,41
+// up: 34,40,41
 // down: 0,26,27
 
 // tmp BPF board assignments: 24: SCL2, 25: SDA2
@@ -71,6 +71,8 @@ extern uint16_t BPF_GPAB_state;
 #define PROFILER_RX_TX               1
 #define PROFILER_DECODE_FT8          1
 #define PROFILER_OTHER               1
+
+#define LDG_AUTO_TUNER  33
 
 //---- end of Teensy 4.1 Pin assignments
 

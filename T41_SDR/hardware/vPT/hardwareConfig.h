@@ -1,6 +1,6 @@
 // vPT specific hardware config file for running on Project System
 
-#define VERSION "vPT_dev/v0.04" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
+#define VERSION "vPT_dev/v0.05" // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 
 #define PROFILER_ACTIVE     false
 

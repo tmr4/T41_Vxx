@@ -1070,8 +1070,6 @@ void FreqShiftM1f() {
 //void FreqShift2f(int shift) {
 void FreqShift2f_old(int shift) {
   uint i;
-  int sideToneShift = 0;
-  int CWFreqShift = 750;
   double NCO_INC, OSC_COS, OSC_SIN, In, Qn;
   static double Osc_Vect_Q = 1.0;
   static double Osc_Vect_I = 0.0;
@@ -1079,7 +1077,7 @@ void FreqShift2f_old(int shift) {
   double Osc_Q = 0.0;
   double Osc_I = 0.0;
 
-  NCO_INC = 2.0 * PI * (t41.NCOFreq + sideToneShift) / t41.SampleRate;
+  NCO_INC = 2.0 * PI * shift / t41.SampleRate;
 
   OSC_COS = cos(NCO_INC);
   OSC_SIN = sin(NCO_INC);

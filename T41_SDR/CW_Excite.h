@@ -17,5 +17,5 @@ void KeyRingOn();
 void CW_ExciterIQData(int state = ON, bool ramp = false, bool pause = true, float timeAdjust = 0.0);
 void CreateCWSignal(unsigned long signalLength);
 
-void CWTransmit();
+void CWTransmit(int pin);
 void CWTransmitPaddle();

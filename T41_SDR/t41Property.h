@@ -22,8 +22,12 @@ public:
     RadioState is a quasi read-only property.  It's intended to be set only in the main loop
     or in the execution loops of routines that bypass that loop, such as during
     calibration. As such, RadioState shouldn't be assigned a value directly outside those areas.
+
+    RxTxState is for the convinience of functions that need to know whether we're Rx or Tx
+    without having to check every RadioState option
   */
   Property<int> RadioState{RECONFIGURE_STATE};
+  Property<int> RxTxState{RX_STATE};
   Property<int> CalState{NOT_CAL_STATE};
 
   Property<int> DisplayState{0}; // DISPLAY_T41

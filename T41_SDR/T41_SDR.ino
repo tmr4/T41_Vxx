@@ -117,6 +117,7 @@ int oldCenterFreq;
 //-------------------------------------------------------------------------------------------------------------
 
 int SetI2SFreq(int freq);
+void AutoTune();
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -408,43 +409,59 @@ FASTRUN void loop() {
   ProcessControls();
 
   // 2. state detection
-  switch(t41.RadioMode) {
-    case SSB_MODE:
-      if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == HIGH) {
-        t41.RadioState = RECEIVE_STATE;
-      } else {
-        t41.RadioState = SSB_TRANSMIT_STATE;
-      }
-      break;
+  if(digitalRead(LDG_AUTO_TUNER) == LOW) {
+    // auto tune request
+    t41.RadioState = TUNER_TRANSMIT_STATE;
+    t41.RxTxState = TX_STATE;
+  } else {
+    switch(t41.RadioMode) {
+      case SSB_MODE:
+        if(t41.RadioMode == SSB_MODE && digitalRead(PTT) == HIGH) {
+          t41.RadioState = RECEIVE_STATE;
+          t41.RxTxState = RX_STATE;
+        } else {
+          t41.RadioState = SSB_TRANSMIT_STATE;
+          t41.RxTxState = TX_STATE;
+        }
+        break;
 
-    case CW_MODE:
-      if(cwKeyerPTT) {
-        t41.RadioState = CW_TRANSMIT_KEYER_STATE;
-      } else if(beaconFlag) {
-        t41.RadioState = BEACON_STATE;
-      } else if((digitalRead(t41.PaddleDit) == HIGH) && (digitalRead(t41.PaddleDah) == HIGH)) {
-        t41.RadioState = RECEIVE_STATE;
-      } else if((digitalRead(t41.PaddleDit) == LOW) && (t41.KeyType == 0)) {
-        t41.RadioState = CW_TRANSMIT_STRAIGHT_STATE;
-      } else if((keyPressedOn == 1) && (t41.KeyType == 1)) {
-        t41.RadioState = CW_TRANSMIT_PADDLE_STATE;
-        keyPressedOn = 0;
-      }
-      break;
+      case CW_MODE:
+        if(cwKeyerPTT) {
+          t41.RadioState = CW_TRANSMIT_KEYER_STATE;
+          t41.RxTxState = TX_STATE;
+        } else if(beaconFlag) {
+          t41.RadioState = BEACON_STATE;
+          t41.RxTxState = RX_STATE;
+        } else if((digitalRead(t41.PaddleDit) == HIGH) && (digitalRead(t41.PaddleDah) == HIGH)) {
+          t41.RadioState = RECEIVE_STATE;
+          t41.RxTxState = RX_STATE;
+        } else if((digitalRead(t41.PaddleDit) == LOW) && (t41.KeyType == 0)) {
+          t41.RadioState = CW_TRANSMIT_STRAIGHT_STATE;
+          t41.RxTxState = TX_STATE;
+        } else if((keyPressedOn == 1) && (t41.KeyType == 1)) {
+          t41.RadioState = CW_TRANSMIT_PADDLE_STATE;
+          t41.RxTxState = TX_STATE;
+          keyPressedOn = 0;
+        }
+        break;
 
-    case DSB_MODE:
-      //if(t41.RadioState != FREQ_CAL_STATE)
-      t41.RadioState = RECEIVE_STATE;
-      break;
-
-    case DATA_MODE:
-      //Serial.print("WSJT-X TX: "); Serial.println(t41.wsjtPTT);
-      if(t41.wsjtPTT) {
-        t41.RadioState = DATA_TRANSMIT_STATE;
-      } else {
+      case DSB_MODE:
+        //if(t41.RadioState != FREQ_CAL_STATE)
         t41.RadioState = RECEIVE_STATE;
-      }
-      break;
+          t41.RxTxState = RX_STATE;
+        break;
+
+      case DATA_MODE:
+        //Serial.print("WSJT-X TX: "); Serial.println(t41.wsjtPTT);
+        if(t41.wsjtPTT) {
+          t41.RadioState = DATA_TRANSMIT_STATE;
+          t41.RxTxState = TX_STATE;
+        } else {
+          t41.RadioState = RECEIVE_STATE;
+          t41.RxTxState = RX_STATE;
+        }
+        break;
+    }
   }
 
   // 3. configure radio for current state
@@ -510,7 +527,7 @@ FASTRUN void loop() {
       break;
 
     case CW_TRANSMIT_STRAIGHT_STATE:
-      CWTransmit();
+      CWTransmit(t41.PaddleDit);
       break;
 
     case CW_TRANSMIT_PADDLE_STATE:
@@ -574,6 +591,10 @@ FASTRUN void loop() {
       // the remaining buffer will be played next time it's connected
       //CWPause(25); // 28ms plays on restart
       CWPause(50); // 5ms plays on restart, but it's the same w/ higher delay, first transmit doesn't have this
+      break;
+
+    case TUNER_TRANSMIT_STATE:
+      AutoTune();
       break;
 
     default:

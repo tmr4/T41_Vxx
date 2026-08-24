@@ -29,6 +29,12 @@ typedef __uint8_t uint8_t;
 #define CW_TRANSMIT_PADDLE_STATE    5
 #define CW_TRANSMIT_KEYER_STATE     6
 #define DATA_TRANSMIT_STATE         7
+#define TUNER_TRANSMIT_STATE        8
+
+// Radio Rx/Tx State
+// this is mostly for the convinience of functions that work with multiple radio states
+#define RX_STATE               0
+#define TX_STATE               1
 
 // Calibration State
 #define NOT_CAL_STATE               0

@@ -282,7 +282,7 @@ void CreateCWSignal(unsigned long signalLength) {
   }
 }
 
-void CWTransmit() {
+void CWTransmit(int pin) {
   int valPin;
   int oldVal = HIGH;
   unsigned long cwTransmitTimer;
@@ -292,13 +292,12 @@ void CWTransmit() {
   cwTransmitTimer = millis();
 
   // start generating CW signal
-  while(millis() - cwTransmitTimer <= t41.CWTransmitDelay) {
-    valPin = digitalRead(t41.PaddleDit);
+  while(millis() - cwTransmitTimer < t41.CWTransmitDelay) {
+    valPin = digitalRead(pin);
 
     // start CW transmit, CW signal timer is on
     switch(valPin) {
       case LOW:
-        cwTransmitTimer = millis();
         if(oldVal == HIGH) {
           // begin ramp up
           CW_ExciterIQData(ON, true);
@@ -306,6 +305,7 @@ void CWTransmit() {
           // continue signal
           CW_ExciterIQData();
         }
+        cwTransmitTimer = millis();
         break;
 
       case HIGH:

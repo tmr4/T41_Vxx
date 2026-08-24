@@ -2,7 +2,7 @@
 
 #pragma once
 
-#define VERSION "vPS_dev/v0.04"   // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
+#define VERSION "vPS_dev/v0.05"   // up to 14 characters can fit *** can adjust infobox ShowVersion routine to accommodate more if needed ***
 #define RADIO_ID 01               // 0-999, radio ID is reported as 24 to WSJT-X (Kenwood TS-890S)
 
 #define RADIO_ROLE 0              // 0: DEVICE_ROLE_T41, or 1: DEVICE_ROLE_REMOTE

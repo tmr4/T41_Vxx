@@ -521,6 +521,7 @@ FLASHMEM void AudioSetup(int sampleRate, bool _supportsTX /* = true */) {
     **********************************************************************************/
 #if INJECT_RX_TEST_SIGNALS
     testQuadSignals.setSignalStrength(RX_TEST_SIGNAL_STRENGTH);
+    testQuadSignals.frequency(60000);
 
     //testQuadSignals.DrawSweepLine(41);
     //sweepTimer.begin(SweepTimerISR, 1000); // increment signals every 1ms
@@ -772,6 +773,11 @@ void ConfigAudioState(int audioState) {
 
       //pc_Q_in_R_Ex.connect();
       //Q_in_R_Ex.begin();
+      break;
+
+    case TUNER_TRANSMIT_STATE:
+      Q_out_Ex_Start();
+      Q_out_Start(); // sidetone
       break;
 
     default:

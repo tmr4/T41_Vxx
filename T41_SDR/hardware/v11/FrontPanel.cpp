@@ -1,7 +1,7 @@
 // v11 Front Panel
 
 #include <SPI.h>
-#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
+//#include <RA8875.h>                    // https://github.com/mjs513/RA8875/tree/RA8875_t4
 
 #include <Rotary.h>                    // https://github.com/brianlow/Rotary
 
@@ -93,7 +93,7 @@ const char *labels[] = { "Select", "Menu Up", "Band Up",
                          "Reset Tuning", "Frequ Entry", "User 2" };
 
 // *** allow for v11 specific RA8875 code ***
-extern RA8875 tft;
+//extern RA8875 tft;
 
 int buttonThresholdPressed = 944;   // switchValues[0] + WIGGLE_ROOM
 int buttonThresholdReleased = 964;  // buttonThresholdPressed + WIGGLE_ROOM
@@ -398,7 +398,7 @@ FLASHMEM void SaveAnalogSwitchValues() {
   int minVal;
   int value;
   int origRepeatDelay;
-
+/*
   tft.clearMemory();  // Need to clear overlay too
   tft.writeTo(L2);
   tft.fillWindow();
@@ -412,16 +412,16 @@ FLASHMEM void SaveAnalogSwitchValues() {
   tft.print("have assigned to");
   tft.setCursor(10, 50);
   tft.print("the switch shown.");
-
+*/
   // Disable button repeat for interrupt driven buttons
   origRepeatDelay = buttonRepeatDelay;
   buttonRepeatDelay = 0;
 
   for(index = 0; index < NUMBER_OF_SWITCHES;) {
-    tft.setCursor(20, 100);
-    tft.print(index + 1);
-    tft.print(". ");
-    tft.print(labels[index]);
+    //tft.setCursor(20, 100);
+    //tft.print(index + 1);
+    //tft.print(". ");
+    //tft.print(labels[index]);
 
     if(buttonInterruptsEnabled) {
       while((value = ReadSelectedPushButton()) == -1) {
@@ -444,13 +444,13 @@ FLASHMEM void SaveAnalogSwitchValues() {
       }
     }
 
-    tft.fillRect(20, 100, 300, 40, RA8875_BLACK);
-    tft.setCursor(350, 20 + index * 25);
-    tft.print(index + 1);
-    tft.print(". ");
-    tft.print(labels[index]);
-    tft.setCursor(660, 20 + index * 25);
-    tft.print(value);
+    //tft.fillRect(20, 100, 300, 40, RA8875_BLACK);
+    //tft.setCursor(350, 20 + index * 25);
+    //tft.print(index + 1);
+    //tft.print(". ");
+    //tft.print(labels[index]);
+    //tft.setCursor(660, 20 + index * 25);
+    //tft.print(value);
     switchValues[index] = value;
 
     // Set interrupt press/release thresholds based on the Select button, which has the highest ADC value
