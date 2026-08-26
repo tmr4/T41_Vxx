@@ -99,6 +99,12 @@ I suppose the best result of this work is algorithm clarity. While the routines 
 
 I've found that zoom filters with 63 taps is a good trade-off between filter and T41 performance. The base of the signal spreads out at the noise flow as taps increase above this level.
 
+I've been working on and off again trying to reduce the loop time at 8x and 16x zoom levels. I tried various strategies to prebuffer the frequency spectrum data. These worked ok when at steady state but tended to cause spectrum glitches when the display frame rate wasn't steady. The work arounds to fix these either involved more calculation time, more memory or both.
+
+I accidentally stumbled on the correct strategy; buffer the data at 8x and 16x zoom levels as before but start updating the display at the beginning of each loop, instead of waiting until sufficient data is buffered to calculate a new FFT. Thus, at 8x and 16x, the frequency spectrum will consist of same data from the previous loop and some from the current loop. My display frame rate is about 11.5fps so the two segments could be about 87ms apart in reality. The difference isn't noticeable and I haven't seen any problems with this approach.
+
+Now there is no slowdown in display frame rate at higher zoom levels.
+
 ### Unifying the Calibration Code
 
 I did some work automating the T41 calibration code a year ago. That code was hardware specific. I've never been happy with it because it breaks my unified code approach. First, very similar code exists for separate hardware versions. That's not a huge deal since most of it is in flash memory. But it increases the code base to keep updated. Second, the code relies on a specific display model and there is a lot of it for each hardware version.  All of this must be modified if another display model is used. That wouldn't be a fun project.

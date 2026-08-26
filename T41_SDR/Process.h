@@ -10,6 +10,11 @@
 // Data
 //-------------------------------------------------------------------------------------------------------------
 
+#define RX_INSUFFICIENT_DATA 0
+#define RX_SPECTRUM_UPDATED  1
+#define RX_DATA_PROCESSED    2
+#define RX_PASSES_NEEDED     3
+
 extern float32_t /*DMAMEM*/ audioFFT[];
 extern float32_t /*DMAMEM*/ audioIFFT[];
 
@@ -51,5 +56,5 @@ inline int __attribute__((always_inline)) CheckReceiverData(bool updateSpectrumD
     return ProcessReceiverData(updateSpectrumData);
   }
 
-  return 0; // insufficient IQ data to process
+  return RX_INSUFFICIENT_DATA;
 }

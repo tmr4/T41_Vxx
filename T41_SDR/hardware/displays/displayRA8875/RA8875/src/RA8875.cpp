@@ -836,7 +836,7 @@ void RA8875::_waitBusy(uint8_t res)
         // set bufferDataCheck so ProcessReceiverData knows we're
         // near the end of updating the current display frame
         bufferDataCheck = true;
-        if(CheckReceiverData(true) == 2) { // keep trying until data is successfully processed
+        if(CheckReceiverData(true) == RX_SPECTRUM_UPDATED) { // keep trying until data is successfully processed
           dspDone = true;
         }
       }

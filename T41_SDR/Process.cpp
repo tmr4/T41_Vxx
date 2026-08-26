@@ -133,9 +133,9 @@ void PrepareExciterIQDataCal(int mode);
 float VolumeToAmplification(int volume);
 void FreqShift1(int blockSize);
 void FreqShift2f(int shift);
+bool BufferFreqSpecData(uint32_t blockSize, int offset = 0);
 bool CalcFreqSpecBuffered(uint32_t blockSize);
 void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier = 1.0);
-void BufferFreqSpecData(uint32_t blockSize);
 
 //-------------------------------------------------------------------------------------------------------------
 // Code
@@ -314,7 +314,7 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   float rfGainValue, intScaler;
   // *** the amount of data required by the frequency spectrum calc depends on the zoom factor ***
   bool freqSpecUpdatedThisLoop = false; // true: spectrums updated, otherwise false
-  bool anotherPassRequired = false; // will be true at 8x and 16x zoom
+  static bool anotherPassRequired = false; // will be true at 8x and 16x zoom
   // audio spectrum calc works with 256 samples which is 2 blocks at 44.1kHz or 16 blocks at 192kHz decimated by 8 or 24Hz
   int blocks = GetBlocks();
 
@@ -412,19 +412,15 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
   // center "hump" around DC is shifted by Fs/4
   FreqShift1(blocks * 128);
 
-  // calculate frequency spectrum for other zoom levels  It uses the shifted spectrum, so the
-  // buffering and spectrum processing is done in CalcFreqSpecBuffered
-  // some prebuffering is done in BufferFreqSpecData
+  // calculate frequency spectrum for other zoom levels
+  // this uses the shifted spectrum
   if(t41.SpectrumZoom != 0) {
-    if(bufferDataCheck) {
-      BufferFreqSpecData(blocks * 128);
-      bufferDataCheck = false;
-    }
     // frequency spectrum FFT routine only performed once for each display frame update loop
-    if(updateSpectrumData) {
+    if(updateSpectrumData || anotherPassRequired) {
       // flag if frequency spectrum updated or more passes required
       if(CalcFreqSpecBuffered(blocks * 128)) {
         freqSpecUpdatedThisLoop = true;
+        anotherPassRequired = false;
       } else {
         anotherPassRequired = true;
       }
@@ -894,8 +890,8 @@ int ProcessReceiverData(bool updateSpectrumData /* = false */) {
 
   RESETPROFILEPIN(PROFILER_PROCESS_RX);
 
-  if(anotherPassRequired) return 3;
-  else return freqSpecUpdatedThisLoop ? 1 : 2;
+  if(anotherPassRequired) return RX_PASSES_NEEDED;
+  else return freqSpecUpdatedThisLoop ? RX_SPECTRUM_UPDATED : RX_DATA_PROCESSED;
 }
 
 /*****
@@ -1103,51 +1099,29 @@ void FreqShift2f_old(int shift) {
 }
 
 // bufIQ serves as both an intermediate and a final buffer for passing decimated IQ data to CalcFreqSpec
+// this save both memory and copying as the 2nd decimation writes directly to the final data position
 /*
          IQ data      decimation 2 write
         Size after        I          Q
   Zoom  Dec1  Dec2   from  to    from  to
    2x   1024  1024     0  1023    512 1535
    4x   1024   512     0   511    512 1023
-   8x    512   256     0
-  16x    256   128     0
+   8x    512   256     *          ***
+  16x    256   128     **         ***
+
+  *  I: pass 1: 0-255 pass 2: 256-511
+  ** I: pass 1: 0-127 pass 2: 128-255 pass 3: 256-383 pass 4: 384-511
+  *** Q: above + SPECTRUM_RES
 */
-float32_t bufIQ[1024 + SPECTRUM_RES];
-
-// buffer data in 8x and 16x zoom modes
-void BufferFreqSpecData(uint32_t blockSize) {
-  float32_t x_buffer[blockSize / 2];
-  float32_t y_buffer[blockSize / 2];
-  float32_t* ptrI = bufIQ;
-  float32_t* ptrQ = &bufIQ[SPECTRUM_RES];
-  int factor = zoomDecFactors[t41.SpectrumZoom];
-  int samples = blockSize / (1 << t41.SpectrumZoom);
-
-  // decimation 1
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I1, audioBufferL, x_buffer, blockSize);
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q1, audioBufferR, y_buffer, blockSize);
-
-  // decimation 2
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I2, x_buffer, ptrI, blockSize / factor);
-  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q2, y_buffer, ptrQ, blockSize / factor);
-
-  // limit samples at lower resolutions
-  if(samples > SPECTRUM_RES) samples = SPECTRUM_RES;
-
-  if(0) {
-    // multiple passes required, buffer IQ data
-    //arm_copy_f32(x_buffer, &bufI[passes * samples], samples);
-    //arm_copy_f32(y_buffer, &bufQ[passes * samples], samples);
-  }
-}
+float32_t bufIQ[1024 + SPECTRUM_RES]; // extra buffer space needed at 2x zoom to contain the 2nd decimation result
 
 /*****
-  Calculate frequency spectrum
+  Buffer decimated frequency spectrum data
 
   *** 512 sample FFT assumed ***
+
   There isn't enough data available at high zoom levels and lower sample rates to perform the FFT.
-  At those times, buffered data is used from previous calls to this routine for the FFT. When
-  sufficient data is buffered the FFT is run and frequency spectrum is produced.
+  At those times, data is buffered data for the FFT. Returns true when sufficient data is buffered.
 
   *** the amount of data required by the frequency spectrum calc depends on the zoom factor ***
   calc passes needed to buffer a complete frequency spectrum at the current zoom factor
@@ -1160,7 +1134,7 @@ void BufferFreqSpecData(uint32_t blockSize) {
               <----------------- zoom factor -------------------------->   <----- sample rate ----->
   reqPasses = (t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4)) + 2048 / (blocks * 128) - 1;
 
-  The IQ data gathered should consecutive to produce the highest resolution frequency spectrum
+  *** Buffered IQ data must be consecutive to produce the highest resolution frequency spectrum ***
 
   Sample Rate: 192k
   Zoom    SpectrumZoom   BW   factor  dec 1   dec 2   passes  samples added per pass
@@ -1174,34 +1148,82 @@ void BufferFreqSpecData(uint32_t blockSize) {
    2x         1          22     2       2x      1x      1           512
    4x         2          11     2       2x      2x      1           512
 
+  *** At 8x and 16x zoom, the frequency spectrum data is updated after a display frame has started
+      to be rendered. Thus the frequency spectrum may contain partial data from two loops. This
+      speeds up processing the frequency spectrum at higher zoom levels instead of waiting for
+      sufficient data to be buffered or resorting to complicated prebuffering schemes. This
+      saves up to 10-30ms per loop depending on the zoom level***
+*****/
+bool BufferFreqSpecData(uint32_t blockSize, int offset /* = 0 */) {
+  float32_t x_buffer[blockSize / 2];
+  float32_t y_buffer[blockSize / 2];
+  float32_t* ptrI = bufIQ;
+  float32_t* ptrQ = &bufIQ[SPECTRUM_RES];
+  int factor = zoomDecFactors[t41.SpectrumZoom];
+  int samples = blockSize / (1 << t41.SpectrumZoom);
+  bool dataReady = true;
+
+  if(t41.SpectrumZoom >= 3) { // 8x or 16x
+    static int lastZoom = 1; // 2x - default zoom level
+    static int passes = 0;
+    // multiple passes required for 8x and 16x zoom
+    // 8x requires 2 passes, 16x requires 4 passes
+    int requiredPasses = t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4);
+
+    // reset if zoom level has changed
+    if(t41.SpectrumZoom != lastZoom) {
+      lastZoom = t41.SpectrumZoom;
+      passes = 0;
+    }
+
+    // adjust buffer pointers to place decimation 2 data in the correct buffer location
+    if(t41.SpectrumZoom >= 3) { // 8x or 16x
+      ptrI = &bufIQ[samples * passes];
+      ptrQ = &bufIQ[SPECTRUM_RES + samples * passes];
+    }
+
+    ++passes;
+    // do we have enough data?
+    // flag if more passes required
+    if(passes < requiredPasses) {
+      dataReady = false;
+    } else {
+      passes = 0;
+    }
+  }
+
+  // decimation 1
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I1, audioBufferL, x_buffer, blockSize);
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q1, audioBufferR, y_buffer, blockSize);
+
+  // decimation 2
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_I2, x_buffer, ptrI, blockSize / factor);
+  arm_fir_decimate_f32(&Fir_Zoom_FFT_Decimate_Q2, y_buffer, ptrQ, blockSize / factor);
+
+  return dataReady;
+}
+
+/*****
+  Calculate frequency spectrum
+
+  *** 512 sample FFT assumed ***
 *****/
 bool CalcFreqSpecBuffered(uint32_t blockSize) {
-  bool spectrumReady = false;
   float32_t multiplier;
-
-  static int passes = 0;
-  static int lastZoom = 1; // 2x - default zoom level
 
   // *** shouldn't be here for 1x zoom but can be if SpectrumZoom
   //     is changed and we arrive here before the change is polled
-  //     in ProcessControls ***
-  if(t41.SpectrumZoom == 0) return spectrumReady;
+  //     in ProcessControls, if so force another loop ***
+  if(t41.SpectrumZoom == 0) return false;
 
   SETPROFILEPIN(PROFILER_OTHER);
 
-  // reset if zoom level has changed
-  if(t41.SpectrumZoom != lastZoom) {
-    lastZoom = t41.SpectrumZoom;
-    passes = 0;
+  // decimate and buffer IQ data
+  // return for more data if needed
+  if(!BufferFreqSpecData(blockSize)) {
+    RESETPROFILEPIN(PROFILER_OTHER);
+    return false;
   }
-
-  // do we have enough data?
-  // at high zoom, multiple, consecutive passes are required to get sufficient
-  // data to produce a high resolution frequency spectrum
-  int requiredPasses = t41.SpectrumZoom < 3 ? 1 : ((1 << t41.SpectrumZoom) / 4);
-  if(passes < requiredPasses) {
-  }
-  BufferFreqSpecData(blockSize);
 
   // set data multiplier according to zoom to maintain consistent spectrum level
   if(t41.SpectrumZoom > 3) { // SPECTRUM_ZOOM_8
@@ -1211,15 +1233,10 @@ bool CalcFreqSpecBuffered(uint32_t blockSize) {
   }
   multiplier = 1.0f;
 
-  if(++passes >= requiredPasses) {
-    CalcFreqSpec(bufIQ, &bufIQ[SPECTRUM_RES], multiplier);
-    spectrumReady = true;
-    passes = 0;
-  }
-
+  CalcFreqSpec(bufIQ, &bufIQ[SPECTRUM_RES], multiplier);
   RESETPROFILEPIN(PROFILER_OTHER);
 
-  return spectrumReady;
+  return true;
 }
 
 /*****
@@ -1227,11 +1244,13 @@ bool CalcFreqSpecBuffered(uint32_t blockSize) {
 
   *** FFT size fixed at 512 ***
 *****/
-FLASHMEM void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /* = 1.0 */) {
+void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /* = 1.0 */) {
   const arm_cfft_instance_f32* S = &arm_cfft_sR_f32_len512;
   static int lastZoom = 1; // 2x, default zoom
   float32_t* dst = freqFFT;
   float32_t LPFcoeff, onem_LPFcoeff;
+
+  SETPROFILEPIN(PROFILER_RX_TX);
 
   // populate the FFT array
   for(int i = 0; i < SPECTRUM_RES; i++) {
@@ -1270,6 +1289,7 @@ FLASHMEM void CalcFreqSpec(float32_t* ptrI, float32_t* ptrQ, float multiplier /*
       }
     }
   }
+  RESETPROFILEPIN(PROFILER_RX_TX);
 }
 
 /*****
@@ -1434,7 +1454,7 @@ void YieldToProcess(bool updateSpectrum /* = false */) {
         done = true;
         break;
       case 2: // IQ data processed
-        // yield again tocheck if more IQ data is available
+        // yield again to check if more IQ data is available
         // we process IQ data while sufficient data exists
         // this allows the process to catch up after longer tasks
         // such as the waterfall update
