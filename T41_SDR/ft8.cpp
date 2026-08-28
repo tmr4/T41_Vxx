@@ -252,7 +252,10 @@ FLASHMEM bool InitFT8() {
     ResetTuning();
 
     // limit zoom range for FT8
+    // *** TODO: consider saving zoom state across modes ***
     t41.SpectrumZoom.Init(1, 1, 2, true, T41_ITEM_ZOOM);
+    UpdateInfoBoxItem(T41_ITEM_ZOOM);
+
     UpdateDisplayFreq();
   }
 
@@ -270,6 +273,8 @@ FLASHMEM void ExitFT8() {
 
     // return zoom to normal range
     t41.SpectrumZoom.Init(1, 0, MAX_ZOOM_ENTRIES - 1, true, T41_ITEM_ZOOM);
+    UpdateInfoBoxItem(T41_ITEM_ZOOM);
+
     UpdateDisplayFreq();
   }
 }
